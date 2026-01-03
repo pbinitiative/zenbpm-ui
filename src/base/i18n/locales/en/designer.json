@@ -1,0 +1,35 @@
+{
+  "title": "What would you like to design?",
+  "processDesigner": "Process Designer",
+  "decisionDesigner": "Decision Designer",
+  "actions": {
+    "import": "Import",
+    "download": "Download",
+    "deploy": "Deploy",
+    "deploying": "Deploying..."
+  },
+  "modes": {
+    "diagram": "Diagram",
+    "xml": "XML"
+  },
+  "messages": {
+    "deploySuccess": "Process deployed successfully",
+    "deployFailed": "Failed to deploy process",
+    "fileLoaded": "File loaded successfully",
+    "fileLoadFailed": "Failed to load file",
+    "downloadFailed": "Failed to download file",
+    "loadDefinitionFailed": "Failed to load process definition",
+    "xmlExportFailed": "Failed to export XML",
+    "xmlImportFailed": "Failed to import XML"
+  },
+  "cards": {
+    "process": {
+      "title": "Design a Process",
+      "description": "Create BPMN 2.0 workflow diagrams with tasks, gateways, and events. Model your business processes visually and deploy them to the engine."
+    },
+    "decision": {
+      "title": "Design a Decision",
+      "description": "Build DMN decision tables to define business rules. Create input/output mappings and automate complex decision logic."
+    }
+  }
+}

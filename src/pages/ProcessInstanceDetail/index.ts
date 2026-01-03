@@ -1,0 +1,1 @@
+export { ProcessInstanceDetailPage } from './ProcessInstanceDetailPage';

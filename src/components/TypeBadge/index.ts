@@ -1,0 +1,1 @@
+export { TypeBadge } from './TypeBadge';

@@ -1,0 +1,49 @@
+{
+  "title": "Decisions",
+  "definitions": {
+    "tabLabel": "Definitions",
+    "title": "Decision Definitions"
+  },
+  "instances": {
+    "tabLabel": "Instances",
+    "title": "Decision Instances"
+  },
+  "detail": {
+    "diagram": "DMN Diagram",
+    "noDiagram": "No DMN diagram available",
+    "metadata": "Metadata",
+    "instances": "Decision Instances"
+  },
+  "instance": {
+    "finalOutput": "Final Output",
+    "evaluatedDecisions": "Evaluated Decisions",
+    "inputs": "Inputs",
+    "outputs": "Outputs",
+    "matchedRules": "Matched Rules"
+  },
+  "fields": {
+    "key": "Key",
+    "name": "Name",
+    "dmnResourceId": "DMN Resource ID",
+    "version": "Version",
+    "decisionId": "Decision ID",
+    "decisionName": "Decision Name",
+    "decisionDefinition": "Decision Definition",
+    "evaluatedAt": "Evaluated At",
+    "result": "Result",
+    "output": "Output"
+  },
+  "filters": {
+    "onlyLatest": "Latest version only",
+    "searchPlaceholder": "Search by name or ID..."
+  },
+  "actions": {
+    "upload": "Upload DMN",
+    "design": "Design Decision",
+    "evaluate": "Evaluate"
+  },
+  "messages": {
+    "uploadSuccess": "DMN definition deployed successfully",
+    "uploadFailed": "Failed to deploy DMN definition"
+  }
+}

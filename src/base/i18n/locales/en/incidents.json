@@ -1,0 +1,27 @@
+{
+  "title": "Incidents",
+  "fields": {
+    "elementId": "Element ID",
+    "errorType": "Error Type",
+    "errorMessage": "Error Message",
+    "processInstance": "Process Instance",
+    "state": "State",
+    "createdAt": "Created At",
+    "resolvedAt": "Resolved At"
+  },
+  "states": {
+    "resolved": "Resolved",
+    "unresolved": "Unresolved"
+  },
+  "actions": {
+    "resolve": "Resolve",
+    "viewDetails": "View Details"
+  },
+  "messages": {
+    "resolved": "Incident resolved successfully",
+    "resolveFailed": "Failed to resolve incident"
+  },
+  "detail": {
+    "title": "Incident Details"
+  }
+}

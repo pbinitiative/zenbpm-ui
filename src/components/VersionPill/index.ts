@@ -1,0 +1,1 @@
+export { VersionPill } from './VersionPill';

@@ -1,0 +1,84 @@
+{
+  "title": "Processes",
+  "definitions": {
+    "title": "Process Definitions",
+    "tabLabel": "Definitions"
+  },
+  "instances": {
+    "title": "Process Instances",
+    "tabLabel": "Instances"
+  },
+  "detail": {
+    "subtitle": "Process Definition",
+    "metadata": "Definition Details",
+    "diagram": "BPMN Diagram",
+    "instances": "Process Instances",
+    "noDiagram": "No diagram available"
+  },
+  "fields": {
+    "name": "Name",
+    "process": "Process",
+    "bpmnProcessId": "BPMN Process ID",
+    "resourceName": "Resource Name",
+    "version": "Version",
+    "key": "Key",
+    "createdAt": "Created At",
+    "state": "State",
+    "partition": "Partition",
+    "variables": "Variables",
+    "activities": "Activities",
+    "activityFilter": "Activity"
+  },
+  "states": {
+    "active": "Active",
+    "completed": "Completed",
+    "terminated": "Terminated",
+    "failed": "Failed"
+  },
+  "statistics": {
+    "active": "Active",
+    "completed": "Completed",
+    "incidents": "Incidents"
+  },
+  "actions": {
+    "create": "Create Process",
+    "upload": "Upload BPMN",
+    "design": "Design Process",
+    "deploy": "Deploy",
+    "startInstance": "Start Instance",
+    "editDefinition": "Edit Definition",
+    "viewDiagram": "View Diagram",
+    "viewInstance": "View Instance",
+    "cancelInstance": "Cancel Instance"
+  },
+  "filters": {
+    "onlyLatest": "Show only latest versions",
+    "dateRange": "Date Range",
+    "createdFrom": "Created From",
+    "createdTo": "Created To",
+    "hasIncident": "Has Incidents",
+    "searchPlaceholder": "Filter processes..."
+  },
+  "dialogs": {
+    "startInstance": {
+      "title": "Start New Instance",
+      "variables": "Process Variables (JSON)",
+      "formatJson": "Format JSON",
+      "start": "Start",
+      "starting": "Starting..."
+    }
+  },
+  "errors": {
+    "invalidJson": "Invalid JSON format",
+    "createFailed": "Failed to create instance"
+  },
+  "messages": {
+    "deploySuccess": "Process deployed successfully",
+    "deployError": "Failed to deploy process",
+    "startSuccess": "Process instance started",
+    "startError": "Failed to start process instance",
+    "instanceCreated": "Instance created successfully",
+    "uploadSuccess": "BPMN definition deployed successfully",
+    "uploadFailed": "Failed to deploy BPMN definition"
+  }
+}

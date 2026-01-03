@@ -1,0 +1,98 @@
+{
+  "appName": "ZenBPM",
+  "yes": "Yes",
+  "no": "No",
+  "navigation": {
+    "processes": "Processes",
+    "designer": "Designer",
+    "design": "Design",
+    "decisions": "Decisions",
+    "incidents": "Incidents",
+    "userTasks": "User Tasks"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "refresh": "Refresh",
+    "apply": "Apply",
+    "clear": "Clear",
+    "search": "Search",
+    "create": "Create",
+    "upload": "Upload",
+    "add": "Add",
+    "update": "Update",
+    "close": "Close"
+  },
+  "all": "All",
+  "pagination": {
+    "rowsPerPage": "Rows per page",
+    "of": "of"
+  },
+  "table": {
+    "noData": "No data available",
+    "loading": "Loading...",
+    "partition": "Partition",
+    "items": "items",
+    "viewMode": "View Mode",
+    "allPartitions": "All Partitions",
+    "singlePartition": "Single Partition",
+    "sorting": {
+      "serverSide": "Server",
+      "clientSide": "Local",
+      "allPartitionsWarning": "Sorting is client-side when viewing all partitions. Select a specific partition for server-side sorting.",
+      "serverSideTooltip": "Data is sorted on the server",
+      "clientSideTooltip": "Data is sorted locally in your browser"
+    }
+  },
+  "filters": {
+    "filters": "Filters",
+    "activeFilters": "Active Filters",
+    "editFilters": "Edit Filters",
+    "clearAll": "Clear All",
+    "all": "All",
+    "from": "From",
+    "to": "To",
+    "searchPlaceholder": "Search...",
+    "searchInstances": "Search instances..."
+  },
+  "search": {
+    "label": "Search",
+    "placeholder": "Search..."
+  },
+  "errors": {
+    "loadFailed": "Failed to load data",
+    "saveFailed": "Failed to save",
+    "networkError": "Network error",
+    "unknownError": "An unknown error occurred",
+    "invalidJson": "Invalid JSON format"
+  },
+  "messages": {
+    "dataLoaded": "Data loaded successfully",
+    "saved": "Saved successfully",
+    "deleted": "Deleted successfully"
+  },
+  "allPartitions": "All Partitions",
+  "partition": "Partition",
+  "clientSideSortingWarning": "When viewing all partitions, sorting is done client-side and may not reflect true ordering across the cluster.",
+  "version": "Version",
+  "createdAt": "Created At",
+  "state": "State",
+  "key": "Key",
+  "current": "current",
+  "loading": "Loading",
+  "fields": {
+    "key": "Key",
+    "name": "Name",
+    "version": "Version",
+    "resourceName": "Resource Name",
+    "state": "State",
+    "createdAt": "Created At",
+    "definition": "Definition",
+    "processDefinition": "Process Definition",
+    "processInstance": "Process Instance",
+    "decisionDefinition": "Decision Definition",
+    "decisionInstance": "Decision Instance"
+  }
+}

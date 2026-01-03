@@ -1,0 +1,22 @@
+{
+  "title": "User Tasks",
+  "fields": {
+    "name": "Task Name",
+    "assignee": "Assignee",
+    "candidateGroups": "Candidate Groups",
+    "candidateUsers": "Candidate Users",
+    "state": "State",
+    "createdAt": "Created At",
+    "processInstance": "Process Instance"
+  },
+  "states": {
+    "created": "Created",
+    "completed": "Completed",
+    "canceled": "Canceled"
+  },
+  "actions": {
+    "claim": "Claim",
+    "assign": "Assign",
+    "complete": "Complete"
+  }
+}

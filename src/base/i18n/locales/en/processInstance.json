@@ -1,0 +1,121 @@
+{
+  "title": "Process Instance",
+  "detail": {
+    "metadata": "Instance Details",
+    "diagram": "BPMN Diagram",
+    "noDiagram": "No diagram available",
+    "hasIncidents": "{{count}} unresolved incident(s)"
+  },
+  "fields": {
+    "key": "Key",
+    "name": "Name",
+    "state": "State",
+    "createdAt": "Created At",
+    "completedAt": "Completed At",
+    "processDefinition": "Process Definition",
+    "version": "Version",
+    "bpmnProcessId": "BPMN Process ID",
+    "elementId": "Element ID",
+    "jobType": "Job Type",
+    "message": "Message",
+    "resolvedAt": "Resolved At",
+    "variableName": "Variable",
+    "variableValue": "Value",
+    "assignee": "Assignee",
+    "currentAssignee": "Current Assignee",
+    "candidateGroups": "Candidate Groups",
+    "retries": "Retries",
+    "currentRetries": "Current Retries",
+    "errorType": "Error Type",
+    "errorMessage": "Error Message"
+  },
+  "tabs": {
+    "jobs": "Jobs",
+    "history": "History",
+    "incidents": "Incidents",
+    "variables": "Variables"
+  },
+  "jobStates": {
+    "activatable": "Activatable",
+    "activated": "Activated",
+    "active": "Active",
+    "completed": "Completed",
+    "failed": "Failed",
+    "canceled": "Canceled"
+  },
+  "incidentStates": {
+    "unresolved": "Unresolved",
+    "resolved": "Resolved"
+  },
+  "actions": {
+    "complete": "Complete",
+    "resolve": "Resolve",
+    "cancel": "Cancel Instance",
+    "assign": "Assign",
+    "retry": "Retry",
+    "updateRetries": "Update Retries",
+    "addVariable": "Add Variable"
+  },
+  "messages": {
+    "jobCompleted": "Job completed successfully",
+    "jobCompleteFailed": "Failed to complete job",
+    "jobAssigned": "Job assigned successfully",
+    "jobAssignFailed": "Failed to assign job",
+    "jobRetried": "Job retry initiated successfully",
+    "jobRetryFailed": "Failed to retry job",
+    "retriesUpdated": "Retries updated successfully",
+    "retriesUpdateFailed": "Failed to update retries",
+    "incidentResolved": "Incident resolved successfully",
+    "incidentResolveFailed": "Failed to resolve incident",
+    "variableAdded": "Variable added successfully",
+    "variableAddFailed": "Failed to add variable",
+    "variableUpdated": "Variable updated successfully",
+    "variableUpdateFailed": "Failed to update variable",
+    "variableDeleted": "Variable deleted successfully",
+    "variableDeleteFailed": "Failed to delete variable"
+  },
+  "dialogs": {
+    "completeJob": {
+      "title": "Complete Job",
+      "description": "Complete this job with optional variables.",
+      "variables": "Variables (JSON)",
+      "variablesHelp": "Enter variables as JSON object"
+    },
+    "assignJob": {
+      "title": "Assign Job",
+      "description": "Assign this user task to a specific user.",
+      "assignee": "Assignee",
+      "placeholder": "Enter username"
+    },
+    "retryJob": {
+      "title": "Retry Failed Job",
+      "description": "Retry this failed job with updated retry count and optional variable modifications.",
+      "retries": "Number of Retries",
+      "retriesHelp": "How many times to retry this job",
+      "variables": "Variables (JSON)",
+      "variablesHelp": "Optionally modify variables before retrying"
+    },
+    "updateRetries": {
+      "title": "Update Retries",
+      "description": "Change the remaining retry count for this job.",
+      "newRetries": "New Retry Count"
+    },
+    "addVariable": {
+      "title": "Add Variable",
+      "name": "Variable Name",
+      "value": "Value (JSON)",
+      "nameRequired": "Variable name is required",
+      "nameExists": "A variable with this name already exists",
+      "valueHelp": "Enter value as JSON (string, number, object, or array)"
+    },
+    "editVariable": {
+      "title": "Edit Variable",
+      "value": "Value (JSON)",
+      "valueHelp": "Enter value as JSON (string, number, object, or array)"
+    },
+    "deleteVariable": {
+      "title": "Delete Variable",
+      "confirmation": "Are you sure you want to delete the variable \"{{name}}\"? This action cannot be undone."
+    }
+  }
+}
