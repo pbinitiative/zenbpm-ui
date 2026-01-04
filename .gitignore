@@ -25,3 +25,6 @@ dist-ssr
 
 # Generated API client (regenerated on build)
 src/base/openapi/generated-api/
+
+# Playwright
+playwright-report/
