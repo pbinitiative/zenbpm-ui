@@ -9,12 +9,6 @@ export * from './generated-api/process-instance/process-instance';
 export * from './generated-api/process-definition/process-definition';
 export * from './generated-api/incident/incident';
 export * from './generated-api/job/job';
-// Decision has conflicts with decision-definition, export selectively
-export {
-  evaluateDecision,
-  getEvaluateDecisionMutationOptions,
-  useEvaluateDecision,
-} from './generated-api/decision/decision';
 export * from './generated-api/decision-definition/decision-definition';
 export * from './generated-api/message/message';
 export * from './generated-api/migration/migration';
