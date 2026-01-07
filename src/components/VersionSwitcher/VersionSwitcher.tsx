@@ -160,7 +160,7 @@ export const VersionSwitcher = ({
                 label={`v${v.version}`}
                 size="small"
                 sx={{
-                  bgcolor: v.key === currentKey ? 'primary.main' : '#e8eaf6',
+                  bgcolor: v.key === currentKey ? 'primary.main' : 'grey.100',
                   color: v.key === currentKey ? 'white' : 'primary.main',
                   fontWeight: 600,
                   fontSize: '0.7rem',

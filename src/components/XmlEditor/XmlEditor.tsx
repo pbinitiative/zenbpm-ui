@@ -7,12 +7,13 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { bracketMatching, syntaxHighlighting, HighlightStyle, defaultHighlightStyle } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
+import { themeColors } from '@base/theme';
 
-// Light theme for the editor chrome
+// Light theme for the editor chrome (using theme colors)
 const lightTheme = EditorView.theme({
   '&': {
     height: '100%',
-    backgroundColor: '#ffffff',
+    backgroundColor: themeColors.xmlEditor.background,
   },
   '.cm-scroller': {
     overflow: 'auto',
@@ -20,32 +21,32 @@ const lightTheme = EditorView.theme({
     fontSize: '13px',
   },
   '.cm-gutters': {
-    backgroundColor: '#f5f5f5',
-    borderRight: '1px solid #e0e0e0',
-    color: '#999',
+    backgroundColor: themeColors.xmlEditor.gutterBg,
+    borderRight: `1px solid ${themeColors.xmlEditor.gutterBorder}`,
+    color: themeColors.xmlEditor.gutterText,
   },
   '.cm-activeLine': {
-    backgroundColor: '#f0f7ff',
+    backgroundColor: themeColors.xmlEditor.lineHighlight,
   },
   '.cm-activeLineGutter': {
-    backgroundColor: '#e8f0fe',
+    backgroundColor: themeColors.xmlEditor.selectionBg,
   },
 }, { dark: false });
 
-// Light theme XML syntax highlighting (matching @lezer/xml tags)
+// Light theme XML syntax highlighting (using theme colors)
 const xmlHighlightStyle = HighlightStyle.define([
-  { tag: tags.tagName, color: '#22863a', fontWeight: 'bold' }, // Element names - green bold
-  { tag: tags.attributeName, color: '#6f42c1' },     // Attribute names - purple
-  { tag: tags.attributeValue, color: '#032f62' },    // Attribute values - dark blue
-  { tag: tags.string, color: '#032f62' },            // Strings - dark blue
-  { tag: tags.blockComment, color: '#6a737d', fontStyle: 'italic' }, // Comments - gray italic
-  { tag: tags.processingInstruction, color: '#005cc5' }, // <?xml ?> - blue
-  { tag: tags.documentMeta, color: '#005cc5' },      // DOCTYPE etc - blue
-  { tag: tags.angleBracket, color: '#d73a49' },      // < > / - red
-  { tag: tags.definitionOperator, color: '#24292e' }, // = sign
-  { tag: tags.character, color: '#e36209' },         // Entity references like &amp; - orange
-  { tag: tags.content, color: '#24292e' },           // Text content - dark
-  { tag: tags.invalid, color: '#cb2431', textDecoration: 'underline wavy' }, // Invalid/mismatched - red underline
+  { tag: tags.tagName, color: themeColors.xmlEditor.tagName, fontWeight: 'bold' },
+  { tag: tags.attributeName, color: themeColors.xmlEditor.attributeName },
+  { tag: tags.attributeValue, color: themeColors.xmlEditor.attributeValue },
+  { tag: tags.string, color: themeColors.xmlEditor.string },
+  { tag: tags.blockComment, color: themeColors.xmlEditor.comment, fontStyle: 'italic' },
+  { tag: tags.processingInstruction, color: themeColors.xmlEditor.processingInstruction },
+  { tag: tags.documentMeta, color: themeColors.xmlEditor.documentMeta },
+  { tag: tags.angleBracket, color: themeColors.xmlEditor.angleBracket },
+  { tag: tags.definitionOperator, color: themeColors.xmlEditor.operator },
+  { tag: tags.character, color: themeColors.xmlEditor.character },
+  { tag: tags.content, color: themeColors.xmlEditor.content },
+  { tag: tags.invalid, color: themeColors.xmlEditor.invalid, textDecoration: 'underline wavy' },
 ]);
 
 // Combined extensions for the XML editor
