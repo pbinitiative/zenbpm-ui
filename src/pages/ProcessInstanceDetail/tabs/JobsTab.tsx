@@ -170,7 +170,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
             label={t(`processInstance:jobStates.${row.state}`)}
             size="small"
             sx={{
-              bgcolor: JOB_STATE_COLORS[row.state] || '#9E9E9E',
+              bgcolor: JOB_STATE_COLORS[row.state] || 'grey.500',
               color: 'white',
               fontWeight: 600,
               fontSize: '0.7rem',

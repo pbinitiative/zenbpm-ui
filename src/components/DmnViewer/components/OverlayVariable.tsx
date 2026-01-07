@@ -20,7 +20,7 @@ export const OverlayVariable = ({ name, value }: OverlayVariableProps) => {
     >
       <Typography
         component="span"
-        sx={{ color: '#666', fontSize: 'inherit' }}
+        sx={{ color: 'text.secondary', fontSize: 'inherit' }}
       >
         {name}:
       </Typography>{' '}

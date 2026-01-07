@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { Box, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
 import DmnJS from 'dmn-js/lib/NavigatedViewer';
 import { DecisionDataOverlay } from './components/DecisionDataOverlay';
+import { themeColors } from '@base/theme';
 
 // Import dmn-js styles
 import 'dmn-js/dist/assets/diagram-js.css';
@@ -241,10 +242,10 @@ export const DmnViewer = ({
           if (rows) {
             rows.forEach((row, index) => {
               if (overlay.matchedRuleIndices?.includes(index)) {
-                (row as HTMLElement).style.backgroundColor = '#c8e6c9';
+                (row as HTMLElement).style.backgroundColor = themeColors.dmn.highlightBg;
                 // Also style all cells in the row
                 row.querySelectorAll('td').forEach(td => {
-                  (td as HTMLElement).style.backgroundColor = '#c8e6c9';
+                  (td as HTMLElement).style.backgroundColor = themeColors.dmn.highlightBg;
                 });
               }
             });
@@ -312,11 +313,11 @@ export const DmnViewer = ({
           flex-direction: column;
           gap: 6px;
           padding: 8px 10px;
-          background: linear-gradient(to bottom, #ffffff, #f8f9fa);
+          background: linear-gradient(to bottom, ${themeColors.dmn.panelBg}, ${themeColors.dmn.panelBgGradient});
           border-radius: 8px;
           box-sizing: border-box;
           cursor: pointer;
-          box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+          box-shadow: 0 3px 12px ${themeColors.shadows.medium};
           transition: box-shadow 0.15s ease;
         `;
 
@@ -331,7 +332,7 @@ export const DmnViewer = ({
         borderRect.setAttribute('rx', '7');
         borderRect.setAttribute('ry', '7');
         borderRect.setAttribute('fill', 'none');
-        borderRect.setAttribute('stroke', '#9e9e9e');
+        borderRect.setAttribute('stroke', themeColors.dmn.borderStroke);
         borderRect.setAttribute('stroke-width', '2');
         borderSvg.appendChild(borderRect);
         container.appendChild(borderSvg);
@@ -368,9 +369,9 @@ export const DmnViewer = ({
           z-index: 10;
         `;
         const handleLine1 = document.createElement('div');
-        handleLine1.style.cssText = 'width: 12px; height: 2px; background: #666; border-radius: 1px;';
+        handleLine1.style.cssText = `width: 12px; height: 2px; background: ${themeColors.dmn.handleBg}; border-radius: 1px;`;
         const handleLine2 = document.createElement('div');
-        handleLine2.style.cssText = 'width: 12px; height: 2px; background: #666; border-radius: 1px;';
+        handleLine2.style.cssText = `width: 12px; height: 2px; background: ${themeColors.dmn.handleBg}; border-radius: 1px;`;
         dragHandle.appendChild(handleLine1);
         dragHandle.appendChild(handleLine2);
         wrapper.appendChild(dragHandle);
@@ -390,14 +391,14 @@ export const DmnViewer = ({
         marker.setAttribute('orient', 'auto');
         const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
         polygon.setAttribute('points', '0 0, 10 3.5, 0 7');
-        polygon.setAttribute('fill', '#9e9e9e');
+        polygon.setAttribute('fill', themeColors.dmn.borderStroke);
         marker.appendChild(polygon);
         defs.appendChild(marker);
         arrowSvg.appendChild(defs);
 
         const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         arrowPath.setAttribute('class', 'dmn-arrow-path');
-        arrowPath.setAttribute('stroke', '#9e9e9e');
+        arrowPath.setAttribute('stroke', themeColors.dmn.borderStroke);
         arrowPath.setAttribute('stroke-width', '2');
         arrowPath.setAttribute('fill', 'none');
         arrowPath.setAttribute('stroke-dasharray', '6,4');
@@ -438,10 +439,10 @@ export const DmnViewer = ({
 
         // Hover effects
         container?.addEventListener('mouseenter', () => {
-          container.style.boxShadow = '0 5px 20px rgba(0,0,0,0.2)';
+          container.style.boxShadow = `0 5px 20px ${themeColors.shadows.dark}`;
         });
         container?.addEventListener('mouseleave', () => {
-          container.style.boxShadow = '0 3px 12px rgba(0,0,0,0.15)';
+          container.style.boxShadow = `0 3px 12px ${themeColors.shadows.medium}`;
         });
 
         // Drag handle hover
@@ -655,28 +656,28 @@ export const DmnViewer = ({
             display: 'flex',
             gap: '4px',
             padding: '8px',
-            background: '#f8f8f8',
-            borderBottom: '1px solid #ccc',
+            background: themeColors.bgLight,
+            borderBottom: `1px solid ${themeColors.borderDark}`,
           },
           '& .dmn-view': {
             padding: '6px 12px',
-            border: '1px solid #ccc',
+            border: `1px solid ${themeColors.borderDark}`,
             borderRadius: '4px',
-            background: '#fff',
+            background: themeColors.bgWhite,
             cursor: 'pointer',
             fontSize: '13px',
             fontWeight: 500,
-            color: '#333',
+            color: themeColors.textPrimary,
             transition: 'all 0.2s ease',
             '&:hover': {
-              background: '#e8f4fc',
-              borderColor: '#52b0ec',
+              background: themeColors.dmn.selectionBg,
+              borderColor: themeColors.dmn.selectionBorder,
             },
           },
           '& .dmn-view.active': {
-            background: '#52b0ec',
-            borderColor: '#52b0ec',
-            color: '#fff',
+            background: themeColors.dmn.selectionBorder,
+            borderColor: themeColors.dmn.selectionBorder,
+            color: themeColors.bgWhite,
           },
           // DRD container
           '& .dmn-drd-container': {

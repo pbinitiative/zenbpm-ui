@@ -144,8 +144,8 @@ export const DecisionInstanceDetailPage = () => {
               display: 'block',
               px: 1,
               py: 0.5,
-              bgcolor: '#e8f5e9',
-              color: '#2e7d32',
+              bgcolor: 'success.light',
+              color: 'success.dark',
               borderRadius: 1,
               fontSize: '0.75rem',
               fontFamily: '"SF Mono", Monaco, monospace',
@@ -228,7 +228,7 @@ export const DecisionInstanceDetailPage = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: '#f5f5f5',
+        bgcolor: 'grey.100',
         borderRadius: 1,
       }}
     >
@@ -258,7 +258,8 @@ export const DecisionInstanceDetailPage = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid #e0e0e0',
+          borderBottom: 1,
+          borderColor: 'divider',
         }}>
           <Typography variant="h6" sx={{ fontSize: '1rem' }}>
             Final Output
@@ -272,7 +273,7 @@ export const DecisionInstanceDetailPage = () => {
             component="pre"
             sx={{
               p: 2,
-              bgcolor: '#f5f5f5',
+              bgcolor: 'grey.100',
               borderRadius: 1,
               overflow: 'auto',
               fontSize: '0.875rem',
@@ -298,7 +299,8 @@ export const DecisionInstanceDetailPage = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              borderBottom: '1px solid #e0e0e0',
+              borderBottom: 1,
+              borderColor: 'divider',
             }}>
               <Typography variant="h6" sx={{ fontSize: '1rem' }}>
                 {getDecisionName(dialogData.decisionId)}
@@ -313,19 +315,19 @@ export const DecisionInstanceDetailPage = () => {
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Box sx={{
                     p: 2,
-                    bgcolor: '#e3f2fd',
+                    bgcolor: 'info.light',
                     borderRadius: 2,
                     height: '100%',
                   }}>
                     <Typography variant="subtitle2" sx={{
                       fontWeight: 600,
-                      color: '#1976d2',
+                      color: 'info.dark',
                       mb: 1,
                       display: 'flex',
                       alignItems: 'center',
                       gap: 1,
                     }}>
-                      <Box sx={{ width: 12, height: 12, bgcolor: '#1976d2', borderRadius: '2px' }} />
+                      <Box sx={{ width: 12, height: 12, bgcolor: 'info.main', borderRadius: '2px' }} />
                       Inputs
                     </Typography>
                     {dialogData.inputs.length > 0 ? (
@@ -360,19 +362,19 @@ export const DecisionInstanceDetailPage = () => {
                 <Grid size={{ xs: 12, md: 6 }}>
                   <Box sx={{
                     p: 2,
-                    bgcolor: '#e8f5e9',
+                    bgcolor: 'success.light',
                     borderRadius: 2,
                     height: '100%',
                   }}>
                     <Typography variant="subtitle2" sx={{
                       fontWeight: 600,
-                      color: '#4caf50',
+                      color: 'success.dark',
                       mb: 1,
                       display: 'flex',
                       alignItems: 'center',
                       gap: 1,
                     }}>
-                      <Box sx={{ width: 12, height: 12, bgcolor: '#4caf50', borderRadius: '2px' }} />
+                      <Box sx={{ width: 12, height: 12, bgcolor: 'success.main', borderRadius: '2px' }} />
                       Outputs
                     </Typography>
                     {dialogData.outputs.length > 0 ? (
