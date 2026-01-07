@@ -79,17 +79,7 @@ export interface PartitionedTableProps<T extends object> {
 
 // Helper function to generate consistent colors for partitions
 function getPartitionColor(partitionId: number): string {
-  const colors = [
-    '#5C6BC0', // Indigo
-    '#26A69A', // Teal
-    '#7E57C2', // Deep Purple
-    '#42A5F5', // Blue
-    '#66BB6A', // Green
-    '#FFA726', // Orange
-    '#EC407A', // Pink
-    '#8D6E63', // Brown
-  ];
-  return colors[(partitionId - 1) % colors.length];
+  return themeColors.partitionColors[(partitionId - 1) % themeColors.partitionColors.length];
 }
 
 export const PartitionedTable = <T extends object>({
@@ -228,7 +218,7 @@ export const PartitionedTable = <T extends object>({
           width: '100%',
           overflow: 'hidden',
           borderRadius: '12px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+          boxShadow: `0 1px 3px ${themeColors.shadows.light}`,
         }}
       >
         {/* Toolbar row */}

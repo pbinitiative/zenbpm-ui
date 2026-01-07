@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState, useImperativeHandle, forwardRef } from 'react';
 import { Box, CircularProgress } from '@mui/material';
 import DmnModeler from 'dmn-js/lib/Modeler';
+import { themeColors } from '@base/theme';
 import {
   DmnPropertiesPanelModule,
   DmnPropertiesProviderModule,
@@ -320,28 +321,28 @@ export const DmnEditor = forwardRef<DmnEditorRef, DmnEditorProps>(
                 display: 'flex',
                 gap: '4px',
                 padding: '8px',
-                background: '#f8f8f8',
-                borderBottom: '1px solid #ccc',
+                background: themeColors.bgLight,
+                borderBottom: `1px solid ${themeColors.borderDark}`,
               },
               '& .dmn-view': {
                 padding: '6px 12px',
-                border: '1px solid #ccc',
+                border: `1px solid ${themeColors.borderDark}`,
                 borderRadius: '4px',
-                background: '#fff',
+                background: themeColors.bgWhite,
                 cursor: 'pointer',
                 fontSize: '13px',
                 fontWeight: 500,
-                color: '#333',
+                color: themeColors.textPrimary,
                 transition: 'all 0.2s ease',
                 '&:hover': {
-                  background: '#e8f4fc',
-                  borderColor: '#52b0ec',
+                  background: themeColors.dmn.selectionBg,
+                  borderColor: themeColors.dmn.selectionBorder,
                 },
               },
               '& .dmn-view.active': {
-                background: '#52b0ec',
-                borderColor: '#52b0ec',
-                color: '#fff',
+                background: themeColors.dmn.selectionBorder,
+                borderColor: themeColors.dmn.selectionBorder,
+                color: themeColors.bgWhite,
               },
               '& .bjs-powered-by': {
                 display: 'none',

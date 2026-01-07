@@ -20,7 +20,7 @@ export const DecisionDataOverlay = ({ inputs, outputs }: DecisionDataOverlayProp
     >
       {hasInputs && <OverlaySection type="input" variables={inputs} />}
       {hasInputs && hasOutputs && (
-        <Divider sx={{ borderColor: '#e0e0e0' }} />
+        <Divider sx={{ borderColor: 'divider' }} />
       )}
       {hasOutputs && <OverlaySection type="output" variables={outputs} />}
     </Box>

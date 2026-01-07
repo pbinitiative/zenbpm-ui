@@ -76,6 +76,79 @@ const colors = {
     selectionGlowLight: 'rgba(16, 188, 105, 0.5)',
     hoverGlow: 'rgba(16, 188, 105, 0.8)',
   },
+
+  // DMN Viewer colors
+  dmn: {
+    highlightBg: '#c8e6c9',           // Row/cell highlight
+    panelBg: '#ffffff',               // Panel background
+    panelBgGradient: '#f8f9fa',       // Panel gradient end
+    borderStroke: '#9e9e9e',          // Border/arrow strokes
+    handleBg: '#666666',              // Drag handle
+    selectionBg: '#e8f4fc',           // Selected decision
+    selectionBorder: '#52b0ec',       // Selection border
+  },
+
+  // XML Editor syntax highlighting
+  xmlEditor: {
+    background: '#ffffff',
+    gutterBg: '#f5f5f5',
+    gutterBorder: '#e0e0e0',
+    gutterText: '#999999',
+    lineHighlight: '#f0f7ff',
+    selectionBg: '#e8f0fe',
+    // Syntax colors
+    tagName: '#22863a',
+    attributeName: '#6f42c1',
+    attributeValue: '#032f62',
+    string: '#032f62',
+    comment: '#6a737d',
+    processingInstruction: '#005cc5',
+    documentMeta: '#005cc5',
+    angleBracket: '#d73a49',
+    operator: '#24292e',
+    character: '#e36209',
+    content: '#24292e',
+    invalid: '#cb2431',
+  },
+
+  // Partition colors for tables
+  partitionColors: [
+    '#5C6BC0',  // Indigo
+    '#26A69A',  // Teal
+    '#7E57C2',  // Deep Purple
+    '#42A5F5',  // Blue
+    '#66BB6A',  // Green
+    '#FFA726',  // Orange
+    '#EC407A',  // Pink
+    '#8D6E63',  // Brown
+  ],
+
+  // Design page illustration colors
+  design: {
+    // BPMN illustration
+    bpmnPrimary: '#1976d2',
+    bpmnSecondary: '#666666',
+    bpmnBg: '#e3f2fd',
+    // DMN illustration
+    dmnPrimary: '#f57c00',
+    dmnSecondary: '#666666',
+    dmnBg: '#fff3e0',
+    // Decision illustration
+    decisionRed: '#d32f2f',
+    decisionPurple: '#7b1fa2',
+    decisionPurpleBg: '#f3e5f5',
+    decisionPurpleLight: '#e1bee7',
+    // Common
+    iconGray: '#666666',
+    checkGreen: '#4caf50',
+  },
+
+  // Shadows
+  shadows: {
+    light: 'rgba(0, 0, 0, 0.1)',
+    medium: 'rgba(0, 0, 0, 0.15)',
+    dark: 'rgba(0, 0, 0, 0.2)',
+  },
 };
 
 export const theme = createTheme({

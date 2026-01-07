@@ -131,7 +131,7 @@ export const DecisionDefinitionDetailPage = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: '#f5f5f5',
+        bgcolor: 'grey.100',
         borderRadius: 1,
       }}
     >

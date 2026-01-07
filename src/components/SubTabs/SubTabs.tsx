@@ -56,7 +56,7 @@ export const SubTabs = ({ tabs, value, onChange, actions }: SubTabsProps) => {
               border: 'none',
               bgcolor: isActive ? themeColors.bgWhite : 'transparent',
               color: isActive ? themeColors.textPrimary : themeColors.textSecondary,
-              boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              boxShadow: isActive ? `0 1px 3px ${themeColors.shadows.light}` : 'none',
               '&:hover': {
                 bgcolor: isActive ? themeColors.bgWhite : 'transparent',
                 color: themeColors.textPrimary,

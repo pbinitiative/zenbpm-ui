@@ -445,7 +445,7 @@ export const BpmnDiagram = ({
             height: '24px',
             color: 'white',
             cursor: 'pointer',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            boxShadow: `0 2px 4px ${themeColors.shadows.dark}`,
           },
           '& .running-badge': {
             backgroundColor: themeColors.bpmn.runningBadge,

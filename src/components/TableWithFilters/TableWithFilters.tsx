@@ -304,7 +304,7 @@ export const TableWithFilters = <T extends object>({
     () =>
       hideableFiltersContent ? (
         <Collapse in={showHideableFilters}>
-          <Box sx={{ p: 2, borderBottom: '1px solid #f0f0f0' }}>{hideableFiltersContent}</Box>
+          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>{hideableFiltersContent}</Box>
         </Collapse>
       ) : null,
     [hideableFiltersContent, showHideableFilters]
@@ -385,7 +385,7 @@ export const TableWithFilters = <T extends object>({
             filters.length > 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                 {filters.some((f) => f.zone === 'exposed_second_line') && (
-                  <Box sx={{ p: 2, borderBottom: '1px solid #f0f0f0' }}>{secondLineContent}</Box>
+                  <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>{secondLineContent}</Box>
                 )}
                 {hideableFiltersPanel}
                 {activeFilterBadgesPanel}

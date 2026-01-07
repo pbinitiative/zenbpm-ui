@@ -213,7 +213,7 @@ export const MetadataPanel = ({
               label={`v${version}`}
               size="small"
               sx={{
-                bgcolor: '#e8eaf6',
+                bgcolor: 'grey.100',
                 color: 'primary.main',
                 fontWeight: 600,
                 fontSize: '0.75rem',

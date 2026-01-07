@@ -14,6 +14,7 @@ import {
   Typography,
 } from '@mui/material';
 import { TablePagination } from '@components/TablePagination';
+import { themeColors } from '@base/theme';
 
 export interface Column<T> {
   id: keyof T | string;
@@ -119,7 +120,7 @@ export const DataTable = <T extends object>({
         width: '100%',
         overflow: 'hidden',
         borderRadius: '12px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+        boxShadow: `0 1px 3px ${themeColors.shadows.light}`,
       }}
       data-testid={testId}
     >
@@ -130,7 +131,8 @@ export const DataTable = <T extends object>({
             p: 2,
             display: 'flex',
             alignItems: 'center',
-            borderBottom: '1px solid #f0f0f0',
+            borderBottom: 1,
+            borderColor: 'divider',
           }}
         >
           {toolbar}

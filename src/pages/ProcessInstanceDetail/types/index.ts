@@ -76,20 +76,22 @@ export interface Variable {
   scope?: 'process' | 'local';
 }
 
-// Helper type for state colors
+import { themeColors } from '@base/theme';
+
+// Helper type for state colors - using theme stateBadge colors
 export const STATE_COLORS: Record<ProcessInstanceState, string> = {
-  active: '#26A69A',
-  completed: '#66BB6A',
-  terminated: '#EF5350',
-  failed: '#EF5350',
+  active: themeColors.stateBadge.active,
+  completed: themeColors.stateBadge.completed,
+  terminated: themeColors.stateBadge.terminated,
+  failed: themeColors.stateBadge.failed,
 };
 
 export const JOB_STATE_COLORS: Record<JobState, string> = {
-  activatable: '#42A5F5',
-  activated: '#FFA726',
-  active: '#26A69A',
-  completed: '#66BB6A',
-  failed: '#EF5350',
-  canceled: '#9E9E9E',
-  terminated: '#9E9E9E',
+  activatable: themeColors.stateBadge.created,
+  activated: themeColors.stateBadge.terminated,
+  active: themeColors.stateBadge.active,
+  completed: themeColors.stateBadge.completed,
+  failed: themeColors.stateBadge.failed,
+  canceled: themeColors.stateBadge.completed,
+  terminated: themeColors.stateBadge.completed,
 };
