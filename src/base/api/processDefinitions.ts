@@ -7,7 +7,10 @@ import type {
   ProcessDefinitionDetail,
   ProcessDefinitionSimple,
   ProcessDefinitionsPage,
+  CreateProcessDefinitionBody
 } from '@base/openapi';
+
+import { createProcessDefinition as createProcessDefinitionApi } from '@base/openapi';
 
 export type { ProcessDefinitionDetail, ProcessDefinitionSimple, ProcessDefinitionsPage };
 
@@ -82,8 +85,18 @@ export const getProcessDefinition = async (
  * Deploy a process definition
  */
 export const createProcessDefinition = async (xml: string): Promise<ProcessDefinitionDetail> => {
-  const response = await AXIOS_INSTANCE.post<ProcessDefinitionDetail>('/process-definitions', xml, {
-    headers: { 'Content-Type': 'application/xml' },
-  });
-  return response.data;
+  // Convert XML string to Blob
+  const blob = new Blob([xml], { type: 'application/xml' });
+  
+  // Create request body for the generated client
+  const requestBody: CreateProcessDefinitionBody = {
+    resource: blob
+  };
+
+  // Call the generated client
+  const response = await createProcessDefinitionApi(requestBody);
+  const processDefinitionKey  = response.processDefinitionKey;
+  
+  const detailResponse = await getProcessDefinition(processDefinitionKey);
+  return detailResponse;
 };
