@@ -17,6 +17,7 @@ import {
   ToggleButtonGroup,
 } from '@mui/material';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import { themeColors } from '@base/theme';
 
 export interface DateRangeValue {
   from?: string;
@@ -274,7 +275,7 @@ export const DateRangePicker = ({
           justifyContent: 'flex-start',
           textTransform: 'none',
           color: 'text.primary',
-          borderColor: 'rgba(0, 0, 0, 0.23)',
+          borderColor: themeColors.overlay.inputBorder,
           backgroundColor: 'background.paper',
           minWidth: 280,
           height: 40,
