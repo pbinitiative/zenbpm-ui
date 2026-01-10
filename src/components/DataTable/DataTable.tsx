@@ -149,7 +149,7 @@ export const DataTable = <T extends object>({
               left: 0,
               right: 0,
               bottom: 0,
-              bgcolor: 'rgba(255, 255, 255, 0.7)',
+              bgcolor: themeColors.overlay.loading,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
