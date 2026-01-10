@@ -143,11 +143,17 @@ const colors = {
     checkGreen: '#4caf50',
   },
 
-  // Shadows
+  // Shadows and overlays
   shadows: {
     light: 'rgba(0, 0, 0, 0.1)',
     medium: 'rgba(0, 0, 0, 0.15)',
     dark: 'rgba(0, 0, 0, 0.2)',
+  },
+
+  // Overlay colors
+  overlay: {
+    loading: 'rgba(255, 255, 255, 0.7)',    // Semi-transparent white for loading states
+    inputBorder: 'rgba(0, 0, 0, 0.23)',     // MUI standard outlined input border
   },
 };
 
