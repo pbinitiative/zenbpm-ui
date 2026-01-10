@@ -124,33 +124,49 @@ export const schemas = {
     },
   },
 
-  // Process Definition Statistics Map - returns a map of processDefinitionKey -> statistics
-  ProcessDefinitionStatisticsMap: {
+  // Process Definition Statistics Page - paginated response with statistics for each definition
+  // Note: Keys can be strings (after json-bigint parsing) or numbers
+  ProcessDefinitionStatisticsPage: {
     type: 'object',
-    additionalProperties: {
-      type: 'object',
-      required: ['instanceCounts', 'incidentCounts'],
-      properties: {
-        instanceCounts: {
+    required: ['items', 'page', 'size', 'count', 'totalCount'],
+    properties: {
+      items: {
+        type: 'array',
+        items: {
           type: 'object',
-          required: ['total', 'active', 'completed', 'terminated', 'failed'],
+          required: ['key', 'version', 'bpmnProcessId', 'instanceCounts', 'incidentCounts'],
           properties: {
-            total: { type: 'integer' },
-            active: { type: 'integer' },
-            completed: { type: 'integer' },
-            terminated: { type: 'integer' },
-            failed: { type: 'integer' },
-          },
-        },
-        incidentCounts: {
-          type: 'object',
-          required: ['total', 'unresolved'],
-          properties: {
-            total: { type: 'integer' },
-            unresolved: { type: 'integer' },
+            key: { type: ['number', 'string'] },
+            version: { type: 'number' },
+            bpmnProcessId: { type: 'string' },
+            name: { type: 'string' },
+            bpmnResourceName: { type: 'string' },
+            instanceCounts: {
+              type: 'object',
+              required: ['total', 'active', 'completed', 'terminated', 'failed'],
+              properties: {
+                total: { type: 'number' },
+                active: { type: 'number' },
+                completed: { type: 'number' },
+                terminated: { type: 'number' },
+                failed: { type: 'number' },
+              },
+            },
+            incidentCounts: {
+              type: 'object',
+              required: ['total', 'unresolved'],
+              properties: {
+                total: { type: 'number' },
+                unresolved: { type: 'number' },
+              },
+            },
           },
         },
       },
+      page: { type: 'number' },
+      size: { type: 'number' },
+      count: { type: 'number' },
+      totalCount: { type: 'number' },
     },
   },
 
@@ -394,6 +410,48 @@ export const schemas = {
     },
   },
 
+  // Global Incidents Partition Page - partitioned response for global incidents list
+  IncidentPartitionPage: {
+    type: 'object',
+    required: ['partitions', 'page', 'size', 'count', 'totalCount'],
+    properties: {
+      partitions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['partition', 'items'],
+          properties: {
+            partition: { type: 'integer' },
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['key', 'elementInstanceKey', 'elementId', 'processInstanceKey', 'message', 'createdAt', 'executionToken'],
+                properties: {
+                  key: { type: 'string', pattern: '^\\d{15,25}$' },
+                  elementInstanceKey: { type: 'string', pattern: '^\\d{15,25}$' },
+                  elementId: { type: 'string' },
+                  processInstanceKey: { type: 'string', pattern: '^\\d{15,25}$' },
+                  processDefinitionKey: { type: 'string', pattern: '^\\d{15,25}$' },
+                  bpmnProcessId: { type: 'string' },
+                  errorType: { type: 'string' },
+                  message: { type: 'string' },
+                  createdAt: { type: 'string', format: 'date-time' },
+                  resolvedAt: { type: 'string', format: 'date-time' },
+                  executionToken: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      },
+      page: { type: 'integer' },
+      size: { type: 'integer' },
+      count: { type: 'integer' },
+      totalCount: { type: 'integer' },
+    },
+  },
+
   // History schemas
   FlowElementHistory: {
     type: 'object',
@@ -566,7 +624,7 @@ export const schemas = {
 export const endpointSchemas: Record<string, { request?: string; response?: string }> = {
   // Process Definitions
   'GET /v1/process-definitions': { response: 'ProcessDefinitionsPage' },
-  'GET /v1/process-definitions/statistics': { response: 'ProcessDefinitionStatisticsMap' },
+  'GET /v1/process-definitions/statistics': { response: 'ProcessDefinitionStatisticsPage' },
   'GET /v1/process-definitions/:key': { response: 'ProcessDefinitionDetail' },
   'GET /v1/process-definitions/:key/statistics': { response: 'ElementStatistics' },
   'POST /v1/process-definitions': { response: 'ProcessDefinitionSimple' },
@@ -584,6 +642,7 @@ export const endpointSchemas: Record<string, { request?: string; response?: stri
   'POST /v1/jobs': { request: 'CompleteJobRequest' },
 
   // Incidents
+  'GET /v1/incidents': { response: 'IncidentPartitionPage' },
   'POST /v1/incidents/:key/resolve': {},
 
   // Decision Definitions

@@ -22,7 +22,12 @@ import { JOB_STATE_COLORS } from '../types';
 import { CompleteJobDialog } from '../modals/CompleteJobDialog';
 import { AssignJobDialog } from '../modals/AssignJobDialog';
 import { UpdateRetriesDialog } from '../modals/UpdateRetriesDialog';
-import { completeJob, assignJob, updateJobRetries } from '@base/api';
+import { completeJobByKey, assignJob, customInstance } from '@base/openapi';
+
+// updateJobRetries is not in generated API, use direct axios call
+const updateJobRetries = async (jobKey: number, retries: number): Promise<void> => {
+  await customInstance({ url: `/jobs/${jobKey}/retries`, method: 'POST', data: { retries } });
+};
 
 interface JobsTabProps {
   jobs: Job[];
@@ -61,7 +66,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
 
   const handleCompleteJob = useCallback(async (jobKey: number, variables: Record<string, unknown>) => {
     try {
-      await completeJob(jobKey, variables);
+      await completeJobByKey(jobKey, { variables });
       onShowNotification(t('processInstance:messages.jobCompleted'), 'success');
       await onRefetch();
     } catch {
@@ -72,7 +77,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
 
   const handleAssignJob = useCallback(async (jobKey: number, assignee: string) => {
     try {
-      await assignJob(jobKey, assignee);
+      await assignJob(jobKey, { assignee });
       onShowNotification(t('processInstance:messages.jobAssigned'), 'success');
       await onRefetch();
     } catch {

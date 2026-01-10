@@ -5,10 +5,13 @@ import RuleIcon from '@mui/icons-material/Rule';
 import WarningIcon from '@mui/icons-material/Warning';
 import { useQuery } from '@tanstack/react-query';
 import { themeColors } from '@base/theme';
-import { getProcessDefinitions } from '@base/api/processDefinitions';
-import { getProcessInstances } from '@base/api/processInstances';
-import { getGlobalIncidents } from '@base/api/incidents';
-import { getDmnResourceDefinitions, getDecisionInstances } from '@base/openapi';
+import {
+  getProcessDefinitions,
+  getProcessInstances,
+  getGlobalIncidents,
+  getDmnResourceDefinitions,
+  getDecisionInstances,
+} from '@base/openapi';
 import { QuickAccessCard, type QuickAccessCardProps } from './components/QuickAccessCard';
 
 export const HomePage = () => {
@@ -37,7 +40,7 @@ export const HomePage = () => {
 
   const { data: incidents, isLoading: isLoadingIncidents } = useQuery({
     queryKey: ['incidents', 'unresolved', 'count'],
-    queryFn: () => getGlobalIncidents({ size: 1, resolved: false }),
+    queryFn: () => getGlobalIncidents({ size: 1, state: 'unresolved' }),
   });
 
   const quickAccessItems: QuickAccessCardProps[] = [

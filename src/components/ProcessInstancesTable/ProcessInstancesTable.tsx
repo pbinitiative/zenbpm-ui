@@ -13,7 +13,7 @@ import {
   getProcessInstances,
   getProcessDefinitions,
   type ProcessInstance as ApiProcessInstance,
-} from '@base/api';
+} from '@base/openapi';
 
 // Process instance type for display (extends API type with UI-specific fields)
 export interface ProcessInstance {

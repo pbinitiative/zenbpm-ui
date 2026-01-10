@@ -11,17 +11,19 @@ import {
   type FilterValues,
 } from '@components/TableWithFilters';
 import type { Column } from '@components/DataTable';
-import type { ProcessDefinitionSimple } from '@base/openapi';
 import {
   getProcessDefinitions,
-  getProcessDefinitionStatisticsMap,
-  type ProcessDefinitionCounts,
-} from '@base/api';
+  getProcessDefinitionStatistics,
+  type ProcessDefinitionSimple,
+  type InstanceCounts,
+  type IncidentCounts,
+  type GetProcessDefinitionsParams,
+} from '@base/openapi';
 
 // Combined type for display: definition data + statistics
 interface ProcessDefinitionWithStats extends ProcessDefinitionSimple {
-  instanceCounts: ProcessDefinitionCounts['instanceCounts'];
-  incidentCounts: ProcessDefinitionCounts['incidentCounts'];
+  instanceCounts: InstanceCounts;
+  incidentCounts: IncidentCounts;
 }
 
 interface ProcessDefinitionsTabProps {
@@ -49,14 +51,7 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
 
     try {
       // Build params for process definitions endpoint
-      const apiParams: {
-        page?: number;
-        size?: number;
-        onlyLatest?: boolean;
-        search?: string;
-        sortBy?: string;
-        sortOrder?: 'asc' | 'desc';
-      } = {
+      const apiParams: GetProcessDefinitionsParams = {
         page: 1,
         size: 100,
       };
@@ -66,17 +61,14 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
         apiParams.onlyLatest = true;
       }
 
-      // Add search filter
-      if (filterValues.search && typeof filterValues.search === 'string') {
-        apiParams.search = filterValues.search;
-      }
+      // Note: search filter not supported by backend API yet
 
       // Add sorting - map column ids to API sort fields
       if (sortBy) {
-        const sortMapping: Record<string, string> = {
+        const sortMapping: Record<string, GetProcessDefinitionsParams['sortBy']> = {
           bpmnProcessId: 'bpmnProcessId',
-          bpmnProcessName: 'bpmnProcessName',
-          name: 'bpmnProcessName',
+          bpmnProcessName: 'name',
+          name: 'name',
           version: 'version',
         };
         const mappedSortBy = sortMapping[sortBy];
@@ -90,13 +82,21 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
       const definitionsData = await getProcessDefinitions(apiParams);
       const definitions = definitionsData.items || [];
 
-      // 2. Fetch statistics for those definitions
-      const keys = definitions.map((d) => String(d.key));
-      const statisticsMap = keys.length > 0 ? await getProcessDefinitionStatisticsMap(keys) : {};
+      // 2. Fetch statistics (all statistics, will filter by keys client-side)
+      const statisticsData = definitions.length > 0 ? await getProcessDefinitionStatistics({ size: 100, onlyLatest: apiParams.onlyLatest }) : { items: [] };
+
+      // Build a map from key to statistics
+      const statisticsMap = new Map<number, { instanceCounts: InstanceCounts; incidentCounts: IncidentCounts }>();
+      for (const stat of statisticsData.items || []) {
+        statisticsMap.set(stat.key, {
+          instanceCounts: stat.instanceCounts,
+          incidentCounts: stat.incidentCounts,
+        });
+      }
 
       // 3. Merge definitions with statistics
       const merged: ProcessDefinitionWithStats[] = definitions.map((def) => {
-        const stats = statisticsMap[def.key] || {
+        const stats = statisticsMap.get(def.key) || {
           instanceCounts: { total: 0, active: 0, completed: 0, terminated: 0, failed: 0 },
           incidentCounts: { total: 0, unresolved: 0 },
         };

@@ -7,7 +7,7 @@
   "scripts": {
     "prebuild": "orval",
     "predev": "pnpm prebuild",
-    "dev": "vite --mode mocks",
+    "dev": "vite",
     "dev:mocks": "pnpm dev --mode mocks",
     "dev:live": "pnpm dev --mode live",
     "build": "tsc -b && vite build",

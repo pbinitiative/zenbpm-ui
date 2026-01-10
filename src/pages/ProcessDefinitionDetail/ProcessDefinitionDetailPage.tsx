@@ -20,8 +20,11 @@ import { DiagramDetailLayout, MetadataPanel } from '@components/DiagramDetailLay
 import type { MetadataField, VersionInfo } from '@components/DiagramDetailLayout';
 import { StartInstanceDialog } from '@components/StartInstanceDialog';
 import { ProcessInstancesTable } from '@components/ProcessInstancesTable';
-import { getProcessDefinition, getProcessDefinitions } from '@base/api';
-import { useGetProcessDefinitionElementStatistics } from '@base/openapi';
+import {
+  getProcessDefinition,
+  getProcessDefinitions,
+  useGetProcessDefinitionElementStatistics,
+} from '@base/openapi';
 
 // Process definition type
 interface ProcessDefinition {
@@ -119,7 +122,9 @@ export const ProcessDefinitionDetailPage = () => {
 
       try {
         // Fetch process definition
-        const data = await getProcessDefinition(processDefinitionKey);
+        // Note: Cast to unknown then number to preserve precision for large int64 keys
+        // The URL interpolation works correctly with strings, avoiding JS number precision loss
+        const data = await getProcessDefinition((processDefinitionKey as unknown) as number);
         setProcessDefinition(data as ProcessDefinition);
 
         // Extract activity IDs from BPMN data

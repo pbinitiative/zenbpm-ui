@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import FormatAlignLeftIcon from '@mui/icons-material/FormatAlignLeft';
 import CloseIcon from '@mui/icons-material/Close';
-import { createProcessInstance } from '@base/api';
+import { createProcessInstance } from '@base/openapi';
 
 export interface StartInstanceDialogProps {
   /** Whether the dialog is open */
@@ -92,7 +92,10 @@ export const StartInstanceDialog = ({
     setError(null);
 
     try {
-      const data = await createProcessInstance(processDefinitionKey, JSON.parse(variables));
+      const data = await createProcessInstance({
+        processDefinitionKey,
+        variables: JSON.parse(variables),
+      });
       onSuccess?.(data.key);
       onClose();
     } catch (e) {

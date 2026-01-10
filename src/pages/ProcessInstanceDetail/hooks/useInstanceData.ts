@@ -10,9 +10,9 @@ import {
   getProcessInstance,
   getProcessDefinition,
   getProcessInstanceJobs,
-  getProcessInstanceHistory,
-  getProcessInstanceIncidents,
-} from '@base/api';
+  getHistory,
+  getIncidents,
+} from '@base/openapi';
 
 interface UseInstanceDataResult {
   processInstance: ProcessInstance | null;
@@ -40,7 +40,7 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
   const fetchJobs = useCallback(async () => {
     if (!processInstanceKey) return;
     try {
-      const data = await getProcessInstanceJobs(processInstanceKey, { page: 1, size: 100 });
+      const data = await getProcessInstanceJobs((processInstanceKey as unknown) as number, { page: 1, size: 100 });
       setJobs((data.items || []) as Job[]);
     } catch (err) {
       console.error('Failed to fetch jobs:', err);
@@ -51,7 +51,7 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
   const fetchIncidents = useCallback(async () => {
     if (!processInstanceKey) return;
     try {
-      const data = await getProcessInstanceIncidents(processInstanceKey, { page: 1, size: 100 });
+      const data = await getIncidents((processInstanceKey as unknown) as number, { page: 1, size: 100 });
       setIncidents((data.items || []) as Incident[]);
     } catch (err) {
       console.error('Failed to fetch incidents:', err);
@@ -62,7 +62,7 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
   const fetchVariables = useCallback(async () => {
     if (!processInstanceKey) return;
     try {
-      const data = await getProcessInstance(processInstanceKey);
+      const data = await getProcessInstance((processInstanceKey as unknown) as number);
       setProcessInstance(data as unknown as ProcessInstance);
     } catch (err) {
       console.error('Failed to fetch process instance:', err);
@@ -79,7 +79,8 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
 
       try {
         // Fetch process instance
-        const instanceData = await getProcessInstance(processInstanceKey);
+        // Cast to unknown then number to preserve precision for large int64 keys
+        const instanceData = await getProcessInstance((processInstanceKey as unknown) as number);
         setProcessInstance(instanceData as unknown as ProcessInstance);
 
         // Fetch process definition for BPMN diagram
@@ -92,7 +93,7 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
 
         // Fetch jobs
         try {
-          const jobsData = await getProcessInstanceJobs(processInstanceKey, { page: 1, size: 100 });
+          const jobsData = await getProcessInstanceJobs((processInstanceKey as unknown) as number, { page: 1, size: 100 });
           setJobs((jobsData.items || []) as Job[]);
         } catch {
           // Jobs fetch failure is not critical
@@ -100,7 +101,7 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
 
         // Fetch history
         try {
-          const historyData = await getProcessInstanceHistory(processInstanceKey, { page: 1, size: 100 });
+          const historyData = await getHistory((processInstanceKey as unknown) as number, { page: 1, size: 100 });
           setHistory((historyData.items || []) as FlowElementHistory[]);
         } catch {
           // History fetch failure is not critical
@@ -108,7 +109,7 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
 
         // Fetch incidents
         try {
-          const incidentsData = await getProcessInstanceIncidents(processInstanceKey, { page: 1, size: 100 });
+          const incidentsData = await getIncidents((processInstanceKey as unknown) as number, { page: 1, size: 100 });
           setIncidents((incidentsData.items || []) as Incident[]);
         } catch {
           // Incidents fetch failure is not critical

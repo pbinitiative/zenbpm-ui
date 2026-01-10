@@ -17,7 +17,7 @@ import CodeIcon from '@mui/icons-material/Code';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import { BpmnEditor, type BpmnEditorRef } from '@components/BpmnEditor';
 import { XmlEditor } from '@components/XmlEditor';
-import { getProcessDefinition, createProcessDefinition } from '@base/api';
+import { getProcessDefinition, createProcessDefinition } from '@base/openapi';
 
 type EditorMode = 'diagram' | 'xml';
 
@@ -44,7 +44,8 @@ export const ProcessDesignerPage = () => {
     const loadDefinition = async () => {
       setLoadingDefinition(true);
       try {
-        const data = await getProcessDefinition(processDefinitionKey);
+        // Cast to unknown then number to preserve precision for large int64 keys
+        const data = await getProcessDefinition((processDefinitionKey as unknown) as number);
 
         // bpmnData may be base64 encoded
         let xml = data.bpmnData || '';

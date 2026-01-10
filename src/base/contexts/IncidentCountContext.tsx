@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { IncidentCountContext } from './incidentCountContextDef';
-import { getGlobalIncidents } from '@base/api';
+import { getGlobalIncidents } from '@base/openapi';
 
 export type { IncidentCountContextType } from './incidentCountContextDef';
 export { IncidentCountContext } from './incidentCountContextDef';
@@ -18,7 +18,7 @@ export const IncidentCountProvider = ({ children }: IncidentCountProviderProps) 
 
   const fetchIncidentCount = useCallback(async () => {
     try {
-      const data = await getGlobalIncidents({ resolved: false, size: 1 });
+      const data = await getGlobalIncidents({ state: 'unresolved', size: 1 });
       if (isMountedRef.current) {
         setUnresolvedCount(data.totalCount ?? 0);
       }

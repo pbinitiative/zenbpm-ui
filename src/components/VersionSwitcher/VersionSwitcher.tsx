@@ -9,7 +9,7 @@ import {
   Typography,
   CircularProgress,
 } from '@mui/material';
-import { getProcessDefinitions } from '@base/api';
+import { getProcessDefinitions } from '@base/openapi';
 import { themeColors } from '@base/theme';
 
 export interface VersionInfo {

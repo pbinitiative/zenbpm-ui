@@ -14,7 +14,7 @@ import { DataTable, type Column } from '@components/DataTable';
 import { AddVariableDialog } from '../modals/AddVariableDialog';
 import { EditVariableDialog } from '../modals/EditVariableDialog';
 import { DeleteVariableDialog } from '../modals/DeleteVariableDialog';
-import { updateProcessInstanceVariables, deleteProcessInstanceVariable } from '@base/api';
+import { updateProcessInstanceVariables, deleteProcessInstanceVariable } from '@base/openapi';
 
 interface Variable {
   name: string;
@@ -55,7 +55,7 @@ export const VariablesTab = ({
   const handleAddVariable = useCallback(async (name: string, value: unknown) => {
     try {
       const updatedVariables = { ...variables, [name]: value };
-      await updateProcessInstanceVariables(processInstanceKey, updatedVariables);
+      await updateProcessInstanceVariables((processInstanceKey as unknown) as number, { variables: updatedVariables });
       onShowNotification(t('processInstance:messages.variableAdded'), 'success');
       await onRefetch();
     } catch {
@@ -67,7 +67,7 @@ export const VariablesTab = ({
   const handleEditVariable = useCallback(async (name: string, value: unknown) => {
     try {
       const updatedVariables = { ...variables, [name]: value };
-      await updateProcessInstanceVariables(processInstanceKey, updatedVariables);
+      await updateProcessInstanceVariables((processInstanceKey as unknown) as number, { variables: updatedVariables });
       onShowNotification(t('processInstance:messages.variableUpdated'), 'success');
       await onRefetch();
     } catch {
@@ -78,7 +78,7 @@ export const VariablesTab = ({
 
   const handleDeleteVariable = useCallback(async (name: string) => {
     try {
-      await deleteProcessInstanceVariable(processInstanceKey, name);
+      await deleteProcessInstanceVariable((processInstanceKey as unknown) as number, name);
       onShowNotification(t('processInstance:messages.variableDeleted'), 'success');
       await onRefetch();
     } catch {

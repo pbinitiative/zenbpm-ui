@@ -16,7 +16,7 @@ import {
   resolveIncident,
   getProcessDefinitions,
   type Incident as ApiIncident,
-} from '@base/api';
+} from '@base/openapi';
 
 // Incident type extended with optional fields for display
 export interface Incident extends ApiIncident {
@@ -138,22 +138,14 @@ export const IncidentsTable = ({
 
       const responseData = await getGlobalIncidents(apiParams);
 
-      // Transform non-partitioned response to partitioned format
-      const itemsByPartition = new Map<number, Incident[]>();
-      responseData.items.forEach((item) => {
-        const partition = (item as Incident).partition ?? 1;
-        if (!itemsByPartition.has(partition)) {
-          itemsByPartition.set(partition, []);
-        }
-        itemsByPartition.get(partition)!.push(item as Incident);
-      });
-
-      const partitions = Array.from(itemsByPartition.entries())
-        .sort(([a], [b]) => a - b)
-        .map(([partition, items]) => ({ partition, items }));
+      // Response already has partitions structure
+      const partitions = responseData.partitions.map((p) => ({
+        partition: p.partition,
+        items: p.items as Incident[],
+      }));
 
       return {
-        partitions: partitions.length > 0 ? partitions : [{ partition: 1, items: responseData.items as Incident[] }],
+        partitions: partitions.length > 0 ? partitions : [{ partition: 1, items: [] }],
         page: responseData.page,
         size: responseData.size,
         count: responseData.count,

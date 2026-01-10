@@ -180,36 +180,64 @@ export const processDefinitionHandlers = [
   ),
 
   // GET /process-definitions/statistics - Get statistics for process definitions
-  // Accepts optional 'keys' param (comma-separated) to get statistics for specific definitions
-  // Returns a map of processDefinitionKey -> { instanceCounts, incidentCounts }
+  // Returns paginated items with ProcessDefinitionStatistics objects
   http.get(
     `${BASE_URL}/process-definitions/statistics`,
     withValidation(({ request }) => {
       const url = new URL(request.url);
-      const keysParam = url.searchParams.get('keys');
+      const page = parseInt(url.searchParams.get('page') || '1', 10);
+      const size = parseInt(url.searchParams.get('size') || '10', 10);
+      const onlyLatest = url.searchParams.get('onlyLatest') === 'true';
+      const bpmnProcessId = url.searchParams.get('bpmnProcessId');
 
-      // If keys are specified, return statistics for those specific definitions
-      // Otherwise, return statistics for all definitions
+      // Start with all definitions
       let definitionsToProcess = [...processDefinitions];
-      if (keysParam) {
-        const requestedKeys = keysParam.split(',').map((k) => k.trim());
-        definitionsToProcess = definitionsToProcess.filter((d) =>
-          requestedKeys.includes(d.key)
+
+      // Filter by bpmnProcessId if specified
+      if (bpmnProcessId) {
+        definitionsToProcess = definitionsToProcess.filter(
+          (d) => d.bpmnProcessId === bpmnProcessId
         );
       }
 
-      // Build map of key -> statistics
-      const statisticsMap: Record<string, { instanceCounts: ReturnType<typeof computeStatisticsForDefinition>['instanceCounts']; incidentCounts: ReturnType<typeof computeStatisticsForDefinition>['incidentCounts'] }> = {};
+      // Filter to only latest versions if specified
+      if (onlyLatest) {
+        const latestByProcessId = new Map<string, typeof processDefinitions[0]>();
+        definitionsToProcess.forEach((d) => {
+          const existing = latestByProcessId.get(d.bpmnProcessId);
+          if (!existing || d.version > existing.version) {
+            latestByProcessId.set(d.bpmnProcessId, d);
+          }
+        });
+        definitionsToProcess = Array.from(latestByProcessId.values());
+      }
 
-      definitionsToProcess.forEach((def) => {
+      // Build items array with statistics
+      const allItems = definitionsToProcess.map((def) => {
         const stats = computeStatisticsForDefinition(def.key);
-        statisticsMap[def.key] = {
+        return {
+          key: parseInt(def.key, 10),
+          version: def.version,
+          bpmnProcessId: def.bpmnProcessId,
+          name: def.bpmnProcessName,
+          bpmnResourceName: def.bpmnResourceName,
           instanceCounts: stats.instanceCounts,
           incidentCounts: stats.incidentCounts,
         };
       });
 
-      return HttpResponse.json(statisticsMap);
+      // Paginate
+      const startIndex = (page - 1) * size;
+      const endIndex = startIndex + size;
+      const paginatedItems = allItems.slice(startIndex, endIndex);
+
+      return HttpResponse.json({
+        items: paginatedItems,
+        page,
+        size,
+        count: paginatedItems.length,
+        totalCount: allItems.length,
+      });
     })
   ),
 

@@ -67,22 +67,20 @@ export const jobHandlers = [
     })
   ),
 
-  // POST /jobs - Complete a job
+  // POST /jobs/:jobKey/complete - Complete a job
   http.post(
-    `${BASE_URL}/jobs`,
-    withValidation(async ({ request }) => {
-      const body = (await request.json()) as {
-        jobKey: string;
-        variables?: Record<string, unknown>;
-      };
+    `${BASE_URL}/jobs/:jobKey/complete`,
+    withValidation(async ({ params, request }) => {
+      const { jobKey } = params;
+      await request.json(); // Consume body
 
-      const job = findJobByKey(body.jobKey);
+      const job = findJobByKey(jobKey as string);
 
       if (!job) {
         return HttpResponse.json(
           {
             code: 'NOT_FOUND',
-            message: `Job with key ${body.jobKey} not found`,
+            message: `Job with key ${jobKey} not found`,
           },
           { status: 404 }
         );
@@ -90,7 +88,7 @@ export const jobHandlers = [
 
       // In a real implementation, we'd update the job state
       // For mock purposes, just return success
-      return new HttpResponse(null, { status: 201 });
+      return new HttpResponse(null, { status: 200 });
     })
   ),
 
@@ -119,8 +117,8 @@ export const jobHandlers = [
     })
   ),
 
-  // PUT /jobs/:jobKey/retries - Update job retries
-  http.put(
+  // POST /jobs/:jobKey/retries - Update job retries
+  http.post(
     `${BASE_URL}/jobs/:jobKey/retries`,
     withValidation(async ({ params, request }) => {
       const { jobKey } = params;
