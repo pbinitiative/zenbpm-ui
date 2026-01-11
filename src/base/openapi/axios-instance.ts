@@ -8,6 +8,17 @@ export const AXIOS_INSTANCE = axios.create({
   transformResponse: [axiosResponseTransformer],
 });
 
+// Add request interceptor to fix Content-Type for FormData
+// The generated API sets Content-Type: multipart/form-data without boundary,
+// but axios needs to set this automatically when FormData is used
+AXIOS_INSTANCE.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    // Delete the Content-Type header so axios sets it automatically with boundary
+    delete config.headers['Content-Type'];
+  }
+  return config;
+});
+
 // Add response interceptor to validate responses against OpenAPI schema
 // Uses the same validation logic as MSW mocks
 AXIOS_INSTANCE.interceptors.response.use(

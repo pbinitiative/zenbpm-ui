@@ -19,56 +19,65 @@ export function withValidation<
     const method = request.method;
     const url = request.url;
 
-    // Apply configurable delay before processing
-    const delayValue = getDelay();
-    if (delayValue !== 0) {
-      await delay(delayValue);
-    }
+    try {
+      // Apply configurable delay before processing
+      const delayValue = getDelay();
+      if (delayValue !== 0) {
+        await delay(delayValue);
+      }
 
-    // Validate request body for POST/PUT/PATCH methods
-    if (['POST', 'PUT', 'PATCH'].includes(method)) {
-      try {
-        const clonedRequest = request.clone();
-        const contentType = request.headers.get('content-type');
+      // Validate request body for POST/PUT/PATCH methods
+      if (['POST', 'PUT', 'PATCH'].includes(method)) {
+        try {
+          const clonedRequest = request.clone();
+          const contentType = request.headers.get('content-type');
+
+          if (contentType?.includes('application/json')) {
+            const body = await clonedRequest.json();
+            validateRequest(method, url, body);
+          }
+        } catch {
+          // Request might not have a body or not be JSON
+        }
+      }
+
+      // Call the original handler
+      const response = await handler(info);
+
+      // Process JSON responses: validate and convert keys to int64 format
+      if (response instanceof Response) {
+        const contentType = response.headers.get('content-type');
 
         if (contentType?.includes('application/json')) {
-          const body = await clonedRequest.json();
-          validateRequest(method, url, body);
-        }
-      } catch {
-        // Request might not have a body or not be JSON
-      }
-    }
+          try {
+            const clonedResponse = response.clone();
+            const body = await clonedResponse.json();
 
-    // Call the original handler
-    const response = await handler(info);
+            // Note: Validation is done by axios interceptor after json-bigint parsing
+            // We skip validation here to avoid double validation and type mismatches
 
-    // Process JSON responses: validate and convert keys to int64 format
-    if (response instanceof Response) {
-      const contentType = response.headers.get('content-type');
-
-      if (contentType?.includes('application/json')) {
-        try {
-          const clonedResponse = response.clone();
-          const body = await clonedResponse.json();
-
-          // Note: Validation is done by axios interceptor after json-bigint parsing
-          // We skip validation here to avoid double validation and type mismatches
-
-          // Re-serialize with string keys converted to JSON numbers (int64 simulation)
-          const jsonBody = stringifyMockData(body);
-          return new HttpResponse(jsonBody, {
-            status: response.status,
-            statusText: response.statusText,
-            headers: response.headers,
-          });
-        } catch {
-          // Response might not have a body or not be valid JSON
+            // Re-serialize with string keys converted to JSON numbers (int64 simulation)
+            const jsonBody = stringifyMockData(body);
+            return new HttpResponse(jsonBody, {
+              status: response.status,
+              statusText: response.statusText,
+              headers: response.headers,
+            });
+          } catch {
+            // Response might not have a body or not be valid JSON
+          }
         }
       }
-    }
 
-    return response;
+      return response;
+    } catch (error) {
+      // Log the error for debugging and return a 500 response
+      console.error(`[MSW] Handler error for ${method} ${url}:`, error);
+      return HttpResponse.json(
+        { code: 'INTERNAL_ERROR', message: String(error) },
+        { status: 500 }
+      );
+    }
   };
 
   return wrappedHandler as HttpResponseResolver<Params, RequestBody, ResponseBody>;

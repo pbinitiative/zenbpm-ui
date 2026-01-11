@@ -118,7 +118,9 @@ export const ProcessDesignerPage = () => {
         throw new Error('No XML content');
       }
 
-      await createProcessDefinition(xml);
+      // Create a Blob from the XML string for multipart/form-data upload
+      const blob = new Blob([xml], { type: 'application/xml' });
+      await createProcessDefinition({ resource: blob });
       setSnackbar({
         open: true,
         message: t('designer:messages.deploySuccess'),
