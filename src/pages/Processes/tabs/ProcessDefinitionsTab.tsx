@@ -82,21 +82,27 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
       const definitionsData = await getProcessDefinitions(apiParams);
       const definitions = definitionsData.items || [];
 
-      // 2. Fetch statistics (all statistics, will filter by keys client-side)
-      const statisticsData = definitions.length > 0 ? await getProcessDefinitionStatistics({ size: 100, onlyLatest: apiParams.onlyLatest }) : { items: [] };
-
-      // Build a map from key to statistics
-      const statisticsMap = new Map<number, { instanceCounts: InstanceCounts; incidentCounts: IncidentCounts }>();
-      for (const stat of statisticsData.items || []) {
-        statisticsMap.set(stat.key, {
-          instanceCounts: stat.instanceCounts,
-          incidentCounts: stat.incidentCounts,
-        });
+      // 2. Fetch statistics separately - if it fails, we still show definitions with zero stats
+      // Use string keys because json-bigint converts large numbers to strings to preserve precision
+      const statisticsMap = new Map<string, { instanceCounts: InstanceCounts; incidentCounts: IncidentCounts }>();
+      if (definitions.length > 0) {
+        try {
+          const statisticsData = await getProcessDefinitionStatistics({ size: 100, onlyLatest: apiParams.onlyLatest });
+          for (const stat of statisticsData.items || []) {
+            statisticsMap.set(String(stat.key), {
+              instanceCounts: stat.instanceCounts,
+              incidentCounts: stat.incidentCounts,
+            });
+          }
+        } catch (statsError) {
+          // Statistics failed - log but continue with definitions
+          console.warn('Failed to fetch process definition statistics:', statsError);
+        }
       }
 
-      // 3. Merge definitions with statistics
+      // 3. Merge definitions with statistics (defaults to zero if stats not available)
       const merged: ProcessDefinitionWithStats[] = definitions.map((def) => {
-        const stats = statisticsMap.get(def.key) || {
+        const stats = statisticsMap.get(String(def.key)) || {
           instanceCounts: { total: 0, active: 0, completed: 0, terminated: 0, failed: 0 },
           incidentCounts: { total: 0, unresolved: 0 },
         };
