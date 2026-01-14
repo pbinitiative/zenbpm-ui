@@ -38,7 +38,7 @@ interface DateRangePickerProps {
 // Helper to format datetime to ISO string for datetime-local input
 function formatDateTimeLocal(date: Date): string {
   const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00Z`;
 }
 
 // Helper to format datetime for display
