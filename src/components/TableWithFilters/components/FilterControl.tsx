@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Box,
   FormControl,
@@ -33,7 +34,7 @@ interface FilterControlProps {
 }
 
 export const FilterControl = ({ filter, value, onChange }: FilterControlProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common]);
   const isReadonly = filter.readonly === true;
   const width = filter.width ?? 200;
 

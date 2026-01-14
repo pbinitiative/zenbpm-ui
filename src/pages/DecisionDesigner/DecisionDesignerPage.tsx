@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Box,
   Snackbar,
@@ -22,7 +23,7 @@ import { getDmnResourceDefinition, createDmnResourceDefinition } from '@base/ope
 type EditorMode = 'diagram' | 'xml';
 
 export const DecisionDesignerPage = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.designer]);
   const { decisionDefinitionKey } = useParams<{ decisionDefinitionKey?: string }>();
   const editorRef = useRef<DmnEditorRef>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

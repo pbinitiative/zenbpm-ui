@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Dialog,
   DialogTitle,
@@ -22,7 +23,7 @@ export const DeleteVariableDialog = ({
   onClose,
   onDelete,
 }: DeleteVariableDialogProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processInstance]);
   const [loading, setLoading] = useState(false);
 
   const handleDelete = useCallback(async () => {

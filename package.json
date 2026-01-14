@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "prebuild": "orval",
+    "prebuild": "orval && node scripts/generate-i18n-types.mjs",
     "predev": "pnpm prebuild",
     "dev": "vite",
     "dev:mocks": "pnpm dev --mode mocks",
@@ -14,6 +14,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "generate:api": "orval",
+    "generate:i18n-types": "node scripts/generate-i18n-types.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

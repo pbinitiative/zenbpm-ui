@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Box,
   Typography,
@@ -32,7 +33,7 @@ export const TablePagination = ({
   onPageSizeChange,
   pageSizeOptions = [5, 10, 20, 50],
 }: TablePaginationProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common]);
 
   const totalPages = Math.ceil(count / pageSize);
 

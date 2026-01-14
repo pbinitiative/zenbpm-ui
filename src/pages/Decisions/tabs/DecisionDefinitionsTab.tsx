@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import { Box } from '@mui/material';
 import { useNotification } from '@base/contexts';
 import { VersionPill } from '@components/VersionPill';
@@ -19,7 +20,7 @@ interface DecisionDefinitionsTabProps {
 }
 
 export const DecisionDefinitionsTab = ({ refreshKey = 0 }: DecisionDefinitionsTabProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.decisions]);
   const navigate = useNavigate();
   const { showError } = useNotification();
 

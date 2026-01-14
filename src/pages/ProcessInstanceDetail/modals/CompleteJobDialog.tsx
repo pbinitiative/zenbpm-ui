@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Dialog,
   DialogTitle,
@@ -26,7 +27,7 @@ export const CompleteJobDialog = ({
   onClose,
   onComplete,
 }: CompleteJobDialogProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processInstance]);
   const [variables, setVariables] = useState('{}');
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

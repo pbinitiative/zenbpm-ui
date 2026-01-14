@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Box,
   CircularProgress,
@@ -97,7 +98,7 @@ export const PartitionedTable = <T extends object>({
   'data-testid': testId,
   refreshKey = 0,
 }: PartitionedTableProps<T>) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common]);
   // Notification hooks available for future use
   const { showError } = useNotification();
 

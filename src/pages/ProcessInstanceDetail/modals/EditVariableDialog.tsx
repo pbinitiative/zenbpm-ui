@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Dialog,
   DialogTitle,
@@ -30,7 +31,7 @@ export const EditVariableDialog = ({
   onClose,
   onSave,
 }: EditVariableDialogProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processInstance]);
   const [value, setValue] = useState(variable.value);
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

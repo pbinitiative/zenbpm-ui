@@ -17,6 +17,8 @@ import {
   ToggleButtonGroup,
 } from '@mui/material';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import { themeColors } from '@base/theme';
 
 export interface DateRangeValue {
@@ -59,10 +61,10 @@ function formatDisplayDateTime(dateStr: string | undefined): string {
   }
 }
 
-// Quick select options
-const quickSelectOptions: QuickSelectOption[] = [
+// Quick select option factories (labels provided by translations)
+const createQuickSelectOptions = (t: (key: string) => string): QuickSelectOption[] => [
   {
-    label: 'Last 15 minutes',
+    label: t('common:dateRange.quickSelect.last15Minutes'),
     getValue: () => {
       const now = new Date();
       const from = new Date(now.getTime() - 15 * 60 * 1000);
@@ -70,7 +72,7 @@ const quickSelectOptions: QuickSelectOption[] = [
     },
   },
   {
-    label: 'Last 1 hour',
+    label: t('common:dateRange.quickSelect.last1Hour'),
     getValue: () => {
       const now = new Date();
       const from = new Date(now.getTime() - 60 * 60 * 1000);
@@ -78,7 +80,7 @@ const quickSelectOptions: QuickSelectOption[] = [
     },
   },
   {
-    label: 'Last 24 hours',
+    label: t('common:dateRange.quickSelect.last24Hours'),
     getValue: () => {
       const now = new Date();
       const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -86,7 +88,7 @@ const quickSelectOptions: QuickSelectOption[] = [
     },
   },
   {
-    label: 'Last 7 days',
+    label: t('common:dateRange.quickSelect.last7Days'),
     getValue: () => {
       const now = new Date();
       const from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -94,7 +96,7 @@ const quickSelectOptions: QuickSelectOption[] = [
     },
   },
   {
-    label: 'Last 30 days',
+    label: t('common:dateRange.quickSelect.last30Days'),
     getValue: () => {
       const now = new Date();
       const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -102,7 +104,7 @@ const quickSelectOptions: QuickSelectOption[] = [
     },
   },
   {
-    label: 'Last 90 days',
+    label: t('common:dateRange.quickSelect.last90Days'),
     getValue: () => {
       const now = new Date();
       const from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
@@ -110,7 +112,7 @@ const quickSelectOptions: QuickSelectOption[] = [
     },
   },
   {
-    label: 'Today',
+    label: t('common:dateRange.quickSelect.today'),
     getValue: () => {
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -118,7 +120,7 @@ const quickSelectOptions: QuickSelectOption[] = [
     },
   },
   {
-    label: 'This week',
+    label: t('common:dateRange.quickSelect.thisWeek'),
     getValue: () => {
       const now = new Date();
       const dayOfWeek = now.getDay();
@@ -127,7 +129,7 @@ const quickSelectOptions: QuickSelectOption[] = [
     },
   },
   {
-    label: 'This month',
+    label: t('common:dateRange.quickSelect.thisMonth'),
     getValue: () => {
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -135,7 +137,7 @@ const quickSelectOptions: QuickSelectOption[] = [
     },
   },
   {
-    label: 'This year',
+    label: t('common:dateRange.quickSelect.thisYear'),
     getValue: () => {
       const now = new Date();
       const startOfYear = new Date(now.getFullYear(), 0, 1);
@@ -152,6 +154,8 @@ export const DateRangePicker = ({
   label,
   disabled = false,
 }: DateRangePickerProps) => {
+  const { t } = useTranslation([ns.common]);
+  const quickSelectOptions = useMemo(() => createQuickSelectOptions(t), [t]);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [tempFrom, setTempFrom] = useState(value.from || '');
   const [tempTo, setTempTo] = useState(value.to || '');
@@ -247,7 +251,7 @@ export const DateRangePicker = ({
   // Display text for the button
   const displayText = useMemo(() => {
     if (!value.from && !value.to) {
-      return label || 'Select date range';
+      return label || t('common:dateRange.selectDateRange');
     }
     const fromDisplay = formatDisplayDateTime(value.from);
     const toDisplay = formatDisplayDateTime(value.to);
@@ -255,13 +259,13 @@ export const DateRangePicker = ({
       return `${fromDisplay} → ${toDisplay}`;
     }
     if (fromDisplay) {
-      return `From ${fromDisplay}`;
+      return t('common:dateRange.fromDate', { date: fromDisplay });
     }
     if (toDisplay) {
-      return `Until ${toDisplay}`;
+      return t('common:dateRange.untilDate', { date: toDisplay });
     }
-    return label || 'Select date range';
-  }, [value, label]);
+    return label || t('common:dateRange.selectDateRange');
+  }, [value, label, t]);
 
   return (
     <>
@@ -332,7 +336,7 @@ export const DateRangePicker = ({
               color="text.secondary"
               sx={{ px: 1.5, pt: 1.5, pb: 0.5, display: 'block', fontWeight: 600, textTransform: 'uppercase', fontSize: '0.7rem' }}
             >
-              Quick select
+              {t('common:dateRange.quickSelectTitle')}
             </Typography>
             <List dense disablePadding>
               {quickSelectOptions.map((option) => (
@@ -357,7 +361,7 @@ export const DateRangePicker = ({
               <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                   <Typography variant="subtitle2" fontWeight={600}>
-                    From
+                    {t('common:filters.from')}
                   </Typography>
                   <ToggleButtonGroup
                     value={fromMode}
@@ -366,10 +370,10 @@ export const DateRangePicker = ({
                     size="small"
                   >
                     <ToggleButton value="absolute" sx={{ px: 1.5, py: 0.25, fontSize: '0.75rem' }}>
-                      Absolute
+                      {t('common:dateRange.mode.absolute')}
                     </ToggleButton>
                     <ToggleButton value="relative" sx={{ px: 1.5, py: 0.25, fontSize: '0.75rem' }}>
-                      Relative
+                      {t('common:dateRange.mode.relative')}
                     </ToggleButton>
                   </ToggleButtonGroup>
                 </Box>
@@ -398,15 +402,15 @@ export const DateRangePicker = ({
                         value={relativeFromUnit}
                         onChange={(e) => setRelativeFromUnit(e.target.value as TimeUnit)}
                       >
-                        <MenuItem value="minutes">minutes</MenuItem>
-                        <MenuItem value="hours">hours</MenuItem>
-                        <MenuItem value="days">days</MenuItem>
-                        <MenuItem value="weeks">weeks</MenuItem>
-                        <MenuItem value="months">months</MenuItem>
+                        <MenuItem value="minutes">{t('common:dateRange.units.minutes')}</MenuItem>
+                        <MenuItem value="hours">{t('common:dateRange.units.hours')}</MenuItem>
+                        <MenuItem value="days">{t('common:dateRange.units.days')}</MenuItem>
+                        <MenuItem value="weeks">{t('common:dateRange.units.weeks')}</MenuItem>
+                        <MenuItem value="months">{t('common:dateRange.units.months')}</MenuItem>
                       </Select>
                     </FormControl>
                     <Typography variant="body2" color="text.secondary">
-                      ago
+                      {t('common:dateRange.ago')}
                     </Typography>
                   </Box>
                 )}
@@ -418,7 +422,7 @@ export const DateRangePicker = ({
               <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                   <Typography variant="subtitle2" fontWeight={600}>
-                    To
+                    {t('common:filters.to')}
                   </Typography>
                   <ToggleButtonGroup
                     value={toMode}
@@ -427,10 +431,10 @@ export const DateRangePicker = ({
                     size="small"
                   >
                     <ToggleButton value="absolute" sx={{ px: 1.5, py: 0.25, fontSize: '0.75rem' }}>
-                      Absolute
+                      {t('common:dateRange.mode.absolute')}
                     </ToggleButton>
                     <ToggleButton value="relative" sx={{ px: 1.5, py: 0.25, fontSize: '0.75rem' }}>
-                      Relative
+                      {t('common:dateRange.mode.relative')}
                     </ToggleButton>
                   </ToggleButtonGroup>
                 </Box>
@@ -459,15 +463,15 @@ export const DateRangePicker = ({
                         value={relativeToUnit}
                         onChange={(e) => setRelativeToUnit(e.target.value as TimeUnit)}
                       >
-                        <MenuItem value="minutes">minutes</MenuItem>
-                        <MenuItem value="hours">hours</MenuItem>
-                        <MenuItem value="days">days</MenuItem>
-                        <MenuItem value="weeks">weeks</MenuItem>
-                        <MenuItem value="months">months</MenuItem>
+                        <MenuItem value="minutes">{t('common:dateRange.units.minutes')}</MenuItem>
+                        <MenuItem value="hours">{t('common:dateRange.units.hours')}</MenuItem>
+                        <MenuItem value="days">{t('common:dateRange.units.days')}</MenuItem>
+                        <MenuItem value="weeks">{t('common:dateRange.units.weeks')}</MenuItem>
+                        <MenuItem value="months">{t('common:dateRange.units.months')}</MenuItem>
                       </Select>
                     </FormControl>
                     <Typography variant="body2" color="text.secondary">
-                      ago (0 = now)
+                      {t('common:dateRange.agoZeroIsNow')}
                     </Typography>
                   </Box>
                 )}
@@ -478,10 +482,10 @@ export const DateRangePicker = ({
               {/* Action buttons */}
               <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                 <Button variant="outlined" size="small" onClick={handleClear}>
-                  Clear
+                  {t('common:actions.clear')}
                 </Button>
                 <Button variant="contained" size="small" onClick={handleApply}>
-                  Apply
+                  {t('common:actions.apply')}
                 </Button>
               </Box>
             </Stack>

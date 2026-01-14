@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Box,
   Typography,
@@ -35,7 +36,7 @@ export const VariablesTab = ({
   onRefetch,
   onShowNotification,
 }: VariablesTabProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processInstance]);
 
   // Dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);

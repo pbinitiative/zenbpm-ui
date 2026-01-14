@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Box,
   Typography,
@@ -25,7 +26,7 @@ interface DmnResourceDefinition {
 export const DecisionDefinitionDetailPage = () => {
   const { dmnResourceDefinitionKey } = useParams<{ dmnResourceDefinitionKey: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.decisions]);
 
   // State
   const [definition, setDefinition] = useState<DmnResourceDefinition | null>(null);
@@ -103,7 +104,7 @@ export const DecisionDefinitionDetailPage = () => {
   if (error || !definition) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error || 'Decision definition not found'}</Alert>
+        <Alert severity="error">{error || t('common:errors.decisionDefinitionNotFound')}</Alert>
       </Box>
     );
   }

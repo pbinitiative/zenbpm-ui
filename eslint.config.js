@@ -11,7 +11,7 @@ const require = createRequire(import.meta.url)
 const localRules = require('./eslint-rules/index.cjs')
 
 export default defineConfig([
-  globalIgnores(['dist', 'src/base/openapi/generated-api']),
+  globalIgnores(['dist', 'src/base/openapi/generated-api', 'public/mockServiceWorker.js']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -28,10 +28,14 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
+      // Allow unused vars with underscore prefix
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       // Enforce themed colors - no hardcoded hex/rgb/hsl values
       'local/no-hardcoded-colors': 'error',
       // Enforce sx prop over inline styles
       'local/no-inline-styles': 'error',
+      // Enforce i18n namespace declarations match usage
+      'local/i18n-namespace-match': 'error',
     },
   },
   // Exception: Allow hardcoded colors in theme definition file

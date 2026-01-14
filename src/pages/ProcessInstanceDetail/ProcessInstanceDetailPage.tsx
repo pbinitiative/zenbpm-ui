@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Box,
   Paper,
@@ -50,7 +51,7 @@ const TAB_MAP: Record<string, number> = {
 export const ProcessInstanceDetailPage = () => {
   const { processInstanceKey } = useParams<{ processInstanceKey: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processInstance]);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -127,7 +128,7 @@ export const ProcessInstanceDetailPage = () => {
   if (error || !processInstance) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error || 'Process instance not found'}</Alert>
+        <Alert severity="error">{error || t('common:errors.processInstanceNotFound')}</Alert>
       </Box>
     );
   }

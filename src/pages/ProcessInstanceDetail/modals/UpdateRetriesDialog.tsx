@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Dialog,
   DialogTitle,
@@ -25,7 +26,7 @@ export const UpdateRetriesDialog = ({
   onClose,
   onUpdate,
 }: UpdateRetriesDialogProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processInstance]);
   const [retries, setRetries] = useState(job.retries ?? 3);
   const [loading, setLoading] = useState(false);
 

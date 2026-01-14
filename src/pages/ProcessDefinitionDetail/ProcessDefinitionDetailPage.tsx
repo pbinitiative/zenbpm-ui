@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Box,
   Typography,
@@ -40,7 +41,7 @@ interface ProcessDefinition {
 export const ProcessDefinitionDetailPage = () => {
   const { processDefinitionKey } = useParams<{ processDefinitionKey: string }>();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processes]);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -224,7 +225,7 @@ export const ProcessDefinitionDetailPage = () => {
   if (error || !processDefinition) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error || 'Process definition not found'}</Alert>
+        <Alert severity="error">{error || t('common:errors.processDefinitionNotFound')}</Alert>
       </Box>
     );
   }

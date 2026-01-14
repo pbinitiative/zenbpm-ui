@@ -19,7 +19,12 @@
     "evaluatedDecisions": "Evaluated Decisions",
     "inputs": "Inputs",
     "outputs": "Outputs",
-    "matchedRules": "Matched Rules"
+    "input": "Input",
+    "output": "Output",
+    "noInputs": "No inputs",
+    "noOutputs": "No outputs",
+    "matchedRules": "Matched Rules",
+    "moreItems": "+{{count}} more"
   },
   "fields": {
     "key": "Key",

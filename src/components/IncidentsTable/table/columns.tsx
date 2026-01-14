@@ -55,7 +55,7 @@ export const getIncidentColumns = (
       id: 'message',
       label: t('incidents:fields.errorMessage'),
       render: (row) => (
-        <Tooltip title={t('incidents:actions.viewStackTrace', { defaultValue: 'Click to view full error' })}>
+        <Tooltip title={t('incidents:actions.viewStackTrace')}>
           <Link
             component="button"
             variant="body2"

@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import { Box, Chip } from '@mui/material';
 import { useNotification } from '@base/contexts';
 import { VersionPill } from '@components/VersionPill';
@@ -31,7 +32,7 @@ interface ProcessDefinitionsTabProps {
 }
 
 export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processes]);
   const navigate = useNavigate();
   const { showError } = useNotification();
 

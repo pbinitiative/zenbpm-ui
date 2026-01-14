@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import { Box } from '@mui/material';
 import { MonoText } from '@components/MonoText';
 import { DataTable, type Column } from '@components/DataTable';
@@ -12,7 +13,7 @@ interface DecisionInstancesTableProps {
 }
 
 export const DecisionInstancesTable = ({ dmnResourceDefinitionKey }: DecisionInstancesTableProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.decisions]);
   const navigate = useNavigate();
 
   const [instances, setInstances] = useState<DecisionInstanceSummary[]>([]);

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import { Box, Typography, Grid } from '@mui/material';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import RuleIcon from '@mui/icons-material/Rule';
@@ -15,7 +16,7 @@ import {
 import { QuickAccessCard, type QuickAccessCardProps } from './components/QuickAccessCard';
 
 export const HomePage = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common]);
 
   // Fetch statistics for dashboard cards
   const { data: processDefinitions, isLoading: isLoadingDefinitions } = useQuery({
@@ -47,16 +48,16 @@ export const HomePage = () => {
     {
       icon: <AccountTreeIcon fontSize="large" />,
       title: t('common:navigation.processes'),
-      description: 'Manage BPMN process definitions and view running instances',
+      description: t('common:home.processes.description'),
       path: '/processes',
       stats: [
         {
-          label: 'Definitions',
+          label: t('common:home.stats.definitions'),
           value: processDefinitions?.totalCount,
           isLoading: isLoadingDefinitions,
         },
         {
-          label: 'Instances',
+          label: t('common:home.stats.instances'),
           value: processInstances?.totalCount,
           isLoading: isLoadingInstances,
         },
@@ -65,16 +66,16 @@ export const HomePage = () => {
     {
       icon: <RuleIcon fontSize="large" />,
       title: t('common:navigation.decisions'),
-      description: 'Manage DMN decision definitions and evaluate decisions',
+      description: t('common:home.decisions.description'),
       path: '/decisions',
       stats: [
         {
-          label: 'Definitions',
+          label: t('common:home.stats.definitions'),
           value: dmnDefinitions?.totalCount,
           isLoading: isLoadingDmn,
         },
         {
-          label: 'Instances',
+          label: t('common:home.stats.instances'),
           value: decisionInstances?.totalCount,
           isLoading: isLoadingDecisionInstances,
         },
@@ -83,11 +84,11 @@ export const HomePage = () => {
     {
       icon: <WarningIcon fontSize="large" />,
       title: t('common:navigation.incidents'),
-      description: 'View and resolve process incidents',
+      description: t('common:home.incidents.description'),
       path: '/incidents',
       stats: [
         {
-          label: 'Unresolved',
+          label: t('common:home.stats.unresolved'),
           value: incidents?.totalCount,
           isLoading: isLoadingIncidents,
         },
@@ -115,7 +116,7 @@ export const HomePage = () => {
           mb: 4,
         }}
       >
-        Business Process Management Engine
+        {t('common:appDescription')}
       </Typography>
 
       <Grid container spacing={3}>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import { Box, Button, Snackbar, Alert } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import UploadIcon from '@mui/icons-material/Upload';
@@ -16,7 +17,7 @@ type TabValue = 'definitions' | 'instances';
 const validTabs: TabValue[] = ['definitions', 'instances'];
 
 export const DecisionsPage = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.decisions]);
   const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);

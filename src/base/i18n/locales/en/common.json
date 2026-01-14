@@ -1,5 +1,22 @@
 {
   "appName": "ZenBPM",
+  "appDescription": "Business Process Management Engine",
+  "home": {
+    "processes": {
+      "description": "Manage BPMN process definitions and view running instances"
+    },
+    "decisions": {
+      "description": "Manage DMN decision definitions and evaluate decisions"
+    },
+    "incidents": {
+      "description": "View and resolve process incidents"
+    },
+    "stats": {
+      "definitions": "Definitions",
+      "instances": "Instances",
+      "unresolved": "Unresolved"
+    }
+  },
   "yes": "Yes",
   "no": "No",
   "navigation": {
@@ -23,7 +40,9 @@
     "upload": "Upload",
     "add": "Add",
     "update": "Update",
-    "close": "Close"
+    "close": "Close",
+    "copy": "Copy to clipboard",
+    "copied": "Copied!"
   },
   "all": "All",
   "pagination": {
@@ -57,6 +76,37 @@
     "searchPlaceholder": "Search...",
     "searchInstances": "Search instances..."
   },
+  "dateRange": {
+    "selectDateRange": "Select date range",
+    "fromDate": "From {{date}}",
+    "untilDate": "Until {{date}}",
+    "quickSelectTitle": "Quick select",
+    "quickSelect": {
+      "last15Minutes": "Last 15 minutes",
+      "last1Hour": "Last 1 hour",
+      "last24Hours": "Last 24 hours",
+      "last7Days": "Last 7 days",
+      "last30Days": "Last 30 days",
+      "last90Days": "Last 90 days",
+      "today": "Today",
+      "thisWeek": "This week",
+      "thisMonth": "This month",
+      "thisYear": "This year"
+    },
+    "units": {
+      "minutes": "minutes",
+      "hours": "hours",
+      "days": "days",
+      "weeks": "weeks",
+      "months": "months"
+    },
+    "mode": {
+      "absolute": "Absolute",
+      "relative": "Relative"
+    },
+    "ago": "ago",
+    "agoZeroIsNow": "ago (0 = now)"
+  },
   "search": {
     "label": "Search",
     "placeholder": "Search..."
@@ -66,7 +116,12 @@
     "saveFailed": "Failed to save",
     "networkError": "Network error",
     "unknownError": "An unknown error occurred",
-    "invalidJson": "Invalid JSON format"
+    "invalidJson": "Invalid JSON format",
+    "loadDiagramFailed": "Failed to load diagram",
+    "processInstanceNotFound": "Process instance not found",
+    "processDefinitionNotFound": "Process definition not found",
+    "decisionInstanceNotFound": "Decision instance not found",
+    "decisionDefinitionNotFound": "Decision definition not found"
   },
   "messages": {
     "dataLoaded": "Data loaded successfully",

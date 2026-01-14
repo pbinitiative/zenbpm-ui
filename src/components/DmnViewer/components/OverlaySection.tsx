@@ -1,4 +1,6 @@
 import { Box, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import { OverlayVariable } from './OverlayVariable';
 import { themeColors } from '@base/theme';
 
@@ -8,11 +10,13 @@ interface OverlaySectionProps {
 }
 
 export const OverlaySection = ({ type, variables }: OverlaySectionProps) => {
+  const { t } = useTranslation([ns.common, ns.decisions]);
+
   if (variables.length === 0) return null;
 
   const isInput = type === 'input';
   const color = isInput ? themeColors.info : themeColors.success;
-  const label = isInput ? 'Input' : 'Output';
+  const label = isInput ? t('decisions:instance.input') : t('decisions:instance.output');
 
   return (
     <Box>
@@ -38,7 +42,7 @@ export const OverlaySection = ({ type, variables }: OverlaySectionProps) => {
       ))}
       {variables.length > 3 && (
         <Typography sx={{ fontSize: '9px', color: 'text.secondary' }}>
-          +{variables.length - 3} more
+          {t('decisions:instance.moreItems', { count: variables.length - 3 })}
         </Typography>
       )}
     </Box>

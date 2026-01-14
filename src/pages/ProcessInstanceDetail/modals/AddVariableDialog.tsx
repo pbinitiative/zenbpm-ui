@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Dialog,
   DialogTitle,
@@ -23,7 +24,7 @@ export const AddVariableDialog = ({
   onClose,
   onAdd,
 }: AddVariableDialogProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processInstance]);
   const [name, setName] = useState('');
   const [value, setValue] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);

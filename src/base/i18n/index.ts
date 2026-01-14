@@ -1,26 +1,14 @@
+/**
+ * i18next configuration.
+ * Resources are auto-generated in resources.ts - this file is manually maintained.
+ */
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import { resources } from './resources';
 
-// Import translations
-import commonEn from './locales/en/common.json';
-import processesEn from './locales/en/processes.json';
-import processInstanceEn from './locales/en/processInstance.json';
-import decisionsEn from './locales/en/decisions.json';
-import incidentsEn from './locales/en/incidents.json';
-import userTasksEn from './locales/en/userTasks.json';
-import designerEn from './locales/en/designer.json';
-
-const resources = {
-  en: {
-    common: commonEn,
-    processes: processesEn,
-    processInstance: processInstanceEn,
-    decisions: decisionsEn,
-    incidents: incidentsEn,
-    userTasks: userTasksEn,
-    designer: designerEn,
-  },
-};
+// Re-export for convenience
+export { ns, allNamespaces } from './resources';
+export type { Resources, Namespace } from './resources';
 
 i18n.use(initReactI18next).init({
   resources,
@@ -29,6 +17,12 @@ i18n.use(initReactI18next).init({
   defaultNS: 'common',
   interpolation: {
     escapeValue: false,
+  },
+  saveMissing: import.meta.env.DEV,
+  missingKeyHandler: (_lngs, ns, key) => {
+    if (import.meta.env.DEV) {
+      console.warn(`[i18n] Missing translation: "${ns}:${key}"`);
+    }
   },
 });
 

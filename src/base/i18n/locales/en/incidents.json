@@ -15,7 +15,11 @@
   },
   "actions": {
     "resolve": "Resolve",
-    "viewDetails": "View Details"
+    "viewDetails": "View Details",
+    "viewStackTrace": "Click to view full error"
+  },
+  "filters": {
+    "enterKey": "Enter key..."
   },
   "messages": {
     "resolved": "Incident resolved successfully",

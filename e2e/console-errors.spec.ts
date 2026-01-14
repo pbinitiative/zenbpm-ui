@@ -60,7 +60,7 @@ async function waitForStable(page: Page) {
 }
 
 // Get all valid process definition keys from the mock data
-const processDefinitionKeys = [
+const _processDefinitionKeys = [
   '3000000000000000001', // call-activity-simple
   '3000000000000000002', // call-activity-with-boundary-simple
   '3000000000000000003', // call-activity-with-multiple-boundary-user-task-end
@@ -73,7 +73,7 @@ const processDefinitionKeys = [
 ];
 
 // Get process instance keys
-const processInstanceKeys = [
+const _processInstanceKeys = [
   '3100000000000000164', // showcase-process instance
   '3100000000000000014', // showcase-process instance
   '3100000000000000066', // call-activity-simple instance

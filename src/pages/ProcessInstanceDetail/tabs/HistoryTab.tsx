@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import { Typography } from '@mui/material';
 import { DataTable, type Column } from '@components/DataTable';
 import type { FlowElementHistory } from '../types';
@@ -9,7 +10,7 @@ interface HistoryTabProps {
 }
 
 export const HistoryTab = ({ history }: HistoryTabProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processInstance]);
 
   // Table state
   const [page, setPage] = useState(0);

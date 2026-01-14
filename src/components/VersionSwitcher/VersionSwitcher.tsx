@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Box,
   FormControl,
@@ -36,7 +37,7 @@ export const VersionSwitcher = ({
   onVersionChange,
   versions: propVersions,
 }: VersionSwitcherProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processes]);
   const [versions, setVersions] = useState<VersionInfo[]>(propVersions || []);
   const [loading, setLoading] = useState(!propVersions);
 

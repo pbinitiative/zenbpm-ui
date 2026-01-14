@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Box,
   Chip,
@@ -127,7 +128,7 @@ export const MetadataPanel = ({
   fields: directFields,
   gap = 1.5,
 }: MetadataPanelProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processInstance]);
 
   // Build metadata fields from props (or use direct fields)
   const fields = useMemo((): MetadataField[] => {

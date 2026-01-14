@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Box,
   Typography,
@@ -36,7 +37,7 @@ interface JobsTabProps {
 }
 
 export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processInstance]);
 
   // Table state
   const [page, setPage] = useState(0);

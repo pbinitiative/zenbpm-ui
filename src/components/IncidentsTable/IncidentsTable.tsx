@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   TableWithFilters,
   type FilterValues,
@@ -51,7 +52,7 @@ export const IncidentsTable = ({
   onIncidentResolved,
   onShowNotification,
 }: IncidentsTableProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.incidents]);
   const navigate = useNavigate();
   const [internalRefreshKey, setInternalRefreshKey] = useState(0);
   const [processOptions, setProcessOptions] = useState<FilterOption[]>([]);

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Dialog,
   DialogTitle,
@@ -37,7 +38,7 @@ export const StartInstanceDialog = ({
   processName,
   onSuccess,
 }: StartInstanceDialogProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processes]);
   const [variables, setVariables] = useState('{}');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

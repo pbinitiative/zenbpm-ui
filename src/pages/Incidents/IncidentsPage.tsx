@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
 import { Box, Snackbar } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import { PageHeader } from '@components/PageHeader';
 import { IncidentsTable } from '@components/IncidentsTable';
 import type { FilterValues } from '@components/TableWithFilters';
 
 export const IncidentsPage = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.incidents]);
 
   // Table state
   const [refreshKey, setRefreshKey] = useState(0);

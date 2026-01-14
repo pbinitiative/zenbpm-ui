@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   AppBar,
   Avatar,
@@ -25,25 +26,19 @@ import RuleIcon from '@mui/icons-material/Rule';
 import WarningIcon from '@mui/icons-material/Warning';
 import { useIncidentCount } from '@base/contexts';
 
-interface NavItem {
-  labelKey: string;
-  path: string;
-  icon: React.ReactNode;
-}
-
-const navItems: NavItem[] = [
+const navItems = [
   {
-    labelKey: 'navigation.processes',
+    labelKey: 'navigation.processes' as const,
     path: '/processes',
     icon: <AccountTreeIcon />,
   },
   {
-    labelKey: 'navigation.decisions',
+    labelKey: 'navigation.decisions' as const,
     path: '/decisions',
     icon: <RuleIcon />,
   },
   {
-    labelKey: 'navigation.incidents',
+    labelKey: 'navigation.incidents' as const,
     path: '/incidents',
     icon: <WarningIcon />,
   },
@@ -92,7 +87,7 @@ const Logo = ({ showText = true, onClick, appName }: LogoProps) => (
 );
 
 export const MainLayout = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common]);
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -125,7 +120,7 @@ export const MainLayout = () => {
     /^\/decision-definitions\/[^/]+/.test(location.pathname) ||
     /^\/decision-instances\/[^/]+/.test(location.pathname);
 
-  const appName = t('common:appName');
+  const appName = t('appName');
   const handleLogoClick = () => handleNavClick('/');
 
   // Mobile drawer content
@@ -310,13 +305,13 @@ export const MainLayout = () => {
                 },
               }}
             >
-              {t('common:navigation.design')}
+              {t('navigation.design')}
             </Button>
 
             {/* Search */}
             <TextField
               size="small"
-              placeholder={t('common:search.placeholder', 'Search anything...')}
+              placeholder={t('search.placeholder')}
               sx={{
                 width: { xs: 160, sm: 280 },
                 '& .MuiOutlinedInput-root': {

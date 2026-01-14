@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Box,
   Typography,
@@ -42,7 +43,7 @@ interface OverlayDialogData {
 
 export const DecisionInstanceDetailPage = () => {
   const { decisionInstanceKey } = useParams<{ decisionInstanceKey: string }>();
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.decisions]);
 
   // State
   const [instance, setInstance] = useState<DecisionInstanceDetail | null>(null);
@@ -188,7 +189,7 @@ export const DecisionInstanceDetailPage = () => {
   if (error || !instance) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error || 'Decision instance not found'}</Alert>
+        <Alert severity="error">{error || t('common:errors.decisionInstanceNotFound')}</Alert>
       </Box>
     );
   }
@@ -262,7 +263,7 @@ export const DecisionInstanceDetailPage = () => {
           borderColor: 'divider',
         }}>
           <Typography variant="h6" sx={{ fontSize: '1rem' }}>
-            Final Output
+            {t('decisions:instance.finalOutput')}
           </Typography>
           <IconButton onClick={() => setShowOutputDialog(false)} size="small">
             <CloseIcon />
@@ -328,7 +329,7 @@ export const DecisionInstanceDetailPage = () => {
                       gap: 1,
                     }}>
                       <Box sx={{ width: 12, height: 12, bgcolor: 'info.main', borderRadius: '2px' }} />
-                      Inputs
+                      {t('decisions:instance.inputs')}
                     </Typography>
                     {dialogData.inputs.length > 0 ? (
                       <Box
@@ -354,7 +355,7 @@ export const DecisionInstanceDetailPage = () => {
                         )}
                       </Box>
                     ) : (
-                      <Typography variant="body2" color="text.secondary">No inputs</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('decisions:instance.noInputs')}</Typography>
                     )}
                   </Box>
                 </Grid>
@@ -375,7 +376,7 @@ export const DecisionInstanceDetailPage = () => {
                       gap: 1,
                     }}>
                       <Box sx={{ width: 12, height: 12, bgcolor: 'success.main', borderRadius: '2px' }} />
-                      Outputs
+                      {t('decisions:instance.outputs')}
                     </Typography>
                     {dialogData.outputs.length > 0 ? (
                       <Box
@@ -401,7 +402,7 @@ export const DecisionInstanceDetailPage = () => {
                         )}
                       </Box>
                     ) : (
-                      <Typography variant="body2" color="text.secondary">No outputs</Typography>
+                      <Typography variant="body2" color="text.secondary">{t('decisions:instance.noOutputs')}</Typography>
                     )}
                   </Box>
                 </Grid>

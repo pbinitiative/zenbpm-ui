@@ -54,7 +54,7 @@ test.describe('Process Instance History - Green Path Visualization', () => {
 
     // Check that connections with completed marker exist
     // The CSS class 'connection-completed' is applied to sequence flows between completed elements
-    const completedConnections = page.locator('.connection-completed');
+    const _completedConnections = page.locator('.connection-completed');
 
     // Should have completed connections if there are multiple completed elements
     // This may not be visible if only start event is completed

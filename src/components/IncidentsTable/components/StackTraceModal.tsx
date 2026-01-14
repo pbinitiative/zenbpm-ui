@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Dialog,
   DialogTitle,
@@ -25,7 +26,7 @@ export const StackTraceModal = ({
   message,
   onClose,
 }: StackTraceModalProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.incidents]);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -59,7 +60,7 @@ export const StackTraceModal = ({
             <ErrorIcon sx={{ color: 'error.main' }} />
             {t('incidents:fields.errorMessage')}
           </Box>
-          <Tooltip title={copied ? t('common:actions.copied', { defaultValue: 'Copied!' }) : t('common:actions.copy', { defaultValue: 'Copy to clipboard' })}>
+          <Tooltip title={copied ? t('common:actions.copied') : t('common:actions.copy')}>
             <IconButton
               size="small"
               onClick={handleCopy}

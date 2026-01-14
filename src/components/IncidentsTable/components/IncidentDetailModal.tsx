@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Dialog,
   DialogTitle,
@@ -28,7 +29,7 @@ export const IncidentDetailModal = ({
   onClose,
   onResolve,
 }: IncidentDetailModalProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.incidents, ns.processes]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -39,7 +40,7 @@ export const IncidentDetailModal = ({
           ) : (
             <ErrorIcon sx={{ color: 'error.main' }} />
           )}
-          {t('incidents:detail.title', { defaultValue: 'Incident Details' })}
+          {t('incidents:detail.title')}
         </Box>
       </DialogTitle>
       <DialogContent>

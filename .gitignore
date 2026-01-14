@@ -26,5 +26,8 @@ dist-ssr
 # Generated API client (regenerated on build)
 src/base/openapi/generated-api/
 
+# Generated i18n resources (regenerated on build)
+src/base/i18n/resources.ts
+
 # Playwright
 playwright-report/

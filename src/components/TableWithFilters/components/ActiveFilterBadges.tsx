@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import { Box, Chip, Button, Collapse } from '@mui/material';
 import ClearIcon from '@mui/icons-material/Clear';
 import { themeColors } from '@base/theme';
@@ -15,7 +16,7 @@ export const ActiveFilterBadges = ({
   onRemoveFilter,
   onClearAll,
 }: ActiveFilterBadgesProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common]);
   const hasActiveBadges = activeFilters.length > 0;
 
   return (

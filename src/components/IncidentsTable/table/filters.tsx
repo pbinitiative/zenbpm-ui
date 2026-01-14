@@ -60,7 +60,7 @@ export const getIncidentFilters = (
         id: 'processInstanceKey',
         type: 'text',
         label: t('incidents:fields.processInstance'),
-        placeholder: t('incidents:filters.enterKey', { defaultValue: 'Enter key...' }),
+        placeholder: t('incidents:filters.enterKey'),
       },
       {
         id: 'createdAt',

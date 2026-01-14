@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import { Box, Card, CardActionArea, CardContent, Typography } from '@mui/material';
 import { themeColors } from '@base/theme';
 
@@ -103,7 +104,7 @@ const DecisionIllustration = () => (
 );
 
 export const DesignPage = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.designer]);
   const navigate = useNavigate();
 
   const handleProcessClick = useCallback(() => {

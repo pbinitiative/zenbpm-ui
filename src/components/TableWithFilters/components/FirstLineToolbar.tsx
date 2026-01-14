@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import { Box, Button, Stack, Typography } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { FilterRenderer } from './FilterRenderer';
@@ -26,7 +27,7 @@ export const FirstLineToolbar = ({
   showHideableFilters,
   onToggleHideableFilters,
 }: FirstLineToolbarProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common]);
 
   const zoneData = filtersByZone['exposed_first_line'];
   const leftGroups = Array.from(zoneData.left.entries());

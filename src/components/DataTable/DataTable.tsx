@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Box,
   Table,
@@ -63,7 +64,7 @@ export const DataTable = <T extends object>({
   'data-testid': testId,
   toolbar,
 }: DataTableProps<T>) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common]);
 
   const handleSortClick = useCallback(
     (columnId: string) => {

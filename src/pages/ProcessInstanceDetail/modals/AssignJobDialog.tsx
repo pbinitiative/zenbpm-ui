@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ns } from '@base/i18n';
 import {
   Dialog,
   DialogTitle,
@@ -26,7 +27,7 @@ export const AssignJobDialog = ({
   onClose,
   onAssign,
 }: AssignJobDialogProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation([ns.common, ns.processInstance]);
   const [assignee, setAssignee] = useState(job.assignee || '');
   const [loading, setLoading] = useState(false);
 
