@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Box, Collapse } from '@mui/material';
 import { DataTable, type Column, type SortOrder } from '@components/DataTable';
@@ -7,89 +7,12 @@ import {
   type FilterValues as PartitionedFilterValues,
 } from '@components/PartitionedTable';
 
-// Types
-import type {
-  FilterConfig,
-  FilterGroupConfig,
-  FilterValues,
-  TableConfig,
-} from './types';
-
-// Hooks
-import { useFilterState, flattenFilters } from './hooks/useFilterState';
-import { useFiltersByZone } from './hooks/useFiltersByZone';
-
-// Components
+import type { FilterConfig, FilterGroupConfig, FilterValues, TableConfig } from './types';
+import { useFilterState, useFiltersByZone, useTableState } from './hooks';
+import { computeInitialFilterValues } from './utils/urlHelpers';
 import { FirstLineToolbar } from './components/FirstLineToolbar';
 import { FilterZoneRenderer } from './components/FilterZoneRenderer';
 import { ActiveFilterBadges } from './components/ActiveFilterBadges';
-
-// ============================================================================
-// Helper Functions (outside component)
-// ============================================================================
-
-function getFiltersFromUrlParams(
-  filters: FilterConfig[],
-  searchParams: URLSearchParams
-): FilterValues {
-  const urlFilters: FilterValues = {};
-  const flatFilters = flattenFilters(filters);
-  flatFilters.forEach((filter) => {
-    const paramValue = searchParams.get(filter.id);
-    if (paramValue !== null) {
-      if (filter.type === 'dateRange') {
-        const fromValue = searchParams.get(`${filter.id}From`);
-        const toValue = searchParams.get(`${filter.id}To`);
-        if (fromValue || toValue) {
-          urlFilters[filter.id] = { from: fromValue || undefined, to: toValue || undefined };
-        }
-      } else {
-        urlFilters[filter.id] = paramValue;
-      }
-    } else if (filter.type === 'dateRange') {
-      const fromValue = searchParams.get(`${filter.id}From`);
-      const toValue = searchParams.get(`${filter.id}To`);
-      if (fromValue || toValue) {
-        urlFilters[filter.id] = { from: fromValue || undefined, to: toValue || undefined };
-      }
-    }
-  });
-  return urlFilters;
-}
-
-function computeInitialFilterValues(
-  syncWithUrl: boolean,
-  filters: FilterConfig[],
-  searchParams: URLSearchParams,
-  initialFilterValues: FilterValues
-): FilterValues {
-  if (syncWithUrl) {
-    const urlFilters = getFiltersFromUrlParams(filters, searchParams);
-    return { ...initialFilterValues, ...urlFilters };
-  }
-  return initialFilterValues;
-}
-
-function computeInitialSorting(
-  syncSortingWithUrl: boolean,
-  searchParams: URLSearchParams,
-  defaultSortBy: string | undefined,
-  defaultSortOrder: SortOrder
-): { sortBy?: string; sortOrder: SortOrder } {
-  if (syncSortingWithUrl) {
-    const urlSortBy = searchParams.get('sortBy');
-    const urlSortOrder = searchParams.get('sortOrder') as SortOrder | null;
-    return {
-      sortBy: urlSortBy || defaultSortBy,
-      sortOrder: urlSortOrder || defaultSortOrder,
-    };
-  }
-  return { sortBy: defaultSortBy, sortOrder: defaultSortOrder };
-}
-
-// ============================================================================
-// Component Props
-// ============================================================================
 
 export interface TableWithFiltersProps<T extends object> {
   columns: Column<T>[];
@@ -123,10 +46,6 @@ export interface TableWithFiltersProps<T extends object> {
   syncSortingWithUrl?: boolean;
 }
 
-// ============================================================================
-// Component
-// ============================================================================
-
 export const TableWithFilters = <T extends object>({
   columns,
   rowKey,
@@ -146,43 +65,46 @@ export const TableWithFilters = <T extends object>({
   syncWithUrl = false,
   syncSortingWithUrl = false,
 }: TableWithFiltersProps<T>) => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
-  // Compute initial values using helper functions
+  // Compute initial filter values (only once on mount)
   const computedInitialFilters = useMemo(
     () => computeInitialFilterValues(syncWithUrl, filters, searchParams, initialFilterValues),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [] // Only compute once on mount
+    []
   );
 
-  const computedInitialSorting = useMemo(
-    () => computeInitialSorting(syncSortingWithUrl, searchParams, defaultSortBy, defaultSortOrder),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [] // Only compute once on mount
-  );
+  // Filter state management
+  const { filterValues, activeFilters, handleFilterChange, handleClearFilters, handleRemoveFilter } =
+    useFilterState({
+      filters,
+      initialFilterValues: computedInitialFilters,
+      externalFilterValues,
+      onFilterChange,
+    });
 
-  // ========== Filter State ==========
+  // Table UI state (sorting, pagination, hideable filters)
   const {
-    filterValues,
-    activeFilters,
-    handleFilterChange,
-    handleClearFilters,
-    handleRemoveFilter,
-  } = useFilterState({
+    page,
+    pageSize,
+    sortBy,
+    sortOrder,
+    showHideableFilters,
+    setPage,
+    setPageSize,
+    handleSortChange,
+    handleToggleHideableFilters,
+  } = useTableState({
+    defaultSortBy,
+    defaultSortOrder,
+    syncSortingWithUrl,
+    syncWithUrl,
     filters,
-    initialFilterValues: computedInitialFilters,
-    externalFilterValues,
-    onFilterChange,
+    filterValues,
+    onSortChange: externalOnSortChange,
   });
 
-  // ========== UI State ==========
-  const [showHideableFilters, setShowHideableFilters] = useState(false);
-  const [sortBy, setSortBy] = useState<string | undefined>(computedInitialSorting.sortBy);
-  const [sortOrder, setSortOrder] = useState<SortOrder>(computedInitialSorting.sortOrder);
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-
-  // ========== Filter Organization ==========
+  // Filter organization by zone
   const filtersByZone = useFiltersByZone(filters);
 
   const hasHideableFilters = useMemo(
@@ -190,75 +112,29 @@ export const TableWithFilters = <T extends object>({
     [filters]
   );
 
-  // ========== Handlers ==========
+  // Handlers that also reset pagination
   const handleFilterChangeWithPageReset = useCallback(
     (filterId: string, value: string | string[] | { from?: string; to?: string }) => {
       handleFilterChange(filterId, value);
       setPage(0);
     },
-    [handleFilterChange]
+    [handleFilterChange, setPage]
   );
 
   const handleClearFiltersWithPageReset = useCallback(() => {
     handleClearFilters();
     setPage(0);
-  }, [handleClearFilters]);
+  }, [handleClearFilters, setPage]);
 
   const handleRemoveFilterWithPageReset = useCallback(
     (filterId: string) => {
       handleRemoveFilter(filterId);
       setPage(0);
     },
-    [handleRemoveFilter]
+    [handleRemoveFilter, setPage]
   );
 
-  const handleSortChange = useCallback(
-    (newSortBy: string, newSortOrder: SortOrder) => {
-      setSortBy(newSortBy);
-      setSortOrder(newSortOrder);
-      externalOnSortChange?.(newSortBy, newSortOrder);
-    },
-    [externalOnSortChange]
-  );
-
-  const handleToggleHideableFilters = useCallback(() => {
-    setShowHideableFilters((prev) => !prev);
-  }, []);
-
-  // ========== URL Sync Effect ==========
-  useEffect(() => {
-    if (!syncWithUrl && !syncSortingWithUrl) return;
-
-    const newParams = new URLSearchParams();
-
-    if (syncWithUrl) {
-      const flatFilters = flattenFilters(filters);
-      flatFilters.forEach((filter) => {
-        const value = filterValues[filter.id];
-
-        if (filter.type === 'dateRange') {
-          const rangeValue = value as { from?: string; to?: string } | undefined;
-          if (rangeValue?.from) {
-            newParams.set(`${filter.id}From`, rangeValue.from);
-          }
-          if (rangeValue?.to) {
-            newParams.set(`${filter.id}To`, rangeValue.to);
-          }
-        } else if (typeof value === 'string' && value !== '') {
-          newParams.set(filter.id, value);
-        }
-      });
-    }
-
-    if (syncSortingWithUrl && sortBy) {
-      newParams.set('sortBy', sortBy);
-      newParams.set('sortOrder', sortOrder);
-    }
-
-    setSearchParams(newParams, { replace: true });
-  }, [syncWithUrl, syncSortingWithUrl, filterValues, filters, sortBy, sortOrder, setSearchParams]);
-
-  // ========== Memoized Render Sections ==========
+  // First line toolbar
   const firstLineToolbar = useMemo(
     () => (
       <FirstLineToolbar
@@ -271,9 +147,18 @@ export const TableWithFilters = <T extends object>({
         onToggleHideableFilters={handleToggleHideableFilters}
       />
     ),
-    [filtersByZone, filterGroups, filterValues, handleFilterChangeWithPageReset, hasHideableFilters, showHideableFilters, handleToggleHideableFilters]
+    [
+      filtersByZone,
+      filterGroups,
+      filterValues,
+      handleFilterChangeWithPageReset,
+      hasHideableFilters,
+      showHideableFilters,
+      handleToggleHideableFilters,
+    ]
   );
 
+  // Second line filters
   const secondLineContent = useMemo(
     () => (
       <FilterZoneRenderer
@@ -287,6 +172,7 @@ export const TableWithFilters = <T extends object>({
     [filtersByZone, filterGroups, filterValues, handleFilterChangeWithPageReset]
   );
 
+  // Hideable filters content
   const hideableFiltersContent = useMemo(
     () => (
       <FilterZoneRenderer
@@ -300,6 +186,7 @@ export const TableWithFilters = <T extends object>({
     [filtersByZone, filterGroups, filterValues, handleFilterChangeWithPageReset]
   );
 
+  // Hideable filters panel with collapse
   const hideableFiltersPanel = useMemo(
     () =>
       hideableFiltersContent ? (
@@ -310,6 +197,7 @@ export const TableWithFilters = <T extends object>({
     [hideableFiltersContent, showHideableFilters]
   );
 
+  // Active filter badges
   const activeFilterBadgesPanel = useMemo(
     () => (
       <ActiveFilterBadges
@@ -321,7 +209,7 @@ export const TableWithFilters = <T extends object>({
     [activeFilters, handleRemoveFilterWithPageReset, handleClearFiltersWithPageReset]
   );
 
-  // Combined toolbar for DataTable
+  // Combined toolbar for DataTable (simple mode)
   const simpleToolbar = useMemo(() => {
     const hasFirstLine = hasHideableFilters || filters.some((f) => f.zone === 'exposed_first_line');
     const hasSecondLine = filters.some((f) => f.zone === 'exposed_second_line');
@@ -338,7 +226,7 @@ export const TableWithFilters = <T extends object>({
     );
   }, [hasHideableFilters, filters, firstLineToolbar, secondLineContent]);
 
-  // ========== Render ==========
+  // Render
   return (
     <Box data-testid={testId}>
       {tableConfig.mode === 'simple' ? (

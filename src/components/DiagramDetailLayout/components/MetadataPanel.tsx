@@ -1,42 +1,13 @@
-import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import {
-  Box,
-  Chip,
-  Divider,
-  FormControl,
-  Select,
-  MenuItem,
-  Tooltip,
-} from '@mui/material';
-import ErrorIcon from '@mui/icons-material/Error';
-import { MonoText } from '@components/MonoText';
+import { Box, Divider } from '@mui/material';
 import { NavButton } from '@components/NavButton';
-import { StateBadge } from '@components/StateBadge';
 import { MetadataItem } from './MetadataItem';
+import type { MetadataField, VersionInfo, DefinitionInfo } from '../types';
+import { useMetadataFields } from '../hooks';
 
-export interface MetadataField {
-  /** Label text displayed above the value */
-  label: string;
-  /** ReactNode to display as the value */
-  value: ReactNode;
-  /** Whether to use monospace font for string values */
-  mono?: boolean;
-}
-
-export interface VersionInfo {
-  key: number;
-  version: number;
-}
-
-/** Definition info for instances - displayed as a link to the parent definition */
-export interface DefinitionInfo {
-  /** Definition key (used for link) */
-  key: number | string;
-  /** Type of definition (determines the link URL) */
-  type: 'process' | 'decision';
-}
+// Re-export types for backward compatibility
+export type { MetadataField, VersionInfo, DefinitionInfo };
 
 export interface MetadataPanelProps {
   /** Primary entity key */
@@ -94,22 +65,6 @@ export interface MetadataPanelProps {
  * 1. Pass `fields` directly for simple usage
  * 2. Pass individual props (entityKey, name, version, etc.) to auto-build fields
  */
-// Helper function for date formatting
-function formatDate(dateString: string): string {
-  try {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
-  } catch {
-    return dateString;
-  }
-}
-
 export const MetadataPanel = ({
   entityKey,
   stateField,
@@ -128,126 +83,9 @@ export const MetadataPanel = ({
   fields: directFields,
   gap = 1.5,
 }: MetadataPanelProps) => {
-  const { t } = useTranslation([ns.common, ns.processInstance]);
+  const { t } = useTranslation([ns.common]);
 
-  // Build metadata fields from props (or use direct fields)
-  const fields = useMemo((): MetadataField[] => {
-    // If direct fields provided, use them
-    if (directFields) {
-      return directFields;
-    }
-
-    // Otherwise build from individual props
-    if (entityKey === undefined) {
-      return [];
-    }
-
-    const result: MetadataField[] = [];
-
-    // 1. State (first when present, for instances)
-    // Use stateField if provided, otherwise build from state prop
-    if (stateField) {
-      result.push(stateField);
-    } else if (state) {
-      result.push({
-        label: t('common:fields.state'),
-        value: (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <StateBadge state={state} />
-            {incidentsCount !== undefined && incidentsCount > 0 && (
-              <Tooltip title={t('processInstance:detail.hasIncidents', { count: incidentsCount })}>
-                <ErrorIcon sx={{ fontSize: 18, color: 'error.main' }} />
-              </Tooltip>
-            )}
-          </Box>
-        ),
-      });
-    }
-
-    // 2. Key
-    result.push({
-      label: keyLabel || t('common:fields.key'),
-      value: <MonoText>{entityKey}</MonoText>,
-    });
-
-    // 3. Name
-    if (name) {
-      result.push({
-        label: t('common:fields.name'),
-        value: name,
-      });
-    }
-
-    // 4. Version (with selector if multiple versions available)
-    if (version !== undefined) {
-      if (versions.length > 1 && onVersionChange) {
-        result.push({
-          label: t('common:fields.version'),
-          value: (
-            <FormControl size="small" fullWidth>
-              <Select
-                value={entityKey}
-                onChange={(e) => onVersionChange(String(e.target.value))}
-                sx={{ fontSize: '0.875rem' }}
-              >
-                {versions.map((v) => (
-                  <MenuItem key={v.key} value={v.key}>
-                    v{v.version}
-                    {v.key === entityKey && (
-                      <Chip
-                        label={t('common:current')}
-                        size="small"
-                        sx={{ ml: 1, height: 18, fontSize: '0.65rem' }}
-                      />
-                    )}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          ),
-        });
-      } else {
-        result.push({
-          label: t('common:fields.version'),
-          value: (
-            <Chip
-              label={`v${version}`}
-              size="small"
-              sx={{
-                bgcolor: 'grey.100',
-                color: 'primary.main',
-                fontWeight: 600,
-                fontSize: '0.75rem',
-                height: 20,
-              }}
-            />
-          ),
-        });
-      }
-    }
-
-    // 5. Resource name
-    if (resourceName) {
-      result.push({
-        label: t('common:fields.resourceName'),
-        value: resourceName,
-      });
-    }
-
-    // 6. Created at
-    if (createdAt) {
-      result.push({
-        label: t('common:fields.createdAt'),
-        value: formatDate(createdAt),
-      });
-    }
-
-    // 7. Additional fields
-    result.push(...additionalFields);
-
-    return result;
-  }, [
-    directFields,
+  const fields = useMetadataFields({
     entityKey,
     stateField,
     state,
@@ -259,11 +97,10 @@ export const MetadataPanel = ({
     resourceName,
     onVersionChange,
     additionalFields,
-    t,
     keyLabel,
-  ]);
+    directFields,
+  });
 
-  // Check if we have navigation links
   const hasLinks = definitionInfo || processInstanceKey;
 
   // Simple render if no links
@@ -271,12 +108,7 @@ export const MetadataPanel = ({
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap, flex: 1 }}>
         {fields.map((field, index) => (
-          <MetadataItem
-            key={`${field.label}-${index}`}
-            label={field.label}
-            value={field.value}
-            mono={field.mono}
-          />
+          <MetadataItem key={`${field.label}-${index}`} label={field.label} value={field.value} mono={field.mono} />
         ))}
       </Box>
     );
@@ -288,12 +120,7 @@ export const MetadataPanel = ({
       {/* Main content */}
       <Box sx={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap }}>
         {fields.map((field, index) => (
-          <MetadataItem
-            key={`${field.label}-${index}`}
-            label={field.label}
-            value={field.value}
-            mono={field.mono}
-          />
+          <MetadataItem key={`${field.label}-${index}`} label={field.label} value={field.value} mono={field.mono} />
         ))}
       </Box>
 
@@ -317,9 +144,7 @@ export const MetadataPanel = ({
           </NavButton>
         )}
         {processInstanceKey && (
-          <NavButton to={`/process-instances/${processInstanceKey}`}>
-            {t('common:fields.processInstance')}
-          </NavButton>
+          <NavButton to={`/process-instances/${processInstanceKey}`}>{t('common:fields.processInstance')}</NavButton>
         )}
       </Box>
     </Box>
