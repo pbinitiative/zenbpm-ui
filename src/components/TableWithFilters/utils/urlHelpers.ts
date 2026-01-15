@@ -1,4 +1,3 @@
-import type { SortOrder } from '@components/DataTable';
 import type { FilterConfig, FilterValues } from '../types';
 import { flattenFilters } from '../hooks/useFilterState';
 
@@ -44,19 +43,3 @@ export function computeInitialFilterValues(
   return initialFilterValues;
 }
 
-export function computeInitialSorting(
-  syncSortingWithUrl: boolean,
-  searchParams: URLSearchParams,
-  defaultSortBy: string | undefined,
-  defaultSortOrder: SortOrder
-): { sortBy?: string; sortOrder: SortOrder } {
-  if (syncSortingWithUrl) {
-    const urlSortBy = searchParams.get('sortBy');
-    const urlSortOrder = searchParams.get('sortOrder') as SortOrder | null;
-    return {
-      sortBy: urlSortBy || defaultSortBy,
-      sortOrder: urlSortOrder || defaultSortOrder,
-    };
-  }
-  return { sortBy: defaultSortBy, sortOrder: defaultSortOrder };
-}

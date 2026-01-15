@@ -1,1 +1,0 @@
-export { IncidentsPage } from './IncidentsPage';

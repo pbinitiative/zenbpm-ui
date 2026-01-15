@@ -78,14 +78,6 @@ export interface Variable {
 
 import { themeColors } from '@base/theme';
 
-// Helper type for state colors - using theme stateBadge colors
-export const STATE_COLORS: Record<ProcessInstanceState, string> = {
-  active: themeColors.stateBadge.active,
-  completed: themeColors.stateBadge.completed,
-  terminated: themeColors.stateBadge.terminated,
-  failed: themeColors.stateBadge.failed,
-};
-
 export const JOB_STATE_COLORS: Record<JobState, string> = {
   activatable: themeColors.stateBadge.created,
   activated: themeColors.stateBadge.terminated,
