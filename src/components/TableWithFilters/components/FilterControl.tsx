@@ -138,7 +138,7 @@ export const FilterControl = ({ filter, value, onChange }: FilterControlProps) =
           label={filter.label}
           value={(value as string) || ''}
           onChange={(e) => handleChange(e.target.value)}
-          InputLabelProps={{ shrink: true }}
+          slotProps={{ inputLabel: { shrink: true } }}
           sx={{ minWidth: width, maxWidth: width }}
         />
       );

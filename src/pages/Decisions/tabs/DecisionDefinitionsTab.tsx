@@ -68,7 +68,7 @@ export const DecisionDefinitionsTab = ({ refreshKey = 0 }: DecisionDefinitionsTa
 
   // Fetch when filters, sorting change or refresh is triggered
   useEffect(() => {
-    fetchDefinitions();
+    void fetchDefinitions();
   }, [fetchDefinitions, refreshKey]);
 
   // Handle sort change from table
@@ -127,7 +127,7 @@ export const DecisionDefinitionsTab = ({ refreshKey = 0 }: DecisionDefinitionsTa
 
   // Handlers
   const handleRowClick = useCallback((row: DmnResourceDefinitionSimple) => {
-    navigate(`/decision-definitions/${row.key}`);
+    void navigate(`/decision-definitions/${row.key}`);
   }, [navigate]);
 
   const handleFilterChange = useCallback((newFilters: FilterValues) => {

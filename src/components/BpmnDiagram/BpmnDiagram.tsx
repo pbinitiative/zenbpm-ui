@@ -3,6 +3,36 @@ import { Box, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
 import BpmnViewer from 'bpmn-js/lib/NavigatedViewer';
 import { themeColors } from '@base/theme';
 
+// bpmn-js type definitions (library has poor TypeScript support)
+interface BpmnElement {
+  id: string;
+  type: string;
+  businessObject?: {
+    outgoing?: Array<{ id: string }>;
+    targetRef?: { id: string };
+  };
+}
+
+interface BpmnCanvas {
+  addMarker: (elementId: string, marker: string) => void;
+  removeMarker: (elementId: string, marker: string) => void;
+  zoom: (type: string) => void;
+}
+
+interface BpmnElementRegistry {
+  get: (elementId: string) => BpmnElement | undefined;
+  getAll: () => BpmnElement[];
+}
+
+interface BpmnOverlays {
+  add: (elementId: string, type: string, config: { position: { top?: number; right?: number; bottom?: number; left?: number }; html: string }) => void;
+  clear: () => void;
+}
+
+interface BpmnEventBus {
+  on: (event: string, callback: (e: { element: BpmnElement }) => void) => void;
+}
+
 // Element statistics from API - map of elementId to counts
 export type ElementStatistics = Record<string, { activeCount: number; incidentCount: number }>;
 
@@ -83,12 +113,8 @@ export const BpmnDiagram = ({
   // Apply history markers (completed elements and connecting sequence flows)
   const applyHistory = useCallback(() => {
     if (!viewerRef.current || !historyRef.current.length) return;
-    const canvas = viewerRef.current.get('canvas') as {
-      addMarker: (id: string, marker: string) => void;
-    };
-    const elementRegistry = viewerRef.current.get('elementRegistry') as {
-      get: (id: string) => { businessObject?: { incoming?: Array<{ id: string }>; outgoing?: Array<{ id: string }> } } | undefined;
-    };
+    const canvas = viewerRef.current.get('canvas') as BpmnCanvas;
+    const elementRegistry = viewerRef.current.get('elementRegistry') as BpmnElementRegistry;
 
     // Create a set of completed element IDs for quick lookup
     const completedElementIds = new Set(historyRef.current.map(h => h.elementId));
@@ -126,12 +152,8 @@ export const BpmnDiagram = ({
   // Apply active element markers
   const applyActiveElements = useCallback(() => {
     if (!viewerRef.current || !activeElementsRef.current.length) return;
-    const canvas = viewerRef.current.get('canvas') as {
-      addMarker: (id: string, marker: string) => void;
-    };
-    const elementRegistry = viewerRef.current.get('elementRegistry') as {
-      get: (id: string) => object | undefined;
-    };
+    const canvas = viewerRef.current.get('canvas') as BpmnCanvas;
+    const elementRegistry = viewerRef.current.get('elementRegistry') as BpmnElementRegistry;
 
     activeElementsRef.current.forEach(({ elementId }) => {
       const element = elementRegistry.get(elementId);
@@ -150,12 +172,8 @@ export const BpmnDiagram = ({
     const stats = elementStatisticsRef.current;
     if (Object.keys(stats).length === 0) return;
 
-    const overlays = viewerRef.current.get('overlays') as {
-      add: (id: string, type: string, options: object) => void;
-    };
-    const elementRegistry = viewerRef.current.get('elementRegistry') as {
-      get: (id: string) => object | undefined;
-    };
+    const overlays = viewerRef.current.get('overlays') as BpmnOverlays;
+    const elementRegistry = viewerRef.current.get('elementRegistry') as BpmnElementRegistry;
 
     Object.entries(stats).forEach(([elementId, { activeCount, incidentCount }]) => {
       // Check if element exists in the diagram before adding overlay
@@ -195,17 +213,11 @@ export const BpmnDiagram = ({
   // Apply selected element marker
   const applySelectedElement = useCallback(() => {
     if (!viewerRef.current) return;
-    const canvas = viewerRef.current.get('canvas') as {
-      addMarker: (id: string, marker: string) => void;
-      removeMarker: (id: string, marker: string) => void;
-    };
-    const elementRegistry = viewerRef.current.get('elementRegistry') as {
-      get: (id: string) => object | undefined;
-      getAll: () => Array<{ id: string }>;
-    };
+    const canvas = viewerRef.current.get('canvas') as BpmnCanvas;
+    const elementRegistry = viewerRef.current.get('elementRegistry') as BpmnElementRegistry;
 
     // Remove previous selected marker from all elements
-    elementRegistry.getAll().forEach((el) => {
+    elementRegistry.getAll().forEach((el: BpmnElement) => {
       try {
         canvas.removeMarker(el.id, 'element-selected');
       } catch {
@@ -234,6 +246,9 @@ export const BpmnDiagram = ({
   useEffect(() => {
     if (!containerRef.current || !diagramData) return;
 
+    // Capture container reference for use in async function
+    const container = containerRef.current;
+
     // Track if this specific effect is still active (not cleaned up)
     let isEffectActive = true;
     isMountedRef.current = true;
@@ -257,7 +272,7 @@ export const BpmnDiagram = ({
 
       // Create new viewer
       const viewer = new BpmnViewer({
-        container: containerRef.current!,
+        container,
       });
 
       // Store reference immediately
@@ -290,9 +305,7 @@ export const BpmnDiagram = ({
         }
 
         // Zoom to fit
-        const canvas = viewer.get('canvas') as {
-          zoom: (type: string) => void;
-        };
+        const canvas = viewer.get('canvas') as BpmnCanvas;
         canvas.zoom('fit-viewport');
 
         // Apply overlays
@@ -301,10 +314,8 @@ export const BpmnDiagram = ({
         applyElementStatistics();
 
         // Setup click handler using ref to avoid dependency
-        const eventBus = viewer.get('eventBus') as {
-          on: (event: string, callback: (e: { element: { id: string; type: string } }) => void) => void;
-        };
-        eventBus.on('element.click', (e) => {
+        const eventBus = viewer.get('eventBus') as BpmnEventBus;
+        eventBus.on('element.click', (e: { element: BpmnElement }) => {
           if (e.element.type !== 'bpmn:Process' && onElementClickRef.current) {
             onElementClickRef.current(e.element.id);
           }
@@ -323,7 +334,7 @@ export const BpmnDiagram = ({
       }
     };
 
-    initViewer();
+    void initViewer();
 
     return () => {
       isEffectActive = false;
@@ -347,9 +358,7 @@ export const BpmnDiagram = ({
     if (!viewerRef.current || loading) return;
 
     // Clear existing overlays and reapply
-    const overlays = viewerRef.current.get('overlays') as {
-      clear: () => void;
-    };
+    const overlays = viewerRef.current.get('overlays') as BpmnOverlays;
     overlays.clear();
     applyHistory();
     applyActiveElements();
@@ -366,9 +375,7 @@ export const BpmnDiagram = ({
   useEffect(() => {
     if (!viewerRef.current || loading) return;
 
-    const canvas = viewerRef.current.get('canvas') as {
-      zoom: (type: string) => void;
-    };
+    const canvas = viewerRef.current.get('canvas') as BpmnCanvas;
 
     // Small delay to let the container resize first
     const timeoutId = setTimeout(() => {

@@ -5,8 +5,21 @@ interface OverlayVariableProps {
   value: unknown;
 }
 
+// Helper to safely stringify any value
+const stringify = (val: unknown): string => {
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'object') return JSON.stringify(val);
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number' || typeof val === 'boolean' || typeof val === 'bigint') {
+    return val.toString();
+  }
+  if (typeof val === 'symbol') return val.toString();
+  if (typeof val === 'function') return '[Function]';
+  return '';
+};
+
 export const OverlayVariable = ({ name, value }: OverlayVariableProps) => {
-  let valStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
+  let valStr = stringify(value);
   if (valStr.length > 12) valStr = valStr.slice(0, 12) + '…';
 
   return (

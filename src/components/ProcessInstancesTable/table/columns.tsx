@@ -2,8 +2,10 @@ import { Box } from '@mui/material';
 import { StateBadge } from '@components/StateBadge';
 import { MonoText } from '@components/MonoText';
 import type { Column } from '@components/DataTable';
-import type { TFunction } from 'i18next';
 import type { ProcessInstance, ProcessDefinitionOption } from '../ProcessInstancesTable';
+
+// Translation function type - ESLint validates keys via i18n-namespace-match rule
+type TranslateFunction = (key: string) => string;
 
 interface ColumnOptions {
   /** Whether to show the process column */
@@ -13,7 +15,7 @@ interface ColumnOptions {
 }
 
 export const getProcessInstanceColumns = (
-  t: TFunction,
+  t: TranslateFunction,
   options: ColumnOptions
 ): Column<ProcessInstance>[] => {
   const { showProcessColumn, processDefinitions } = options;

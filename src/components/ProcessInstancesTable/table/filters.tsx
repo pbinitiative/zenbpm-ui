@@ -1,6 +1,8 @@
 import { StateBadge } from '@components/StateBadge';
 import type { FilterConfig, FilterOption, SimpleFilterConfig } from '@components/TableWithFilters';
-import type { TFunction } from 'i18next';
+
+// Translation function type - ESLint validates keys via i18n-namespace-match rule
+type TranslateFunction = (key: string) => string;
 
 interface FilterOptions {
   /** Whether to show the process filter */
@@ -12,7 +14,7 @@ interface FilterOptions {
 }
 
 export const getProcessInstanceFilters = (
-  t: TFunction,
+  t: TranslateFunction,
   options: FilterOptions
 ): FilterConfig[] => {
   const { showProcessFilter, processOptions, activityIds } = options;

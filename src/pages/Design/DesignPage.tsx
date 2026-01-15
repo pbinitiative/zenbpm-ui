@@ -108,11 +108,11 @@ export const DesignPage = () => {
   const navigate = useNavigate();
 
   const handleProcessClick = useCallback(() => {
-    navigate('/designer/process');
+    void navigate('/designer/process');
   }, [navigate]);
 
   const handleDecisionClick = useCallback(() => {
-    navigate('/designer/decision');
+    void navigate('/designer/decision');
   }, [navigate]);
 
   return (

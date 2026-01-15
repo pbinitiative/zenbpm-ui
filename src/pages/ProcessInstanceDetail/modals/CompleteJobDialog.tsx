@@ -54,7 +54,7 @@ export const CompleteJobDialog = ({
 
     setLoading(true);
     try {
-      const parsedVariables = JSON.parse(variables);
+      const parsedVariables = JSON.parse(variables) as Record<string, unknown>;
       await onComplete(job.key, parsedVariables);
     } finally {
       setLoading(false);

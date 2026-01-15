@@ -68,7 +68,7 @@ export const StartInstanceDialog = ({
   // Format JSON
   const handleFormat = useCallback(() => {
     try {
-      const parsed = JSON.parse(variables);
+      const parsed: unknown = JSON.parse(variables);
       setVariables(JSON.stringify(parsed, null, 2));
       setError(null);
     } catch {
@@ -95,7 +95,7 @@ export const StartInstanceDialog = ({
     try {
       const data = await createProcessInstance({
         processDefinitionKey,
-        variables: JSON.parse(variables),
+        variables: JSON.parse(variables) as Record<string, unknown>,
       });
       onSuccess?.(data.key);
       onClose();
@@ -112,8 +112,8 @@ export const StartInstanceDialog = ({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{
-        sx: { borderRadius: '12px' },
+      slotProps={{
+        paper: { sx: { borderRadius: '12px' } },
       }}
     >
       <DialogTitle

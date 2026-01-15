@@ -32,8 +32,8 @@ export const IncidentCountProvider = ({ children }: IncidentCountProviderProps) 
     isMountedRef.current = true;
 
     // Initial fetch - async callback sets state after data arrives
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Async fetch with setState in callback is valid pattern
-    fetchIncidentCount();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Async fetch pattern is valid
+    void fetchIncidentCount();
 
     // Periodic polling
     const intervalId = setInterval(fetchIncidentCount, POLL_INTERVAL);
@@ -45,7 +45,7 @@ export const IncidentCountProvider = ({ children }: IncidentCountProviderProps) 
   }, [fetchIncidentCount]);
 
   const refreshCount = useCallback(() => {
-    fetchIncidentCount();
+    void fetchIncidentCount();
   }, [fetchIncidentCount]);
 
   return (

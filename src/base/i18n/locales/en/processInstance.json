@@ -41,7 +41,8 @@
     "active": "Active",
     "completed": "Completed",
     "failed": "Failed",
-    "canceled": "Canceled"
+    "canceled": "Canceled",
+    "terminated": "Terminated"
   },
   "incidentStates": {
     "unresolved": "Unresolved",

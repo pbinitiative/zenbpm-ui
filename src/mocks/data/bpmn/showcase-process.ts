@@ -26,7 +26,7 @@ const createInstance = (
   variables: Record<string, unknown>,
   partition: number,
   stoppedAt: StoppedAt = 'task-a',
-  isHighValue: boolean = false // Determines if it goes through task-b (price > 50000)
+  isHighValue = false // Determines if it goes through task-b (price > 50000)
 ): MockProcessInstance => {
   const startCompletedAt = addMinutes(createdAt, 1);
   const taskACompletedAt = stoppedAt !== 'task-a' ? addMinutes(createdAt, 30) : undefined;
@@ -52,7 +52,7 @@ const createInstance = (
       key: `${key}002`,
       elementId: 'task-a',
       elementType: 'userTask',
-      state: (stoppedAt === 'task-a' ? state : 'completed') as 'active' | 'completed' | 'terminated' | 'failed',
+      state: (stoppedAt === 'task-a' ? state : 'completed'),
       startedAt: startCompletedAt,
       completedAt: taskACompletedAt,
     },
@@ -76,7 +76,7 @@ const createInstance = (
             key: `${key}004`,
             elementId: 'task-b',
             elementType: 'userTask',
-            state: (stoppedAt === 'task-b' ? state : 'completed') as 'active' | 'completed' | 'terminated' | 'failed',
+            state: (stoppedAt === 'task-b' ? state : 'completed'),
             startedAt: gatewayCompletedAt!,
             completedAt: taskBCompletedAt,
           },

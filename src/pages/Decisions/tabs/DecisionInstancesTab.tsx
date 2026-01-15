@@ -45,7 +45,7 @@ export const DecisionInstancesTab = ({ refreshKey = 0 }: DecisionInstancesTabPro
         console.error('Failed to load decision definitions:', error);
       }
     };
-    loadDecisionDefinitions();
+    void loadDecisionDefinitions();
   }, []);
 
   // Fetch decision instances data using API service
@@ -200,7 +200,7 @@ export const DecisionInstancesTab = ({ refreshKey = 0 }: DecisionInstancesTabPro
 
   // Handlers
   const handleRowClick = useCallback((row: DecisionInstanceSummary) => {
-    navigate(`/decision-instances/${row.key}`);
+    void navigate(`/decision-instances/${row.key}`);
   }, [navigate]);
 
   const handleFilterChange = useCallback((newFilters: FilterValues) => {

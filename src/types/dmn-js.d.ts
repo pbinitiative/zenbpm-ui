@@ -4,14 +4,14 @@ declare module 'dmn-js/lib/NavigatedViewer' {
   }
 
   interface DmnViewer {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     get(name: string): any;
   }
 
   export default class DmnJS {
     constructor(options?: ViewerOptions);
     importXML(xml: string): Promise<{ warnings: string[] }>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     get(name: string): any;
     getActiveViewer(): DmnViewer | null;
     getActiveView(): { type: string; element: unknown } | null;
@@ -38,7 +38,7 @@ declare module 'dmn-js/lib/Modeler' {
       propertiesPanel?: {
         parent: HTMLElement;
       };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       additionalModules?: any[];
     };
     keyboard?: {
@@ -47,7 +47,7 @@ declare module 'dmn-js/lib/Modeler' {
   }
 
   interface DmnModelerViewer {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     get(name: string): any;
   }
 
@@ -55,7 +55,7 @@ declare module 'dmn-js/lib/Modeler' {
     constructor(options?: ModelerOptions);
     importXML(xml: string): Promise<{ warnings: string[] }>;
     saveXML(options?: { format?: boolean }): Promise<{ xml?: string }>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     get(name: string): any;
     getActiveViewer(): DmnModelerViewer | null;
     getActiveView(): { type: string; element: unknown } | null;
@@ -66,10 +66,10 @@ declare module 'dmn-js/lib/Modeler' {
 }
 
 declare module 'dmn-js-properties-panel' {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   export const DmnPropertiesPanelModule: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   export const DmnPropertiesProviderModule: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   export const CamundaPropertiesProviderModule: any;
 }

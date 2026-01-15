@@ -38,7 +38,7 @@ export const ProcessesPage = () => {
   // Redirect to default tab if no tab specified or invalid tab
   useEffect(() => {
     if (!tab || !validTabs.includes(tab as TabValue)) {
-      navigate('/processes/definitions', { replace: true });
+      void navigate('/processes/definitions', { replace: true });
     }
   }, [tab, navigate]);
 
@@ -50,7 +50,7 @@ export const ProcessesPage = () => {
   const handleTabChange = useCallback(
     (value: string) => {
       // Clear query params when switching tabs (each tab has its own filters)
-      navigate(`/processes/${value}`);
+      void navigate(`/processes/${value}`);
     },
     [navigate]
   );
@@ -94,7 +94,7 @@ export const ProcessesPage = () => {
   }, [t]);
 
   const handleDesignProcess = useCallback(() => {
-    navigate('/designer/process');
+    void navigate('/designer/process');
   }, [navigate]);
 
   const handleStartInstance = useCallback(() => {

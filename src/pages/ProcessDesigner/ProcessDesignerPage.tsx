@@ -69,7 +69,7 @@ export const ProcessDesignerPage = () => {
       }
     };
 
-    loadDefinition();
+    void loadDefinition();
   }, [processDefinitionKey, t]);
 
   // Handle mode change

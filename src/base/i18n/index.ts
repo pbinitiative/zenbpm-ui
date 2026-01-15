@@ -10,7 +10,7 @@ import { resources } from './resources';
 export { ns, allNamespaces } from './resources';
 export type { Resources, Namespace } from './resources';
 
-i18n.use(initReactI18next).init({
+void i18n.use(initReactI18next).init({
   resources,
   lng: 'en',
   fallbackLng: 'en',

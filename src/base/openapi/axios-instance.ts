@@ -22,12 +22,12 @@ AXIOS_INSTANCE.interceptors.request.use((config) => {
 // Add response interceptor to validate responses against OpenAPI schema
 // Uses the same validation logic as MSW mocks
 AXIOS_INSTANCE.interceptors.response.use(
-  (response: AxiosResponse) => {
+  (response: AxiosResponse<unknown>) => {
     const { config, data } = response;
-    const method = (config.method || 'GET').toUpperCase();
+    const method = (config.method ?? 'GET').toUpperCase();
     // Build full URL path including baseURL for schema matching
-    const baseURL = config.baseURL || '';
-    const url = config.url || '';
+    const baseURL = config.baseURL ?? '';
+    const url = config.url ?? '';
     const fullUrl = baseURL + url;
 
     // Validate response body against OpenAPI schema

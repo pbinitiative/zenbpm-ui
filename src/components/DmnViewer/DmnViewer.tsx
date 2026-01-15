@@ -96,6 +96,10 @@ export const DmnViewer = ({
       setLoading(true);
       setError(null);
 
+      // Capture container reference for use in async function
+      const container = containerRef.current;
+      if (!container) return;
+
       // Clean up existing viewer
       if (viewerRef.current) {
         viewerRef.current.destroy();
@@ -103,7 +107,7 @@ export const DmnViewer = ({
 
       // Create new viewer
       viewerRef.current = new DmnJS({
-        container: containerRef.current!,
+        container,
       });
 
       try {
@@ -173,7 +177,7 @@ export const DmnViewer = ({
       }
     };
 
-    initViewer();
+    void initViewer();
 
     return () => {
       // Cleanup React roots
@@ -465,7 +469,7 @@ export const DmnViewer = ({
           startX = e.clientX;
           startY = e.clientY;
           const transform = wrapper.style.transform;
-          const match = transform.match(/translate\(([^,]+)px,\s*([^)]+)px\)/);
+          const match = /translate\(([^,]+)px,\s*([^)]+)px\)/.exec(transform);
           if (match) {
             currentTranslateX = parseFloat(match[1]);
             currentTranslateY = parseFloat(match[2]);
@@ -487,7 +491,7 @@ export const DmnViewer = ({
         const onMouseUp = () => {
           if (isDragging) {
             const transform = wrapper.style.transform;
-            const match = transform.match(/translate\(([^,]+)px,\s*([^)]+)px\)/);
+            const match = /translate\(([^,]+)px,\s*([^)]+)px\)/.exec(transform);
             if (match) {
               currentTranslateX = parseFloat(match[1]);
               currentTranslateY = parseFloat(match[2]);

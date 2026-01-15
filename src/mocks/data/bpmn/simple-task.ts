@@ -21,7 +21,7 @@ const createInstance = (
   state: 'active' | 'completed' | 'terminated' | 'failed',
   variables: Record<string, unknown>,
   partition: number,
-  stoppedAtTask: boolean = true // true = stopped at Task_1, false = completed
+  stoppedAtTask = true // true = stopped at Task_1, false = completed
 ): MockProcessInstance => {
   const startCompletedAt = addMinutes(createdAt, 1);
 

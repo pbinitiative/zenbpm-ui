@@ -66,7 +66,7 @@ export const VersionSwitcher = ({
     };
 
     if (bpmnProcessId) {
-      fetchVersions();
+      void fetchVersions();
     }
   }, [bpmnProcessId, propVersions]);
 

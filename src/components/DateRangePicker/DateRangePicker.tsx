@@ -347,7 +347,7 @@ export const DateRangePicker = ({
                 >
                   <ListItemText
                     primary={option.label}
-                    primaryTypographyProps={{ variant: 'body2', fontSize: '0.8rem' }}
+                    slotProps={{ primary: { variant: 'body2', fontSize: '0.8rem' } }}
                   />
                 </ListItemButton>
               ))}
@@ -366,7 +366,7 @@ export const DateRangePicker = ({
                   <ToggleButtonGroup
                     value={fromMode}
                     exclusive
-                    onChange={(_, newMode) => newMode && setFromMode(newMode)}
+                    onChange={(_, newMode: 'absolute' | 'relative' | null) => newMode && setFromMode(newMode)}
                     size="small"
                   >
                     <ToggleButton value="absolute" sx={{ px: 1.5, py: 0.25, fontSize: '0.75rem' }}>
@@ -385,7 +385,7 @@ export const DateRangePicker = ({
                     value={tempFrom}
                     onChange={(e) => setTempFrom(e.target.value)}
                     fullWidth
-                    InputLabelProps={{ shrink: true }}
+                    slotProps={{ inputLabel: { shrink: true } }}
                   />
                 ) : (
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -395,7 +395,7 @@ export const DateRangePicker = ({
                       value={relativeFromValue}
                       onChange={(e) => setRelativeFromValue(parseInt(e.target.value) || 0)}
                       sx={{ width: 80 }}
-                      inputProps={{ min: 0 }}
+                      slotProps={{ htmlInput: { min: 0 } }}
                     />
                     <FormControl size="small" sx={{ minWidth: 100 }}>
                       <Select
@@ -427,7 +427,7 @@ export const DateRangePicker = ({
                   <ToggleButtonGroup
                     value={toMode}
                     exclusive
-                    onChange={(_, newMode) => newMode && setToMode(newMode)}
+                    onChange={(_, newMode: 'absolute' | 'relative' | null) => newMode && setToMode(newMode)}
                     size="small"
                   >
                     <ToggleButton value="absolute" sx={{ px: 1.5, py: 0.25, fontSize: '0.75rem' }}>
@@ -446,7 +446,7 @@ export const DateRangePicker = ({
                     value={tempTo}
                     onChange={(e) => setTempTo(e.target.value)}
                     fullWidth
-                    InputLabelProps={{ shrink: true }}
+                    slotProps={{ inputLabel: { shrink: true } }}
                   />
                 ) : (
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -456,7 +456,7 @@ export const DateRangePicker = ({
                       value={relativeToValue}
                       onChange={(e) => setRelativeToValue(parseInt(e.target.value) || 0)}
                       sx={{ width: 80 }}
-                      inputProps={{ min: 0 }}
+                      slotProps={{ htmlInput: { min: 0 } }}
                     />
                     <FormControl size="small" sx={{ minWidth: 100 }}>
                       <Select

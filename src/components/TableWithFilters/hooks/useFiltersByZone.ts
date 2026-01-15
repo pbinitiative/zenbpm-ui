@@ -21,7 +21,10 @@ export const useFiltersByZone = (filters: FilterConfig[]): FiltersByZone => {
       if (!alignMap.has(group)) {
         alignMap.set(group, []);
       }
-      alignMap.get(group)!.push(filter);
+      const groupFilters = alignMap.get(group);
+      if (groupFilters) {
+        groupFilters.push(filter);
+      }
     });
 
     return zones;

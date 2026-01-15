@@ -152,7 +152,7 @@ export const ProcessDefinitionDetailPage = () => {
       }
     };
 
-    fetchData();
+    void fetchData();
   }, [processDefinitionKey, refreshKey]);
 
   // Handlers
@@ -160,7 +160,7 @@ export const ProcessDefinitionDetailPage = () => {
     (key: string) => {
       // Reset selected activity and navigate to new version
       setSelectedActivityId(undefined);
-      navigate(`/process-definitions/${key}`);
+      void navigate(`/process-definitions/${key}`);
     },
     [navigate]
   );
@@ -193,7 +193,7 @@ export const ProcessDefinitionDetailPage = () => {
   }, [t]);
 
   const handleEditDefinition = useCallback(() => {
-    navigate(`/designer/process/${processDefinitionKey}`);
+    void navigate(`/designer/process/${processDefinitionKey}`);
   }, [navigate, processDefinitionKey]);
 
   const handleSnackbarClose = useCallback(() => {
