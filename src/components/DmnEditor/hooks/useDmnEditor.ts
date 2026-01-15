@@ -1,0 +1,206 @@
+import { useEffect, useRef, useCallback, useState } from 'react';
+import DmnModeler from 'dmn-js/lib/Modeler';
+import {
+  DmnPropertiesPanelModule,
+  DmnPropertiesProviderModule,
+} from 'dmn-js-properties-panel';
+import type { DmnCanvas, DmnEventBus, DmnViewer } from '../types';
+import { EMPTY_DIAGRAM } from '../constants';
+
+interface UseDmnEditorOptions {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  propertiesPanelRef: React.RefObject<HTMLDivElement | null>;
+  initialXml?: string;
+  onChange?: (xml: string) => void;
+}
+
+interface UseDmnEditorResult {
+  loading: boolean;
+  error: string | null;
+  getXml: () => Promise<string>;
+  importXml: (xml: string) => Promise<void>;
+  createNew: () => Promise<void>;
+}
+
+export function useDmnEditor({
+  containerRef,
+  propertiesPanelRef,
+  initialXml,
+  onChange,
+}: UseDmnEditorOptions): UseDmnEditorResult {
+  const modelerRef = useRef<InstanceType<typeof DmnModeler> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const initialXmlLoadedRef = useRef(false);
+
+  // Get current XML from modeler
+  const getXml = useCallback(async (): Promise<string> => {
+    if (!modelerRef.current) {
+      throw new Error('Modeler not initialized');
+    }
+    const { xml } = await modelerRef.current.saveXML({ format: true });
+    return xml || '';
+  }, []);
+
+  // Import XML into modeler
+  const importXml = useCallback(async (xml: string): Promise<void> => {
+    if (!modelerRef.current) {
+      throw new Error('Modeler not initialized');
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await modelerRef.current.importXML(xml);
+      const activeViewer = modelerRef.current.getActiveViewer() as DmnViewer | null;
+      if (activeViewer) {
+        const canvas = activeViewer.get<DmnCanvas>('canvas');
+        canvas.zoom('fit-viewport');
+      }
+      setLoading(false);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to import diagram';
+      setError(errorMessage);
+      setLoading(false);
+      throw err;
+    }
+  }, []);
+
+  // Create new empty diagram
+  const createNew = useCallback(async (): Promise<void> => {
+    await importXml(EMPTY_DIAGRAM);
+  }, [importXml]);
+
+  // Initialize modeler once on mount
+  useEffect(() => {
+    let mounted = true;
+    let modeler: InstanceType<typeof DmnModeler> | null = null;
+
+    const initModeler = async () => {
+      if (!containerRef.current || !propertiesPanelRef.current) return;
+
+      // Wait a frame for container to have dimensions
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      if (!mounted || !containerRef.current || !propertiesPanelRef.current) return;
+
+      // Check container has dimensions
+      const rect = containerRef.current.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        // Wait a bit more
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        if (!mounted || !containerRef.current) return;
+      }
+
+      // Create DMN modeler with properties panel
+      modeler = new DmnModeler({
+        container: containerRef.current,
+        drd: {
+          propertiesPanel: {
+            parent: propertiesPanelRef.current,
+          },
+          additionalModules: [DmnPropertiesPanelModule, DmnPropertiesProviderModule],
+        },
+        keyboard: {
+          bindTo: document,
+        },
+      });
+
+      modelerRef.current = modeler;
+
+      // Setup change listener
+      const setupChangeListener = () => {
+        const activeViewer = modeler?.getActiveViewer() as DmnViewer | null;
+        if (activeViewer) {
+          const eventBus = activeViewer.get<DmnEventBus>('eventBus');
+          eventBus.on('commandStack.changed', () => {
+            const currentModeler = modelerRef.current;
+            if (onChange && currentModeler) {
+              void (async () => {
+                try {
+                  const { xml } = await currentModeler.saveXML({ format: true });
+                  if (xml) {
+                    onChange(xml);
+                  }
+                } catch {
+                  // Ignore errors during save
+                }
+              })();
+            }
+          });
+        }
+      };
+
+      // Load initial diagram
+      try {
+        const xmlToLoad = initialXml || EMPTY_DIAGRAM;
+        await modeler.importXML(xmlToLoad);
+        initialXmlLoadedRef.current = true;
+
+        if (!mounted) return;
+
+        // Setup change listener after import
+        setupChangeListener();
+
+        const activeViewer = modeler.getActiveViewer() as DmnViewer | null;
+        if (activeViewer) {
+          const canvas = activeViewer.get<DmnCanvas>('canvas');
+          canvas.zoom('fit-viewport');
+        }
+        setLoading(false);
+      } catch (err) {
+        console.error('Failed to load DMN diagram:', err);
+        if (!mounted) return;
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load diagram';
+        setError(errorMessage);
+        setLoading(false);
+      }
+    };
+
+    void initModeler();
+
+    return () => {
+      mounted = false;
+      if (modelerRef.current) {
+        modelerRef.current.destroy();
+        modelerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
+
+  // Handle initialXml changes after initial load
+  useEffect(() => {
+    if (!initialXmlLoadedRef.current || !modelerRef.current) return;
+
+    // Only reload if initialXml prop changed after initial load
+    const loadXml = async () => {
+      if (!modelerRef.current) return;
+      setLoading(true);
+      try {
+        const xmlToLoad = initialXml || EMPTY_DIAGRAM;
+        await modelerRef.current.importXML(xmlToLoad);
+        const activeViewer = modelerRef.current.getActiveViewer() as DmnViewer | null;
+        if (activeViewer) {
+          const canvas = activeViewer.get<DmnCanvas>('canvas');
+          canvas.zoom('fit-viewport');
+        }
+        setLoading(false);
+      } catch (err) {
+        console.error('Failed to reload DMN diagram:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load diagram';
+        setError(errorMessage);
+        setLoading(false);
+      }
+    };
+
+    void loadXml();
+  }, [initialXml]);
+
+  return {
+    loading,
+    error,
+    getXml,
+    importXml,
+    createNew,
+  };
+}

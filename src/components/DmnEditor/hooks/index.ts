@@ -1,0 +1,1 @@
+export { useDmnEditor } from './useDmnEditor';

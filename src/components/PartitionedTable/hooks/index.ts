@@ -1,0 +1,1 @@
+export { usePartitionedData } from './usePartitionedData';
