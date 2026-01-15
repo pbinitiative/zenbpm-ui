@@ -136,16 +136,19 @@ export const BpmnEditor = forwardRef<BpmnEditorRef, BpmnEditorProps>(
         const eventBus = modeler.get('eventBus') as {
           on: (event: string, callback: () => void) => void;
         };
-        eventBus.on('commandStack.changed', async () => {
-          if (onChange && modelerRef.current) {
-            try {
-              const { xml } = await modelerRef.current.saveXML({ format: true });
-              if (xml) {
-                onChange(xml);
+        eventBus.on('commandStack.changed', () => {
+          const currentModeler = modelerRef.current;
+          if (onChange && currentModeler) {
+            void (async () => {
+              try {
+                const { xml } = await currentModeler.saveXML({ format: true });
+                if (xml) {
+                  onChange(xml);
+                }
+              } catch {
+                // Ignore errors during save
               }
-            } catch {
-              // Ignore errors during save
-            }
+            })();
           }
         });
 
@@ -171,7 +174,7 @@ export const BpmnEditor = forwardRef<BpmnEditorRef, BpmnEditorProps>(
         }
       };
 
-      initModeler();
+      void initModeler();
 
       return () => {
         mounted = false;
@@ -207,7 +210,7 @@ export const BpmnEditor = forwardRef<BpmnEditorRef, BpmnEditorProps>(
         }
       };
 
-      loadXml();
+      void loadXml();
     }, [initialXml]);
 
     return (

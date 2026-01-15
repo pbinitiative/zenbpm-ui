@@ -42,7 +42,7 @@ export const DecisionInstancesTable = ({ dmnResourceDefinitionKey }: DecisionIns
       }
     };
 
-    fetchInstances();
+    void fetchInstances();
   }, [dmnResourceDefinitionKey]);
 
   // Column definitions
@@ -91,7 +91,7 @@ export const DecisionInstancesTable = ({ dmnResourceDefinitionKey }: DecisionIns
 
   const handleRowClick = useCallback(
     (row: DecisionInstanceSummary) => {
-      navigate(`/decision-instances/${row.key}`);
+      void navigate(`/decision-instances/${row.key}`);
     },
     [navigate]
   );

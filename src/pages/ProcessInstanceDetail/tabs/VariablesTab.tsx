@@ -17,6 +17,19 @@ import { EditVariableDialog } from '../modals/EditVariableDialog';
 import { DeleteVariableDialog } from '../modals/DeleteVariableDialog';
 import { updateProcessInstanceVariables, deleteProcessInstanceVariable } from '@base/openapi';
 
+// Helper to safely stringify any value
+const stringify = (val: unknown): string => {
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'object') return JSON.stringify(val, null, 2);
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number' || typeof val === 'boolean' || typeof val === 'bigint') {
+    return val.toString();
+  }
+  if (typeof val === 'symbol') return val.toString();
+  if (typeof val === 'function') return '[Function]';
+  return '';
+};
+
 interface Variable {
   name: string;
   value: string;
@@ -48,7 +61,7 @@ export const VariablesTab = ({
     if (!variables) return [];
     return Object.entries(variables).map(([name, value]) => ({
       name,
-      value: typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value),
+      value: stringify(value),
       rawValue: value,
     }));
   }, [variables]);

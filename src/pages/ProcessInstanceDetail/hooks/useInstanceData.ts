@@ -121,7 +121,7 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
       }
     };
 
-    fetchData();
+    void fetchData();
   }, [processInstanceKey]);
 
   return {

@@ -68,13 +68,13 @@ export const DecisionDefinitionDetailPage = () => {
       }
     };
 
-    fetchData();
+    void fetchData();
   }, [dmnResourceDefinitionKey]);
 
   // Handlers
   const handleVersionChange = useCallback(
     (key: string) => {
-      navigate(`/decision-definitions/${key}`);
+      void navigate(`/decision-definitions/${key}`);
     },
     [navigate]
   );

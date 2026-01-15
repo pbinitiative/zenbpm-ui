@@ -60,7 +60,7 @@ export const UpdateRetriesDialog = ({
             type="number"
             value={retries}
             onChange={(e) => setRetries(Math.max(0, parseInt(e.target.value) || 0))}
-            inputProps={{ min: 0, max: 100 }}
+            slotProps={{ htmlInput: { min: 0, max: 100 } }}
             fullWidth
             autoFocus
           />

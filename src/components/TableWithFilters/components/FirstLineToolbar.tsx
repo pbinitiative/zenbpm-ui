@@ -29,7 +29,7 @@ export const FirstLineToolbar = ({
 }: FirstLineToolbarProps) => {
   const { t } = useTranslation([ns.common]);
 
-  const zoneData = filtersByZone['exposed_first_line'];
+  const zoneData = filtersByZone.exposed_first_line;
   const leftGroups = Array.from(zoneData.left.entries());
   const rightGroups = Array.from(zoneData.right.entries());
   const showFiltersButton = hasHideableFilters;

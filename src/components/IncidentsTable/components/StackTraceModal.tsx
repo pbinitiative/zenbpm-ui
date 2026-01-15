@@ -29,18 +29,8 @@ export const StackTraceModal = ({
   const { t } = useTranslation([ns.common, ns.incidents]);
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(message);
-    } catch {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = message;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-    }
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(message);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -50,8 +40,8 @@ export const StackTraceModal = ({
       open={open}
       onClose={onClose}
       maxWidth="lg"
-      PaperProps={{
-        sx: { maxHeight: '80vh' },
+      slotProps={{
+        paper: { sx: { maxHeight: '80vh' } },
       }}
     >
       <DialogTitle>

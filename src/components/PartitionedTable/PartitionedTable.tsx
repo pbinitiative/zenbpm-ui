@@ -20,6 +20,19 @@ import { useNotification } from '@base/contexts';
 import { TablePagination } from '@components/TablePagination';
 import type { Column, SortOrder } from '@components/DataTable';
 
+// Helper to safely stringify any value
+const stringify = (val: unknown): string => {
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'object') return JSON.stringify(val);
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number' || typeof val === 'boolean' || typeof val === 'bigint') {
+    return val.toString();
+  }
+  if (typeof val === 'symbol') return val.toString();
+  if (typeof val === 'function') return '[Function]';
+  return '';
+};
+
 // Generic partition data structure matching the API response
 export interface PartitionData<T> {
   partition: number;
@@ -138,7 +151,7 @@ export const PartitionedTable = <T extends object>({
       }
     };
 
-    loadData();
+    void loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchData, page, pageSize, filters, refreshKey, serverSideSorting, localSortBy, localSortOrder]);
 
@@ -175,9 +188,9 @@ export const PartitionedTable = <T extends object>({
           return localSortOrder === 'asc' ? aValue - bValue : bValue - aValue;
         }
 
-        // Default comparison
-        const aStr = String(aValue);
-        const bStr = String(bValue);
+        // Default comparison - handle objects by JSON.stringify
+        const aStr = stringify(aValue);
+        const bStr = stringify(bValue);
         return localSortOrder === 'asc'
           ? aStr.localeCompare(bStr)
           : bStr.localeCompare(aStr);
@@ -404,7 +417,7 @@ export const PartitionedTable = <T extends object>({
                         <TableCell key={String(column.id)} align={column.align}>
                           {column.render
                             ? column.render(row)
-                            : String((row as Record<string, unknown>)[String(column.id)] ?? '')}
+                            : stringify((row as Record<string, unknown>)[String(column.id)])}
                         </TableCell>
                       ))}
                     </TableRow>

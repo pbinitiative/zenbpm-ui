@@ -117,7 +117,7 @@ export const ProcessInstancesTable = ({
         console.error('Failed to load process definitions:', error);
       }
     };
-    loadProcessDefinitions();
+    void loadProcessDefinitions();
   }, [processDefinitionKey]);
 
   // Convert process definitions to filter options
@@ -245,7 +245,7 @@ export const ProcessInstancesTable = ({
   // Handlers
   const handleRowClick = useCallback(
     (row: ProcessInstance) => {
-      navigate(`/process-instances/${row.key}`);
+      void navigate(`/process-instances/${row.key}`);
     },
     [navigate]
   );

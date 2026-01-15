@@ -15,7 +15,7 @@ declare module 'camunda-bpmn-js/lib/camunda-platform/Modeler' {
     constructor(options?: ModelerOptions);
     importXML(xml: string): Promise<{ warnings: string[] }>;
     saveXML(options?: { format?: boolean }): Promise<{ xml?: string }>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     get(name: string): any;
     destroy(): void;
   }

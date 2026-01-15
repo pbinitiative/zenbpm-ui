@@ -3,8 +3,10 @@ import InfoIcon from '@mui/icons-material/Info';
 import { MonoText } from '@components/MonoText';
 import { StateBadge } from '@components/StateBadge';
 import type { Column } from '@components/DataTable';
-import type { TFunction } from 'i18next';
 import type { Incident } from '../IncidentsTable';
+
+// Translation function type - ESLint validates keys via i18n-namespace-match rule
+type TranslateFunction = (key: string) => string;
 
 interface ColumnOptions {
   /** Whether to show the processInstanceKey column */
@@ -18,7 +20,7 @@ interface ColumnOptions {
 }
 
 export const getIncidentColumns = (
-  t: TFunction,
+  t: TranslateFunction,
   options: ColumnOptions
 ): Column<Incident>[] => {
   const { showProcessInstanceKey, onViewDetails, onResolve, onMessageClick } = options;

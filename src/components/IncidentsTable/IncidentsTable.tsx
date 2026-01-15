@@ -87,7 +87,7 @@ export const IncidentsTable = ({
         console.error('Failed to load process definitions:', error);
       }
     };
-    loadProcessDefinitions();
+    void loadProcessDefinitions();
   }, [processInstanceKey]);
 
   // Fetch incidents data using API service
@@ -179,7 +179,7 @@ export const IncidentsTable = ({
   const handleRowClick = useCallback(
     (row: Incident) => {
       if (!processInstanceKey) {
-        navigate(`/process-instances/${row.processInstanceKey}?tab=incidents`);
+        void navigate(`/process-instances/${row.processInstanceKey}?tab=incidents`);
       }
     },
     [navigate, processInstanceKey]
@@ -201,7 +201,7 @@ export const IncidentsTable = ({
       getIncidentColumns(t, {
         showProcessInstanceKey: !processInstanceKey,
         onViewDetails: handleViewDetails,
-        onResolve: handleResolveIncident,
+        onResolve: (incidentKey) => void handleResolveIncident(incidentKey),
         onMessageClick: handleMessageClick,
       }),
     [t, processInstanceKey, handleViewDetails, handleResolveIncident, handleMessageClick]

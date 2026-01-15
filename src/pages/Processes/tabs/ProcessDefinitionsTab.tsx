@@ -127,7 +127,7 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
 
   // Fetch when filters, sorting change or refresh is triggered
   useEffect(() => {
-    fetchProcessDefinitions();
+    void fetchProcessDefinitions();
   }, [fetchProcessDefinitions, refreshKey]);
 
   // Handle sort change from table
@@ -241,7 +241,7 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
   // Handlers
   const handleRowClick = useCallback(
     (row: ProcessDefinitionWithStats) => {
-      navigate(`/process-definitions/${row.key}`);
+      void navigate(`/process-definitions/${row.key}`);
     },
     [navigate]
   );

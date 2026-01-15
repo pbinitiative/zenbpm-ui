@@ -81,7 +81,7 @@ export const DecisionInstanceDetailPage = () => {
       }
     };
 
-    fetchData();
+    void fetchData();
   }, [decisionInstanceKey]);
 
   // Handle overlay click to show modal
@@ -346,10 +346,10 @@ export const DecisionInstanceDetailPage = () => {
                         }}
                       >
                         {JSON.stringify(
-                          dialogData.inputs.reduce((acc, item) => {
+                          dialogData.inputs.reduce<Record<string, unknown>>((acc, item) => {
                             acc[item.name] = item.value;
                             return acc;
-                          }, {} as Record<string, unknown>),
+                          }, {}),
                           null,
                           2
                         )}
@@ -393,10 +393,10 @@ export const DecisionInstanceDetailPage = () => {
                         }}
                       >
                         {JSON.stringify(
-                          dialogData.outputs.reduce((acc, item) => {
+                          dialogData.outputs.reduce<Record<string, unknown>>((acc, item) => {
                             acc[item.name] = item.value;
                             return acc;
-                          }, {} as Record<string, unknown>),
+                          }, {}),
                           null,
                           2
                         )}

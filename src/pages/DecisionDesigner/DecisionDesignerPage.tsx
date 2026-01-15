@@ -68,7 +68,7 @@ export const DecisionDesignerPage = () => {
       }
     };
 
-    loadDefinition();
+    void loadDefinition();
   }, [decisionDefinitionKey, t]);
 
   // Handle mode change

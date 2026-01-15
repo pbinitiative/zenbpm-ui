@@ -100,7 +100,7 @@ export const MainLayout = () => {
   };
 
   const handleNavClick = (path: string) => {
-    navigate(path);
+    void navigate(path);
     if (isMobile) {
       setMobileOpen(false);
     }
@@ -184,9 +184,11 @@ export const MainLayout = () => {
                       )}
                     </Box>
                   }
-                  primaryTypographyProps={{
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
+                  slotProps={{
+                    primary: {
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                    },
                   }}
                 />
               </ListItemButton>

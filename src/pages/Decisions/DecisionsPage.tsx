@@ -37,7 +37,7 @@ export const DecisionsPage = () => {
   // Redirect to default tab if no tab specified or invalid tab
   useEffect(() => {
     if (!tab || !validTabs.includes(tab as TabValue)) {
-      navigate('/decisions/definitions', { replace: true });
+      void navigate('/decisions/definitions', { replace: true });
     }
   }, [tab, navigate]);
 
@@ -48,7 +48,7 @@ export const DecisionsPage = () => {
 
   const handleTabChange = useCallback(
     (value: string) => {
-      navigate(`/decisions/${value}`);
+      void navigate(`/decisions/${value}`);
     },
     [navigate]
   );
@@ -92,7 +92,7 @@ export const DecisionsPage = () => {
   }, [t]);
 
   const handleDesignDecision = useCallback(() => {
-    navigate('/designer/decision');
+    void navigate('/designer/decision');
   }, [navigate]);
 
   // Actions displayed next to tabs

@@ -49,7 +49,7 @@ const TAB_MAP: Record<string, number> = {
 };
 
 export const ProcessInstanceDetailPage = () => {
-  const { processInstanceKey } = useParams<{ processInstanceKey: string }>();
+  const { processInstanceKey = '' } = useParams<{ processInstanceKey: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useTranslation([ns.common, ns.processInstance]);
   const theme = useTheme();
@@ -247,7 +247,7 @@ export const ProcessInstanceDetailPage = () => {
           {/* Incidents Tab */}
           <TabPanel value={activeTab} index={2}>
             <IncidentsTab
-              processInstanceKey={processInstanceKey!}
+              processInstanceKey={processInstanceKey}
               onRefetch={refetchIncidents}
               onShowNotification={showNotification}
             />
@@ -256,7 +256,7 @@ export const ProcessInstanceDetailPage = () => {
           {/* Variables Tab */}
           <TabPanel value={activeTab} index={3}>
             <VariablesTab
-              processInstanceKey={processInstanceKey!}
+              processInstanceKey={processInstanceKey}
               variables={processInstance.variables}
               onRefetch={refetchVariables}
               onShowNotification={showNotification}
