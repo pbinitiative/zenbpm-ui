@@ -1,1 +1,0 @@
-export { TypeBadge } from './TypeBadge';

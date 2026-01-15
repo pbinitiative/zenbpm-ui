@@ -7,6 +7,7 @@ declare module 'i18next' {
   interface CustomTypeOptions {
     defaultNS: 'common';
     resources: Resources;
+    strictKeyChecks: true;
   }
 }
 
@@ -15,5 +16,6 @@ declare module 'react-i18next' {
   interface CustomTypeOptions {
     defaultNS: 'common';
     resources: Resources;
+    strictKeyChecks: true;
   }
 }
