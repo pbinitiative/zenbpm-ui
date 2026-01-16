@@ -1,0 +1,102 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - paragraph [ref=e9] [cursor=pointer]: ZenBPM
+        - navigation [ref=e10]:
+          - button "Processes" [ref=e11] [cursor=pointer]
+          - button "Decisions" [ref=e12] [cursor=pointer]
+          - button "Incidents" [ref=e13] [cursor=pointer]
+      - generic [ref=e14]:
+        - button "Design" [ref=e15] [cursor=pointer]
+        - generic [ref=e17]:
+          - textbox "Search..." [ref=e18]
+          - group
+        - generic [ref=e19] [cursor=pointer]: JD
+  - main [ref=e20]:
+    - generic [ref=e22]:
+      - heading "Decisions" [level=1] [ref=e26]
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - button "Definitions" [ref=e29] [cursor=pointer]
+          - button "Instances" [ref=e30] [cursor=pointer]
+        - generic [ref=e31]:
+          - button "Refresh" [ref=e32] [cursor=pointer]:
+            - img [ref=e34]
+            - text: Refresh
+          - button "Upload DMN" [ref=e36] [cursor=pointer]:
+            - img [ref=e38]
+            - text: Upload DMN
+          - button "Design Decision" [ref=e40] [cursor=pointer]:
+            - img [ref=e42]
+            - text: Design Decision
+      - generic [ref=e47]:
+        - generic [ref=e49]:
+          - button "Filters" [ref=e51] [cursor=pointer]:
+            - img [ref=e53]
+            - text: Filters
+          - generic [ref=e58]:
+            - generic: Search
+            - generic [ref=e59]:
+              - textbox "Search" [ref=e60]:
+                - /placeholder: Search by name or ID...
+              - group:
+                - generic: Search
+        - generic:
+          - generic: Decision Definition
+        - generic [ref=e61]:
+          - progressbar [ref=e63]:
+            - img [ref=e64]
+          - table [ref=e66]:
+            - rowgroup [ref=e67]:
+              - row "Key Decision ID Evaluated At Inputs Outputs" [ref=e68]:
+                - columnheader "Key" [ref=e69]:
+                  - button "Key" [ref=e70] [cursor=pointer]:
+                    - text: Key
+                    - img [ref=e71]
+                - columnheader "Decision ID" [ref=e73]:
+                  - button "Decision ID" [ref=e74] [cursor=pointer]:
+                    - text: Decision ID
+                    - img [ref=e75]
+                - columnheader "Evaluated At" [ref=e77]:
+                  - button "Evaluated At" [ref=e78] [cursor=pointer]:
+                    - text: Evaluated At
+                    - img [ref=e79]
+                - columnheader "Inputs" [ref=e81]:
+                  - button "Inputs" [ref=e82] [cursor=pointer]:
+                    - text: Inputs
+                    - img [ref=e83]
+                - columnheader "Outputs" [ref=e85]:
+                  - button "Outputs" [ref=e86] [cursor=pointer]:
+                    - text: Outputs
+                    - img [ref=e87]
+            - rowgroup [ref=e89]:
+              - row "Loading..." [ref=e90]:
+                - cell "Loading..." [ref=e91]:
+                  - paragraph [ref=e92]: Loading...
+        - generic [ref=e93]:
+          - generic [ref=e94]:
+            - paragraph [ref=e95]: "Rows per page:"
+            - generic [ref=e97]:
+              - combobox [ref=e98] [cursor=pointer]: "5"
+              - textbox: "5"
+              - img
+              - group
+          - navigation "pagination navigation" [ref=e99]:
+            - list [ref=e100]:
+              - listitem [ref=e101]:
+                - button "Go to first page" [disabled]:
+                  - img
+              - listitem [ref=e102]:
+                - button "Go to previous page" [disabled]:
+                  - img
+              - listitem [ref=e103]:
+                - button "Go to next page" [disabled]:
+                  - img
+              - listitem [ref=e104]:
+                - button "Go to last page" [disabled]:
+                  - img
+```

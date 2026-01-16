@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
 import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
@@ -19,6 +22,9 @@ export default defineConfig([
     'e2e/**',
     'orval.config.ts',
     'playwright.config.ts',
+    // Storybook
+    '.storybook/**',
+    'storybook-static/**',
   ]),
   {
     files: ['**/*.{ts,tsx}'],
@@ -166,6 +172,16 @@ export default defineConfig([
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
+    },
+  },
+  // Exception: Relax rules for Storybook stories
+  {
+    files: ['**/*.stories.{ts,tsx}'],
+    rules: {
+      'local/no-hardcoded-colors': 'off',
+      'local/no-inline-styles': 'off',
+      '@typescript-eslint/no-deprecated': 'off',
+      'no-loss-of-precision': 'off',
     },
   },
 ])

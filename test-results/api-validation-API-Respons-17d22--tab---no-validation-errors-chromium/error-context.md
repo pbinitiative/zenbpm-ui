@@ -1,0 +1,114 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - paragraph [ref=e9] [cursor=pointer]: ZenBPM
+        - navigation [ref=e10]:
+          - button "Processes" [ref=e11] [cursor=pointer]
+          - button "Decisions" [ref=e12] [cursor=pointer]
+          - button "Incidents 11" [ref=e13] [cursor=pointer]:
+            - text: Incidents
+            - generic [ref=e14]: "11"
+      - generic [ref=e15]:
+        - button "Design" [ref=e16] [cursor=pointer]
+        - generic [ref=e18]:
+          - textbox "Search..." [ref=e19]
+          - group
+        - generic [ref=e20] [cursor=pointer]: JD
+  - main [ref=e21]:
+    - generic [ref=e23]:
+      - heading "Decisions" [level=1] [ref=e27]
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - button "Definitions" [ref=e30] [cursor=pointer]
+          - button "Instances" [ref=e31] [cursor=pointer]
+        - generic [ref=e32]:
+          - button "Refresh" [ref=e33] [cursor=pointer]:
+            - img [ref=e35]
+            - text: Refresh
+          - button "Upload DMN" [ref=e37] [cursor=pointer]:
+            - img [ref=e39]
+            - text: Upload DMN
+          - button "Design Decision" [ref=e41] [cursor=pointer]:
+            - img [ref=e43]
+            - text: Design Decision
+      - generic [ref=e47]:
+        - generic [ref=e55]:
+          - generic: Search
+          - generic [ref=e56]:
+            - textbox "Search" [ref=e57]:
+              - /placeholder: Search by name or ID...
+            - group:
+              - generic: Search
+        - table [ref=e59]:
+          - rowgroup [ref=e60]:
+            - row "Key Name DMN Resource ID Version" [ref=e61]:
+              - columnheader "Key" [ref=e62]:
+                - button "Key" [ref=e63] [cursor=pointer]:
+                  - text: Key
+                  - img [ref=e64]
+              - columnheader "Name" [ref=e66]:
+                - button "Name" [ref=e67] [cursor=pointer]:
+                  - text: Name
+                  - img [ref=e68]
+              - columnheader "DMN Resource ID" [ref=e70]:
+                - button "DMN Resource ID" [ref=e71] [cursor=pointer]:
+                  - text: DMN Resource ID
+                  - img [ref=e72]
+              - columnheader "Version" [ref=e74]:
+                - button "Version" [ref=e75] [cursor=pointer]:
+                  - text: Version
+                  - img [ref=e76]
+          - rowgroup [ref=e78]:
+            - row "4000000000000000001 Sports Decision drd_sports v1" [ref=e79] [cursor=pointer]:
+              - cell "4000000000000000001" [ref=e80]
+              - cell "Sports Decision" [ref=e81]
+              - cell "drd_sports" [ref=e82]
+              - cell "v1" [ref=e83]:
+                - generic [ref=e84]: v1
+            - row "4000000000000000002 Sports Decision drd_sports v2" [ref=e85] [cursor=pointer]:
+              - cell "4000000000000000002" [ref=e86]
+              - cell "Sports Decision" [ref=e87]
+              - cell "drd_sports" [ref=e88]
+              - cell "v2" [ref=e89]:
+                - generic [ref=e90]: v2
+            - row "4000000000000000003 Auto Liquidation Rule example_canAutoLiquidate v1" [ref=e91] [cursor=pointer]:
+              - cell "4000000000000000003" [ref=e92]
+              - cell "Auto Liquidation Rule" [ref=e93]
+              - cell "example_canAutoLiquidate" [ref=e94]
+              - cell "v1" [ref=e95]:
+                - generic [ref=e96]: v1
+            - row "4000000000000000004 Auto Liquidation Rule example_canAutoLiquidate v2" [ref=e97] [cursor=pointer]:
+              - cell "4000000000000000004" [ref=e98]
+              - cell "Auto Liquidation Rule" [ref=e99]
+              - cell "example_canAutoLiquidate" [ref=e100]
+              - cell "v2" [ref=e101]:
+                - generic [ref=e102]: v2
+        - generic [ref=e103]:
+          - generic [ref=e104]:
+            - paragraph [ref=e105]: "Rows per page:"
+            - generic [ref=e107]:
+              - combobox [ref=e108] [cursor=pointer]: "10"
+              - textbox: "10"
+              - img
+              - group
+          - navigation "pagination navigation" [ref=e109]:
+            - list [ref=e110]:
+              - listitem [ref=e111]:
+                - button "Go to first page" [disabled]:
+                  - img
+              - listitem [ref=e112]:
+                - button "Go to previous page" [disabled]:
+                  - img
+              - listitem [ref=e113]:
+                - button "page 1" [ref=e114] [cursor=pointer]: "1"
+              - listitem [ref=e115]:
+                - button "Go to next page" [disabled]:
+                  - img
+              - listitem [ref=e116]:
+                - button "Go to last page" [disabled]:
+                  - img
+```

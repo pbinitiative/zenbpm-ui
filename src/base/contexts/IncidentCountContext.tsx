@@ -36,7 +36,7 @@ export const IncidentCountProvider = ({ children }: IncidentCountProviderProps) 
     void fetchIncidentCount();
 
     // Periodic polling
-    const intervalId = setInterval(fetchIncidentCount, POLL_INTERVAL);
+    const intervalId = setInterval(() => void fetchIncidentCount(), POLL_INTERVAL);
 
     return () => {
       isMountedRef.current = false;

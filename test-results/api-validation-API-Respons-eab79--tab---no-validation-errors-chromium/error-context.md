@@ -1,0 +1,111 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - paragraph [ref=e9] [cursor=pointer]: ZenBPM
+        - navigation [ref=e10]:
+          - button "Processes" [ref=e11] [cursor=pointer]
+          - button "Decisions" [ref=e12] [cursor=pointer]
+          - button "Incidents 11" [ref=e13] [cursor=pointer]:
+            - text: Incidents
+            - generic [ref=e14]: "11"
+      - generic [ref=e15]:
+        - button "Design" [ref=e16] [cursor=pointer]
+        - generic [ref=e18]:
+          - textbox "Search..." [ref=e19]
+          - group
+        - generic [ref=e20] [cursor=pointer]: JD
+  - main [ref=e21]:
+    - generic [ref=e23]:
+      - generic [ref=e24]:
+        - generic [ref=e26]:
+          - heading "BPMN Diagram" [level=6] [ref=e27]
+          - paragraph [ref=e29]: No diagram available
+        - generic [ref=e31]:
+          - heading "Instance Details" [level=6] [ref=e32]
+          - generic [ref=e33]:
+            - generic [ref=e34]:
+              - generic [ref=e35]:
+                - generic [ref=e36]: State
+                - generic [ref=e38]:
+                  - img [ref=e39]
+                  - generic [ref=e41]: Active
+              - generic [ref=e42]:
+                - generic [ref=e43]: Key
+                - text: "3100000000000000164"
+              - generic [ref=e44]:
+                - generic [ref=e45]: Created At
+                - paragraph [ref=e46]: Jan 15, 2026, 10:23 AM
+            - separator [ref=e48]
+            - link "Process Definition" [ref=e50] [cursor=pointer]:
+              - /url: /process-definitions/3000000000000000027
+              - text: Process Definition
+              - img [ref=e52]
+      - generic [ref=e54]:
+        - tablist [ref=e57]:
+          - tab "Jobs 0" [selected] [ref=e58] [cursor=pointer]:
+            - generic [ref=e59]:
+              - text: Jobs
+              - generic [ref=e61]: "0"
+          - tab "History" [ref=e62] [cursor=pointer]
+          - tab "Incidents" [ref=e63] [cursor=pointer]:
+            - generic [ref=e64]: Incidents
+          - tab "Variables" [ref=e65] [cursor=pointer]
+        - tabpanel [ref=e68]:
+          - generic [ref=e71]:
+            - table [ref=e73]:
+              - rowgroup [ref=e74]:
+                - row "Key Element ID Job Type Assignee State Retries Created At" [ref=e75]:
+                  - columnheader "Key" [ref=e76]:
+                    - button "Key" [ref=e77] [cursor=pointer]:
+                      - text: Key
+                      - img [ref=e78]
+                  - columnheader "Element ID" [ref=e80]:
+                    - button "Element ID" [ref=e81] [cursor=pointer]:
+                      - text: Element ID
+                      - img [ref=e82]
+                  - columnheader "Job Type" [ref=e84]:
+                    - button "Job Type" [ref=e85] [cursor=pointer]:
+                      - text: Job Type
+                      - img [ref=e86]
+                  - columnheader "Assignee" [ref=e88]
+                  - columnheader "State" [ref=e89]:
+                    - button "State" [ref=e90] [cursor=pointer]:
+                      - text: State
+                      - img [ref=e91]
+                  - columnheader "Retries" [ref=e93]
+                  - columnheader "Created At" [ref=e94]:
+                    - button "Created At" [ref=e95] [cursor=pointer]:
+                      - text: Created At
+                      - img [ref=e96]
+                  - columnheader [ref=e98]
+              - rowgroup [ref=e99]:
+                - row "No data available" [ref=e100]:
+                  - cell "No data available" [ref=e101]:
+                    - paragraph [ref=e102]: No data available
+            - generic [ref=e103]:
+              - generic [ref=e104]:
+                - paragraph [ref=e105]: "Rows per page:"
+                - generic [ref=e107]:
+                  - combobox [ref=e108] [cursor=pointer]: "10"
+                  - textbox: "10"
+                  - img
+                  - group
+              - navigation "pagination navigation" [ref=e109]:
+                - list [ref=e110]:
+                  - listitem [ref=e111]:
+                    - button "Go to first page" [disabled]:
+                      - img
+                  - listitem [ref=e112]:
+                    - button "Go to previous page" [disabled]:
+                      - img
+                  - listitem [ref=e113]:
+                    - button "Go to next page" [disabled]:
+                      - img
+                  - listitem [ref=e114]:
+                    - button "Go to last page" [disabled]:
+                      - img
+```
