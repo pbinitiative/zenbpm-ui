@@ -2163,12 +2163,9 @@ components:
           type: integer
         dmnResourceDefinitionId:
           type: string
-        name:
+        dmnDefinitionName:
           type: string
           description: Decision name from DMN
-        resourceName:
-          type: string
-          description: DMN resource file name
     DmnResourceDefinitionDetail:
       type: object
       required:

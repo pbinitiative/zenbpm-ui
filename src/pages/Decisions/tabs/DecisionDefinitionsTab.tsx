@@ -86,10 +86,10 @@ export const DecisionDefinitionsTab = ({ refreshKey = 0 }: DecisionDefinitionsTa
         render: (row) => <MonoText>{row.key}</MonoText>,
       },
       {
-        id: 'name',
+        id: 'dmnDefinitionName',
         label: t('decisions:fields.name'),
         sortable: true,
-        render: (row) => row.name || row.dmnResourceDefinitionId,
+        render: (row) => row.dmnDefinitionName || row.dmnResourceDefinitionId,
       },
       {
         id: 'dmnResourceDefinitionId',
