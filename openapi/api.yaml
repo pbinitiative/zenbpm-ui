@@ -145,13 +145,11 @@ paths:
                   - key: 4503599627370495
                     version: 2
                     dmnResourceDefinitionId: "loan-approval"
-                    name: "Loan Approval Decision"
-                    resourceName: "loan-approval.dmn"
+                    dmnDefinitionName: "Loan Approval Decision"
                   - key: 4503599627370497
                     version: 1
                     dmnResourceDefinitionId: "credit-score-check"
-                    name: "Credit Score Check"
-                    resourceName: "credit-score.dmn"
+                    dmnDefinitionName: "Credit Score Check"
                 page: 1
                 size: 10
                 count: 2
@@ -188,8 +186,7 @@ paths:
                 key: 4503599627370495
                 version: 2
                 dmnResourceDefinitionId: "loan-approval"
-                name: "Loan Approval Decision"
-                resourceName: "loan-approval.dmn"
+                dmnDefinitionName: "Loan Approval Decision"
                 dmnData: |
                   <?xml version="1.0" encoding="UTF-8"?>
                   <definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" id="loan-drd">
