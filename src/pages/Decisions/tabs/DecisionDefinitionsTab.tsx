@@ -89,7 +89,7 @@ export const DecisionDefinitionsTab = ({ refreshKey = 0 }: DecisionDefinitionsTa
         id: 'dmnDefinitionName',
         label: t('decisions:fields.name'),
         sortable: true,
-        render: (row) => row.dmnDefinitionName || row.dmnResourceDefinitionId,
+        render: (row) => row.dmnDefinitionName,
       },
       {
         id: 'dmnResourceDefinitionId',
