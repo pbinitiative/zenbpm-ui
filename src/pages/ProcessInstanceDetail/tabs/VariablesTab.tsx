@@ -173,13 +173,14 @@ export const VariablesTab = ({
   );
 
   return (
-    <Box>
+    <Box data-testid="variables-tab">
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
         <Button
           variant="outlined"
           startIcon={<AddIcon />}
           onClick={() => setAddDialogOpen(true)}
           size="small"
+          data-testid="add-variable-button"
         >
           {t('processInstance:actions.addVariable')}
         </Button>
@@ -190,6 +191,7 @@ export const VariablesTab = ({
         data={variablesArray}
         rowKey="name"
         totalCount={variablesArray.length}
+        data-testid="variables-table"
       />
 
       {/* Dialogs */}

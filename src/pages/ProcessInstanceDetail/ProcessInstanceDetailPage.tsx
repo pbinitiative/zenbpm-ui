@@ -134,11 +134,11 @@ export const ProcessInstanceDetailPage = () => {
   }
 
   return (
-    <Box sx={{ pb: 4 }}>
+    <Box sx={{ pb: 4 }} data-testid="process-instance-detail-page">
       <Grid container spacing={{ xs: 2, md: 3 }} sx={{ alignItems: 'stretch' }}>
         {/* BPMN Diagram - First on mobile */}
         <Grid size={{ xs: 12, md: 9 }} order={{ xs: 1, md: 2 }}>
-          <Paper sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: '12px', height: '100%' }}>
+          <Paper sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: '12px', height: '100%' }} data-testid="process-instance-diagram-panel">
             <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 2 }}>
               {t('processInstance:detail.diagram')}
             </Typography>
@@ -169,7 +169,7 @@ export const ProcessInstanceDetailPage = () => {
 
         {/* Metadata - Second on mobile */}
         <Grid size={{ xs: 12, md: 3 }} order={{ xs: 2, md: 1 }}>
-          <Paper sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Paper sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: '12px', height: '100%', display: 'flex', flexDirection: 'column' }} data-testid="process-instance-metadata-panel">
             <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
               {t('processInstance:detail.metadata')}
             </Typography>
@@ -189,7 +189,7 @@ export const ProcessInstanceDetailPage = () => {
       </Grid>
 
       {/* Tabs for Jobs, History, Incidents, Variables */}
-      <Paper sx={{ mt: { xs: 2, md: 3 }, borderRadius: '12px' }}>
+      <Paper sx={{ mt: { xs: 2, md: 3 }, borderRadius: '12px' }} data-testid="process-instance-tabs-panel">
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
@@ -201,8 +201,10 @@ export const ProcessInstanceDetailPage = () => {
           }}
           variant={isMobile ? 'scrollable' : 'standard'}
           scrollButtons={isMobile ? 'auto' : false}
+          data-testid="process-instance-tabs"
         >
           <Tab
+            data-testid="process-instance-tab-jobs"
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {t('processInstance:tabs.jobs')}
@@ -210,8 +212,9 @@ export const ProcessInstanceDetailPage = () => {
               </Box>
             }
           />
-          <Tab label={t('processInstance:tabs.history')} />
+          <Tab data-testid="process-instance-tab-history" label={t('processInstance:tabs.history')} />
           <Tab
+            data-testid="process-instance-tab-incidents"
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {t('processInstance:tabs.incidents')}
@@ -226,7 +229,7 @@ export const ProcessInstanceDetailPage = () => {
               </Box>
             }
           />
-          <Tab label={t('processInstance:tabs.variables')} />
+          <Tab data-testid="process-instance-tab-variables" label={t('processInstance:tabs.variables')} />
         </Tabs>
 
         <Box sx={{ p: { xs: 1.5, sm: 2 } }}>

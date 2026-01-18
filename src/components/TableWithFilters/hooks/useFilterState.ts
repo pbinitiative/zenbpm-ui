@@ -84,13 +84,14 @@ export const useFilterState = ({
   const handleFilterChange = useCallback(
     (filterId: string, value: string | string[] | { from?: string; to?: string }) => {
       const newValues = { ...filterValues, [filterId]: value };
-      if (onFilterChange) {
-        onFilterChange(newValues);
-      } else {
+      // Always update internal state when not externally controlled
+      if (!externalFilterValues) {
         setInternalFilterValues(newValues);
       }
+      // Notify parent of changes (for callbacks like onActivityFilterChange)
+      onFilterChange?.(newValues);
     },
-    [filterValues, onFilterChange]
+    [filterValues, externalFilterValues, onFilterChange]
   );
 
   const handleClearFilters = useCallback(() => {
@@ -102,23 +103,25 @@ export const useFilterState = ({
         clearedValues[f.id] = '';
       }
     });
-    if (onFilterChange) {
-      onFilterChange(clearedValues);
-    } else {
+    // Always update internal state when not externally controlled
+    if (!externalFilterValues) {
       setInternalFilterValues(clearedValues);
     }
-  }, [flattenedFilters, filterValues, onFilterChange]);
+    // Notify parent of changes
+    onFilterChange?.(clearedValues);
+  }, [flattenedFilters, filterValues, externalFilterValues, onFilterChange]);
 
   const handleRemoveFilter = useCallback(
     (filterId: string) => {
       const newValues = { ...filterValues, [filterId]: '' };
-      if (onFilterChange) {
-        onFilterChange(newValues);
-      } else {
+      // Always update internal state when not externally controlled
+      if (!externalFilterValues) {
         setInternalFilterValues(newValues);
       }
+      // Notify parent of changes
+      onFilterChange?.(newValues);
     },
-    [filterValues, onFilterChange]
+    [filterValues, externalFilterValues, onFilterChange]
   );
 
   return {

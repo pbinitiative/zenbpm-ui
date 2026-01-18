@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import type { MetadataField, VersionInfo } from '@components/DiagramDetailLayout';
@@ -43,6 +43,7 @@ export function useProcessDefinitionData({
   processDefinitionKey,
 }: UseProcessDefinitionDataOptions): UseProcessDefinitionDataResult {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useTranslation([ns.common, ns.processes]);
 
   // State
@@ -53,11 +54,13 @@ export function useProcessDefinitionData({
   const [error, setError] = useState<string | null>(null);
   const [startDialogOpen, setStartDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [selectedActivityId, setSelectedActivityId] = useState<string | undefined>(undefined);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
     message: '',
   });
+
+  // Get selected activity from URL (for diagram highlight sync)
+  const selectedActivityId = searchParams.get('activityId') || undefined;
 
   // Fetch element statistics for diagram overlays
   const { data: elementStatistics } = useGetProcessDefinitionElementStatistics(
@@ -114,19 +117,30 @@ export function useProcessDefinitionData({
   // Handlers
   const handleVersionChange = useCallback(
     (key: string) => {
-      setSelectedActivityId(undefined);
+      // Navigate to new version, clearing any activity filter
       void navigate(`/process-definitions/${key}`);
     },
     [navigate]
   );
 
   const handleElementClick = useCallback((elementId: string) => {
-    setSelectedActivityId(elementId);
-  }, []);
+    // Update URL with activityId - this syncs with the filter
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('activityId', elementId);
+    setSearchParams(newParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const handleActivityFilterChange = useCallback((activityId: string | undefined) => {
-    setSelectedActivityId(activityId);
-  }, []);
+    // Sync URL with filter changes from the table
+    // This is called when the activity filter changes in the table
+    const newParams = new URLSearchParams(searchParams);
+    if (activityId) {
+      newParams.set('activityId', activityId);
+    } else {
+      newParams.delete('activityId');
+    }
+    setSearchParams(newParams, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const handleStartInstance = useCallback(() => {
     setStartDialogOpen(true);

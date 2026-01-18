@@ -57,13 +57,6 @@ export const IncidentsTable = ({
   const [internalRefreshKey, setInternalRefreshKey] = useState(0);
   const [processOptions, setProcessOptions] = useState<FilterOption[]>([]);
 
-  // Use external or internal filter values
-  const [internalFilterValues, setInternalFilterValues] = useState<FilterValues>({
-    state: 'all',
-  });
-
-  const filterValues = externalFilterValues ?? internalFilterValues;
-  const onFilterChange = externalOnFilterChange ?? setInternalFilterValues;
   const refreshKey = externalRefreshKey || internalRefreshKey;
 
   // Modal state
@@ -228,9 +221,10 @@ export const IncidentsTable = ({
           onRefresh: handleRefresh,
         }}
         filters={filters}
-        filterValues={filterValues}
+        // Only pass filterValues when externally controlled
+        filterValues={externalFilterValues}
         initialFilterValues={{ state: 'all' }}
-        onFilterChange={onFilterChange}
+        onFilterChange={externalOnFilterChange}
         onRowClick={processInstanceKey ? undefined : handleRowClick}
         refreshKey={refreshKey}
         syncWithUrl={syncWithUrl}

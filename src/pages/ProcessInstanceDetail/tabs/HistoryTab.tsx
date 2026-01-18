@@ -70,6 +70,7 @@ export const HistoryTab = ({ history }: HistoryTabProps) => {
       onPageChange={setPage}
       onPageSizeChange={setPageSize}
       totalCount={history.length}
+      data-testid="history-table"
     />
   );
 };

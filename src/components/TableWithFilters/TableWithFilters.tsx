@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Box, Collapse } from '@mui/material';
 import { DataTable, type Column, type SortOrder } from '@components/DataTable';
@@ -8,7 +8,7 @@ import {
 } from '@components/PartitionedTable';
 
 import type { FilterConfig, FilterGroupConfig, FilterValues, TableConfig } from './types';
-import { useFilterState, useFiltersByZone, useTableState } from './hooks';
+import { useFilterState, useFiltersByZone, useTableState, flattenFilters } from './hooks';
 import { computeInitialFilterValues } from './utils/urlHelpers';
 import { FirstLineToolbar } from './components/FirstLineToolbar';
 import { FilterZoneRenderer } from './components/FilterZoneRenderer';
@@ -75,13 +75,46 @@ export const TableWithFilters = <T extends object>({
   );
 
   // Filter state management
-  const { filterValues, activeFilters, handleFilterChange, handleClearFilters, handleRemoveFilter } =
+  const { filterValues, activeFilters, handleFilterChange, handleClearFilters, handleRemoveFilter, setInternalFilterValues } =
     useFilterState({
       filters,
       initialFilterValues: computedInitialFilters,
       externalFilterValues,
       onFilterChange,
     });
+
+  // Track previous searchParams to detect external URL changes
+  const prevSearchParamsRef = useRef<string>(searchParams.toString());
+
+  // Listen to URL changes and update filter state (for external URL changes like diagram clicks)
+  useEffect(() => {
+    if (!syncWithUrl || externalFilterValues) return;
+
+    const currentParamsString = searchParams.toString();
+    // Skip if params haven't changed (avoid unnecessary processing)
+    if (currentParamsString === prevSearchParamsRef.current) return;
+    prevSearchParamsRef.current = currentParamsString;
+
+    const flatFilters = flattenFilters(filters);
+    const newFilterValues: FilterValues = {};
+
+    flatFilters.forEach((filter) => {
+      if (filter.type === 'dateRange') {
+        const from = searchParams.get(`${filter.id}From`);
+        const to = searchParams.get(`${filter.id}To`);
+        if (from || to) {
+          newFilterValues[filter.id] = { from: from || undefined, to: to || undefined };
+        }
+      } else {
+        const value = searchParams.get(filter.id);
+        if (value) {
+          newFilterValues[filter.id] = value;
+        }
+      }
+    });
+
+    setInternalFilterValues(newFilterValues);
+  }, [searchParams, syncWithUrl, externalFilterValues, filters, setInternalFilterValues]);
 
   // Table UI state (sorting, pagination, hideable filters)
   const {

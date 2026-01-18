@@ -105,21 +105,21 @@ export const ProcessDefinitionDetailPage = () => {
       processDefinitionKey={processDefinitionKey}
       activityIds={activityIds}
       refreshKey={refreshKey}
+      syncWithUrl
       selectedActivityId={selectedActivityId}
       onActivityFilterChange={handleActivityFilterChange}
-      syncWithUrl
     />
   );
 
   const floatingActions = (
     <>
       <Tooltip title={t('processes:actions.startInstance')}>
-        <Fab color="primary" onClick={handleStartInstance} size={isMobile ? 'medium' : 'large'}>
+        <Fab color="primary" onClick={handleStartInstance} size={isMobile ? 'medium' : 'large'} data-testid="process-definition-start-instance-button">
           <PlayArrowIcon />
         </Fab>
       </Tooltip>
       <Tooltip title={t('processes:actions.editDefinition')}>
-        <Fab color="primary" onClick={handleEditDefinition} size={isMobile ? 'medium' : 'large'}>
+        <Fab color="primary" onClick={handleEditDefinition} size={isMobile ? 'medium' : 'large'} data-testid="process-definition-edit-button">
           <EditIcon />
         </Fab>
       </Tooltip>
@@ -127,7 +127,7 @@ export const ProcessDefinitionDetailPage = () => {
   );
 
   return (
-    <>
+    <Box data-testid="process-definition-detail-page">
       <DiagramDetailLayout
         leftSection={metadataContent}
         leftTitle={t('processes:detail.metadata')}
@@ -165,6 +165,6 @@ export const ProcessDefinitionDetailPage = () => {
           </Box>
         }
       />
-    </>
+    </Box>
   );
 };

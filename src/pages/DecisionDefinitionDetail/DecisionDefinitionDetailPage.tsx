@@ -150,13 +150,15 @@ export const DecisionDefinitionDetailPage = () => {
   );
 
   return (
-    <DiagramDetailLayout
-      leftSection={metadataContent}
-      leftTitle={t('decisions:detail.metadata')}
-      rightSection={diagramContent}
-      rightTitle={t('decisions:detail.diagram')}
-      bottomSection={instancesContent}
-      bottomTitle={t('decisions:detail.instances')}
-    />
+    <Box data-testid="decision-definition-detail-page">
+      <DiagramDetailLayout
+        leftSection={metadataContent}
+        leftTitle={t('decisions:detail.metadata')}
+        rightSection={diagramContent}
+        rightTitle={t('decisions:detail.diagram')}
+        bottomSection={instancesContent}
+        bottomTitle={t('decisions:detail.instances')}
+      />
+    </Box>
   );
 };

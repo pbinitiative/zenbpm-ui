@@ -26,6 +26,7 @@ export const IncidentsTab = ({
       syncWithUrl={false}
       onIncidentResolved={handleIncidentResolved}
       onShowNotification={onShowNotification}
+      data-testid="incidents-tab-table"
     />
   );
 };

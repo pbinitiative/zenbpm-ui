@@ -97,7 +97,7 @@ export const HomePage = () => {
   ];
 
   return (
-    <Box>
+    <Box data-testid="home-page">
       <Typography
         sx={{
           fontSize: '1.75rem',
@@ -119,7 +119,7 @@ export const HomePage = () => {
         {t('common:appDescription')}
       </Typography>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={3} data-testid="home-quick-access-cards">
         {quickAccessItems.map((item) => (
           <Grid key={item.path} size={{ xs: 12, sm: 6, lg: 4 }}>
             <QuickAccessCard {...item} />

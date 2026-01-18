@@ -4,16 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { PageHeader } from '@components/PageHeader';
 import { IncidentsTable } from '@components/IncidentsTable';
-import type { FilterValues } from '@components/TableWithFilters';
 
 export const IncidentsPage = () => {
   const { t } = useTranslation([ns.common, ns.incidents]);
 
   // Table state
   const [refreshKey, setRefreshKey] = useState(0);
-  const [filterValues, setFilterValues] = useState<FilterValues>({
-    state: 'all',
-  });
 
   // Snackbar state
   const [snackbar, setSnackbar] = useState<{
@@ -21,11 +17,6 @@ export const IncidentsPage = () => {
     message: string;
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
-
-  // Handle filter change
-  const handleFilterChange = useCallback((newFilters: FilterValues) => {
-    setFilterValues(newFilters);
-  }, []);
 
   // Handle incident resolved
   const handleIncidentResolved = useCallback(() => {
@@ -38,12 +29,11 @@ export const IncidentsPage = () => {
   }, []);
 
   return (
-    <Box>
+    <Box data-testid="incidents-page">
       <PageHeader title={t('incidents:title')} />
 
       <IncidentsTable
-        filterValues={filterValues}
-        onFilterChange={handleFilterChange}
+        data-testid="incidents-table"
         refreshKey={refreshKey}
         syncWithUrl={true}
         onIncidentResolved={handleIncidentResolved}

@@ -79,7 +79,7 @@ export const DecisionInstanceDetailPage = () => {
   );
 
   return (
-    <>
+    <Box data-testid="decision-instance-detail-page">
       <DiagramDetailLayout
         leftSection={metadataContent}
         leftTitle={t('decisions:detail.metadata')}
@@ -94,6 +94,6 @@ export const DecisionInstanceDetailPage = () => {
       />
 
       <InputOutputDialog data={dialogData} onClose={closeDialog} getDecisionName={getDecisionName} />
-    </>
+    </Box>
   );
 };
