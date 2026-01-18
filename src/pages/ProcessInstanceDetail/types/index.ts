@@ -1,83 +1,70 @@
 // Types for Process Instance Detail page
+// Re-export and extend OpenAPI generated types
 
-export interface ProcessInstance {
-  key: number;
-  processDefinitionKey: number;
-  bpmnProcessId?: string;
-  createdAt: string;
-  state: ProcessInstanceState;
-  variables: Record<string, unknown>;
-  activeElementInstances: ElementInstance[];
-}
+import { themeColors } from '@base/theme';
+import {
+  type ProcessInstance as ApiProcessInstance,
+  type ProcessInstanceState as ApiProcessInstanceState,
+  type ElementInstance as ApiElementInstance,
+  type ProcessDefinitionDetail as ApiProcessDefinitionDetail,
+  type Job as ApiJob,
+  type JobState as ApiJobState,
+  type FlowElementHistory as ApiFlowElementHistory,
+  type Incident as ApiIncident,
+} from '@base/openapi';
 
-export type ProcessInstanceState = 'active' | 'completed' | 'terminated' | 'failed';
+// Re-export API types directly when they match our needs
+export type ProcessInstance = ApiProcessInstance;
+export type ProcessInstanceState = ApiProcessInstanceState;
+export type ElementInstance = ApiElementInstance;
 
-export interface ElementInstance {
-  elementInstanceKey: number;
-  createdAt: string;
-  state: string;
-  elementId: string;
-}
+// ProcessDefinition - use the detail type which includes bpmnData
+export type ProcessDefinition = ApiProcessDefinitionDetail;
 
-export interface ProcessDefinition {
-  key: number;
-  version: number;
-  bpmnProcessId: string;
-  bpmnData?: string;
-  bpmnProcessName?: string;
-  bpmnResourceName?: string;
-}
+// JobState - the API type may have fewer values, so we define UI-specific states
+// that might come from different sources or be computed
+export type JobState = ApiJobState | 'activatable' | 'activated' | 'canceled';
 
-export interface Job {
-  key: number;
-  elementId: string;
-  elementName?: string;
-  type: string;
-  processInstanceKey: number;
+// Job - extend API type with UI-specific fields and override state type
+export interface Job extends Omit<ApiJob, 'state'> {
+  /** Job state (extended with UI-specific states) */
   state: JobState;
-  retries?: number;
-  assignee?: string;
+  /** Element name (resolved from BPMN) */
+  elementName?: string;
+  /** Candidate groups for user tasks */
   candidateGroups?: string[];
-  createdAt: string;
+  /** When the job was completed */
   completedAt?: string;
-  variables: Record<string, unknown>;
+  /** Error message if job failed */
   errorMessage?: string;
 }
 
-export type JobState = 'activatable' | 'activated' | 'active' | 'completed' | 'failed' | 'canceled' | 'terminated';
-
-export interface FlowElementHistory {
-  key: number;
-  elementId: string;
-  processInstanceKey: number;
-  createdAt: string;
+// FlowElementHistory - extend API type with additional fields
+export interface FlowElementHistory extends ApiFlowElementHistory {
+  /** When the element was completed */
   completedAt?: string;
+  /** Element state */
   state?: string;
 }
 
-export interface Incident {
-  key: number;
-  elementInstanceKey: number;
-  elementId: string;
-  processInstanceKey: number;
+// Incident - extend API type with additional fields
+export interface Incident extends ApiIncident {
+  /** Process definition key */
   processDefinitionKey?: number;
-  bpmnProcessId?: string;
+  /** Error type classification */
   errorType?: string;
-  message: string;
-  createdAt: string;
-  resolvedAt?: string;
-  executionToken?: number;
+  /** Partition number */
   partition?: number;
 }
 
+// Variable - UI-specific type for variable display
 export interface Variable {
   name: string;
   value: unknown;
   scope?: 'process' | 'local';
 }
 
-import { themeColors } from '@base/theme';
-
+// Job state colors for UI display
 export const JOB_STATE_COLORS: Record<JobState, string> = {
   activatable: themeColors.stateBadge.created,
   activated: themeColors.stateBadge.terminated,
