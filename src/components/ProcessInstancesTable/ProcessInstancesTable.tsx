@@ -13,32 +13,15 @@ import { getProcessInstanceFilters } from './table/filters';
 import {
   getProcessInstances,
   getProcessDefinitions,
-  type ProcessInstance as ApiProcessInstance,
+  type ProcessInstance,
+  type ProcessDefinitionSimple,
 } from '@base/openapi';
 
-// Process instance type for display (extends API type with UI-specific fields)
-export interface ProcessInstance {
-  key: number;
-  processDefinitionKey: number;
-  bpmnProcessId?: string;
-  createdAt: string;
-  state: 'active' | 'completed' | 'terminated' | 'failed';
-  variables: Record<string, unknown>;
-  activeElementInstances: Array<{
-    elementInstanceKey: number;
-    createdAt: string;
-    state: string;
-    elementId: string;
-  }>;
-}
+// Re-export for consumers
+export type { ProcessInstance };
 
-// Process definition type for the filter dropdown
-export interface ProcessDefinitionOption {
-  key: number;
-  bpmnProcessId: string;
-  bpmnProcessName?: string;
-  version: number;
-}
+// Process definition type for the filter dropdown (subset of ProcessDefinitionSimple)
+export type ProcessDefinitionOption = Pick<ProcessDefinitionSimple, 'key' | 'bpmnProcessId' | 'bpmnProcessName' | 'version'>;
 
 export interface ProcessInstancesTableProps {
   /** Fixed process definition key - when set, instances are filtered by this key and the process filter is hidden */
@@ -66,9 +49,11 @@ export const ProcessInstancesTable = ({
   onFilterChange: externalOnFilterChange,
   refreshKey: externalRefreshKey = 0,
   syncWithUrl = true,
-  selectedActivityId,
+  selectedActivityId: _selectedActivityId,
   onActivityFilterChange,
 }: ProcessInstancesTableProps) => {
+  // Note: _selectedActivityId is not used directly - the table reads activityId from URL via syncWithUrl.
+  // The prop exists for API consistency; the page uses it to sync diagram highlighting.
   const { t } = useTranslation([ns.common]);
   const navigate = useNavigate();
   const [internalRefreshKey, setInternalRefreshKey] = useState(0);
@@ -170,28 +155,9 @@ export const ProcessInstancesTable = ({
 
       const data = await getProcessInstances(apiParams);
 
-      // Transform to ProcessInstance type with proper field mappings
-      const transformPartition = (partition: { partition: number; items: ApiProcessInstance[]; count?: number }) => ({
-        partition: partition.partition,
-        count: partition.count,
-        items: partition.items.map((pi) => ({
-          key: pi.key,
-          processDefinitionKey: pi.processDefinitionKey,
-          bpmnProcessId: (pi as unknown as { bpmnProcessId?: string }).bpmnProcessId,
-          createdAt: pi.createdAt,
-          state: pi.state as ProcessInstance['state'],
-          variables: pi.variables as Record<string, unknown>,
-          activeElementInstances: pi.activeElementInstances.map((ei) => ({
-            elementInstanceKey: ei.elementInstanceKey,
-            createdAt: ei.createdAt,
-            state: ei.state,
-            elementId: ei.elementId,
-          })),
-        })),
-      });
-
+      // Data is already in the correct ProcessInstance format from the API
       return {
-        partitions: data.partitions.map(transformPartition),
+        partitions: data.partitions,
         page: data.page,
         size: data.size,
         count: data.count,
