@@ -35,7 +35,7 @@ export const DecisionDesignerPage = () => {
   }
 
   return (
-    <Box sx={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }} data-testid="decision-designer-page">
       {/* Hidden file input */}
       <Box
         component="input"
@@ -44,6 +44,7 @@ export const DecisionDesignerPage = () => {
         accept=".dmn,.xml"
         onChange={handleFileUpload}
         sx={{ display: 'none' }}
+        data-testid="decision-designer-file-input"
       />
 
       {/* Editor container */}
@@ -57,6 +58,7 @@ export const DecisionDesignerPage = () => {
           bgcolor: 'background.paper',
           position: 'relative',
         }}
+        data-testid="decision-designer-editor-container"
       >
         {/* DMN Editor - always mounted, hidden when in XML mode */}
         <Box

@@ -74,29 +74,20 @@ export const ProcessInstancesTable = ({
   const [internalRefreshKey, setInternalRefreshKey] = useState(0);
   const [processDefinitions, setProcessDefinitions] = useState<ProcessDefinitionOption[]>([]);
 
-  // Use external or internal filter values
-  const [internalFilterValues, setInternalFilterValues] = useState<FilterValues>({
-    state: '',
-    bpmnProcessId: '',
-    search: '',
-    activityId: '',
-  });
-
-  const filterValues = externalFilterValues ?? internalFilterValues;
   const refreshKey = externalRefreshKey || internalRefreshKey;
 
-  // Wrap filter change to also notify parent about activityId changes
-  const onFilterChange = useCallback((newFilters: FilterValues) => {
-    if (externalOnFilterChange) {
-      externalOnFilterChange(newFilters);
-    } else {
-      setInternalFilterValues(newFilters);
-    }
+  // Handle filter changes - notify parent when activityId changes
+  const handleFilterChange = useCallback(
+    (filters: FilterValues) => {
+      externalOnFilterChange?.(filters);
 
-    // Notify parent when activityId filter changes
-    const newActivityId = typeof newFilters.activityId === 'string' ? newFilters.activityId : undefined;
-    onActivityFilterChange?.(newActivityId || undefined);
-  }, [externalOnFilterChange, onActivityFilterChange]);
+      // Notify parent of activity filter changes for diagram sync
+      const newActivityId = typeof filters.activityId === 'string' ? filters.activityId : undefined;
+      onActivityFilterChange?.(newActivityId || undefined);
+    },
+    [externalOnFilterChange, onActivityFilterChange]
+  );
+
 
   // Load process definitions for the filter dropdown (only when not fixed to a single definition)
   useEffect(() => {
@@ -127,16 +118,6 @@ export const ProcessInstancesTable = ({
       label: pd.bpmnProcessName || pd.bpmnProcessId,
     }));
   }, [processDefinitions]);
-
-  // Handle selectedActivityId from diagram click - update internal filter
-  useEffect(() => {
-    if (selectedActivityId !== undefined && !externalFilterValues) {
-      setInternalFilterValues((prev) => ({
-        ...prev,
-        activityId: selectedActivityId,
-      }));
-    }
-  }, [selectedActivityId, externalFilterValues]);
 
   // Fetch process instances data using API service
   const fetchData = useCallback(
@@ -264,8 +245,8 @@ export const ProcessInstancesTable = ({
         onRefresh: handleRefresh,
       }}
       filters={filters}
-      filterValues={filterValues}
-      onFilterChange={onFilterChange}
+      filterValues={externalFilterValues}
+      onFilterChange={handleFilterChange}
       onRowClick={handleRowClick}
       refreshKey={refreshKey}
       serverSideSorting

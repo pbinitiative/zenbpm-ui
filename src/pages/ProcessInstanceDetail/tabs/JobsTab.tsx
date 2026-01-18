@@ -241,11 +241,12 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
   );
 
   return (
-    <Box>
+    <Box data-testid="jobs-tab">
       <DataTable
         columns={columns}
         data={jobs}
         rowKey="key"
+        data-testid="jobs-table"
         page={page}
         pageSize={pageSize}
         onPageChange={setPage}

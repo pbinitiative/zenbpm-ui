@@ -31,6 +31,7 @@ src/base/i18n/resources.ts
 
 # Playwright
 playwright-report/
+test-results/
 
 *storybook.log
 storybook-static

@@ -35,7 +35,7 @@ export const ProcessDesignerPage = () => {
   }
 
   return (
-    <Box sx={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }} data-testid="process-designer-page">
       {/* Hidden file input */}
       <Box
         component="input"
@@ -44,6 +44,7 @@ export const ProcessDesignerPage = () => {
         accept=".bpmn,.xml"
         onChange={handleFileUpload}
         sx={{ display: 'none' }}
+        data-testid="process-designer-file-input"
       />
 
       {/* Editor container */}
@@ -57,6 +58,7 @@ export const ProcessDesignerPage = () => {
           bgcolor: 'background.paper',
           position: 'relative',
         }}
+        data-testid="process-designer-editor-container"
       >
         {/* BPMN Editor - always mounted, hidden when in XML mode */}
         <Box
