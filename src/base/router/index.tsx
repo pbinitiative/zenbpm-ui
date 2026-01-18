@@ -1,5 +1,5 @@
 import { createBrowserRouter } from 'react-router-dom';
-import { MainLayout } from '@/layouts/MainLayout';
+import { MainLayout } from '@components/layouts/MainLayout';
 import { HomePage } from '@pages/Home/HomePage';
 import { ProcessesPage } from '@pages/Processes/ProcessesPage';
 import { ProcessDefinitionDetailPage } from '@pages/ProcessDefinitionDetail';
