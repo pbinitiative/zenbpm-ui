@@ -71,6 +71,7 @@
     "eslint-plugin-storybook": "^10.1.11",
     "globals": "^16.5.0",
     "msw": "^2.12.4",
+    "openapi3-ts": "^4.5.0",
     "orval": "^7.13.2",
     "storybook": "^10.1.11",
     "typescript": "~5.9.3",

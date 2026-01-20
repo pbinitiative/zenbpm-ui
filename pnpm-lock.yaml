@@ -153,6 +153,9 @@ importers:
       msw:
         specifier: ^2.12.4
         version: 2.12.4(@types/node@24.10.3)(typescript@5.9.3)
+      openapi3-ts:
+        specifier: ^4.5.0
+        version: 4.5.0
       orval:
         specifier: ^7.13.2
         version: 7.17.0(openapi-types@12.1.3)(typescript@5.9.3)
