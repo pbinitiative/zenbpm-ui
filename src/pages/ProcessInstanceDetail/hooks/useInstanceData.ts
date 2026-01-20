@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type {
   ProcessInstance,
   ProcessDefinition,
@@ -13,6 +13,12 @@ import {
   getHistory,
   getIncidents,
 } from '@base/openapi';
+
+// States that indicate the process instance is finished and doesn't need periodic refresh
+const TERMINAL_STATES = ['completed', 'terminated', 'canceled'];
+
+// Refresh interval in milliseconds (5 seconds)
+const AUTO_REFRESH_INTERVAL = 5000;
 
 interface UseInstanceDataResult {
   processInstance: ProcessInstance | null;
@@ -147,6 +153,22 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
 
     void fetchData();
   }, [processInstanceKey]);
+
+  // Track if auto-refresh should be active
+  const isActiveInstance = processInstance && !TERMINAL_STATES.includes(processInstance.state);
+  const fetchAllRef = useRef(fetchAll);
+  fetchAllRef.current = fetchAll;
+
+  // Periodic auto-refresh for active instances
+  useEffect(() => {
+    if (!processInstanceKey || loading || !isActiveInstance) return;
+
+    const intervalId = setInterval(() => {
+      void fetchAllRef.current();
+    }, AUTO_REFRESH_INTERVAL);
+
+    return () => clearInterval(intervalId);
+  }, [processInstanceKey, loading, isActiveInstance]);
 
   return {
     processInstance,
