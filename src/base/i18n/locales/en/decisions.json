@@ -36,7 +36,9 @@
     "decisionDefinition": "Decision Definition",
     "evaluatedAt": "Evaluated At",
     "result": "Result",
-    "output": "Output"
+    "output": "Output",
+    "inputs": "Inputs",
+    "outputs": "Outputs"
   },
   "filters": {
     "onlyLatest": "Latest version only",

@@ -11,7 +11,7 @@ import {
 import { DmnViewer } from '@components/DmnViewer';
 import { DiagramDetailLayout, MetadataPanel } from '@components/DiagramDetailLayout';
 import type { MetadataField, VersionInfo } from '@components/DiagramDetailLayout';
-import { DecisionInstancesTable } from './components/DecisionInstancesTable';
+import { DecisionInstancesTable } from '@components/DecisionInstancesTable';
 import { getDmnResourceDefinition, getDmnResourceDefinitions } from '@base/openapi';
 
 interface DmnResourceDefinition {
@@ -146,6 +146,7 @@ export const DecisionDefinitionDetailPage = () => {
   const instancesContent = (
     <DecisionInstancesTable
       dmnResourceDefinitionKey={dmnResourceDefinitionKey}
+      syncWithUrl={false}
     />
   );
 
