@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { Box, Divider } from '@mui/material';
@@ -57,6 +58,9 @@ export interface MetadataPanelProps {
 
   /** Gap between fields (MUI spacing units, default: 1.5) */
   gap?: number;
+
+  /** Action buttons to display at the bottom of the panel */
+  actions?: ReactNode;
 }
 
 /**
@@ -82,6 +86,7 @@ export const MetadataPanel = ({
   keyLabel,
   fields: directFields,
   gap = 1.5,
+  actions,
 }: MetadataPanelProps) => {
   const { t } = useTranslation([ns.common]);
 
@@ -102,9 +107,10 @@ export const MetadataPanel = ({
   });
 
   const hasLinks = definitionInfo || processInstanceKey;
+  const hasBottomSection = hasLinks || actions;
 
-  // Simple render if no links
-  if (!hasLinks) {
+  // Simple render if no links or actions
+  if (!hasBottomSection) {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap, flex: 1 }}>
         {fields.map((field, index) => (
@@ -114,7 +120,7 @@ export const MetadataPanel = ({
     );
   }
 
-  // Render with navigation links at bottom
+  // Render with navigation links and/or actions at bottom
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       {/* Main content */}
@@ -124,12 +130,16 @@ export const MetadataPanel = ({
         ))}
       </Box>
 
-      {/* Spacer to push links to bottom */}
+      {/* Spacer to push bottom section down */}
       <Box sx={{ flex: 1 }} />
 
-      {/* Navigation links at bottom */}
+      {/* Bottom section: actions and navigation links */}
       <Divider sx={{ my: 2 }} />
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {/* Action buttons */}
+        {actions}
+
+        {/* Navigation links */}
         {definitionInfo && (
           <NavButton
             to={

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import CamundaPlatformModeler from 'camunda-bpmn-js/lib/camunda-platform/Modeler';
+import CamundaCloudModeler from 'camunda-bpmn-js/lib/camunda-cloud/Modeler';
 import type { BpmnCanvas, BpmnEventBus } from '../types';
 import { EMPTY_DIAGRAM } from '../constants';
 
@@ -24,7 +24,7 @@ export function useBpmnEditor({
   initialXml,
   onChange,
 }: UseBpmnEditorOptions): UseBpmnEditorResult {
-  const modelerRef = useRef<InstanceType<typeof CamundaPlatformModeler> | null>(null);
+  const modelerRef = useRef<InstanceType<typeof CamundaCloudModeler> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const initialXmlLoadedRef = useRef(false);
@@ -66,7 +66,7 @@ export function useBpmnEditor({
   // Initialize modeler once on mount
   useEffect(() => {
     let mounted = true;
-    let modeler: InstanceType<typeof CamundaPlatformModeler> | null = null;
+    let modeler: InstanceType<typeof CamundaCloudModeler> | null = null;
 
     const initModeler = async () => {
       if (!containerRef.current || !propertiesPanelRef.current) return;
@@ -85,7 +85,7 @@ export function useBpmnEditor({
       }
 
       // Create Camunda Platform modeler with properties panel
-      modeler = new CamundaPlatformModeler({
+      modeler = new CamundaCloudModeler({
         container: containerRef.current,
         propertiesPanel: {
           parent: propertiesPanelRef.current,

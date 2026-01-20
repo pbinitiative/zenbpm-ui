@@ -2,13 +2,14 @@ import { useCallback, useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import { Box, Button, Snackbar, Alert } from '@mui/material';
+import { Box, Button, Snackbar, Alert, Link } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import UploadIcon from '@mui/icons-material/Upload';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { PageHeader } from '@components/PageHeader';
 import { SubTabs, type SubTab } from '@components/SubTabs';
+import { StartInstanceDialog } from '@components/StartInstanceDialog';
 import { ProcessDefinitionsTab } from './tabs/ProcessDefinitionsTab';
 import { ProcessInstancesTab } from './tabs/ProcessInstancesTab';
 import { createProcessDefinition } from '@base/openapi';
@@ -26,6 +27,8 @@ export const ProcessesPage = () => {
   // Shared state
   const [refreshKey, setRefreshKey] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [startDialogOpen, setStartDialogOpen] = useState(false);
+  const [createdInstanceKey, setCreatedInstanceKey] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -98,9 +101,23 @@ export const ProcessesPage = () => {
   }, [navigate]);
 
   const handleStartInstance = useCallback(() => {
-    // TODO: Open start instance modal
-    console.log('Start instance clicked');
+    setStartDialogOpen(true);
   }, []);
+
+  const handleStartDialogClose = useCallback(() => {
+    setStartDialogOpen(false);
+  }, []);
+
+  const handleInstanceCreated = useCallback((instanceKey: string) => {
+    setCreatedInstanceKey(instanceKey);
+    setSnackbar({
+      open: true,
+      message: t('processes:messages.instanceCreated'),
+      severity: 'success',
+    });
+    // Refresh instances tab if currently viewing it
+    setRefreshKey((k) => k + 1);
+  }, [t]);
 
   // Actions displayed next to tabs
   const actions = (
@@ -172,19 +189,42 @@ export const ProcessesPage = () => {
       {activeTab === 'definitions' && <ProcessDefinitionsTab refreshKey={refreshKey} />}
       {activeTab === 'instances' && <ProcessInstancesTab refreshKey={refreshKey} />}
 
-      {/* Snackbar for upload feedback */}
+      {/* Start Instance Dialog */}
+      <StartInstanceDialog
+        open={startDialogOpen}
+        onClose={handleStartDialogClose}
+        onSuccess={handleInstanceCreated}
+      />
+
+      {/* Snackbar for feedback */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        onClose={() => {
+          setSnackbar({ ...snackbar, open: false });
+          setCreatedInstanceKey(null);
+        }}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          onClose={() => {
+            setSnackbar({ ...snackbar, open: false });
+            setCreatedInstanceKey(null);
+          }}
           severity={snackbar.severity}
           sx={{ width: '100%' }}
         >
           {snackbar.message}
+          {createdInstanceKey && (
+            <Link
+              component="button"
+              variant="body2"
+              onClick={() => void navigate(`/process-instances/${createdInstanceKey}`)}
+              sx={{ ml: 1, color: 'inherit', textDecoration: 'underline' }}
+            >
+              {t('processes:actions.viewInstance')}
+            </Link>
+          )}
         </Alert>
       </Snackbar>
     </Box>

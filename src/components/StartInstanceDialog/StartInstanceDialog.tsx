@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import {
@@ -13,29 +13,43 @@ import {
   IconButton,
   Tooltip,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Autocomplete,
 } from '@mui/material';
 import FormatAlignLeftIcon from '@mui/icons-material/FormatAlignLeft';
 import CloseIcon from '@mui/icons-material/Close';
-import { createProcessInstance } from '@base/openapi';
+import {
+  createProcessInstance,
+  getProcessDefinitions,
+  type ProcessDefinitionSimple,
+} from '@base/openapi';
 
 export interface StartInstanceDialogProps {
   /** Whether the dialog is open */
   open: boolean;
   /** Callback to close the dialog */
   onClose: () => void;
-  /** Process definition key */
-  processDefinitionKey: string;
-  /** Process name for display */
+  /** Process definition key - if provided, pre-selects this process and version */
+  processDefinitionKey?: string;
+  /** Process name for display (used with processDefinitionKey) */
   processName?: string;
   /** Callback when instance is created successfully */
   onSuccess?: (instanceKey: string) => void;
 }
 
+// Unique process option (grouped by bpmnProcessId)
+interface ProcessOption {
+  bpmnProcessId: string;
+  name: string;
+}
+
 export const StartInstanceDialog = ({
   open,
   onClose,
-  processDefinitionKey,
-  processName,
+  processDefinitionKey: propProcessDefinitionKey,
   onSuccess,
 }: StartInstanceDialogProps) => {
   const { t } = useTranslation([ns.common, ns.processes]);
@@ -43,12 +57,94 @@ export const StartInstanceDialog = ({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Process selector state
+  const [allDefinitions, setAllDefinitions] = useState<ProcessDefinitionSimple[]>([]);
+  const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
+  const [selectedVersion, setSelectedVersion] = useState<string>('');
+  const [loadingProcesses, setLoadingProcesses] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  // Get unique process options (by bpmnProcessId)
+  const processOptions = useMemo((): ProcessOption[] => {
+    const uniqueProcesses = new Map<string, ProcessOption>();
+    for (const def of allDefinitions) {
+      if (!uniqueProcesses.has(def.bpmnProcessId)) {
+        uniqueProcesses.set(def.bpmnProcessId, {
+          bpmnProcessId: def.bpmnProcessId,
+          name: def.bpmnProcessName || def.bpmnProcessId,
+        });
+      }
+    }
+    return Array.from(uniqueProcesses.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [allDefinitions]);
+
+  // Get versions for selected process
+  const versionOptions = useMemo(() => {
+    if (!selectedProcessId) return [];
+    return allDefinitions
+      .filter((d) => d.bpmnProcessId === selectedProcessId)
+      .sort((a, b) => b.version - a.version);
+  }, [allDefinitions, selectedProcessId]);
+
+  // Determine actual process key to use
+  const processDefinitionKey = selectedVersion;
+
+  // Load all process definitions when dialog opens
+  useEffect(() => {
+    if (open) {
+      const loadProcessDefinitions = async () => {
+        setLoadingProcesses(true);
+        try {
+          // Load all definitions to have all versions available
+          const data = await getProcessDefinitions({ size: 500 });
+          setAllDefinitions(data.items || []);
+        } catch (err) {
+          console.error('Failed to load process definitions:', err);
+          setError(t('processes:errors.loadDefinitionsFailed'));
+        } finally {
+          setLoadingProcesses(false);
+        }
+      };
+      void loadProcessDefinitions();
+    }
+  }, [open, t]);
+
+  // Initialize selection after definitions are loaded
+  useEffect(() => {
+    if (allDefinitions.length > 0 && !initialized) {
+      if (propProcessDefinitionKey) {
+        // Find the definition by key and pre-select it
+        const def = allDefinitions.find((d) => d.key === propProcessDefinitionKey);
+        if (def) {
+          setSelectedProcessId(def.bpmnProcessId);
+          setSelectedVersion(propProcessDefinitionKey);
+        }
+      } else if (processOptions.length > 0) {
+        // Auto-select first process
+        const firstProcess = processOptions[0];
+        setSelectedProcessId(firstProcess.bpmnProcessId);
+      }
+      setInitialized(true);
+    }
+  }, [allDefinitions, propProcessDefinitionKey, processOptions, initialized]);
+
+  // Auto-select latest version when process is selected (but not during initial load with propProcessDefinitionKey)
+  useEffect(() => {
+    if (selectedProcessId && versionOptions.length > 0 && !selectedVersion) {
+      // Select the latest version (first in sorted list)
+      setSelectedVersion(versionOptions[0].key);
+    }
+  }, [selectedProcessId, versionOptions, selectedVersion]);
+
   // Reset state when dialog opens
   useEffect(() => {
     if (open) {
       setVariables('{}');
       setError(null);
       setLoading(false);
+      setSelectedProcessId(null);
+      setSelectedVersion('');
+      setInitialized(false);
     }
   }, [open]);
 
@@ -106,6 +202,12 @@ export const StartInstanceDialog = ({
     }
   }, [isValidJson, processDefinitionKey, variables, onSuccess, onClose, t]);
 
+  // Handle process selection from autocomplete
+  const handleProcessChange = useCallback((_: unknown, value: ProcessOption | null) => {
+    setSelectedProcessId(value?.bpmnProcessId || null);
+    setSelectedVersion(''); // Reset version when process changes
+  }, []);
+
   return (
     <Dialog
       open={open}
@@ -126,23 +228,8 @@ export const StartInstanceDialog = ({
           pb: 2,
         }}
       >
-        <Box>
-          <Box component="span" sx={{ fontWeight: 600 }}>
-            {t('processes:dialogs.startInstance.title')}
-          </Box>
-          {processName && (
-            <Box
-              component="span"
-              sx={{
-                ml: 1,
-                color: 'text.secondary',
-                fontWeight: 400,
-                fontSize: '0.875rem',
-              }}
-            >
-              - {processName}
-            </Box>
-          )}
+        <Box component="span" sx={{ fontWeight: 600 }}>
+          {t('processes:dialogs.startInstance.title')}
         </Box>
         <IconButton onClick={onClose} size="small">
           <CloseIcon />
@@ -151,12 +238,78 @@ export const StartInstanceDialog = ({
 
       <DialogContent sx={{ pt: 3 }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
             {error}
           </Alert>
         )}
 
-        <Box sx={{ mb: 2 }}>
+        {/* Process and version selectors */}
+        <Box sx={{ mb: 3, mt: 1 }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+            {/* Process name selector (searchable) */}
+            <Autocomplete
+              options={processOptions}
+              getOptionLabel={(option) => option.name}
+              value={processOptions.find((p) => p.bpmnProcessId === selectedProcessId) || null}
+              onChange={handleProcessChange}
+              loading={loadingProcesses}
+              disabled={loadingProcesses}
+              sx={{ flex: 1 }}
+              size="small"
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label={t('processes:dialogs.startInstance.selectProcess')}
+                  slotProps={{
+                    input: {
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {loadingProcesses ? <CircularProgress size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    },
+                  }}
+                />
+              )}
+              renderOption={(props, option) => (
+                <li {...props} key={option.bpmnProcessId}>
+                  <Box>
+                    <Box>{option.name}</Box>
+                    {option.name !== option.bpmnProcessId && (
+                      <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                        {option.bpmnProcessId}
+                      </Box>
+                    )}
+                  </Box>
+                </li>
+              )}
+            />
+
+            {/* Version selector */}
+            <FormControl sx={{ minWidth: 120 }} size="small" disabled={!selectedProcessId}>
+              <InputLabel id="version-select-label">
+                {t('processes:fields.version')}
+              </InputLabel>
+              <Select
+                labelId="version-select-label"
+                value={selectedVersion}
+                onChange={(e) => setSelectedVersion(e.target.value)}
+                label={t('processes:fields.version')}
+              >
+                {versionOptions.map((v) => (
+                  <MenuItem key={v.key} value={v.key}>
+                    v{v.version}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        </Box>
+
+        {/* Variables editor */}
+        <Box>
           <Box
             sx={{
               display: 'flex',
@@ -183,7 +336,7 @@ export const StartInstanceDialog = ({
           </Box>
           <TextField
             multiline
-            rows={10}
+            rows={6}
             fullWidth
             value={variables}
             onChange={(e) => handleVariablesChange(e.target.value)}
@@ -224,7 +377,7 @@ export const StartInstanceDialog = ({
         <Button
           variant="contained"
           onClick={handleCreate}
-          disabled={!isValidJson || loading}
+          disabled={!isValidJson || loading || !processDefinitionKey}
           startIcon={loading ? <CircularProgress size={16} /> : undefined}
         >
           {loading
