@@ -1,7 +1,9 @@
-import type { TFunction } from 'i18next';
 import { MonoText } from '@components/MonoText';
 import type { Column } from '@components/DataTable';
 import type { DecisionInstanceSummary, DmnResourceDefinitionSimple } from '@base/openapi';
+
+// Translation function type - ESLint validates keys via i18n-namespace-match rule
+type TranslateFunction = (key: string) => string;
 
 export interface ColumnOptions {
   /** Whether to show the decision definition column (hidden when filtering by specific definition) */
@@ -11,7 +13,7 @@ export interface ColumnOptions {
 }
 
 export const getDecisionInstanceColumns = (
-  t: TFunction,
+  t: TranslateFunction,
   options: ColumnOptions = {}
 ): Column<DecisionInstanceSummary>[] => {
   const { showDecisionColumn = true, decisionDefinitions = [] } = options;

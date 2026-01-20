@@ -24,11 +24,11 @@ export interface StartInstanceDialogProps {
   /** Callback to close the dialog */
   onClose: () => void;
   /** Process definition key */
-  processDefinitionKey: number;
+  processDefinitionKey: string;
   /** Process name for display */
   processName?: string;
   /** Callback when instance is created successfully */
-  onSuccess?: (instanceKey: number) => void;
+  onSuccess?: (instanceKey: string) => void;
 }
 
 export const StartInstanceDialog = ({

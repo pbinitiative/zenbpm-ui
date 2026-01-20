@@ -48,7 +48,7 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
       setError(null);
 
       try {
-        const data = await getDecisionInstance(decisionInstanceKey as unknown as number);
+        const data = await getDecisionInstance(decisionInstanceKey);
         setInstance(data);
 
         // Fetch DMN definition to get diagram and definition details

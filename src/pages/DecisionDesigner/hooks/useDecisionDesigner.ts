@@ -52,7 +52,7 @@ export function useDecisionDesigner({
     const loadDefinition = async () => {
       setLoadingDefinition(true);
       try {
-        const data = await getDmnResourceDefinition((decisionDefinitionKey as unknown) as number);
+        const data = await getDmnResourceDefinition(decisionDefinitionKey);
 
         let xml = data.dmnData || '';
         if (xml && !xml.startsWith('<')) {

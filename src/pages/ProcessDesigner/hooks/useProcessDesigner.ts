@@ -52,7 +52,7 @@ export function useProcessDesigner({
     const loadDefinition = async () => {
       setLoadingDefinition(true);
       try {
-        const data = await getProcessDefinition((processDefinitionKey as unknown) as number);
+        const data = await getProcessDefinition(processDefinitionKey);
 
         let xml = data.bpmnData || '';
         if (xml && !xml.startsWith('<')) {

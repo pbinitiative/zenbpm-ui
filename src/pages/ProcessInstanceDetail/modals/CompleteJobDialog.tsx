@@ -18,7 +18,7 @@ interface CompleteJobDialogProps {
   open: boolean;
   job: Job;
   onClose: () => void;
-  onComplete: (jobKey: number, variables: Record<string, unknown>) => Promise<void>;
+  onComplete: (jobKey: string, variables: Record<string, unknown>) => Promise<void>;
 }
 
 export const CompleteJobDialog = ({

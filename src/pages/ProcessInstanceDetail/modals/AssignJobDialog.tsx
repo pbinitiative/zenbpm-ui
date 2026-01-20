@@ -18,7 +18,7 @@ interface AssignJobDialogProps {
   open: boolean;
   job: Job;
   onClose: () => void;
-  onAssign: (jobKey: number, assignee: string) => Promise<void>;
+  onAssign: (jobKey: string, assignee: string) => Promise<void>;
 }
 
 export const AssignJobDialog = ({

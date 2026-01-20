@@ -46,6 +46,27 @@ pnpm dev
 pnpm dev --mode live
 ```
 
+## Quality Checks
+
+Before submitting a PR, ensure all quality checks pass:
+
+```bash
+pnpm check
+```
+
+This runs:
+- **ESLint** - Code style and best practices (zero warnings allowed)
+- **TypeScript** - Type checking
+
+PRs must pass `pnpm check` without any errors or warnings to be merged.
+
+You can also run checks individually:
+
+```bash
+pnpm lint        # ESLint only
+pnpm typecheck   # TypeScript only
+```
+
 ## Tech Stack
 
 - React 19 + TypeScript

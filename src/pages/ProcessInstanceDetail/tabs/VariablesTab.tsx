@@ -69,7 +69,7 @@ export const VariablesTab = ({
   const handleAddVariable = useCallback(async (name: string, value: unknown) => {
     try {
       const updatedVariables = { ...variables, [name]: value };
-      await updateProcessInstanceVariables((processInstanceKey as unknown) as number, { variables: updatedVariables });
+      await updateProcessInstanceVariables(processInstanceKey, { variables: updatedVariables });
       onShowNotification(t('processInstance:messages.variableAdded'), 'success');
       await onRefetch();
     } catch {
@@ -81,7 +81,7 @@ export const VariablesTab = ({
   const handleEditVariable = useCallback(async (name: string, value: unknown) => {
     try {
       const updatedVariables = { ...variables, [name]: value };
-      await updateProcessInstanceVariables((processInstanceKey as unknown) as number, { variables: updatedVariables });
+      await updateProcessInstanceVariables(processInstanceKey, { variables: updatedVariables });
       onShowNotification(t('processInstance:messages.variableUpdated'), 'success');
       await onRefetch();
     } catch {
@@ -92,7 +92,7 @@ export const VariablesTab = ({
 
   const handleDeleteVariable = useCallback(async (name: string) => {
     try {
-      await deleteProcessInstanceVariable((processInstanceKey as unknown) as number, name);
+      await deleteProcessInstanceVariable(processInstanceKey, name);
       onShowNotification(t('processInstance:messages.variableDeleted'), 'success');
       await onRefetch();
     } catch {

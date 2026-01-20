@@ -15,7 +15,7 @@ import { DecisionInstancesTable } from '@components/DecisionInstancesTable';
 import { getDmnResourceDefinition, getDmnResourceDefinitions } from '@base/openapi';
 
 interface DmnResourceDefinition {
-  key: number;
+  key: string;
   version: number;
   dmnResourceDefinitionId: string;
   name?: string;
@@ -43,7 +43,7 @@ export const DecisionDefinitionDetailPage = () => {
       setError(null);
 
       try {
-        const data = await getDmnResourceDefinition(dmnResourceDefinitionKey as unknown as number);
+        const data = await getDmnResourceDefinition(dmnResourceDefinitionKey);
         setDefinition(data as unknown as DmnResourceDefinition);
 
         // Fetch all versions for this DMN resource

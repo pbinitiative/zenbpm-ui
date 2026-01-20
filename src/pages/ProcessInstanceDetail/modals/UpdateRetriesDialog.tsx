@@ -17,7 +17,7 @@ interface UpdateRetriesDialogProps {
   open: boolean;
   job: Job;
   onClose: () => void;
-  onUpdate: (jobKey: number, retries: number) => Promise<void>;
+  onUpdate: (jobKey: string, retries: number) => Promise<void>;
 }
 
 export const UpdateRetriesDialog = ({

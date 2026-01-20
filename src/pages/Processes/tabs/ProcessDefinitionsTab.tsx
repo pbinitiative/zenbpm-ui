@@ -90,8 +90,7 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
         try {
           const statisticsData = await getProcessDefinitionStatistics({ size: 100, onlyLatest: apiParams.onlyLatest });
           for (const stat of statisticsData.items || []) {
-            // Convert to string for consistent comparison (int64 keys may be strings after json-bigint parsing)
-            statisticsMap.set(String(stat.key), {
+            statisticsMap.set(stat.key, {
               instanceCounts: stat.instanceCounts,
               incidentCounts: stat.incidentCounts,
             });
@@ -104,8 +103,7 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
 
       // 3. Merge definitions with statistics (defaults to zero if stats not available)
       const merged: ProcessDefinitionWithStats[] = definitions.map((def) => {
-        // Convert to string for consistent comparison (int64 keys may be strings after json-bigint parsing)
-        const stats = statisticsMap.get(String(def.key)) || {
+        const stats = statisticsMap.get(def.key) || {
           instanceCounts: { total: 0, active: 0, completed: 0, terminated: 0, failed: 0 },
           incidentCounts: { total: 0, unresolved: 0 },
         };
