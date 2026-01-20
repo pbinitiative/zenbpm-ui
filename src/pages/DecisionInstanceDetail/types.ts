@@ -1,7 +1,7 @@
 import type { EvaluatedDecision } from '@base/openapi';
 
 export interface DmnResourceDefinition {
-  key: number;
+  key: string;
   version: number;
   dmnResourceDefinitionId: string;
   name?: string;

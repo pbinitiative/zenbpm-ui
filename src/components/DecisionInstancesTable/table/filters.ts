@@ -1,5 +1,7 @@
-import type { TFunction } from 'i18next';
 import type { FilterConfig, FilterOption, SimpleFilterConfig } from '@components/TableWithFilters';
+
+// Translation function type - ESLint validates keys via i18n-namespace-match rule
+type TranslateFunction = (key: string) => string;
 
 export interface FilterOptions {
   /** Whether to show the decision definition filter (hidden when filtering by specific definition) */
@@ -9,7 +11,7 @@ export interface FilterOptions {
 }
 
 export const getDecisionInstanceFilters = (
-  t: TFunction,
+  t: TranslateFunction,
   options: FilterOptions = {}
 ): FilterConfig[] => {
   const { showDecisionFilter = true, decisionOptions = [] } = options;

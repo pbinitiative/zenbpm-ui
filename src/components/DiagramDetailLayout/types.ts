@@ -10,7 +10,7 @@ export interface MetadataField {
 }
 
 export interface VersionInfo {
-  key: number;
+  key: string;
   version: number;
 }
 

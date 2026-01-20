@@ -50,7 +50,7 @@ export interface FlowElementHistory extends ApiFlowElementHistory {
 // Incident - extend API type with additional fields
 export interface Incident extends ApiIncident {
   /** Process definition key */
-  processDefinitionKey?: number;
+  processDefinitionKey?: string;
   /** Error type classification */
   errorType?: string;
   /** Partition number */

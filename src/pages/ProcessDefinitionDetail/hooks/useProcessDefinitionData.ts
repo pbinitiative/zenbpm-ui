@@ -33,7 +33,7 @@ interface UseProcessDefinitionDataResult {
   handleActivityFilterChange: (activityId: string | undefined) => void;
   handleStartInstance: () => void;
   handleStartDialogClose: () => void;
-  handleInstanceCreated: (instanceKey: number) => void;
+  handleInstanceCreated: (instanceKey: string) => void;
   handleEditDefinition: () => void;
   handleSnackbarClose: () => void;
   navigateToInstance: (key: string) => void;
@@ -64,7 +64,7 @@ export function useProcessDefinitionData({
 
   // Fetch element statistics for diagram overlays
   const { data: elementStatistics } = useGetProcessDefinitionElementStatistics(
-    (processDefinitionKey as unknown) as number,
+    processDefinitionKey ?? '',
     {
       query: {
         enabled: !!processDefinitionKey && !!processDefinition,
@@ -82,7 +82,7 @@ export function useProcessDefinitionData({
       setError(null);
 
       try {
-        const data = await getProcessDefinition((processDefinitionKey as unknown) as number);
+        const data = await getProcessDefinition(processDefinitionKey);
         setProcessDefinition(data as ProcessDefinition);
 
         if (data.bpmnData) {
@@ -151,11 +151,11 @@ export function useProcessDefinitionData({
   }, []);
 
   const handleInstanceCreated = useCallback(
-    (instanceKey: number) => {
+    (instanceKey: string) => {
       setSnackbar({
         open: true,
         message: t('processes:messages.instanceCreated'),
-        key: String(instanceKey),
+        key: instanceKey,
       });
       setRefreshKey((k) => k + 1);
     },

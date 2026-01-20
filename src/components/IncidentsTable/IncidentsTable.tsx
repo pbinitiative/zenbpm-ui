@@ -151,7 +151,7 @@ export const IncidentsTable = ({
   );
 
   // Handle resolve incident using API service
-  const handleResolveIncident = useCallback(async (incidentKey: number) => {
+  const handleResolveIncident = useCallback(async (incidentKey: string) => {
     try {
       await resolveIncident(incidentKey);
       onShowNotification?.(t('incidents:messages.resolved'), 'success');

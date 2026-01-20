@@ -14,7 +14,7 @@ interface ColumnOptions {
   /** Callback when view details is clicked */
   onViewDetails: (incident: Incident) => void;
   /** Callback when resolve is clicked */
-  onResolve: (incidentKey: number) => void;
+  onResolve: (incidentKey: string) => void;
   /** Callback when message is clicked to show stack trace */
   onMessageClick: (message: string) => void;
 }

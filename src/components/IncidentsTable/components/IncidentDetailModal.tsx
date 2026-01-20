@@ -20,7 +20,7 @@ interface IncidentDetailModalProps {
   open: boolean;
   incident: Incident;
   onClose: () => void;
-  onResolve?: (incidentKey: number) => void;
+  onResolve?: (incidentKey: string) => void;
 }
 
 export const IncidentDetailModal = ({

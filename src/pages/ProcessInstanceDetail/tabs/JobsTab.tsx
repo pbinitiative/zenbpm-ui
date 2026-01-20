@@ -26,7 +26,7 @@ import { UpdateRetriesDialog } from '../modals/UpdateRetriesDialog';
 import { completeJobByKey, assignJob, customInstance } from '@base/openapi';
 
 // updateJobRetries is not in generated API, use direct axios call
-const updateJobRetries = async (jobKey: number, retries: number): Promise<void> => {
+const updateJobRetries = async (jobKey: string, retries: number): Promise<void> => {
   await customInstance({ url: `/jobs/${jobKey}/retries`, method: 'POST', data: { retries } });
 };
 
@@ -65,7 +65,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
     setMenuJob(null);
   }, []);
 
-  const handleCompleteJob = useCallback(async (jobKey: number, variables: Record<string, unknown>) => {
+  const handleCompleteJob = useCallback(async (jobKey: string, variables: Record<string, unknown>) => {
     try {
       await completeJobByKey(jobKey, { variables });
       onShowNotification(t('processInstance:messages.jobCompleted'), 'success');
@@ -76,7 +76,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
     setCompleteDialogJob(null);
   }, [onRefetch, onShowNotification, t]);
 
-  const handleAssignJob = useCallback(async (jobKey: number, assignee: string) => {
+  const handleAssignJob = useCallback(async (jobKey: string, assignee: string) => {
     try {
       await assignJob(jobKey, { assignee });
       onShowNotification(t('processInstance:messages.jobAssigned'), 'success');
@@ -87,7 +87,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
     setAssignDialogJob(null);
   }, [onRefetch, onShowNotification, t]);
 
-  const handleUpdateRetries = useCallback(async (jobKey: number, retries: number) => {
+  const handleUpdateRetries = useCallback(async (jobKey: string, retries: number) => {
     try {
       await updateJobRetries(jobKey, retries);
       onShowNotification(t('processInstance:messages.retriesUpdated'), 'success');
