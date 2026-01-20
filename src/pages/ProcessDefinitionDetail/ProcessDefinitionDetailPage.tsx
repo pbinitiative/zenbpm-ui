@@ -6,12 +6,9 @@ import {
   Typography,
   CircularProgress,
   Alert,
-  Fab,
-  Tooltip,
   Link,
   Snackbar,
-  useMediaQuery,
-  useTheme,
+  Button,
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import EditIcon from '@mui/icons-material/Edit';
@@ -24,8 +21,6 @@ import { useProcessDefinitionData } from './hooks';
 export const ProcessDefinitionDetailPage = () => {
   const { processDefinitionKey } = useParams<{ processDefinitionKey: string }>();
   const { t } = useTranslation([ns.common, ns.processes]);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const {
     processDefinition,
@@ -66,6 +61,31 @@ export const ProcessDefinitionDetailPage = () => {
     );
   }
 
+  const metadataActions = (
+    <>
+      <Button
+        variant="outlined"
+        size="small"
+        startIcon={<PlayArrowIcon />}
+        onClick={handleStartInstance}
+        sx={{ justifyContent: 'flex-start' }}
+        data-testid="process-definition-start-instance-button"
+      >
+        {t('processes:actions.startInstance')}
+      </Button>
+      <Button
+        variant="outlined"
+        size="small"
+        startIcon={<EditIcon />}
+        onClick={handleEditDefinition}
+        sx={{ justifyContent: 'flex-start' }}
+        data-testid="process-definition-edit-button"
+      >
+        {t('processes:actions.editDefinition')}
+      </Button>
+    </>
+  );
+
   const metadataContent = (
     <MetadataPanel
       entityKey={processDefinition.key}
@@ -75,6 +95,7 @@ export const ProcessDefinitionDetailPage = () => {
       resourceName={processDefinition.bpmnResourceName}
       additionalFields={additionalFields}
       onVersionChange={handleVersionChange}
+      actions={metadataActions}
     />
   );
 
@@ -111,21 +132,6 @@ export const ProcessDefinitionDetailPage = () => {
     />
   );
 
-  const floatingActions = (
-    <>
-      <Tooltip title={t('processes:actions.startInstance')}>
-        <Fab color="primary" onClick={handleStartInstance} size={isMobile ? 'medium' : 'large'} data-testid="process-definition-start-instance-button">
-          <PlayArrowIcon />
-        </Fab>
-      </Tooltip>
-      <Tooltip title={t('processes:actions.editDefinition')}>
-        <Fab color="primary" onClick={handleEditDefinition} size={isMobile ? 'medium' : 'large'} data-testid="process-definition-edit-button">
-          <EditIcon />
-        </Fab>
-      </Tooltip>
-    </>
-  );
-
   return (
     <Box data-testid="process-definition-detail-page">
       <DiagramDetailLayout
@@ -135,7 +141,6 @@ export const ProcessDefinitionDetailPage = () => {
         rightTitle={t('processes:detail.diagram')}
         bottomSection={instancesContent}
         bottomTitle={t('processes:detail.instances')}
-        floatingActions={floatingActions}
       />
 
       <StartInstanceDialog

@@ -46,7 +46,7 @@
     "design": "Design Process",
     "deploy": "Deploy",
     "startInstance": "Start Instance",
-    "editDefinition": "Edit Definition",
+    "editDefinition": "Open In Editor",
     "viewDiagram": "View Diagram",
     "viewInstance": "View Instance",
     "cancelInstance": "Cancel Instance"
@@ -62,15 +62,18 @@
   "dialogs": {
     "startInstance": {
       "title": "Start New Instance",
+      "selectProcess": "Select Process Definition",
       "variables": "Process Variables (JSON)",
       "formatJson": "Format JSON",
+      "viewDefinition": "View Definition",
       "start": "Start",
       "starting": "Starting..."
     }
   },
   "errors": {
     "invalidJson": "Invalid JSON format",
-    "createFailed": "Failed to create instance"
+    "createFailed": "Failed to create instance",
+    "loadDefinitionsFailed": "Failed to load process definitions"
   },
   "messages": {
     "deploySuccess": "Process deployed successfully",

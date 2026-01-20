@@ -87,9 +87,8 @@ export const ProcessInstanceDetailPage = () => {
     incidents,
     loading,
     error,
-    refetchJobs,
-    refetchIncidents,
     refetchVariables,
+    refetchAll,
   } = useInstanceData(processInstanceKey);
 
   // Show notification helper
@@ -237,7 +236,7 @@ export const ProcessInstanceDetailPage = () => {
           <TabPanel value={activeTab} index={0}>
             <JobsTab
               jobs={jobs}
-              onRefetch={refetchJobs}
+              onRefetch={refetchAll}
               onShowNotification={showNotification}
             />
           </TabPanel>
@@ -251,7 +250,7 @@ export const ProcessInstanceDetailPage = () => {
           <TabPanel value={activeTab} index={2}>
             <IncidentsTab
               processInstanceKey={processInstanceKey}
-              onRefetch={refetchIncidents}
+              onRefetch={refetchAll}
               onShowNotification={showNotification}
             />
           </TabPanel>

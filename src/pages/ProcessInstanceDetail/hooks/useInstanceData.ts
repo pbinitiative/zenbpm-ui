@@ -25,6 +25,8 @@ interface UseInstanceDataResult {
   refetchJobs: () => Promise<void>;
   refetchIncidents: () => Promise<void>;
   refetchVariables: () => Promise<void>;
+  refetchHistory: () => Promise<void>;
+  refetchAll: () => Promise<void>;
 }
 
 export const useInstanceData = (processInstanceKey: string | undefined): UseInstanceDataResult => {
@@ -58,8 +60,8 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
     }
   }, [processInstanceKey]);
 
-  // Fetch process instance (which includes variables)
-  const fetchVariables = useCallback(async () => {
+  // Fetch process instance (which includes variables and active elements)
+  const fetchProcessInstance = useCallback(async () => {
     if (!processInstanceKey) return;
     try {
       const data = await getProcessInstance(processInstanceKey);
@@ -68,6 +70,28 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
       console.error('Failed to fetch process instance:', err);
     }
   }, [processInstanceKey]);
+
+  // Fetch history for the process instance
+  const fetchHistory = useCallback(async () => {
+    if (!processInstanceKey) return;
+    try {
+      const data = await getHistory(processInstanceKey, { page: 1, size: 100 });
+      setHistory((data.items || []) as FlowElementHistory[]);
+    } catch (err) {
+      console.error('Failed to fetch history:', err);
+    }
+  }, [processInstanceKey]);
+
+  // Fetch all data (useful after actions that can affect multiple things)
+  const fetchAll = useCallback(async () => {
+    if (!processInstanceKey) return;
+    await Promise.all([
+      fetchProcessInstance(),
+      fetchJobs(),
+      fetchHistory(),
+      fetchIncidents(),
+    ]);
+  }, [processInstanceKey, fetchProcessInstance, fetchJobs, fetchHistory, fetchIncidents]);
 
   // Initial data fetch
   useEffect(() => {
@@ -134,6 +158,8 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
     error,
     refetchJobs: fetchJobs,
     refetchIncidents: fetchIncidents,
-    refetchVariables: fetchVariables,
+    refetchVariables: fetchProcessInstance,
+    refetchHistory: fetchHistory,
+    refetchAll: fetchAll,
   };
 };
