@@ -2,7 +2,14 @@ import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import type { DateRangeValue, QuickSelectOption, TimeUnit, DateInputMode } from '../types';
-import { formatDateTimeLocal, formatDisplayDateTime, getRelativeTime, createQuickSelectOptions } from '../utils';
+import {
+  dateToISO,
+  isoToLocalInput,
+  localInputToISO,
+  formatDisplayDateTime,
+  getRelativeTime,
+  createQuickSelectOptions,
+} from '../utils';
 
 interface UseDateRangePickerOptions {
   value: DateRangeValue;
@@ -78,8 +85,9 @@ export function useDateRangePicker({
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
       setAnchorEl(event.currentTarget);
-      setTempFrom(value.from || '');
-      setTempTo(value.to || '');
+      // Convert ISO strings to local input format for editing
+      setTempFrom(isoToLocalInput(value.from));
+      setTempTo(isoToLocalInput(value.to));
     },
     [value]
   );
@@ -91,10 +99,12 @@ export function useDateRangePicker({
   const handleQuickSelect = useCallback(
     (option: QuickSelectOption) => {
       const newValue = option.getValue();
-      setTempFrom(newValue.from || '');
-      setTempTo(newValue.to || '');
+      // Convert ISO strings to local input format for display in inputs
+      setTempFrom(isoToLocalInput(newValue.from));
+      setTempTo(isoToLocalInput(newValue.to));
       setFromMode('absolute');
       setToMode('absolute');
+      // Pass ISO strings to parent
       onChange(newValue);
       handleClose();
     },
@@ -102,26 +112,32 @@ export function useDateRangePicker({
   );
 
   const handleApply = useCallback(() => {
-    let fromValue = tempFrom;
-    let toValue = tempTo;
+    let fromISO: string | undefined;
+    let toISO: string | undefined;
 
-    // Calculate relative "from" if in relative mode
+    // Calculate "from" value
     if (fromMode === 'relative') {
       const relativeDate = getRelativeTime(relativeFromValue, relativeFromUnit, 'past');
-      fromValue = formatDateTimeLocal(relativeDate);
+      fromISO = dateToISO(relativeDate);
+    } else {
+      // Convert local input to ISO
+      fromISO = localInputToISO(tempFrom);
     }
 
-    // Calculate relative "to" if in relative mode
+    // Calculate "to" value
     if (toMode === 'relative') {
       if (relativeToValue === 0) {
-        toValue = formatDateTimeLocal(new Date());
+        toISO = dateToISO(new Date());
       } else {
         const relativeDate = getRelativeTime(relativeToValue, relativeToUnit, 'past');
-        toValue = formatDateTimeLocal(relativeDate);
+        toISO = dateToISO(relativeDate);
       }
+    } else {
+      // Convert local input to ISO
+      toISO = localInputToISO(tempTo);
     }
 
-    onChange({ from: fromValue || undefined, to: toValue || undefined });
+    onChange({ from: fromISO, to: toISO });
     handleClose();
   }, [
     tempFrom,

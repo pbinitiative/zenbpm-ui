@@ -1,8 +1,9 @@
 import type { QuickSelectOption } from '../types';
-import { formatDateTimeLocal } from './dateFormatters';
+import { dateToISO } from './dateFormatters';
 
 /**
  * Quick select option factories (labels provided by translations)
+ * All dates are returned as ISO 8601 strings
  */
 export const createQuickSelectOptions = (t: (key: string) => string): QuickSelectOption[] => [
   {
@@ -10,7 +11,7 @@ export const createQuickSelectOptions = (t: (key: string) => string): QuickSelec
     getValue: () => {
       const now = new Date();
       const from = new Date(now.getTime() - 15 * 60 * 1000);
-      return { from: formatDateTimeLocal(from), to: formatDateTimeLocal(now) };
+      return { from: dateToISO(from), to: dateToISO(now) };
     },
   },
   {
@@ -18,7 +19,7 @@ export const createQuickSelectOptions = (t: (key: string) => string): QuickSelec
     getValue: () => {
       const now = new Date();
       const from = new Date(now.getTime() - 60 * 60 * 1000);
-      return { from: formatDateTimeLocal(from), to: formatDateTimeLocal(now) };
+      return { from: dateToISO(from), to: dateToISO(now) };
     },
   },
   {
@@ -26,7 +27,7 @@ export const createQuickSelectOptions = (t: (key: string) => string): QuickSelec
     getValue: () => {
       const now = new Date();
       const from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      return { from: formatDateTimeLocal(from), to: formatDateTimeLocal(now) };
+      return { from: dateToISO(from), to: dateToISO(now) };
     },
   },
   {
@@ -34,7 +35,7 @@ export const createQuickSelectOptions = (t: (key: string) => string): QuickSelec
     getValue: () => {
       const now = new Date();
       const from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      return { from: formatDateTimeLocal(from), to: formatDateTimeLocal(now) };
+      return { from: dateToISO(from), to: dateToISO(now) };
     },
   },
   {
@@ -42,7 +43,7 @@ export const createQuickSelectOptions = (t: (key: string) => string): QuickSelec
     getValue: () => {
       const now = new Date();
       const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      return { from: formatDateTimeLocal(from), to: formatDateTimeLocal(now) };
+      return { from: dateToISO(from), to: dateToISO(now) };
     },
   },
   {
@@ -50,7 +51,7 @@ export const createQuickSelectOptions = (t: (key: string) => string): QuickSelec
     getValue: () => {
       const now = new Date();
       const from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-      return { from: formatDateTimeLocal(from), to: formatDateTimeLocal(now) };
+      return { from: dateToISO(from), to: dateToISO(now) };
     },
   },
   {
@@ -58,7 +59,7 @@ export const createQuickSelectOptions = (t: (key: string) => string): QuickSelec
     getValue: () => {
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      return { from: formatDateTimeLocal(startOfDay), to: formatDateTimeLocal(now) };
+      return { from: dateToISO(startOfDay), to: dateToISO(now) };
     },
   },
   {
@@ -67,7 +68,7 @@ export const createQuickSelectOptions = (t: (key: string) => string): QuickSelec
       const now = new Date();
       const dayOfWeek = now.getDay();
       const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
-      return { from: formatDateTimeLocal(startOfWeek), to: formatDateTimeLocal(now) };
+      return { from: dateToISO(startOfWeek), to: dateToISO(now) };
     },
   },
   {
@@ -75,7 +76,7 @@ export const createQuickSelectOptions = (t: (key: string) => string): QuickSelec
     getValue: () => {
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { from: formatDateTimeLocal(startOfMonth), to: formatDateTimeLocal(now) };
+      return { from: dateToISO(startOfMonth), to: dateToISO(now) };
     },
   },
   {
@@ -83,7 +84,7 @@ export const createQuickSelectOptions = (t: (key: string) => string): QuickSelec
     getValue: () => {
       const now = new Date();
       const startOfYear = new Date(now.getFullYear(), 0, 1);
-      return { from: formatDateTimeLocal(startOfYear), to: formatDateTimeLocal(now) };
+      return { from: dateToISO(startOfYear), to: dateToISO(now) };
     },
   },
 ];

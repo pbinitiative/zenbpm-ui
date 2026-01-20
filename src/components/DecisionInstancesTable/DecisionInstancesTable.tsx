@@ -114,6 +114,7 @@ export const DecisionInstancesTable = ({
       if (params.filters?.dmnResourceDefinitionId && typeof params.filters.dmnResourceDefinitionId === 'string') {
         apiParams.dmnResourceDefinitionId = params.filters.dmnResourceDefinitionId;
       }
+      // Dates are already in ISO format from DateRangePicker
       if (params.filters?.evaluatedAt && typeof params.filters.evaluatedAt === 'object') {
         const evaluatedAt = params.filters.evaluatedAt as { from?: string; to?: string };
         if (evaluatedAt.from) {

@@ -119,7 +119,7 @@ export const IncidentsTable = ({
       }
       if (search) apiParams.search = search;
 
-      // Apply date range filter
+      // Apply date range filter (dates are already in ISO format from DateRangePicker)
       if (params.filters?.createdAt && typeof params.filters.createdAt === 'object') {
         const createdAt = params.filters.createdAt as { from?: string; to?: string };
         if (createdAt.from) {

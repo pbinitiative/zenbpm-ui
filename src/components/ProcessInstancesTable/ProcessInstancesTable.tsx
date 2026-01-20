@@ -139,6 +139,7 @@ export const ProcessInstancesTable = ({
       }
       if (params.filters?.createdAt && typeof params.filters.createdAt === 'object') {
         const createdAt = params.filters.createdAt as { from?: string; to?: string };
+        // Dates are already in ISO format from DateRangePicker
         if (createdAt.from) {
           apiParams.createdFrom = createdAt.from;
         }
