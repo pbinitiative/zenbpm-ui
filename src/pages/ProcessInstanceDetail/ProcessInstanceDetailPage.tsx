@@ -87,7 +87,6 @@ export const ProcessInstanceDetailPage = () => {
     incidents,
     loading,
     error,
-    refetchVariables,
     refetchAll,
   } = useInstanceData(processInstanceKey);
 
@@ -260,7 +259,7 @@ export const ProcessInstanceDetailPage = () => {
             <VariablesTab
               processInstanceKey={processInstanceKey}
               variables={processInstance.variables}
-              onRefetch={refetchVariables}
+              onRefetch={refetchAll}
               onShowNotification={showNotification}
             />
           </TabPanel>
