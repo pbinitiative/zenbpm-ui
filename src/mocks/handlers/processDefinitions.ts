@@ -213,10 +213,12 @@ export const processDefinitionHandlers = [
       }
 
       // Build items array with statistics
+      // Keep key as string to preserve precision for int64 values
+      // The stringifyMockData function will convert it to a proper JSON number
       const allItems = definitionsToProcess.map((def) => {
         const stats = computeStatisticsForDefinition(def.key);
         return {
-          key: parseInt(def.key, 10),
+          key: def.key,
           version: def.version,
           bpmnProcessId: def.bpmnProcessId,
           name: def.bpmnProcessName,
