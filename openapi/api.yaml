@@ -115,7 +115,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [name, dmnResourceDefinitionId, resourceName, version, key]
+            enum: [dmnDefinitionName, dmnResourceDefinitionId, version, key]
           description: Sort field
         - name: sortOrder
           in: query
@@ -128,7 +128,7 @@ paths:
           schema:
             type: string
           description: Filter by DMN resource definition ID to get all versions
-        - name: name
+        - name: dmnDefinitionName
           in: query
           schema:
             type: string
@@ -145,13 +145,11 @@ paths:
                   - key: 4503599627370495
                     version: 2
                     dmnResourceDefinitionId: "loan-approval"
-                    name: "Loan Approval Decision"
-                    resourceName: "loan-approval.dmn"
+                    dmnDefinitionName: "Loan Approval Decision"
                   - key: 4503599627370497
                     version: 1
                     dmnResourceDefinitionId: "credit-score-check"
-                    name: "Credit Score Check"
-                    resourceName: "credit-score.dmn"
+                    dmnDefinitionName: "Credit Score Check"
                 page: 1
                 size: 10
                 count: 2
@@ -188,8 +186,7 @@ paths:
                 key: 4503599627370495
                 version: 2
                 dmnResourceDefinitionId: "loan-approval"
-                name: "Loan Approval Decision"
-                resourceName: "loan-approval.dmn"
+                dmnDefinitionName: "Loan Approval Decision"
                 dmnData: |
                   <?xml version="1.0" encoding="UTF-8"?>
                   <definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" id="loan-drd">
@@ -2150,6 +2147,7 @@ components:
         - key
         - version
         - dmnResourceDefinitionId
+        - dmnDefinitionName
       properties:
         key:
           type: integer
@@ -2158,12 +2156,9 @@ components:
           type: integer
         dmnResourceDefinitionId:
           type: string
-        name:
+        dmnDefinitionName:
           type: string
           description: Decision name from DMN
-        resourceName:
-          type: string
-          description: DMN resource file name
     DmnResourceDefinitionDetail:
       type: object
       required:

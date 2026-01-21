@@ -21,7 +21,7 @@ import {
 export type { DecisionInstanceSummary };
 
 // Decision definition type for the filter dropdown
-export type DecisionDefinitionOption = Pick<DmnResourceDefinitionSimple, 'key' | 'dmnResourceDefinitionId' | 'name'>;
+export type DecisionDefinitionOption = Pick<DmnResourceDefinitionSimple, 'key' | 'dmnResourceDefinitionId' | 'dmnDefinitionName'>;
 
 export interface DecisionInstancesTableProps {
   /** Fixed DMN resource definition key - when set, instances are filtered by this key and the decision filter is hidden */
@@ -69,7 +69,7 @@ export const DecisionInstancesTable = ({
           (data.items || []).map((dd) => ({
             key: dd.key,
             dmnResourceDefinitionId: dd.dmnResourceDefinitionId,
-            name: dd.name,
+            dmnDefinitionName: dd.dmnDefinitionName,
           }))
         );
       } catch (error) {
@@ -83,7 +83,7 @@ export const DecisionInstancesTable = ({
   const decisionOptions: FilterOption[] = useMemo(() => {
     return decisionDefinitions.map((dd) => ({
       value: dd.dmnResourceDefinitionId,
-      label: dd.name || dd.dmnResourceDefinitionId,
+      label: dd.dmnDefinitionName || dd.dmnResourceDefinitionId,
     }));
   }, [decisionDefinitions]);
 

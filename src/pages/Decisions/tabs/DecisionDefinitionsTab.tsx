@@ -54,14 +54,14 @@ export const DecisionDefinitionsTab = ({ refreshKey = 0 }: DecisionDefinitionsTa
 
       // Add name filter (search)
       if (filterValues.search && typeof filterValues.search === 'string') {
-        apiParams.name = filterValues.search;
+        apiParams.dmnDefinitionName = filterValues.search;
       }
 
       // Add sorting - map column ids to API sort fields
       if (sortBy) {
         const sortMapping: Record<string, GetDmnResourceDefinitionsParams['sortBy']> = {
           key: 'key',
-          name: 'name',
+          dmnDefinitionName: 'dmnDefinitionName',
           dmnResourceDefinitionId: 'dmnResourceDefinitionId',
           version: 'version',
         };
@@ -105,10 +105,10 @@ export const DecisionDefinitionsTab = ({ refreshKey = 0 }: DecisionDefinitionsTa
         render: (row) => <MonoText>{row.key}</MonoText>,
       },
       {
-        id: 'name',
+        id: 'dmnDefinitionName',
         label: t('decisions:fields.name'),
         sortable: true,
-        render: (row) => row.name || row.dmnResourceDefinitionId,
+        render: (row) => row.dmnDefinitionName || row.dmnResourceDefinitionId,
       },
       {
         id: 'dmnResourceDefinitionId',

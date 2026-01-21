@@ -9,7 +9,7 @@ export interface ColumnOptions {
   /** Whether to show the decision definition column (hidden when filtering by specific definition) */
   showDecisionColumn?: boolean;
   /** Decision definitions for looking up names */
-  decisionDefinitions?: Pick<DmnResourceDefinitionSimple, 'key' | 'dmnResourceDefinitionId' | 'name'>[];
+  decisionDefinitions?: Pick<DmnResourceDefinitionSimple, 'key' | 'dmnResourceDefinitionId' | 'dmnDefinitionName'>[];
 }
 
 export const getDecisionInstanceColumns = (
@@ -36,7 +36,7 @@ export const getDecisionInstanceColumns = (
       render: (row) => {
         // Try to find name from definitions list
         const def = decisionDefinitions.find((d) => d.dmnResourceDefinitionId === row.dmnResourceDefinitionId);
-        return def?.name || row.dmnResourceDefinitionId;
+        return def?.dmnDefinitionName || row.dmnResourceDefinitionId;
       },
     });
   }
