@@ -5,19 +5,29 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import CodeIcon from '@mui/icons-material/Code';
-import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import TerminalIcon from '@mui/icons-material/Terminal';
-import type { EditorMode } from '../types';
+import type { EditorMode } from './types';
 
-interface DesignerToolbarProps {
+export interface DesignerToolbarProps {
+  /** Current editor mode */
   editorMode: EditorMode;
+  /** Whether deployment is in progress */
   deploying: boolean;
+  /** Whether console is open */
   consoleOpen: boolean;
+  /** Number of console messages */
   consoleMessageCount: number;
+  /** Icon for diagram mode toggle button */
+  diagramModeIcon: React.ReactNode;
+  /** Called when editor mode changes */
   onModeChange: (event: React.MouseEvent<HTMLElement>, newMode: EditorMode | null) => void;
+  /** Called when Import button is clicked */
   onOpenFile: () => void;
+  /** Called when Download button is clicked */
   onDownload: () => void;
+  /** Called when Deploy button is clicked */
   onDeploy: () => void;
+  /** Called when Console button is clicked */
   onToggleConsole: () => void;
 }
 
@@ -26,6 +36,7 @@ export const DesignerToolbar = ({
   deploying,
   consoleOpen,
   consoleMessageCount,
+  diagramModeIcon,
   onModeChange,
   onOpenFile,
   onDownload,
@@ -52,7 +63,7 @@ export const DesignerToolbar = ({
       {/* Left side - Mode toggle */}
       <ToggleButtonGroup value={editorMode} exclusive onChange={onModeChange} size="small">
         <ToggleButton value="diagram" sx={{ px: 1.5 }}>
-          <AccountTreeIcon fontSize="small" sx={{ mr: 0.5 }} />
+          {diagramModeIcon}
           {t('designer:modes.diagram')}
         </ToggleButton>
         <ToggleButton value="xml" sx={{ px: 1.5 }}>

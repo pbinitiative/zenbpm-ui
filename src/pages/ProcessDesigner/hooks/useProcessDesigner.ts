@@ -3,7 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { getProcessDefinition, createProcessDefinition } from '@base/openapi';
 import type { BpmnEditorRef } from '@components/BpmnEditor';
-import type { EditorMode, SnackbarState, ConsoleMessage, ConsoleMessageType, ConsoleMessageLink } from '../types';
+import type { EditorMode, ConsoleMessage, ConsoleMessageType, ConsoleMessageLink } from '@components/DesignerShell';
+
+interface SnackbarState {
+  open: boolean;
+  message: string;
+  severity: 'success' | 'error';
+}
 
 interface UseProcessDesignerOptions {
   processDefinitionKey?: string;
@@ -11,7 +17,6 @@ interface UseProcessDesignerOptions {
 
 interface UseProcessDesignerResult {
   editorRef: React.RefObject<BpmnEditorRef | null>;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
   loadingDefinition: boolean;
   deploying: boolean;
   initialXml: string | undefined;
@@ -24,7 +29,6 @@ interface UseProcessDesignerResult {
   handleDeploy: () => Promise<void>;
   handleFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   handleDownload: () => Promise<void>;
-  handleOpenFile: () => void;
   closeSnackbar: () => void;
   setXmlContent: (content: string) => void;
   toggleConsole: () => void;
@@ -40,7 +44,6 @@ export function useProcessDesigner({
 }: UseProcessDesignerOptions): UseProcessDesignerResult {
   const { t } = useTranslation([ns.common, ns.designer]);
   const editorRef = useRef<BpmnEditorRef>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [deploying, setDeploying] = useState(false);
   const [loadingDefinition, setLoadingDefinition] = useState(false);
@@ -327,11 +330,6 @@ export function useProcessDesigner({
     }
   }, [t, editorMode, xmlContent]);
 
-  // Trigger file input
-  const handleOpenFile = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
   // Close snackbar
   const closeSnackbar = useCallback(() => {
     setSnackbar((prev) => ({ ...prev, open: false }));
@@ -339,7 +337,6 @@ export function useProcessDesigner({
 
   return {
     editorRef,
-    fileInputRef,
     loadingDefinition,
     deploying,
     initialXml,
@@ -352,7 +349,6 @@ export function useProcessDesigner({
     handleDeploy,
     handleFileUpload,
     handleDownload,
-    handleOpenFile,
     closeSnackbar,
     setXmlContent,
     toggleConsole,

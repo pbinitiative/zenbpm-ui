@@ -1,11 +1,5 @@
 export type EditorMode = 'diagram' | 'xml';
 
-export interface SnackbarState {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error';
-}
-
 export type ConsoleMessageType = 'success' | 'error' | 'info' | 'warning';
 
 export interface ConsoleMessageLink {
@@ -20,4 +14,10 @@ export interface ConsoleMessage {
   details?: string;
   link?: ConsoleMessageLink;
   timestamp: Date;
+}
+
+export interface AddConsoleMessageOptions {
+  details?: string;
+  link?: ConsoleMessageLink;
+  autoOpenOnError?: boolean;
 }
