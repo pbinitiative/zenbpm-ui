@@ -922,12 +922,7 @@ paths:
             type: string
             enum: [createdAt, key, state]
           description: Sort field (applies globally across partitions)
-        - name: sortOrder
-          in: query
-          schema:
-            type: string
-            enum: [asc, desc]
-          description: Sort direction
+        - $ref: "#/components/parameters/sortOrder"
         - name: createdFrom
           in: query
           schema:
@@ -1070,7 +1065,7 @@ paths:
                 $ref: "#/components/schemas/Error"
 
   /process-instances/{processInstanceKey}/variables:
-    put:
+    patch:
       operationId: updateProcessInstanceVariables
       summary: Update process instance variables
       tags:
