@@ -102,4 +102,14 @@ export const axiosResponseTransformer = (data: string): unknown => {
   return data;
 };
 
-export default { parse, stringify, stringifyMockData };
+/**
+ * Custom axios request transformer that converts string int64 keys back to BigInt
+ * for proper JSON serialization as numbers when sending to the backend.
+ * This reverses the string conversion done by the response transformer.
+ */
+export const stringifyWithBigInt = (value: unknown): string => {
+  const converted = convertKeysToBigInt(value);
+  return JSONBigStringify.stringify(converted);
+};
+
+export default { parse, stringify, stringifyMockData, stringifyWithBigInt };

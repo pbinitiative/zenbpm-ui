@@ -40,25 +40,23 @@ test.describe('Process Definition Detail Page', () => {
     await expect(page.getByText(/Partition \d+/).first()).toBeVisible();
   });
 
-  test('should show FAB buttons for start instance and edit', async ({ page }) => {
-    // Check for FAB buttons at bottom right
-    const startButton = page.locator('button[aria-label="Start Instance"]').or(
-      page.locator('button').filter({ has: page.locator('svg[data-testid="PlayArrowIcon"]') })
-    );
-    const editButton = page.locator('button[aria-label="Edit Definition"]').or(
-      page.locator('button').filter({ has: page.locator('svg[data-testid="EditIcon"]') })
-    );
+  test('should show action buttons in metadata panel', async ({ page }) => {
+    // Check for action buttons in the metadata panel
+    const startButton = page.getByTestId('process-definition-start-instance-button');
+    const editButton = page.getByTestId('process-definition-edit-button');
 
-    // FABs should be visible
-    await expect(startButton.first()).toBeVisible();
-    await expect(editButton.first()).toBeVisible();
+    // Action buttons should be visible in metadata panel
+    await expect(startButton).toBeVisible();
+    await expect(editButton).toBeVisible();
+
+    // Verify button text
+    await expect(startButton).toContainText('Start Instance');
+    await expect(editButton).toContainText('Open In Editor');
   });
 
   test('should open start instance dialog', async ({ page }) => {
-    // Click start instance FAB
-    const startButton = page.locator('button').filter({
-      has: page.locator('svg[data-testid="PlayArrowIcon"]')
-    }).first();
+    // Click start instance button in metadata panel
+    const startButton = page.getByTestId('process-definition-start-instance-button');
     await startButton.click();
 
     // Dialog should open
@@ -78,9 +76,7 @@ test.describe('Process Definition Detail Page', () => {
 
   test('should validate JSON in start instance dialog', async ({ page }) => {
     // Open dialog
-    const startButton = page.locator('button').filter({
-      has: page.locator('svg[data-testid="PlayArrowIcon"]')
-    }).first();
+    const startButton = page.getByTestId('process-definition-start-instance-button');
     await startButton.click();
 
     // Enter invalid JSON

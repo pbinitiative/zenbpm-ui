@@ -1,11 +1,20 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { validateResponse } from '@/mocks/validation/validator';
-import { axiosResponseTransformer } from '@/base/utils/jsonBigInt';
+import { axiosResponseTransformer, stringifyWithBigInt } from '@/base/utils/jsonBigInt';
 
 export const AXIOS_INSTANCE = axios.create({
   baseURL: '/v1',
   // Use custom JSON parser to handle int64 values without precision loss
   transformResponse: [axiosResponseTransformer],
+  // Use custom JSON stringifier to convert string int64 values back to JSON numbers
+  transformRequest: [
+    (data: unknown) => {
+      if (data && typeof data === 'object' && !(data instanceof FormData)) {
+        return stringifyWithBigInt(data);
+      }
+      return data;
+    },
+  ],
 });
 
 // Add request interceptor to fix Content-Type for FormData
