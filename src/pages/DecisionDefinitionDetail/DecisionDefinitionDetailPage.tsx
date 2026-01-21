@@ -20,8 +20,7 @@ interface DmnResourceDefinition {
   key: string;
   version: number;
   dmnResourceDefinitionId: string;
-  name?: string;
-  resourceName?: string;
+  dmnDefinitionName: string;
   dmnData?: string;
 }
 
@@ -135,10 +134,9 @@ export const DecisionDefinitionDetailPage = () => {
   const metadataContent = (
     <MetadataPanel
       entityKey={definition.key}
-      name={definition.name}
+      name={definition.dmnDefinitionName}
       version={definition.version}
       versions={versions}
-      resourceName={definition.resourceName}
       additionalFields={additionalFields}
       onVersionChange={handleVersionChange}
       actions={metadataActions}

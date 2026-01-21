@@ -4,8 +4,7 @@ export interface DmnResourceDefinition {
   key: string;
   version: number;
   dmnResourceDefinitionId: string;
-  name?: string;
-  resourceName?: string;
+  dmnDefinitionName: string;
   dmnData?: string;
 }
 

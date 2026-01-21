@@ -47,9 +47,8 @@ export const DecisionInstanceDetailPage = () => {
     <MetadataPanel
       entityKey={instance.key ?? ''}
       definitionInfo={definitionInfo}
-      name={definition?.name}
+      name={definition?.dmnDefinitionName}
       version={definition?.version}
-      resourceName={definition?.resourceName}
       processInstanceKey={instance.processInstanceKey}
       additionalFields={additionalFields}
       keyLabel={t('decisions:fields.key')}
