@@ -10,11 +10,13 @@
   },
   "modes": {
     "diagram": "Diagram",
-    "xml": "XML"
+    "xml": "XML",
+    "console": "Console"
   },
   "messages": {
     "deploySuccess": "Process deployed successfully",
     "deployFailed": "Failed to deploy process",
+    "deployFailedCheckConsole": "Deployment failed. Check console for details.",
     "fileLoaded": "File loaded successfully",
     "fileLoadFailed": "Failed to load file",
     "downloadFailed": "Failed to download file",

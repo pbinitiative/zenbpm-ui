@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { getProcessDefinition, createProcessDefinition } from '@base/openapi';
 import type { BpmnEditorRef } from '@components/BpmnEditor';
-import type { EditorMode, SnackbarState } from '../types';
+import type { EditorMode, SnackbarState, ConsoleMessage, ConsoleMessageType, ConsoleMessageLink } from '../types';
 
 interface UseProcessDesignerOptions {
   processDefinitionKey?: string;
@@ -18,6 +18,8 @@ interface UseProcessDesignerResult {
   editorMode: EditorMode;
   xmlContent: string;
   snackbar: SnackbarState;
+  consoleMessages: ConsoleMessage[];
+  consoleOpen: boolean;
   handleModeChange: (event: React.MouseEvent<HTMLElement>, newMode: EditorMode | null) => Promise<void>;
   handleDeploy: () => Promise<void>;
   handleFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
@@ -25,7 +27,13 @@ interface UseProcessDesignerResult {
   handleOpenFile: () => void;
   closeSnackbar: () => void;
   setXmlContent: (content: string) => void;
+  toggleConsole: () => void;
+  clearConsole: () => void;
 }
+
+// Generate unique ID for console messages
+let messageIdCounter = 0;
+const generateMessageId = () => `msg-${Date.now()}-${++messageIdCounter}`;
 
 export function useProcessDesigner({
   processDefinitionKey,
@@ -44,6 +52,46 @@ export function useProcessDesigner({
     message: '',
     severity: 'success',
   });
+
+  // Console state
+  const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
+  const [consoleOpen, setConsoleOpen] = useState(false);
+
+  // Add message to console
+  const addConsoleMessage = useCallback(
+    (
+      type: ConsoleMessageType,
+      message: string,
+      options?: { details?: string; link?: ConsoleMessageLink; autoOpenOnError?: boolean }
+    ) => {
+      const { details, link, autoOpenOnError = true } = options ?? {};
+      const newMessage: ConsoleMessage = {
+        id: generateMessageId(),
+        type,
+        message,
+        details,
+        link,
+        timestamp: new Date(),
+      };
+      setConsoleMessages((prev) => [...prev, newMessage]);
+
+      // Auto-open console on error
+      if (autoOpenOnError && type === 'error') {
+        setConsoleOpen(true);
+      }
+    },
+    []
+  );
+
+  // Toggle console
+  const toggleConsole = useCallback(() => {
+    setConsoleOpen((prev) => !prev);
+  }, []);
+
+  // Clear console
+  const clearConsole = useCallback(() => {
+    setConsoleMessages([]);
+  }, []);
 
   // Load process definition if key is provided
   useEffect(() => {
@@ -106,6 +154,8 @@ export function useProcessDesigner({
   // Handle deploy
   const handleDeploy = useCallback(async () => {
     setDeploying(true);
+    addConsoleMessage('info', 'Starting deployment...', { autoOpenOnError: false });
+
     try {
       let xml: string;
 
@@ -122,23 +172,94 @@ export function useProcessDesigner({
       }
 
       const blob = new Blob([xml], { type: 'application/xml' });
-      await createProcessDefinition({ resource: blob });
+      const result = await createProcessDefinition({ resource: blob });
+
+      // Fetch full definition details to get version info
+      let definitionDetails: { version?: number; bpmnProcessId?: string } | undefined;
+      if (result?.processDefinitionKey) {
+        try {
+          const details = await getProcessDefinition(result.processDefinitionKey);
+          definitionDetails = details;
+        } catch {
+          // Ignore - we'll just show the key without version
+        }
+      }
+
+      // Log success with details and link
+      const successMessage = t('designer:messages.deploySuccess');
+      const version = definitionDetails?.version;
+      const processId = definitionDetails?.bpmnProcessId;
+      const detailsText = [
+        `Key: ${result?.processDefinitionKey || 'unknown'}`,
+        version !== undefined ? `Version: ${version}` : null,
+        processId ? `Process ID: ${processId}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      addConsoleMessage('success', successMessage, {
+        details: detailsText,
+        link: result?.processDefinitionKey
+          ? {
+              text: `Open v${version ?? '?'}`,
+              url: `/process-definitions/${result.processDefinitionKey}`,
+            }
+          : undefined,
+        autoOpenOnError: false,
+      });
+
       setSnackbar({
         open: true,
-        message: t('designer:messages.deploySuccess'),
+        message: successMessage,
         severity: 'success',
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : t('designer:messages.deployFailed');
+      // Extract detailed error information
+      let errorMessage = t('designer:messages.deployFailed');
+      let errorDetails: string | undefined;
+
+      if (err instanceof Error) {
+        errorMessage = err.message;
+
+        // Try to extract more details from axios error response
+        const errorAny = err as unknown as Record<string, unknown>;
+        if (errorAny.response && typeof errorAny.response === 'object') {
+          const response = errorAny.response as Record<string, unknown>;
+          if (response.data && typeof response.data === 'object') {
+            const data = response.data as Record<string, unknown>;
+            if (data.message && typeof data.message === 'string') {
+              errorMessage = data.message;
+            }
+            if (data.details && typeof data.details === 'string') {
+              errorDetails = data.details;
+            } else if (data.error && typeof data.error === 'string') {
+              errorDetails = data.error;
+            }
+            // Include the full error response for debugging if no specific details found
+            if (!errorDetails) {
+              try {
+                errorDetails = JSON.stringify(data, null, 2);
+              } catch {
+                // Ignore JSON stringify errors
+              }
+            }
+          }
+        }
+      }
+
+      // Log error to console (will auto-open)
+      addConsoleMessage('error', `Deployment failed: ${errorMessage}`, { details: errorDetails });
+
+      // Show simple snackbar - details are in console
       setSnackbar({
         open: true,
-        message: errorMessage,
+        message: t('designer:messages.deployFailedCheckConsole'),
         severity: 'error',
       });
     } finally {
       setDeploying(false);
     }
-  }, [t, editorMode, xmlContent]);
+  }, [t, editorMode, xmlContent, addConsoleMessage]);
 
   // Handle file upload
   const handleFileUpload = useCallback(
@@ -225,6 +346,8 @@ export function useProcessDesigner({
     editorMode,
     xmlContent,
     snackbar,
+    consoleMessages,
+    consoleOpen,
     handleModeChange,
     handleDeploy,
     handleFileUpload,
@@ -232,5 +355,7 @@ export function useProcessDesigner({
     handleOpenFile,
     closeSnackbar,
     setXmlContent,
+    toggleConsole,
+    clearConsole,
   };
 }

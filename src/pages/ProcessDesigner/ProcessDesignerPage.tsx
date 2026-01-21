@@ -3,7 +3,7 @@ import { Box, Snackbar, Alert, CircularProgress } from '@mui/material';
 import { BpmnEditor } from '@components/BpmnEditor';
 import { XmlEditor } from '@components/XmlEditor';
 import { useProcessDesigner } from './hooks';
-import { DesignerToolbar } from './components';
+import { DesignerToolbar, ConsolePanel } from './components';
 
 export const ProcessDesignerPage = () => {
   const { processDefinitionKey } = useParams<{ processDefinitionKey?: string }>();
@@ -17,6 +17,8 @@ export const ProcessDesignerPage = () => {
     editorMode,
     xmlContent,
     snackbar,
+    consoleMessages,
+    consoleOpen,
     handleModeChange,
     handleDeploy,
     handleFileUpload,
@@ -24,6 +26,8 @@ export const ProcessDesignerPage = () => {
     handleOpenFile,
     closeSnackbar,
     setXmlContent,
+    toggleConsole,
+    clearConsole,
   } = useProcessDesigner({ processDefinitionKey });
 
   if (loadingDefinition) {
@@ -73,16 +77,22 @@ export const ProcessDesignerPage = () => {
 
         {/* XML Editor - shown when in XML mode */}
         {editorMode === 'xml' && <XmlEditor value={xmlContent} onChange={setXmlContent} height="100%" />}
+
+        {/* Console panel - overlays the editor */}
+        <ConsolePanel messages={consoleMessages} open={consoleOpen} onClear={clearConsole} onClose={toggleConsole} />
       </Box>
 
       {/* Bottom toolbar */}
       <DesignerToolbar
         editorMode={editorMode}
         deploying={deploying}
+        consoleOpen={consoleOpen}
+        consoleMessageCount={consoleMessages.length}
         onModeChange={handleModeChange}
         onOpenFile={handleOpenFile}
         onDownload={handleDownload}
         onDeploy={handleDeploy}
+        onToggleConsole={toggleConsole}
       />
 
       {/* Snackbar */}
