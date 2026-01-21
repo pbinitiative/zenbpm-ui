@@ -14,6 +14,9 @@ importers:
       '@codemirror/commands':
         specifier: ^6.10.1
         version: 6.10.1
+      '@codemirror/lang-json':
+        specifier: ^6.0.2
+        version: 6.0.2
       '@codemirror/lang-xml':
         specifier: ^6.1.0
         version: 6.1.0
@@ -44,6 +47,9 @@ importers:
       '@lezer/xml':
         specifier: ^1.0.6
         version: 1.0.6
+      '@monaco-editor/react':
+        specifier: ^4.7.0
+        version: 4.7.0(monaco-editor@0.55.1)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@mui/icons-material':
         specifier: ^7.3.6
         version: 7.3.6(@mui/material@7.3.6(@emotion/react@11.14.0(@types/react@19.2.7)(react@19.2.1))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.7)(react@19.2.1))(@types/react@19.2.7)(react@19.2.1))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)
@@ -842,6 +848,16 @@ packages:
     peerDependencies:
       '@types/react': '>=16'
       react: '>=16'
+
+  '@monaco-editor/loader@1.7.0':
+    resolution: {integrity: sha512-gIwR1HrJrrx+vfyOhYmCZ0/JcWqG5kbfG7+d3f/C1LXk2EvzAbHSg3MQ5lO2sMlo9izoAZ04shohfKLVT6crVA==}
+
+  '@monaco-editor/react@4.7.0':
+    resolution: {integrity: sha512-cyzXQCtO47ydzxpQtCGSQGOC8Gk3ZUeBXFAxD+CWXYFo5OqZyZUonFl0DwUlTyAfRHntBfw2p3w4s9R6oe1eCA==}
+    peerDependencies:
+      monaco-editor: '>= 0.25.0 < 1'
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   '@mswjs/interceptors@0.40.0':
     resolution: {integrity: sha512-EFd6cVbHsgLa6wa4RljGj6Wk75qoHxUSyc5asLyyPSyuhIcdS2Q3Phw6ImS1q+CkALthJRShiYfKANcQMuMqsQ==}
@@ -1962,6 +1978,9 @@ packages:
     resolution: {integrity: sha512-rmvrrmWQPD/X1A/nPBfIVg4r05792QdG9Z4Prk6oQG0F9zBMDkr0GKAdds1wjb2dq1rTz/ywc4ZxpZbgz0tttg==}
     engines: {node: '>=18'}
 
+  dompurify@3.2.7:
+    resolution: {integrity: sha512-WhL/YuveyGXJaerVlMYGWhvQswa7myDG17P7Vu65EWC05o8vfeNbvNf4d/BOvH99+ZW+LlQsc1GDKMa1vNK6dw==}
+
   dompurify@3.3.1:
     resolution: {integrity: sha512-qkdCKzLNtrgPFP1Vo+98FRzJnBRGe4ffyCea9IwHB1fyxPOeNTHpLKYGd4Uk9xvNoH0ZoOjwZxNptyMwqrId1Q==}
 
@@ -2711,6 +2730,11 @@ packages:
     resolution: {integrity: sha512-a54IwgWPaeBCAAsv13YgmALOF1elABB08FxO9i+r4VFk5Vl4pKokRPeX8u5TCgSsPi6ec1otfLjdOpVcgbpshg==}
     hasBin: true
 
+  marked@14.0.0:
+    resolution: {integrity: sha512-uIj4+faQ+MgHgwUW1l2PsPglZLOLOT1uErt06dAPtx2kjteLAkbsd/0FiYg/MGS+i7ZKLb7w2WClxHkzOOuryQ==}
+    engines: {node: '>= 18'}
+    hasBin: true
+
   marked@16.4.2:
     resolution: {integrity: sha512-TI3V8YYWvkVf3KJe1dRkpnjs68JUPyEa5vjKrp1XEEJUAOaQc+Qj+L1qWbPd0SJuAdQkFU0h73sXXqwDYxsiDA==}
     engines: {node: '>= 20'}
@@ -2792,6 +2816,9 @@ packages:
 
   moddle@7.2.0:
     resolution: {integrity: sha512-x1+JREThy7JBOBR3g2hbOnOfrlC/YAWXX9RzrSZS5HhqeuBly9H/PCtOBtcQs+Y2sjRAXF+WTNSgHvn8Uq+6Yw==}
+
+  monaco-editor@0.55.1:
+    resolution: {integrity: sha512-jz4x+TJNFHwHtwuV9vA9rMujcZRb0CEilTEwG2rRSpe/A7Jdkuj8xPKttCgOh+v/lkHy7HsZ64oj+q3xoAFl9A==}
 
   mri@1.2.0:
     resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}
@@ -3292,6 +3319,9 @@ packages:
   source-map@0.6.1:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
+
+  state-local@1.0.7:
+    resolution: {integrity: sha512-HTEHMNieakEnoe33shBYcZ7NX83ACUjCu8c40iOGEZsngj9zRnkqS9j1pqQPXwobB0ZcVTk27REb7COQ0UR59w==}
 
   statuses@2.0.2:
     resolution: {integrity: sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==}
@@ -4529,6 +4559,17 @@ snapshots:
       '@types/mdx': 2.0.13
       '@types/react': 19.2.7
       react: 19.2.1
+
+  '@monaco-editor/loader@1.7.0':
+    dependencies:
+      state-local: 1.0.7
+
+  '@monaco-editor/react@4.7.0(monaco-editor@0.55.1)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
+    dependencies:
+      '@monaco-editor/loader': 1.7.0
+      monaco-editor: 0.55.1
+      react: 19.2.1
+      react-dom: 19.2.1(react@19.2.1)
 
   '@mswjs/interceptors@0.40.0':
     dependencies:
@@ -5957,6 +5998,10 @@ snapshots:
 
   domify@2.0.0: {}
 
+  dompurify@3.2.7:
+    optionalDependencies:
+      '@types/trusted-types': 2.0.7
+
   dompurify@3.3.1:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
@@ -6788,6 +6833,8 @@ snapshots:
       punycode.js: 2.3.1
       uc.micro: 2.1.0
 
+  marked@14.0.0: {}
+
   marked@16.4.2: {}
 
   math-intrinsics@1.1.0: {}
@@ -6857,6 +6904,11 @@ snapshots:
   moddle@7.2.0:
     dependencies:
       min-dash: 4.2.3
+
+  monaco-editor@0.55.1:
+    dependencies:
+      dompurify: 3.2.7
+      marked: 14.0.0
 
   mri@1.2.0: {}
 
@@ -7430,6 +7482,8 @@ snapshots:
   source-map@0.5.7: {}
 
   source-map@0.6.1: {}
+
+  state-local@1.0.7: {}
 
   statuses@2.0.2: {}
 

@@ -7,11 +7,11 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  TextField,
   Box,
   Typography,
   Alert,
 } from '@mui/material';
+import { JsonEditor } from '@components/JsonEditor';
 import type { Job } from '../types';
 
 interface CompleteJobDialogProps {
@@ -43,8 +43,7 @@ export const CompleteJobDialog = ({
     }
   }, [t]);
 
-  const handleVariablesChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+  const handleVariablesChange = useCallback((value: string) => {
     setVariables(value);
     validateJson(value);
   }, [validateJson]);
@@ -89,21 +88,14 @@ export const CompleteJobDialog = ({
             <Typography variant="body2">{job.elementName || job.elementId}</Typography>
           </Box>
 
-          <TextField
+          <JsonEditor
             label={t('processInstance:dialogs.completeJob.variables')}
-            multiline
-            rows={6}
             value={variables}
             onChange={handleVariablesChange}
             error={!!jsonError}
-            helperText={jsonError || t('processInstance:dialogs.completeJob.variablesHelp')}
-            fullWidth
-            sx={{
-              '& .MuiInputBase-input': {
-                fontFamily: '"SF Mono", Monaco, monospace',
-                fontSize: '0.875rem',
-              },
-            }}
+            errorMessage={jsonError ?? undefined}
+            helperText={t('processInstance:dialogs.completeJob.variablesHelp')}
+            height={180}
           />
 
           {job.errorMessage && (

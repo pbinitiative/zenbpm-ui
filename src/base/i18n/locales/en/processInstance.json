@@ -111,8 +111,18 @@
     },
     "editVariable": {
       "title": "Edit Variable",
-      "value": "Value (JSON)",
-      "valueHelp": "Enter value as JSON (string, number, object, or array)"
+      "value": "Value",
+      "type": "Type",
+      "types": {
+        "string": "String",
+        "number": "Number",
+        "boolean": "Boolean",
+        "json": "JSON"
+      },
+      "stringHelp": "Enter text value",
+      "numberHelp": "Enter numeric value",
+      "booleanLabel": "Value is true",
+      "jsonHelp": "Enter valid JSON (object, array, string, number, or boolean)"
     },
     "deleteVariable": {
       "title": "Delete Variable",

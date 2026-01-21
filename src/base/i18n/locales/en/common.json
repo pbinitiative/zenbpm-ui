@@ -42,7 +42,8 @@
     "update": "Update",
     "close": "Close",
     "copy": "Copy to clipboard",
-    "copied": "Copied!"
+    "copied": "Copied!",
+    "prettify": "Format JSON"
   },
   "all": "All",
   "pagination": {
