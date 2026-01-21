@@ -1,9 +1,12 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { useNotification } from '@base/contexts';
 import { stringify } from '../utils/stringify';
 import type { PartitionedResponse, FilterValues, PartitionData, SortOrder } from '../types';
+
+// Debounce delay for filter changes (ms)
+const FILTER_DEBOUNCE_DELAY = 300;
 
 interface UsePartitionedDataOptions<T extends object> {
   fetchData: (params: {
@@ -59,6 +62,16 @@ export function usePartitionedData<T extends object>({
   const [localSortBy, setLocalSortBy] = useState<string | undefined>(sortBy);
   const [localSortOrder, setLocalSortOrder] = useState<SortOrder>(sortOrder);
 
+  // Use transition to keep UI responsive during data updates
+  const [, startTransition] = useTransition();
+
+  // Debounce timer ref
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track if this is the first render (skip debounce for initial load)
+  const isFirstRenderRef = useRef(true);
+  // Track previous filters to detect filter changes
+  const prevFiltersRef = useRef<FilterValues | undefined>(filters);
+
   // Fetch data when page, filters, sorting, or refreshKey change
   useEffect(() => {
     const loadData = async () => {
@@ -73,7 +86,10 @@ export function usePartitionedData<T extends object>({
           sortBy: serverSideSorting ? localSortBy : undefined,
           sortOrder: serverSideSorting ? localSortOrder : undefined,
         });
-        setData(result);
+        // Use transition to keep UI responsive during heavy data update
+        startTransition(() => {
+          setData(result);
+        });
       } catch (err) {
         setError(t('common:errors.loadFailed'));
         showError(t('common:errors.loadFailed'));
@@ -83,7 +99,31 @@ export function usePartitionedData<T extends object>({
       }
     };
 
-    void loadData();
+    // Clear any existing debounce timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Check if only filters changed (not page, sort, or refresh)
+    const filtersChanged = JSON.stringify(filters) !== JSON.stringify(prevFiltersRef.current);
+    prevFiltersRef.current = filters;
+
+    // Skip debounce on first render or when non-filter params change
+    if (isFirstRenderRef.current || !filtersChanged) {
+      isFirstRenderRef.current = false;
+      void loadData();
+    } else {
+      // Debounce filter changes to prevent UI freeze
+      debounceTimerRef.current = setTimeout(() => {
+        void loadData();
+      }, FILTER_DEBOUNCE_DELAY);
+    }
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchData, page, pageSize, filters, refreshKey, serverSideSorting, localSortBy, localSortOrder]);
 

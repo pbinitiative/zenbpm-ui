@@ -99,6 +99,7 @@ export const DateRangePicker = ({ value, onChange, label, disabled = false }: Da
         onClose={handleClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        disableRestoreFocus
         slotProps={{
           paper: { sx: { width: 650, maxHeight: 500 } },
         }}

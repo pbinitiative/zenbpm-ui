@@ -1,8 +1,11 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { SortOrder } from '@components/DataTable';
 import type { FilterConfig, FilterValues } from '../types';
 import { flattenFilters } from './useFilterState';
+
+// Debounce delay for URL sync (ms)
+const URL_SYNC_DEBOUNCE_DELAY = 150;
 
 interface UseTableStateOptions {
   defaultSortBy?: string;
@@ -58,6 +61,10 @@ export function useTableState({
   const [sortOrder, setSortOrder] = useState<SortOrder>(initialSorting.sortOrder);
   const [showHideableFilters, setShowHideableFilters] = useState(false);
 
+  // Refs for URL sync debouncing
+  const urlSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastUrlParamsRef = useRef<string>(searchParams.toString());
+
   const handleSortChange = useCallback(
     (newSortBy: string, newSortOrder: SortOrder) => {
       setSortBy(newSortBy);
@@ -71,37 +78,56 @@ export function useTableState({
     setShowHideableFilters((prev) => !prev);
   }, []);
 
-  // URL Sync Effect
+  // URL Sync Effect - debounced to prevent UI freeze
   useEffect(() => {
     if (!syncWithUrl && !syncSortingWithUrl) return;
 
-    const newParams = new URLSearchParams();
-
-    if (syncWithUrl) {
-      const flatFilters = flattenFilters(filters);
-      flatFilters.forEach((filter) => {
-        const value = filterValues[filter.id];
-
-        if (filter.type === 'dateRange') {
-          const rangeValue = value as { from?: string; to?: string } | undefined;
-          if (rangeValue?.from) {
-            newParams.set(`${filter.id}From`, rangeValue.from);
-          }
-          if (rangeValue?.to) {
-            newParams.set(`${filter.id}To`, rangeValue.to);
-          }
-        } else if (typeof value === 'string' && value !== '') {
-          newParams.set(filter.id, value);
-        }
-      });
+    // Clear any pending URL sync
+    if (urlSyncTimerRef.current) {
+      clearTimeout(urlSyncTimerRef.current);
     }
 
-    if (syncSortingWithUrl && sortBy) {
-      newParams.set('sortBy', sortBy);
-      newParams.set('sortOrder', sortOrder);
-    }
+    // Debounce URL updates to prevent blocking the main thread
+    urlSyncTimerRef.current = setTimeout(() => {
+      const newParams = new URLSearchParams();
 
-    setSearchParams(newParams, { replace: true });
+      if (syncWithUrl) {
+        const flatFilters = flattenFilters(filters);
+        flatFilters.forEach((filter) => {
+          const value = filterValues[filter.id];
+
+          if (filter.type === 'dateRange') {
+            const rangeValue = value as { from?: string; to?: string } | undefined;
+            if (rangeValue?.from) {
+              newParams.set(`${filter.id}From`, rangeValue.from);
+            }
+            if (rangeValue?.to) {
+              newParams.set(`${filter.id}To`, rangeValue.to);
+            }
+          } else if (typeof value === 'string' && value !== '') {
+            newParams.set(filter.id, value);
+          }
+        });
+      }
+
+      if (syncSortingWithUrl && sortBy) {
+        newParams.set('sortBy', sortBy);
+        newParams.set('sortOrder', sortOrder);
+      }
+
+      // Only update URL if params actually changed
+      const newParamsString = newParams.toString();
+      if (newParamsString !== lastUrlParamsRef.current) {
+        lastUrlParamsRef.current = newParamsString;
+        setSearchParams(newParams, { replace: true });
+      }
+    }, URL_SYNC_DEBOUNCE_DELAY);
+
+    return () => {
+      if (urlSyncTimerRef.current) {
+        clearTimeout(urlSyncTimerRef.current);
+      }
+    };
   }, [syncWithUrl, syncSortingWithUrl, filterValues, filters, sortBy, sortOrder, setSearchParams]);
 
   return {

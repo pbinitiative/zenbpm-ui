@@ -125,6 +125,7 @@ export const PartitionedTable = <T extends object>({
                 alignItems: 'center',
                 justifyContent: 'center',
                 zIndex: 1,
+                pointerEvents: 'none', // Don't block interactions with underlying elements
               }}
             >
               <CircularProgress size={32} />
