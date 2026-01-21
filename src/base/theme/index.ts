@@ -88,29 +88,6 @@ const colors = {
     selectionBorder: '#52b0ec',       // Selection border
   },
 
-  // XML Editor syntax highlighting
-  xmlEditor: {
-    background: '#ffffff',
-    gutterBg: '#f5f5f5',
-    gutterBorder: '#e0e0e0',
-    gutterText: '#999999',
-    lineHighlight: '#f0f7ff',
-    selectionBg: '#e8f0fe',
-    // Syntax colors
-    tagName: '#22863a',
-    attributeName: '#6f42c1',
-    attributeValue: '#032f62',
-    string: '#032f62',
-    comment: '#6a737d',
-    processingInstruction: '#005cc5',
-    documentMeta: '#005cc5',
-    angleBracket: '#d73a49',
-    operator: '#24292e',
-    character: '#e36209',
-    content: '#24292e',
-    invalid: '#cb2431',
-  },
-
   // Partition colors for tables
   partitionColors: [
     '#5C6BC0',  // Indigo
