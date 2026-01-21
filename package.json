@@ -25,6 +25,7 @@
   "dependencies": {
     "@bpmn-io/properties-panel": "^3.34.0",
     "@codemirror/commands": "^6.10.1",
+    "@codemirror/lang-json": "^6.0.2",
     "@codemirror/lang-xml": "^6.1.0",
     "@codemirror/language": "^6.12.1",
     "@codemirror/search": "^6.5.11",
@@ -35,6 +36,7 @@
     "@emotion/styled": "^11.14.1",
     "@lezer/highlight": "^1.2.3",
     "@lezer/xml": "^1.0.6",
+    "@monaco-editor/react": "^4.7.0",
     "@mui/icons-material": "^7.3.6",
     "@mui/material": "^7.3.6",
     "@tanstack/react-query": "^5.90.12",

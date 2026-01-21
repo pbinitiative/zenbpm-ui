@@ -11,7 +11,6 @@ import {
   Box,
   Alert,
   IconButton,
-  Tooltip,
   CircularProgress,
   FormControl,
   InputLabel,
@@ -19,8 +18,8 @@ import {
   MenuItem,
   Autocomplete,
 } from '@mui/material';
-import FormatAlignLeftIcon from '@mui/icons-material/FormatAlignLeft';
 import CloseIcon from '@mui/icons-material/Close';
+import { JsonEditor } from '@components/JsonEditor';
 import {
   createProcessInstance,
   getProcessDefinitions,
@@ -161,17 +160,6 @@ export const StartInstanceDialog = ({
   // Check if current JSON is valid
   const isValidJson = validateJson(variables);
 
-  // Format JSON
-  const handleFormat = useCallback(() => {
-    try {
-      const parsed: unknown = JSON.parse(variables);
-      setVariables(JSON.stringify(parsed, null, 2));
-      setError(null);
-    } catch {
-      setError(t('processes:errors.invalidJson'));
-    }
-  }, [variables, t]);
-
   // Handle variables change
   const handleVariablesChange = useCallback((value: string) => {
     setVariables(value);
@@ -309,58 +297,14 @@ export const StartInstanceDialog = ({
         </Box>
 
         {/* Variables editor */}
-        <Box>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              mb: 1,
-            }}
-          >
-            <Box
-              component="label"
-              sx={{
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                color: 'text.primary',
-              }}
-            >
-              {t('processes:dialogs.startInstance.variables')}
-            </Box>
-            <Tooltip title={t('processes:dialogs.startInstance.formatJson')}>
-              <IconButton size="small" onClick={handleFormat}>
-                <FormatAlignLeftIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          <TextField
-            multiline
-            rows={6}
-            fullWidth
-            value={variables}
-            onChange={(e) => handleVariablesChange(e.target.value)}
-            error={!isValidJson && variables !== ''}
-            placeholder="{}"
-            sx={{
-              '& .MuiInputBase-input': {
-                fontFamily: '"SF Mono", Monaco, Consolas, monospace',
-                fontSize: '0.875rem',
-              },
-            }}
-          />
-          {!isValidJson && variables !== '' && (
-            <Box
-              sx={{
-                mt: 0.5,
-                fontSize: '0.75rem',
-                color: 'error.main',
-              }}
-            >
-              {t('processes:errors.invalidJson')}
-            </Box>
-          )}
-        </Box>
+        <JsonEditor
+          label={t('processes:dialogs.startInstance.variables')}
+          value={variables}
+          onChange={handleVariablesChange}
+          error={!isValidJson && variables !== ''}
+          errorMessage={t('processes:errors.invalidJson')}
+          height={180}
+        />
       </DialogContent>
 
       <DialogActions

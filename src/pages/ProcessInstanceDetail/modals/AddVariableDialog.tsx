@@ -10,6 +10,7 @@ import {
   TextField,
   Box,
 } from '@mui/material';
+import { JsonEditor } from '@components/JsonEditor';
 
 interface AddVariableDialogProps {
   open: boolean;
@@ -65,8 +66,7 @@ export const AddVariableDialog = ({
     validateName(newName);
   }, [validateName]);
 
-  const handleValueChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
+  const handleValueChange = useCallback((newValue: string) => {
     setValue(newValue);
     validateValue(newValue);
   }, [validateValue]);
@@ -114,21 +114,14 @@ export const AddVariableDialog = ({
             fullWidth
             autoFocus
           />
-          <TextField
+          <JsonEditor
             label={t('processInstance:dialogs.addVariable.value')}
             value={value}
             onChange={handleValueChange}
             error={!!jsonError}
-            helperText={jsonError || t('processInstance:dialogs.addVariable.valueHelp')}
-            multiline
-            rows={4}
-            fullWidth
-            sx={{
-              '& .MuiInputBase-input': {
-                fontFamily: '"SF Mono", Monaco, monospace',
-                fontSize: '0.875rem',
-              },
-            }}
+            errorMessage={jsonError ?? undefined}
+            helperText={t('processInstance:dialogs.addVariable.valueHelp')}
+            height={150}
           />
         </Box>
       </DialogContent>
