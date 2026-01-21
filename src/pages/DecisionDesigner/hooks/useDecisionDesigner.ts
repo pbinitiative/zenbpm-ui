@@ -3,7 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { getDmnResourceDefinition, createDmnResourceDefinition } from '@base/openapi';
 import type { DmnEditorRef } from '@components/DmnEditor';
-import type { EditorMode, SnackbarState, ConsoleMessage, ConsoleMessageType, ConsoleMessageLink } from '../types';
+import type { EditorMode, ConsoleMessage, ConsoleMessageType, ConsoleMessageLink } from '@components/DesignerShell';
+
+interface SnackbarState {
+  open: boolean;
+  message: string;
+  severity: 'success' | 'error';
+}
 
 // Message ID counter for unique IDs
 let messageIdCounter = 0;
@@ -15,7 +21,6 @@ interface UseDecisionDesignerOptions {
 
 interface UseDecisionDesignerResult {
   editorRef: React.RefObject<DmnEditorRef | null>;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
   loadingDefinition: boolean;
   deploying: boolean;
   initialXml: string | undefined;
@@ -28,7 +33,6 @@ interface UseDecisionDesignerResult {
   handleDeploy: () => Promise<void>;
   handleFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   handleDownload: () => Promise<void>;
-  handleOpenFile: () => void;
   closeSnackbar: () => void;
   setXmlContent: (content: string) => void;
   toggleConsole: () => void;
@@ -40,7 +44,6 @@ export function useDecisionDesigner({
 }: UseDecisionDesignerOptions): UseDecisionDesignerResult {
   const { t } = useTranslation([ns.common, ns.designer]);
   const editorRef = useRef<DmnEditorRef>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [deploying, setDeploying] = useState(false);
   const [loadingDefinition, setLoadingDefinition] = useState(false);
@@ -327,11 +330,6 @@ export function useDecisionDesigner({
     }
   }, [t, editorMode, xmlContent]);
 
-  // Trigger file input
-  const handleOpenFile = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
   // Close snackbar
   const closeSnackbar = useCallback(() => {
     setSnackbar((prev) => ({ ...prev, open: false }));
@@ -339,7 +337,6 @@ export function useDecisionDesigner({
 
   return {
     editorRef,
-    fileInputRef,
     loadingDefinition,
     deploying,
     initialXml,
@@ -352,7 +349,6 @@ export function useDecisionDesigner({
     handleDeploy,
     handleFileUpload,
     handleDownload,
-    handleOpenFile,
     closeSnackbar,
     setXmlContent,
     toggleConsole,

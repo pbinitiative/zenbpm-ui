@@ -9,9 +9,9 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import DragHandleIcon from '@mui/icons-material/DragHandle';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import type { ConsoleMessage, ConsoleMessageType } from '../types';
+import type { ConsoleMessage, ConsoleMessageType } from './types';
 
-interface ConsolePanelProps {
+export interface ConsolePanelProps {
   messages: ConsoleMessage[];
   open: boolean;
   onClear: () => void;
