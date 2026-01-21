@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { FilterConfig, FilterValues, SimpleFilterConfig, ActiveFilter } from '../types';
+import { formatDisplayDateTime } from '@components/DateRangePicker/utils/dateFormatters';
 
 /** Flatten filters - extract items from groups into a flat array */
 export function flattenFilters(filters: FilterConfig[]): SimpleFilterConfig[] {
@@ -70,10 +71,16 @@ export const useFilterState = ({
             displayValue = value;
           }
         } else if (typeof value === 'object' && !Array.isArray(value)) {
-          const parts = [];
-          if (value.from) parts.push(`from ${value.from}`);
-          if (value.to) parts.push(`to ${value.to}`);
-          displayValue = parts.join(' ');
+          // Format date range values for human-readable display
+          const fromFormatted = formatDisplayDateTime(value.from);
+          const toFormatted = formatDisplayDateTime(value.to);
+          if (fromFormatted && toFormatted) {
+            displayValue = `${fromFormatted} → ${toFormatted}`;
+          } else if (fromFormatted) {
+            displayValue = `from ${fromFormatted}`;
+          } else if (toFormatted) {
+            displayValue = `to ${toFormatted}`;
+          }
         }
 
         return { id: f.id, label: f.label, value: displayValue };
