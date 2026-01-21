@@ -47,7 +47,8 @@
   "actions": {
     "upload": "Upload DMN",
     "design": "Design Decision",
-    "evaluate": "Evaluate"
+    "evaluate": "Evaluate",
+    "editDefinition": "Open In Editor"
   },
   "messages": {
     "uploadSuccess": "DMN definition deployed successfully",

@@ -7,7 +7,9 @@ import {
   Typography,
   CircularProgress,
   Alert,
+  Button,
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
 import { DmnViewer } from '@components/DmnViewer';
 import { DiagramDetailLayout, MetadataPanel } from '@components/DiagramDetailLayout';
 import type { MetadataField, VersionInfo } from '@components/DiagramDetailLayout';
@@ -79,6 +81,12 @@ export const DecisionDefinitionDetailPage = () => {
     [navigate]
   );
 
+  const handleEditDefinition = useCallback(() => {
+    if (dmnResourceDefinitionKey) {
+      void navigate(`/designer/decision/${dmnResourceDefinitionKey}`);
+    }
+  }, [navigate, dmnResourceDefinitionKey]);
+
   // Build additional metadata fields (must be before early returns to follow rules of hooks)
   const additionalFields = useMemo((): MetadataField[] => {
     if (!definition) return [];
@@ -109,6 +117,20 @@ export const DecisionDefinitionDetailPage = () => {
     );
   }
 
+  // Metadata actions
+  const metadataActions = (
+    <Button
+      variant="outlined"
+      size="small"
+      startIcon={<EditIcon />}
+      onClick={handleEditDefinition}
+      sx={{ justifyContent: 'flex-start' }}
+      data-testid="decision-definition-edit-button"
+    >
+      {t('decisions:actions.editDefinition')}
+    </Button>
+  );
+
   // Metadata content using MetadataPanel
   const metadataContent = (
     <MetadataPanel
@@ -119,6 +141,7 @@ export const DecisionDefinitionDetailPage = () => {
       resourceName={definition.resourceName}
       additionalFields={additionalFields}
       onVersionChange={handleVersionChange}
+      actions={metadataActions}
     />
   );
 

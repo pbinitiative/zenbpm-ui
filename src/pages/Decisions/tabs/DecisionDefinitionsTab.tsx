@@ -12,8 +12,11 @@ import {
   type FilterValues,
 } from '@components/TableWithFilters';
 import type { Column } from '@components/DataTable';
-import type { DmnResourceDefinitionSimple } from '@base/openapi';
-import { getDmnResourceDefinitions } from '@base/openapi';
+import {
+  getDmnResourceDefinitions,
+  type DmnResourceDefinitionSimple,
+  type GetDmnResourceDefinitionsParams,
+} from '@base/openapi';
 
 interface DecisionDefinitionsTabProps {
   refreshKey?: number;
@@ -28,6 +31,7 @@ export const DecisionDefinitionsTab = ({ refreshKey = 0 }: DecisionDefinitionsTa
   const [definitions, setDefinitions] = useState<DmnResourceDefinitionSimple[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterValues, setFilterValues] = useState<FilterValues>({
+    onlyLatest: 'true',
     search: '',
   });
   const [sortBy, setSortBy] = useState<string | undefined>(undefined);
@@ -38,20 +42,34 @@ export const DecisionDefinitionsTab = ({ refreshKey = 0 }: DecisionDefinitionsTa
     setLoading(true);
 
     try {
-      const apiParams: Record<string, string | number | boolean | undefined> = {
+      const apiParams: GetDmnResourceDefinitionsParams = {
         page: 1,
         size: 100,
       };
 
-      // Add search filter
-      if (filterValues.search && typeof filterValues.search === 'string') {
-        apiParams.search = filterValues.search;
+      // Add onlyLatest filter
+      if (filterValues.onlyLatest === 'true') {
+        apiParams.onlyLatest = true;
       }
 
-      // Add sorting
+      // Add name filter (search)
+      if (filterValues.search && typeof filterValues.search === 'string') {
+        apiParams.name = filterValues.search;
+      }
+
+      // Add sorting - map column ids to API sort fields
       if (sortBy) {
-        apiParams.sortBy = sortBy;
-        apiParams.sortOrder = sortOrder;
+        const sortMapping: Record<string, GetDmnResourceDefinitionsParams['sortBy']> = {
+          key: 'key',
+          name: 'name',
+          dmnResourceDefinitionId: 'dmnResourceDefinitionId',
+          version: 'version',
+        };
+        const mappedSortBy = sortMapping[sortBy];
+        if (mappedSortBy) {
+          apiParams.sortBy = mappedSortBy;
+          apiParams.sortOrder = sortOrder;
+        }
       }
 
       const data = await getDmnResourceDefinitions(apiParams);
@@ -112,6 +130,13 @@ export const DecisionDefinitionsTab = ({ refreshKey = 0 }: DecisionDefinitionsTa
   // Filter configuration
   const filters: FilterConfig[] = useMemo(
     () => [
+      {
+        id: 'onlyLatest',
+        label: t('decisions:filters.onlyLatest'),
+        type: 'switch',
+        zone: 'exposed_first_line',
+        hideFilterBadge: true,
+      },
       {
         id: 'search',
         label: t('common:search.label'),
