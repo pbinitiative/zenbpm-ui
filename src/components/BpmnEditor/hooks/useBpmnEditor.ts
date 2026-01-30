@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import CamundaCloudModeler from 'camunda-bpmn-js/lib/camunda-cloud/Modeler';
 import type { BpmnCanvas, BpmnEventBus } from '../types';
 import { EMPTY_DIAGRAM } from '../constants';
+import { JsonFormPropertiesProviderModule } from '../extensions';
 
 interface UseBpmnEditorOptions {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -93,6 +94,7 @@ export function useBpmnEditor({
         keyboard: {
           bindTo: document,
         },
+        additionalModules: [JsonFormPropertiesProviderModule],
       });
 
       modelerRef.current = modeler;

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { getProcessDefinition, createProcessDefinition } from '@base/openapi';
 import type { BpmnEditorRef } from '@components/BpmnEditor';
+import { transformXmlForDeploy } from '@components/BpmnEditor';
 import type { EditorMode, ConsoleMessage, ConsoleMessageType, ConsoleMessageLink } from '@components/DesignerShell';
 
 interface SnackbarState {
@@ -174,7 +175,10 @@ export function useProcessDesigner({
         throw new Error('No XML content');
       }
 
-      const blob = new Blob([xml], { type: 'application/xml' });
+      // Transform XML to inject JSON_FORM input mappings for user tasks
+      const transformedXml = transformXmlForDeploy(xml);
+
+      const blob = new Blob([transformedXml], { type: 'application/xml' });
       const result = await createProcessDefinition({ resource: blob });
 
       // Fetch full definition details to get version info
