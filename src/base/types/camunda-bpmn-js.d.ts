@@ -9,6 +9,7 @@ declare module 'camunda-bpmn-js/lib/camunda-platform/Modeler' {
     keyboard?: {
       bindTo?: Document | HTMLElement;
     };
+    additionalModules?: unknown[];
   }
 
   export default class CamundaPlatformModeler {
@@ -32,6 +33,7 @@ declare module 'camunda-bpmn-js/lib/camunda-cloud/Modeler' {
     keyboard?: {
       bindTo?: Document | HTMLElement;
     };
+    additionalModules?: unknown[];
   }
 
   export default class CamundaCloudModeler {
