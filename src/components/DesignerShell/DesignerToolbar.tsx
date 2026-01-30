@@ -19,6 +19,16 @@ export interface DesignerToolbarProps {
   consoleMessageCount: number;
   /** Icon for diagram mode toggle button */
   diagramModeIcon: React.ReactNode;
+  /** Custom label for the diagram mode toggle */
+  diagramModeLabel?: string;
+  /** Custom label for the xml/code mode toggle */
+  xmlModeLabel?: string;
+  /** Custom icon for the xml/code mode toggle */
+  xmlModeIcon?: React.ReactNode;
+  /** Whether the deploy button is always disabled (e.g., for form designer) */
+  deployDisabled?: boolean;
+  /** Whether to hide the console button and divider */
+  hideConsole?: boolean;
   /** Called when editor mode changes */
   onModeChange: (event: React.MouseEvent<HTMLElement>, newMode: EditorMode | null) => void;
   /** Called when Import button is clicked */
@@ -37,6 +47,11 @@ export const DesignerToolbar = ({
   consoleOpen,
   consoleMessageCount,
   diagramModeIcon,
+  diagramModeLabel,
+  xmlModeLabel,
+  xmlModeIcon,
+  deployDisabled,
+  hideConsole,
   onModeChange,
   onOpenFile,
   onDownload,
@@ -64,55 +79,59 @@ export const DesignerToolbar = ({
       <ToggleButtonGroup value={editorMode} exclusive onChange={onModeChange} size="small">
         <ToggleButton value="diagram" sx={{ px: 1.5 }}>
           {diagramModeIcon}
-          {t('designer:modes.diagram')}
+          {diagramModeLabel ?? t('designer:modes.diagram')}
         </ToggleButton>
         <ToggleButton value="xml" sx={{ px: 1.5 }}>
-          <CodeIcon fontSize="small" sx={{ mr: 0.5 }} />
-          {t('designer:modes.xml')}
+          {xmlModeIcon ?? <CodeIcon fontSize="small" sx={{ mr: 0.5 }} />}
+          {xmlModeLabel ?? t('designer:modes.xml')}
         </ToggleButton>
       </ToggleButtonGroup>
 
       {/* Right side - Console and Actions */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Button
-          variant="text"
-          size="small"
-          onClick={onToggleConsole}
-          startIcon={
-            <Badge
-              badgeContent={consoleMessageCount}
-              color="primary"
-              max={99}
+        {!hideConsole && (
+          <>
+            <Button
+              variant="text"
+              size="small"
+              onClick={onToggleConsole}
+              startIcon={
+                <Badge
+                  badgeContent={consoleMessageCount}
+                  color="primary"
+                  max={99}
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      right: -4,
+                      top: -4,
+                      fontSize: '0.65rem',
+                      height: 16,
+                      minWidth: 16,
+                    },
+                  }}
+                >
+                  <TerminalIcon fontSize="small" />
+                </Badge>
+              }
               sx={{
-                '& .MuiBadge-badge': {
-                  right: -4,
-                  top: -4,
-                  fontSize: '0.65rem',
-                  height: 16,
-                  minWidth: 16,
+                minWidth: 'auto',
+                px: 1.5,
+                py: 0.75,
+                borderRadius: 1,
+                color: consoleOpen ? 'text.primary' : 'text.secondary',
+                bgcolor: consoleOpen ? 'background.paper' : 'transparent',
+                boxShadow: consoleOpen ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                '&:hover': {
+                  bgcolor: consoleOpen ? 'background.paper' : 'action.hover',
                 },
               }}
             >
-              <TerminalIcon fontSize="small" />
-            </Badge>
-          }
-          sx={{
-            minWidth: 'auto',
-            px: 1.5,
-            py: 0.75,
-            borderRadius: 1,
-            color: consoleOpen ? 'text.primary' : 'text.secondary',
-            bgcolor: consoleOpen ? 'background.paper' : 'transparent',
-            boxShadow: consoleOpen ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-            '&:hover': {
-              bgcolor: consoleOpen ? 'background.paper' : 'action.hover',
-            },
-          }}
-        >
-          {t('designer:modes.console')}
-        </Button>
+              {t('designer:modes.console')}
+            </Button>
 
-        <Divider orientation="vertical" flexItem />
+            <Divider orientation="vertical" flexItem />
+          </>
+        )}
 
         <Button onClick={onOpenFile} size="small" variant="outlined" startIcon={<FolderOpenIcon />}>
           {t('designer:actions.import')}
@@ -124,7 +143,7 @@ export const DesignerToolbar = ({
           onClick={onDeploy}
           size="small"
           variant="contained"
-          disabled={deploying}
+          disabled={deploying || deployDisabled}
           startIcon={deploying ? <CircularProgress size={16} color="inherit" /> : <CloudUploadIcon />}
         >
           {t('designer:actions.deploy')}

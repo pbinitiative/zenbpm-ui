@@ -21,6 +21,7 @@ import { DataTable, type Column, type SortOrder } from '@components/DataTable';
 import type { Job } from '../types';
 import { JOB_STATE_COLORS } from '../types';
 import { CompleteJobDialog } from '../modals/CompleteJobDialog';
+import { CompleteFormJobDialog } from '../modals/CompleteFormJobDialog';
 import { AssignJobDialog } from '../modals/AssignJobDialog';
 import { UpdateRetriesDialog } from '../modals/UpdateRetriesDialog';
 import { completeJobByKey, assignJob, customInstance } from '@base/openapi';
@@ -294,12 +295,21 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
 
       {/* Dialogs */}
       {completeDialogJob && (
-        <CompleteJobDialog
-          open={true}
-          job={completeDialogJob}
-          onClose={() => setCompleteDialogJob(null)}
-          onComplete={handleCompleteJob}
-        />
+        completeDialogJob.type === 'user-task-type' && completeDialogJob.variables?.JSON_FORM ? (
+          <CompleteFormJobDialog
+            open={true}
+            job={completeDialogJob}
+            onClose={() => setCompleteDialogJob(null)}
+            onComplete={handleCompleteJob}
+          />
+        ) : (
+          <CompleteJobDialog
+            open={true}
+            job={completeDialogJob}
+            onClose={() => setCompleteDialogJob(null)}
+            onComplete={handleCompleteJob}
+          />
+        )
       )}
       {assignDialogJob && (
         <AssignJobDialog
