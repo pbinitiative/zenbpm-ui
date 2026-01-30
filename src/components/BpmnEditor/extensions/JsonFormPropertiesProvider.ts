@@ -1,12 +1,29 @@
 import { TextAreaEntry, isTextAreaEntryEdited } from '@bpmn-io/properties-panel';
+import { createElement } from '@bpmn-io/properties-panel/preact';
 import { useService } from 'bpmn-js-properties-panel';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+/** Read the JSON_FORM zeebe:Property value from an element */
+function getJsonFormValue(element: any): string {
+  const bo = element.businessObject;
+  const extensionElements = bo.extensionElements;
+  if (!extensionElements) return '';
+
+  const zeebeProperties = extensionElements.values?.find(
+    (e: any) => e.$type === 'zeebe:Properties',
+  );
+  if (!zeebeProperties) return '';
+
+  const prop = zeebeProperties.properties?.find(
+    (p: any) => p.name === 'JSON_FORM',
+  );
+  return prop?.value || '';
+}
+
 /**
  * Entry component for the JSON Form Schema textarea.
  * Rendered as a Preact component within the bpmn-js properties panel.
- * Uses useService hook to access the bpmn-js DI container.
  */
 function JsonFormSchemaEntry(props: { element: any; id: string }) {
   const { element, id } = props;
@@ -15,27 +32,12 @@ function JsonFormSchemaEntry(props: { element: any; id: string }) {
   const debounce = useService('debounceInput');
   const commandStack = useService('commandStack');
 
-  const getValue = (): string => {
-    const bo = element.businessObject;
-    const extensionElements = bo.extensionElements;
-    if (!extensionElements) return '';
-
-    const zeebeProperties = extensionElements.values?.find(
-      (e: any) => e.$type === 'zeebe:Properties',
-    );
-    if (!zeebeProperties) return '';
-
-    const prop = zeebeProperties.properties?.find(
-      (p: any) => p.name === 'JSON_FORM',
-    );
-    return prop?.value || '';
-  };
+  const getValue = (): string => getJsonFormValue(element);
 
   const setValue = (value: string) => {
     const bo = element.businessObject;
     const commands: any[] = [];
 
-    // Get or create extensionElements
     let extensionElements = bo.extensionElements;
     if (!extensionElements) {
       extensionElements = bpmnFactory.create('bpmn:ExtensionElements', {
@@ -52,7 +54,6 @@ function JsonFormSchemaEntry(props: { element: any; id: string }) {
       });
     }
 
-    // Get or create zeebe:Properties
     let zeebeProperties = (extensionElements.values || []).find(
       (e: any) => e.$type === 'zeebe:Properties',
     );
@@ -139,6 +140,41 @@ function JsonFormSchemaEntry(props: { element: any; id: string }) {
 }
 
 /**
+ * "Design Form" button entry. Dispatches a CustomEvent so the
+ * React layer can open the visual form designer dialog.
+ */
+function JsonFormDesignButtonEntry(props: { element: any }) {
+  const { element } = props;
+  const translate = useService('translate');
+
+  const handleClick = () => {
+    const currentValue = getJsonFormValue(element);
+    document.dispatchEvent(
+      new CustomEvent('bpmn-open-form-designer', {
+        detail: { elementId: element.id, value: currentValue },
+      }),
+    );
+  };
+
+  return createElement(
+    'div',
+    { class: 'bio-properties-panel-entry', style: 'padding: 0 10px 6px' },
+    createElement(
+      'button',
+      {
+        type: 'button',
+        onClick: handleClick,
+        style:
+          'width: 100%; padding: 6px 12px; cursor: pointer; ' +
+          'background: #4d90fe; color: white; border: none; border-radius: 3px; ' +
+          'font-size: 13px; font-weight: 500;',
+      },
+      translate('Design Form'),
+    ),
+  );
+}
+
+/**
  * Custom properties panel provider that adds a "JSON Form" group
  * to bpmn:UserTask elements. Follows the bpmn-js DI module pattern.
  */
@@ -156,6 +192,10 @@ class JsonFormPropertiesProvider {
           id: 'jsonForm',
           label: 'JSON Form',
           entries: [
+            {
+              id: 'jsonFormDesignButton',
+              component: JsonFormDesignButtonEntry,
+            },
             {
               id: 'jsonFormSchema',
               component: JsonFormSchemaEntry,

@@ -17,6 +17,7 @@ interface UseBpmnEditorResult {
   getXml: () => Promise<string>;
   importXml: (xml: string) => Promise<void>;
   createNew: () => Promise<void>;
+  updateJsonFormProperty: (elementId: string, value: string) => void;
 }
 
 export function useBpmnEditor({
@@ -63,6 +64,75 @@ export function useBpmnEditor({
   const createNew = useCallback(async (): Promise<void> => {
     await importXml(EMPTY_DIAGRAM);
   }, [importXml]);
+
+  // Update the JSON_FORM zeebe:Property on a user task element
+  const updateJsonFormProperty = useCallback((elementId: string, value: string) => {
+    const modeler = modelerRef.current;
+    if (!modeler) return;
+
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const elementRegistry = modeler.get('elementRegistry') as any;
+    const commandStack = modeler.get('commandStack') as any;
+    const bpmnFactory = modeler.get('bpmnFactory') as any;
+
+    const element = elementRegistry.get(elementId);
+    if (!element) return;
+
+    const bo = element.businessObject;
+    const commands: any[] = [];
+
+    let extensionElements = bo.extensionElements;
+    if (!extensionElements) {
+      extensionElements = bpmnFactory.create('bpmn:ExtensionElements', { values: [] });
+      extensionElements.$parent = bo;
+      commands.push({
+        cmd: 'element.updateModdleProperties',
+        context: { element, moddleElement: bo, properties: { extensionElements } },
+      });
+    }
+
+    let zeebeProperties = (extensionElements.values || []).find(
+      (e: any) => e.$type === 'zeebe:Properties',
+    );
+    if (!zeebeProperties) {
+      zeebeProperties = bpmnFactory.create('zeebe:Properties', { properties: [] });
+      zeebeProperties.$parent = extensionElements;
+      commands.push({
+        cmd: 'element.updateModdleProperties',
+        context: {
+          element,
+          moddleElement: extensionElements,
+          properties: { values: [...(extensionElements.values || []), zeebeProperties] },
+        },
+      });
+    }
+
+    const properties = zeebeProperties.properties || [];
+    const existingProp = properties.find((p: any) => p.name === 'JSON_FORM');
+
+    if (existingProp) {
+      commands.push({
+        cmd: 'element.updateModdleProperties',
+        context: { element, moddleElement: existingProp, properties: { value } },
+      });
+    } else {
+      const newProp = bpmnFactory.create('zeebe:Property', { name: 'JSON_FORM', value });
+      newProp.$parent = zeebeProperties;
+      commands.push({
+        cmd: 'element.updateModdleProperties',
+        context: {
+          element,
+          moddleElement: zeebeProperties,
+          properties: { properties: [...properties, newProp] },
+        },
+      });
+    }
+
+    if (commands.length > 0) {
+      commandStack.execute('properties-panel.multi-command-executor', commands);
+    }
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+  }, []);
 
   // Initialize modeler once on mount
   useEffect(() => {
@@ -180,5 +250,6 @@ export function useBpmnEditor({
     getXml,
     importXml,
     createNew,
+    updateJsonFormProperty,
   };
 }
