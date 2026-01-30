@@ -21,7 +21,7 @@ export const BpmnEditor = forwardRef<BpmnEditorRef, BpmnEditorProps>(
     const containerRef = useRef<HTMLDivElement>(null);
     const propertiesPanelRef = useRef<HTMLDivElement>(null);
 
-    const { loading, error, getXml, importXml, createNew, updateJsonFormProperty } = useBpmnEditor({
+    const { loading, error, getXml, importXml, createNew, updateZenFormProperty } = useBpmnEditor({
       containerRef,
       propertiesPanelRef,
       initialXml,
@@ -35,9 +35,9 @@ export const BpmnEditor = forwardRef<BpmnEditorRef, BpmnEditorProps>(
         getXml,
         importXml,
         createNew,
-        updateJsonFormProperty,
+        updateZenFormProperty,
       }),
-      [getXml, importXml, createNew, updateJsonFormProperty]
+      [getXml, importXml, createNew, updateZenFormProperty]
     );
 
     return (

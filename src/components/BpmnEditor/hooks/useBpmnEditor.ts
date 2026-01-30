@@ -17,7 +17,7 @@ interface UseBpmnEditorResult {
   getXml: () => Promise<string>;
   importXml: (xml: string) => Promise<void>;
   createNew: () => Promise<void>;
-  updateJsonFormProperty: (elementId: string, value: string) => void;
+  updateZenFormProperty: (elementId: string, value: string) => void;
 }
 
 export function useBpmnEditor({
@@ -65,8 +65,8 @@ export function useBpmnEditor({
     await importXml(EMPTY_DIAGRAM);
   }, [importXml]);
 
-  // Update the JSON_FORM zeebe:Property on a user task element
-  const updateJsonFormProperty = useCallback((elementId: string, value: string) => {
+  // Update the ZEN_FORM zeebe:Property on a user task element
+  const updateZenFormProperty = useCallback((elementId: string, value: string) => {
     const modeler = modelerRef.current;
     if (!modeler) return;
 
@@ -108,7 +108,7 @@ export function useBpmnEditor({
     }
 
     const properties = zeebeProperties.properties || [];
-    const existingProp = properties.find((p: any) => p.name === 'JSON_FORM');
+    const existingProp = properties.find((p: any) => p.name === 'ZEN_FORM');
 
     if (existingProp) {
       commands.push({
@@ -116,7 +116,7 @@ export function useBpmnEditor({
         context: { element, moddleElement: existingProp, properties: { value } },
       });
     } else {
-      const newProp = bpmnFactory.create('zeebe:Property', { name: 'JSON_FORM', value });
+      const newProp = bpmnFactory.create('zeebe:Property', { name: 'ZEN_FORM', value });
       newProp.$parent = zeebeProperties;
       commands.push({
         cmd: 'element.updateModdleProperties',
@@ -250,6 +250,6 @@ export function useBpmnEditor({
     getXml,
     importXml,
     createNew,
-    updateJsonFormProperty,
+    updateZenFormProperty,
   };
 }
