@@ -2,6 +2,7 @@
   "title": "What would you like to design?",
   "processDesigner": "Process Designer",
   "decisionDesigner": "Decision Designer",
+  "formDesigner": "Form Designer",
   "actions": {
     "import": "Import",
     "download": "Download",
@@ -11,7 +12,9 @@
   "modes": {
     "diagram": "Diagram",
     "xml": "XML",
-    "console": "Console"
+    "console": "Console",
+    "designer": "Designer",
+    "json": "JSON"
   },
   "messages": {
     "deploySuccess": "Process deployed successfully",
@@ -22,7 +25,9 @@
     "downloadFailed": "Failed to download file",
     "loadDefinitionFailed": "Failed to load process definition",
     "xmlExportFailed": "Failed to export XML",
-    "xmlImportFailed": "Failed to import XML"
+    "xmlImportFailed": "Failed to import XML",
+    "jsonParseError": "Invalid JSON format. Please fix the JSON before switching to Designer view.",
+    "formExportFailed": "Failed to export form schema"
   },
   "cards": {
     "process": {
@@ -32,6 +37,10 @@
     "decision": {
       "title": "Design a Decision",
       "description": "Build DMN decision tables to define business rules. Create input/output mappings and automate complex decision logic."
+    },
+    "form": {
+      "title": "Design a Form",
+      "description": "Build user task forms with a visual drag-and-drop builder. Create input fields, layouts, and validations for your processes."
     }
   }
 }

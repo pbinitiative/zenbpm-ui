@@ -103,6 +103,39 @@ const DecisionIllustration = () => (
   </Box>
 );
 
+// Simple form illustration
+const FormIllustration = () => (
+  <Box component="svg" viewBox="0 0 280 120" sx={{ width: '100%', height: 120 }}>
+    {/* Form outline */}
+    <rect x="50" y="10" width="180" height="100" fill={themeColors.design.formBg} stroke={themeColors.design.formPrimary} strokeWidth="1.5" rx="4" />
+
+    {/* Text field 1 - label + input */}
+    <text x="65" y="30" fontSize="9" fill={themeColors.design.formPrimary} fontWeight="500">
+      Name
+    </text>
+    <rect x="65" y="33" width="150" height="16" rx="2" fill={themeColors.bgWhite} stroke={themeColors.design.formSecondary} strokeWidth="1" />
+    <text x="72" y="44" fontSize="8" fill={themeColors.design.iconGray}>
+      Enter your name...
+    </text>
+
+    {/* Text field 2 - label + input */}
+    <text x="65" y="60" fontSize="9" fill={themeColors.design.formPrimary} fontWeight="500">
+      Email
+    </text>
+    <rect x="65" y="63" width="150" height="16" rx="2" fill={themeColors.bgWhite} stroke={themeColors.design.formSecondary} strokeWidth="1" />
+    <text x="72" y="74" fontSize="8" fill={themeColors.design.iconGray}>
+      Enter your email...
+    </text>
+
+    {/* Checkbox */}
+    <rect x="65" y="86" width="10" height="10" rx="2" fill={themeColors.design.formPrimary} stroke={themeColors.design.formPrimary} strokeWidth="1" />
+    <polyline points="67,91 70,94 75,88" fill="none" stroke={themeColors.bgWhite} strokeWidth="1.5" />
+    <text x="80" y="95" fontSize="8" fill={themeColors.design.formSecondary}>
+      I agree to the terms
+    </text>
+  </Box>
+);
+
 export const DesignPage = () => {
   const { t } = useTranslation([ns.common, ns.designer]);
   const navigate = useNavigate();
@@ -114,6 +147,39 @@ export const DesignPage = () => {
   const handleDecisionClick = useCallback(() => {
     void navigate('/designer/decision');
   }, [navigate]);
+
+  const handleFormClick = useCallback(() => {
+    void navigate('/designer/form');
+  }, [navigate]);
+
+  const cardSx = {
+    flex: 1,
+    maxWidth: 400,
+    boxShadow: 3,
+    border: '1px solid',
+    borderColor: 'divider',
+    transition: 'transform 0.2s, box-shadow 0.2s',
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: 8,
+    },
+  };
+
+  const cardContentSx = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    py: 4,
+    px: 3,
+  };
+
+  const illustrationBoxSx = {
+    width: '100%',
+    bgcolor: 'grey.50',
+    borderRadius: 2,
+    p: 2,
+    mb: 3,
+  };
 
   return (
     <Box
@@ -135,49 +201,20 @@ export const DesignPage = () => {
           flexDirection: { xs: 'column', md: 'row' },
           gap: 4,
           justifyContent: 'center',
-          maxWidth: 900,
+          maxWidth: 1300,
           width: '100%',
           px: 2,
         }}
       >
         {/* Process Card */}
-        <Card
-          sx={{
-            flex: 1,
-            maxWidth: 400,
-            boxShadow: 3,
-            border: '1px solid',
-            borderColor: 'divider',
-            transition: 'transform 0.2s, box-shadow 0.2s',
-            '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: 8,
-            },
-          }}
-        >
+        <Card sx={cardSx}>
           <CardActionArea onClick={handleProcessClick} disableRipple sx={{ height: '100%' }}>
-            <CardContent
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                py: 4,
-                px: 3,
-              }}
-            >
+            <CardContent sx={cardContentSx}>
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
                 {t('designer:cards.process.title')}
               </Typography>
 
-              <Box
-                sx={{
-                  width: '100%',
-                  bgcolor: 'grey.50',
-                  borderRadius: 2,
-                  p: 2,
-                  mb: 3,
-                }}
-              >
+              <Box sx={illustrationBoxSx}>
                 <ProcessIllustration />
               </Box>
 
@@ -193,43 +230,14 @@ export const DesignPage = () => {
         </Card>
 
         {/* Decision Card */}
-        <Card
-          sx={{
-            flex: 1,
-            maxWidth: 400,
-            boxShadow: 3,
-            border: '1px solid',
-            borderColor: 'divider',
-            transition: 'transform 0.2s, box-shadow 0.2s',
-            '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: 8,
-            },
-          }}
-        >
+        <Card sx={cardSx}>
           <CardActionArea onClick={handleDecisionClick} disableRipple sx={{ height: '100%' }}>
-            <CardContent
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                py: 4,
-                px: 3,
-              }}
-            >
+            <CardContent sx={cardContentSx}>
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
                 {t('designer:cards.decision.title')}
               </Typography>
 
-              <Box
-                sx={{
-                  width: '100%',
-                  bgcolor: 'grey.50',
-                  borderRadius: 2,
-                  p: 2,
-                  mb: 3,
-                }}
-              >
+              <Box sx={illustrationBoxSx}>
                 <DecisionIllustration />
               </Box>
 
@@ -239,6 +247,29 @@ export const DesignPage = () => {
                 sx={{ textAlign: 'center', lineHeight: 1.6 }}
               >
                 {t('designer:cards.decision.description')}
+              </Typography>
+            </CardContent>
+          </CardActionArea>
+        </Card>
+
+        {/* Form Card */}
+        <Card sx={cardSx}>
+          <CardActionArea onClick={handleFormClick} disableRipple sx={{ height: '100%' }}>
+            <CardContent sx={cardContentSx}>
+              <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
+                {t('designer:cards.form.title')}
+              </Typography>
+
+              <Box sx={illustrationBoxSx}>
+                <FormIllustration />
+              </Box>
+
+              <Typography
+                variant="body1"
+                color="text.secondary"
+                sx={{ textAlign: 'center', lineHeight: 1.6 }}
+              >
+                {t('designer:cards.form.description')}
               </Typography>
             </CardContent>
           </CardActionArea>

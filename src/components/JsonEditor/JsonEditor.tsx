@@ -90,7 +90,7 @@ export const JsonEditor = ({
   }, [onChange]);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, height, minHeight }}>
       {/* Header with label and prettify button */}
       {(label || showPrettify) && (
         <Box
@@ -132,8 +132,8 @@ export const JsonEditor = ({
       {/* Editor container */}
       <Box
         sx={{
-          height,
-          minHeight,
+          flex: 1,
+          minHeight: 0,
           width: '100%',
           border: 1,
           borderColor: error ? 'error.main' : 'divider',

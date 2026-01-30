@@ -115,6 +115,10 @@ const colors = {
     decisionPurple: '#7b1fa2',
     decisionPurpleBg: '#f3e5f5',
     decisionPurpleLight: '#e1bee7',
+    // Form illustration
+    formPrimary: '#0288d1',
+    formSecondary: '#666666',
+    formBg: '#e1f5fe',
     // Common
     iconGray: '#666666',
     checkGreen: '#4caf50',
