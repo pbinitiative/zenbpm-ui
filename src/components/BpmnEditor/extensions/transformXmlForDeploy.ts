@@ -33,12 +33,12 @@ function findOrCreateChild(
 /**
  * Transform BPMN XML before deployment.
  *
- * For each bpmn:UserTask that has a zeebe:Property named "JSON_FORM":
+ * For each bpmn:UserTask that has a zeebe:Property named "ZEN_FORM":
  * 1. Read the property value (JSON form schema)
- * 2. Add/update a zeebe:Input mapping with target="JSON_FORM" and
+ * 2. Add/update a zeebe:Input mapping with target="ZEN_FORM" and
  *    source set to a FEEL string literal of the JSON
  *
- * This ensures the JSON_FORM variable is available on the user task
+ * This ensures the ZEN_FORM variable is available on the user task
  * job when it's created by the engine.
  */
 export function transformXmlForDeploy(xml: string): string {
@@ -71,7 +71,7 @@ export function transformXmlForDeploy(xml: string): string {
     );
     if (zeebePropertiesList.length === 0) continue;
 
-    // Find JSON_FORM property
+    // Find ZEN_FORM property
     const propertyElements = zeebePropertiesList[0].getElementsByTagNameNS(
       ZEEBE_NS,
       'property',
@@ -79,7 +79,7 @@ export function transformXmlForDeploy(xml: string): string {
     let jsonFormValue: string | null = null;
 
     for (let j = 0; j < propertyElements.length; j++) {
-      if (propertyElements[j].getAttribute('name') === 'JSON_FORM') {
+      if (propertyElements[j].getAttribute('name') === 'ZEN_FORM') {
         jsonFormValue = propertyElements[j].getAttribute('value');
         break;
       }
@@ -108,12 +108,12 @@ export function transformXmlForDeploy(xml: string): string {
       'zeebe',
     );
 
-    // Find existing JSON_FORM input or create new one
+    // Find existing ZEN_FORM input or create new one
     const inputs = ioMapping.getElementsByTagNameNS(ZEEBE_NS, 'input');
     let existingInput: Element | null = null;
 
     for (let j = 0; j < inputs.length; j++) {
-      if (inputs[j].getAttribute('target') === 'JSON_FORM') {
+      if (inputs[j].getAttribute('target') === 'ZEN_FORM') {
         existingInput = inputs[j];
         break;
       }
@@ -124,7 +124,7 @@ export function transformXmlForDeploy(xml: string): string {
     } else {
       const inputEl = doc.createElementNS(ZEEBE_NS, 'zeebe:input');
       inputEl.setAttribute('source', feelExpression);
-      inputEl.setAttribute('target', 'JSON_FORM');
+      inputEl.setAttribute('target', 'ZEN_FORM');
       ioMapping.appendChild(inputEl);
     }
   }
