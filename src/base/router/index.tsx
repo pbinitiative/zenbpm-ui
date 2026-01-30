@@ -7,6 +7,7 @@ import { ProcessInstanceDetailPage } from '@pages/ProcessInstanceDetail';
 import { DesignPage } from '@pages/Design';
 import { ProcessDesignerPage } from '@pages/ProcessDesigner';
 import { DecisionDesignerPage } from '@pages/DecisionDesigner';
+import { FormDesignerPage } from '@pages/FormDesigner';
 import { DecisionsPage } from '@pages/Decisions/DecisionsPage';
 import { DecisionDefinitionDetailPage } from '@pages/DecisionDefinitionDetail';
 import { DecisionInstanceDetailPage } from '@pages/DecisionInstanceDetail';
@@ -84,6 +85,10 @@ export const router = createBrowserRouter([
       {
         path: 'designer/decision/:decisionDefinitionKey',
         element: <DecisionDesignerPage />,
+      },
+      {
+        path: 'designer/form',
+        element: <FormDesignerPage />,
       },
     ],
   },

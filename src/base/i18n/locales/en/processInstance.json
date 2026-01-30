@@ -82,6 +82,12 @@
       "variables": "Variables (JSON)",
       "variablesHelp": "Enter variables as JSON object"
     },
+    "completeFormJob": {
+      "title": "Complete User Task",
+      "description": "Fill in the form below and submit to complete this task.",
+      "invalidSchema": "The JSON_FORM variable does not contain a valid form schema.",
+      "validationError": "Please fix the validation errors in the form before submitting."
+    },
     "assignJob": {
       "title": "Assign Job",
       "description": "Assign this user task to a specific user.",
