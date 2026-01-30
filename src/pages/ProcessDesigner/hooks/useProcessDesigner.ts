@@ -175,7 +175,7 @@ export function useProcessDesigner({
         throw new Error('No XML content');
       }
 
-      // Transform XML to inject JSON_FORM input mappings for user tasks
+      // Transform XML to inject ZEN_FORM input mappings for user tasks
       const transformedXml = transformXmlForDeploy(xml);
 
       const blob = new Blob([transformedXml], { type: 'application/xml' });

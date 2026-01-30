@@ -24,7 +24,7 @@ interface CompleteFormJobDialogProps {
 }
 
 /**
- * Parse the JSON_FORM variable value into a FormSchema.
+ * Parse the ZEN_FORM variable value into a FormSchema.
  * Handles both string (JSON-encoded) and object values.
  */
 function parseFormSchema(value: unknown): FormSchema | null {
@@ -59,12 +59,12 @@ export const CompleteFormJobDialog = ({
   const [loading, setLoading] = useState(false);
   const [validationError, setValidationError] = useState(false);
 
-  const schema = useMemo(() => parseFormSchema(job.variables?.JSON_FORM), [job.variables]);
+  const schema = useMemo(() => parseFormSchema(job.variables?.ZEN_FORM), [job.variables]);
 
-  // Initial data: all job variables except JSON_FORM itself
+  // Initial data: all job variables except ZEN_FORM itself
   const initialData = useMemo(() => {
     if (!job.variables) return {};
-    const { JSON_FORM: _, ...rest } = job.variables;
+    const { ZEN_FORM: _, ...rest } = job.variables;
     return rest;
   }, [job.variables]);
 

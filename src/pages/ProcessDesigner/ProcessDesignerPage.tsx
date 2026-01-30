@@ -55,7 +55,7 @@ export const ProcessDesignerPage = () => {
 
   const handleFormDesignSubmit = useCallback(
     (json: string) => {
-      editorRef.current?.updateJsonFormProperty(formDialog.elementId, json);
+      editorRef.current?.updateZenFormProperty(formDialog.elementId, json);
       setFormDialog({ open: false, elementId: '', initialJson: '' });
     },
     [editorRef, formDialog.elementId],

@@ -295,7 +295,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
 
       {/* Dialogs */}
       {completeDialogJob && (
-        completeDialogJob.type === 'user-task-type' && completeDialogJob.variables?.JSON_FORM ? (
+        completeDialogJob.type === 'user-task-type' && completeDialogJob.variables?.ZEN_FORM ? (
           <CompleteFormJobDialog
             open={true}
             job={completeDialogJob}
