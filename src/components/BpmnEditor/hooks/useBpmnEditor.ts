@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import CamundaCloudModeler from 'camunda-bpmn-js/lib/camunda-cloud/Modeler';
 import type { BpmnCanvas, BpmnEventBus } from '../types';
-import { EMPTY_DIAGRAM } from '../constants';
+import { emptyDiagram } from '../utils.ts';
 
 interface UseBpmnEditorOptions {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -60,7 +60,7 @@ export function useBpmnEditor({
 
   // Create new empty diagram
   const createNew = useCallback(async (): Promise<void> => {
-    await importXml(EMPTY_DIAGRAM);
+    await importXml(emptyDiagram());
   }, [importXml]);
 
   // Initialize modeler once on mount
@@ -117,7 +117,7 @@ export function useBpmnEditor({
 
       // Load initial diagram
       try {
-        const xmlToLoad = initialXml || EMPTY_DIAGRAM;
+        const xmlToLoad = initialXml || emptyDiagram();
         await modeler.importXML(xmlToLoad);
         initialXmlLoadedRef.current = true;
 
@@ -156,7 +156,7 @@ export function useBpmnEditor({
       if (!modelerRef.current) return;
       setLoading(true);
       try {
-        const xmlToLoad = initialXml || EMPTY_DIAGRAM;
+        const xmlToLoad = initialXml || emptyDiagram();
         await modelerRef.current.importXML(xmlToLoad);
         const canvas = modelerRef.current.get('canvas') as BpmnCanvas;
         canvas.zoom('fit-viewport');

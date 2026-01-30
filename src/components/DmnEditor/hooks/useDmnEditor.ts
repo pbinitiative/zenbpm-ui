@@ -5,7 +5,7 @@ import {
   DmnPropertiesProviderModule,
 } from 'dmn-js-properties-panel';
 import type { DmnCanvas, DmnEventBus, DmnViewer } from '../types';
-import { EMPTY_DIAGRAM } from '../constants';
+import { emptyDiagram } from '../utils.ts';
 
 interface UseDmnEditorOptions {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -67,7 +67,7 @@ export function useDmnEditor({
 
   // Create new empty diagram
   const createNew = useCallback(async (): Promise<void> => {
-    await importXml(EMPTY_DIAGRAM);
+    await importXml(emptyDiagram());
   }, [importXml]);
 
   // Initialize modeler once on mount
@@ -132,7 +132,7 @@ export function useDmnEditor({
 
       // Load initial diagram
       try {
-        const xmlToLoad = initialXml || EMPTY_DIAGRAM;
+        const xmlToLoad = initialXml || emptyDiagram();
         await modeler.importXML(xmlToLoad);
         initialXmlLoadedRef.current = true;
 
@@ -177,7 +177,7 @@ export function useDmnEditor({
       if (!modelerRef.current) return;
       setLoading(true);
       try {
-        const xmlToLoad = initialXml || EMPTY_DIAGRAM;
+        const xmlToLoad = initialXml || emptyDiagram();
         await modelerRef.current.importXML(xmlToLoad);
         const activeViewer = modelerRef.current.getActiveViewer() as DmnViewer | null;
         if (activeViewer) {
