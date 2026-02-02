@@ -122,6 +122,7 @@ export const DesignerToolbar = ({
         </Button>
         <Button
           onClick={onDeploy}
+          color="secondary"
           size="small"
           variant="contained"
           disabled={deploying}
