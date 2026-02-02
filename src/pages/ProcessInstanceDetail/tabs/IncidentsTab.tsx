@@ -23,10 +23,8 @@ export const IncidentsTab = ({
     <IncidentsTable
       processInstanceKey={processInstanceKey}
       refreshKey={refreshKey}
-      syncWithUrl={false}
       onIncidentResolved={handleIncidentResolved}
       onShowNotification={onShowNotification}
-      data-testid="incidents-tab-table"
     />
   );
 };

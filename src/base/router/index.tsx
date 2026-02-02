@@ -10,7 +10,7 @@ import { DecisionDesignerPage } from '@pages/DecisionDesigner';
 import { DecisionsPage } from '@pages/Decisions/DecisionsPage';
 import { DecisionDefinitionDetailPage } from '@pages/DecisionDefinitionDetail';
 import { DecisionInstanceDetailPage } from '@pages/DecisionInstanceDetail';
-import { IncidentsPage } from '@pages/Incidents/IncidentsPage';
+
 
 export const router = createBrowserRouter([
   {
@@ -64,10 +64,6 @@ export const router = createBrowserRouter([
       {
         path: 'decision-instances/:decisionInstanceKey',
         element: <DecisionInstanceDetailPage />,
-      },
-      {
-        path: 'incidents',
-        element: <IncidentsPage />,
       },
       {
         path: 'designer',

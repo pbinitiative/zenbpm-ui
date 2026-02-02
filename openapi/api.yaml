@@ -1741,127 +1741,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /incidents:
-    get:
-      operationId: getGlobalIncidents
-      summary: Get list of incidents across all process instances
-      tags:
-        - incident
-      parameters:
-        - name: processInstanceKey
-          in: query
-          schema:
-            type: integer
-            format: int64
-          description: Filter by process instance
-        - name: processDefinitionKey
-          in: query
-          schema:
-            type: integer
-            format: int64
-          description: Filter by process definition key
-        - name: bpmnProcessId
-          in: query
-          schema:
-            type: string
-          description: Filter by BPMN process ID
-        - name: state
-          in: query
-          schema:
-            type: string
-            enum: [resolved, unresolved]
-          description: Filter by state (omit to get all incidents)
-        - name: createdFrom
-          in: query
-          schema:
-            type: string
-            format: date-time
-          description: "Filter: created after this date"
-        - name: createdTo
-          in: query
-          schema:
-            type: string
-            format: date-time
-          description: "Filter: created before this date"
-        - name: page
-          in: query
-          schema:
-            type: integer
-            format: int32
-            minimum: 1
-            default: 1
-          description: Page number (1-based indexing)
-        - name: size
-          in: query
-          schema:
-            type: integer
-            format: int32
-            minimum: 1
-            maximum: 100
-            default: 10
-          description: Number of items per page (max 100)
-        - name: sortBy
-          in: query
-          schema:
-            type: string
-            enum: [createdAt, key, errorType]
-          description: Sort field
-        - name: sortOrder
-          in: query
-          schema:
-            type: string
-            enum: [asc, desc]
-          description: Sort direction
-      responses:
-        200:
-          description: List of incidents
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/IncidentPartitionPage"
-              example:
-                partitions:
-                  - partition: 1
-                    count: 15
-                    items:
-                      - key: 4503599627370530
-                        elementInstanceKey: 4503599627370521
-                        elementId: "Task_CreditCheck"
-                        processInstanceKey: 4503599627370501
-                        message: "Failed to connect to external credit service: Connection timeout"
-                        createdAt: "2025-08-22T14:35:10Z"
-                        executionToken: 123456
-                        bpmnProcessId: "loan-application"
-                        state: "unresolved"
-                  - partition: 2
-                    count: 8
-                    items:
-                      - key: 9007199254740998
-                        elementInstanceKey: 9007199254740995
-                        elementId: "Task_ProcessPayment"
-                        processInstanceKey: 9007199254740992
-                        message: "Payment gateway unavailable"
-                        createdAt: "2025-08-22T15:46:33Z"
-                        executionToken: 789012
-                        bpmnProcessId: "order-fulfillment"
-                        state: "unresolved"
-                page: 1
-                size: 10
-                count: 2
-                totalCount: 23
-        500:
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        502:
-          description: Failed to collect data from responsible nodes
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
   /incidents/{incidentKey}/resolve:
     post:
       operationId: resolveIncident
@@ -2524,33 +2403,6 @@ components:
               items:
                 $ref: "#/components/schemas/Incident"
         - $ref: "#/components/schemas/PageMetadata"
-    IncidentPartitionPage:
-      type: object
-      allOf:
-        - type: object
-          required:
-            - partitions
-          properties:
-            partitions:
-              type: array
-              items:
-                $ref: "#/components/schemas/PartitionIncidents"
-        - $ref: "#/components/schemas/PartitionedPageMetadata"
-    PartitionIncidents:
-      type: object
-      required:
-        - partition
-        - items
-      properties:
-        partition:
-          type: integer
-        count:
-          type: integer
-          description: Total incidents in this partition
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/Incident"
     Incident:
       type: object
       required:
@@ -2584,13 +2436,6 @@ components:
         executionToken:
           type: integer
           format: int64
-        bpmnProcessId:
-          type: string
-          description: BPMN process ID
-        state:
-          type: string
-          enum: [resolved, unresolved]
-          description: Incident state (computed from resolvedAt)
     Error:
       type: object
       required:

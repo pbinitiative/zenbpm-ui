@@ -410,48 +410,6 @@ export const schemas = {
     },
   },
 
-  // Global Incidents Partition Page - partitioned response for global incidents list
-  IncidentPartitionPage: {
-    type: 'object',
-    required: ['partitions', 'page', 'size', 'count', 'totalCount'],
-    properties: {
-      partitions: {
-        type: 'array',
-        items: {
-          type: 'object',
-          required: ['partition', 'items'],
-          properties: {
-            partition: { type: 'integer' },
-            items: {
-              type: 'array',
-              items: {
-                type: 'object',
-                required: ['key', 'elementInstanceKey', 'elementId', 'processInstanceKey', 'message', 'createdAt', 'executionToken'],
-                properties: {
-                  key: { type: 'string', pattern: '^\\d{15,25}$' },
-                  elementInstanceKey: { type: 'string', pattern: '^\\d{15,25}$' },
-                  elementId: { type: 'string' },
-                  processInstanceKey: { type: 'string', pattern: '^\\d{15,25}$' },
-                  processDefinitionKey: { type: 'string', pattern: '^\\d{15,25}$' },
-                  bpmnProcessId: { type: 'string' },
-                  errorType: { type: 'string' },
-                  message: { type: 'string' },
-                  createdAt: { type: 'string', format: 'date-time' },
-                  resolvedAt: { type: 'string', format: 'date-time' },
-                  executionToken: { type: 'string' },
-                },
-              },
-            },
-          },
-        },
-      },
-      page: { type: 'integer' },
-      size: { type: 'integer' },
-      count: { type: 'integer' },
-      totalCount: { type: 'integer' },
-    },
-  },
-
   // History schemas
   FlowElementHistory: {
     type: 'object',
@@ -642,7 +600,6 @@ export const endpointSchemas: Record<string, { request?: string; response?: stri
   'POST /v1/jobs': { request: 'CompleteJobRequest' },
 
   // Incidents
-  'GET /v1/incidents': { response: 'IncidentPartitionPage' },
   'POST /v1/incidents/:key/resolve': {},
 
   // Decision Definitions

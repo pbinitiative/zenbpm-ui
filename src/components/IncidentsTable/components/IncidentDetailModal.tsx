@@ -29,7 +29,7 @@ export const IncidentDetailModal = ({
   onClose,
   onResolve,
 }: IncidentDetailModalProps) => {
-  const { t } = useTranslation([ns.common, ns.incidents, ns.processes]);
+  const { t } = useTranslation([ns.common, ns.incidents]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -77,13 +77,6 @@ export const IncidentDetailModal = ({
               {incident.processInstanceKey}
             </MonoLink>
           </DetailRow>
-
-          {/* BPMN Process ID */}
-          {incident.bpmnProcessId && (
-            <DetailRow label={t('processes:fields.bpmnProcessId')}>
-              <Typography variant="body2">{incident.bpmnProcessId}</Typography>
-            </DetailRow>
-          )}
 
           {/* Created At */}
           <DetailRow label={t('incidents:fields.createdAt')}>

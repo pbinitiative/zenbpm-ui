@@ -23,8 +23,6 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import RuleIcon from '@mui/icons-material/Rule';
-import WarningIcon from '@mui/icons-material/Warning';
-import { useIncidentCount } from '@base/contexts';
 
 const navItems = [
   {
@@ -36,11 +34,6 @@ const navItems = [
     labelKey: 'navigation.decisions' as const,
     path: '/decisions',
     icon: <RuleIcon />,
-  },
-  {
-    labelKey: 'navigation.incidents' as const,
-    path: '/incidents',
-    icon: <WarningIcon />,
   },
 ];
 
@@ -93,7 +86,6 @@ export const MainLayout = () => {
   const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { unresolvedCount } = useIncidentCount();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -130,71 +122,41 @@ export const MainLayout = () => {
         <Logo onClick={handleLogoClick} appName={appName} />
       </Toolbar>
       <List>
-        {navItems.map((item) => {
-          const isIncidents = item.path === '/incidents';
-          const showBadge = isIncidents && unresolvedCount > 0;
-
-          return (
-            <ListItem key={item.path} disablePadding>
-              <ListItemButton
-                selected={isActivePath(item.path)}
-                onClick={() => handleNavClick(item.path)}
-                sx={{
-                  mx: 1.5,
-                  borderRadius: 1,
-                  '&.Mui-selected': {
-                    bgcolor: 'primary.light',
+        {navItems.map((item) => (
+          <ListItem key={item.path} disablePadding>
+            <ListItemButton
+              selected={isActivePath(item.path)}
+              onClick={() => handleNavClick(item.path)}
+              sx={{
+                mx: 1.5,
+                borderRadius: 1,
+                '&.Mui-selected': {
+                  bgcolor: 'primary.light',
+                  color: 'primary.dark',
+                  '& .MuiListItemIcon-root': {
                     color: 'primary.dark',
-                    '& .MuiListItemIcon-root': {
-                      color: 'primary.dark',
-                    },
-                    '&:hover': {
-                      bgcolor: 'primary.light',
-                    },
+                  },
+                  '&:hover': {
+                    bgcolor: 'primary.light',
+                  },
+                },
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText
+                primary={t(item.labelKey)}
+                slotProps={{
+                  primary: {
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
                   },
                 }}
-              >
-                <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      {t(item.labelKey)}
-                      {showBadge && (
-                        <Box
-                          component="span"
-                          sx={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            bgcolor: 'error.main',
-                            color: 'white',
-                            fontSize: '10px',
-                            fontWeight: 600,
-                            minWidth: 18,
-                            height: 18,
-                            borderRadius: '9px',
-                            ml: 0.75,
-                            px: '5px',
-                          }}
-                        >
-                          {unresolvedCount}
-                        </Box>
-                      )}
-                    </Box>
-                  }
-                  slotProps={{
-                    primary: {
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                    },
-                  }}
-                />
-              </ListItemButton>
-            </ListItem>
-          );
-        })}
+              />
+            </ListItemButton>
+          </ListItem>
+        ))}
       </List>
     </Box>
   );
@@ -235,55 +197,29 @@ export const MainLayout = () => {
                   gap: 4,
                 }}
               >
-                {navItems.map((item) => {
-                  const isIncidents = item.path === '/incidents';
-                  const showBadge = isIncidents && unresolvedCount > 0;
-
-                  return (
-                    <Button
-                      key={item.path}
-                      onClick={() => handleNavClick(item.path)}
-                      disableRipple
-                      sx={{
-                        px: 0,
-                        py: 0.5,
-                        minWidth: 'auto',
-                        color: isActivePath(item.path) ? 'text.primary' : 'text.secondary',
-                        fontWeight: 500,
-                        fontSize: '0.875rem',
-                        borderRadius: 0,
+                {navItems.map((item) => (
+                  <Button
+                    key={item.path}
+                    onClick={() => handleNavClick(item.path)}
+                    disableRipple
+                    sx={{
+                      px: 0,
+                      py: 0.5,
+                      minWidth: 'auto',
+                      color: isActivePath(item.path) ? 'text.primary' : 'text.secondary',
+                      fontWeight: 500,
+                      fontSize: '0.875rem',
+                      borderRadius: 0,
+                      bgcolor: 'transparent',
+                      '&:hover': {
                         bgcolor: 'transparent',
-                        '&:hover': {
-                          bgcolor: 'transparent',
-                          color: 'text.primary',
-                        },
-                      }}
-                    >
-                      {t(item.labelKey)}
-                      {showBadge && (
-                        <Box
-                          component="span"
-                          sx={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            bgcolor: 'error.main',
-                            color: 'white',
-                            fontSize: '10px',
-                            fontWeight: 600,
-                            minWidth: 18,
-                            height: 18,
-                            borderRadius: '9px',
-                            ml: 0.75,
-                            px: '5px',
-                          }}
-                        >
-                          {unresolvedCount}
-                        </Box>
-                      )}
-                    </Button>
-                  );
-                })}
+                        color: 'text.primary',
+                      },
+                    }}
+                  >
+                    {t(item.labelKey)}
+                  </Button>
+                ))}
               </Box>
             )}
           </Box>

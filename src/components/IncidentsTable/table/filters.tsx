@@ -1,23 +1,13 @@
 import { StateBadge } from '@components/StateBadge';
-import type { FilterConfig, FilterOption, SimpleFilterConfig } from '@components/TableWithFilters';
+import type { FilterConfig } from '@components/TableWithFilters';
 
 // Translation function type - ESLint validates keys via i18n-namespace-match rule
 type TranslateFunction = (key: string) => string;
 
-interface FilterOptions {
-  /** Whether to show process-level filters (bpmnProcessId, processInstanceKey) */
-  showProcessFilters: boolean;
-  /** Process definition options for the dropdown */
-  processOptions: FilterOption[];
-}
-
 export const getIncidentFilters = (
   t: TranslateFunction,
-  options: FilterOptions
 ): FilterConfig[] => {
-  const { showProcessFilters, processOptions } = options;
-
-  const filters: FilterConfig[] = [
+  return [
     {
       id: 'state',
       type: 'select',
@@ -47,39 +37,4 @@ export const getIncidentFilters = (
       width: 250,
     },
   ];
-
-  // Add process-level filters only when viewing global incidents
-  if (showProcessFilters) {
-    const hideableItems: SimpleFilterConfig[] = [
-      {
-        id: 'bpmnProcessId',
-        type: 'select',
-        label: t('processes:fields.process'),
-        options: processOptions,
-        searchable: true,
-      },
-      {
-        id: 'processInstanceKey',
-        type: 'text',
-        label: t('incidents:fields.processInstance'),
-        placeholder: t('incidents:filters.enterKey'),
-      },
-      {
-        id: 'createdAt',
-        label: t('incidents:fields.createdAt'),
-        type: 'dateRange',
-        colSpan: 2,
-      },
-    ];
-
-    filters.push({
-      id: 'filterGroup',
-      type: 'group',
-      zone: 'hideable',
-      columns: 3,
-      items: hideableItems,
-    });
-  }
-
-  return filters;
 };

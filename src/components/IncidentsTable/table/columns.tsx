@@ -9,8 +9,6 @@ import type { Incident } from '../IncidentsTable';
 type TranslateFunction = (key: string) => string;
 
 interface ColumnOptions {
-  /** Whether to show the processInstanceKey column */
-  showProcessInstanceKey: boolean;
   /** Callback when view details is clicked */
   onViewDetails: (incident: Incident) => void;
   /** Callback when resolve is clicked */
@@ -23,9 +21,9 @@ export const getIncidentColumns = (
   t: TranslateFunction,
   options: ColumnOptions
 ): Column<Incident>[] => {
-  const { showProcessInstanceKey, onViewDetails, onResolve, onMessageClick } = options;
+  const { onViewDetails, onResolve, onMessageClick } = options;
 
-  const columns: Column<Incident>[] = [
+  return [
     {
       id: 'key',
       label: t('common:key'),
@@ -40,19 +38,6 @@ export const getIncidentColumns = (
       width: 150,
       render: (row) => <MonoText>{row.elementId}</MonoText>,
     },
-  ];
-
-  // Conditionally add processInstanceKey column
-  if (showProcessInstanceKey) {
-    columns.push({
-      id: 'processInstanceKey',
-      label: t('incidents:fields.processInstance'),
-      width: 180,
-      render: (row: Incident) => <MonoText>{row.processInstanceKey}</MonoText>,
-    });
-  }
-
-  columns.push(
     {
       id: 'message',
       label: t('incidents:fields.errorMessage'),
@@ -66,7 +51,7 @@ export const getIncidentColumns = (
               onMessageClick(row.message);
             }}
             sx={{
-              maxWidth: showProcessInstanceKey ? 280 : 330,
+              maxWidth: 330,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -133,10 +118,8 @@ export const getIncidentColumns = (
           )}
         </Box>
       ),
-    }
-  );
-
-  return columns;
+    },
+  ];
 };
 
 function formatDate(dateString: string): string {

@@ -3,13 +3,11 @@ import { ns } from '@base/i18n';
 import { Box, Typography, Grid } from '@mui/material';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import RuleIcon from '@mui/icons-material/Rule';
-import WarningIcon from '@mui/icons-material/Warning';
 import { useQuery } from '@tanstack/react-query';
 import { themeColors } from '@base/theme';
 import {
   getProcessDefinitions,
   getProcessInstances,
-  getGlobalIncidents,
   getDmnResourceDefinitions,
   getDecisionInstances,
 } from '@base/openapi';
@@ -37,11 +35,6 @@ export const HomePage = () => {
   const { data: decisionInstances, isLoading: isLoadingDecisionInstances } = useQuery({
     queryKey: ['decisionInstances', 'count'],
     queryFn: () => getDecisionInstances({ size: 1 }),
-  });
-
-  const { data: incidents, isLoading: isLoadingIncidents } = useQuery({
-    queryKey: ['incidents', 'unresolved', 'count'],
-    queryFn: () => getGlobalIncidents({ size: 1, state: 'unresolved' }),
   });
 
   const quickAccessItems: QuickAccessCardProps[] = [
@@ -78,19 +71,6 @@ export const HomePage = () => {
           label: t('common:home.stats.instances'),
           value: decisionInstances?.totalCount,
           isLoading: isLoadingDecisionInstances,
-        },
-      ],
-    },
-    {
-      icon: <WarningIcon fontSize="large" />,
-      title: t('common:navigation.incidents'),
-      description: t('common:home.incidents.description'),
-      path: '/incidents',
-      stats: [
-        {
-          label: t('common:home.stats.unresolved'),
-          value: incidents?.totalCount,
-          isLoading: isLoadingIncidents,
         },
       ],
     },

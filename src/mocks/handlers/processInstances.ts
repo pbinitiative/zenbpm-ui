@@ -269,20 +269,28 @@ export const processInstanceHandlers = [
       const url = new URL(request.url);
       const page = parseInt(url.searchParams.get('page') || '1', 10);
       const size = parseInt(url.searchParams.get('size') || '10', 10);
+      const state = url.searchParams.get('state');
 
-      const incidents = getIncidentsByProcessInstanceKey(processInstanceKey as string);
+      let filteredIncidents = getIncidentsByProcessInstanceKey(processInstanceKey as string);
+
+      // Filter by state
+      if (state === 'resolved') {
+        filteredIncidents = filteredIncidents.filter((i) => i.resolvedAt);
+      } else if (state === 'unresolved') {
+        filteredIncidents = filteredIncidents.filter((i) => !i.resolvedAt);
+      }
 
       // Paginate
       const startIndex = (page - 1) * size;
       const endIndex = startIndex + size;
-      const paginatedItems = incidents.slice(startIndex, endIndex);
+      const paginatedItems = filteredIncidents.slice(startIndex, endIndex);
 
       return HttpResponse.json({
         items: paginatedItems,
         page,
         size,
         count: paginatedItems.length,
-        totalCount: incidents.length,
+        totalCount: filteredIncidents.length,
       });
     })
   ),

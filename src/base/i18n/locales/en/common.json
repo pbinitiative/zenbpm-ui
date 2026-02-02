@@ -8,13 +8,9 @@
     "decisions": {
       "description": "Manage DMN decision definitions and evaluate decisions"
     },
-    "incidents": {
-      "description": "View and resolve process incidents"
-    },
     "stats": {
       "definitions": "Definitions",
-      "instances": "Instances",
-      "unresolved": "Unresolved"
+      "instances": "Instances"
     }
   },
   "yes": "Yes",
@@ -24,7 +20,6 @@
     "designer": "Designer",
     "design": "Design",
     "decisions": "Decisions",
-    "incidents": "Incidents",
     "userTasks": "User Tasks"
   },
   "actions": {
