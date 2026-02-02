@@ -26,6 +26,7 @@ export const DecisionDesignerPage = () => {
     setXmlContent,
     toggleConsole,
     clearConsole,
+    hasUnsavedChanges,
   } = useDecisionDesigner({ decisionDefinitionKey });
 
   return (
@@ -46,8 +47,9 @@ export const DecisionDesignerPage = () => {
       onToggleConsole={toggleConsole}
       onClearConsole={clearConsole}
       onCloseSnackbar={closeSnackbar}
-      diagramEditor={<DmnEditor ref={editorRef} height="100%" initialXml={initialXml} />}
+      diagramEditor={<DmnEditor ref={editorRef} height="100%" initialXml={initialXml} onChange={setXmlContent} />}
       xmlEditor={<XmlEditor value={xmlContent} onChange={setXmlContent} height="100%" />}
+      hasUnsavedChanges={hasUnsavedChanges}
     />
   );
 };

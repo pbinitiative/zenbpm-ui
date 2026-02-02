@@ -3,17 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { getDmnResourceDefinition, createDmnResourceDefinition } from '@base/openapi';
 import type { DmnEditorRef } from '@components/DmnEditor';
-import type { EditorMode, ConsoleMessage, ConsoleMessageType, ConsoleMessageLink } from '@components/DesignerShell';
-
-interface SnackbarState {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error';
-}
-
-// Message ID counter for unique IDs
-let messageIdCounter = 0;
-const generateMessageId = () => `msg-${Date.now()}-${++messageIdCounter}`;
+import {
+  type EditorMode,
+  type ConsoleMessage,
+  useDesignerConsole
+} from '@components/DesignerShell';
+import type { SnackbarState } from "@components/DesignerShell/types.ts";
 
 interface UseDecisionDesignerOptions {
   decisionDefinitionKey?: string;
@@ -37,7 +32,10 @@ interface UseDecisionDesignerResult {
   setXmlContent: (content: string) => void;
   toggleConsole: () => void;
   clearConsole: () => void;
+  hasUnsavedChanges: boolean;
 }
+
+const normalize = (s?: string) => (s ?? '').trim();
 
 export function useDecisionDesigner({
   decisionDefinitionKey,
@@ -50,50 +48,24 @@ export function useDecisionDesigner({
   const [initialXml, setInitialXml] = useState<string | undefined>(undefined);
   const [editorMode, setEditorMode] = useState<EditorMode>('diagram');
   const [xmlContent, setXmlContent] = useState<string>('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  useEffect(() => {
+    setHasUnsavedChanges(normalize(initialXml) !== normalize(xmlContent));
+  }, [initialXml, xmlContent]);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
     message: '',
     severity: 'success',
   });
 
-  // Console state
-  const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
-  const [consoleOpen, setConsoleOpen] = useState(false);
+  const {
+    consoleMessages,
+    consoleOpen,
+    addConsoleMessage,
+    toggleConsole,
+    clearConsole,
+  } = useDesignerConsole()
 
-  // Add message to console
-  const addConsoleMessage = useCallback(
-    (
-      type: ConsoleMessageType,
-      message: string,
-      options?: { details?: string; link?: ConsoleMessageLink; autoOpenOnError?: boolean }
-    ) => {
-      const newMessage: ConsoleMessage = {
-        id: generateMessageId(),
-        type,
-        message,
-        details: options?.details,
-        link: options?.link,
-        timestamp: new Date(),
-      };
-      setConsoleMessages((prev) => [...prev, newMessage]);
-
-      // Auto-open console on error
-      if (type === 'error' && options?.autoOpenOnError !== false) {
-        setConsoleOpen(true);
-      }
-    },
-    []
-  );
-
-  // Toggle console visibility
-  const toggleConsole = useCallback(() => {
-    setConsoleOpen((prev) => !prev);
-  }, []);
-
-  // Clear console messages
-  const clearConsole = useCallback(() => {
-    setConsoleMessages([]);
-  }, []);
 
   // Load decision definition if key is provided
   useEffect(() => {
@@ -111,6 +83,7 @@ export function useDecisionDesigner({
         }
 
         setInitialXml(xml);
+        setXmlContent(xml);
       } catch {
         setSnackbar({
           open: true,
@@ -156,7 +129,7 @@ export function useDecisionDesigner({
   // Handle deploy
   const handleDeploy = useCallback(async () => {
     setDeploying(true);
-    addConsoleMessage('info', 'Starting deployment...', { autoOpenOnError: false });
+    addConsoleMessage('info', 'Starting deployment...');
 
     try {
       let xml: string;
@@ -200,22 +173,26 @@ export function useDecisionDesigner({
         .filter(Boolean)
         .join('\n');
 
+      const link = result?.dmnResourceDefinitionKey
+        ? {
+          text: `${t('common:actions.open')} v${version ?? '?'}`,
+          url: `/decision-definitions/${result.dmnResourceDefinitionKey}`,
+        }
+        : undefined;
       addConsoleMessage('success', successMessage, {
         details: detailsText,
-        link: result?.dmnResourceDefinitionKey
-          ? {
-              text: `Open v${version ?? '?'}`,
-              url: `/decision-definitions/${result.dmnResourceDefinitionKey}`,
-            }
-          : undefined,
-        autoOpenOnError: false,
+        link: link,
       });
 
       setSnackbar({
         open: true,
         message: successMessage,
+        link: link,
         severity: 'success',
       });
+
+      setInitialXml(xml);
+
     } catch (err) {
       // Extract detailed error information
       let errorMessage = t('designer:messages.deployFailed');
@@ -353,5 +330,6 @@ export function useDecisionDesigner({
     setXmlContent,
     toggleConsole,
     clearConsole,
+    hasUnsavedChanges,
   };
 }

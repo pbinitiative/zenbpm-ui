@@ -34,6 +34,7 @@ export const ProcessDesignerPage = () => {
     setXmlContent,
     toggleConsole,
     clearConsole,
+    hasUnsavedChanges,
   } = useProcessDesigner({ processDefinitionKey });
 
   // Form design dialog state
@@ -84,8 +85,9 @@ export const ProcessDesignerPage = () => {
         onToggleConsole={toggleConsole}
         onClearConsole={clearConsole}
         onCloseSnackbar={closeSnackbar}
-        diagramEditor={<BpmnEditor ref={editorRef} height="100%" initialXml={initialXml} />}
+        diagramEditor={<BpmnEditor ref={editorRef} height="100%" initialXml={initialXml} onChange={setXmlContent} />}
         xmlEditor={<XmlEditor value={xmlContent} onChange={setXmlContent} height="100%" />}
+        hasUnsavedChanges={hasUnsavedChanges}
       />
 
       <FormDesignDialog

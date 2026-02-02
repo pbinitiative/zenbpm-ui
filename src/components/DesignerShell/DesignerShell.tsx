@@ -2,7 +2,9 @@ import { useRef } from 'react';
 import { Box, Snackbar, Alert, CircularProgress } from '@mui/material';
 import { ConsolePanel } from './ConsolePanel';
 import { DesignerToolbar } from './DesignerToolbar';
-import type { EditorMode, ConsoleMessage } from './types';
+import type { EditorMode, ConsoleMessage, SnackbarState } from './types';
+import { useUnsavedChangesPrompt } from './useUnsavedChangesPrompt';
+import { Link } from "react-router-dom";
 
 export interface DesignerShellProps {
   /** Whether definition is loading */
@@ -16,11 +18,7 @@ export interface DesignerShellProps {
   /** Whether console is open */
   consoleOpen: boolean;
   /** Snackbar state */
-  snackbar: {
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error';
-  };
+  snackbar: SnackbarState;
   /** File input accept types (e.g., ".bpmn,.xml" or ".dmn,.xml") */
   fileAccept: string;
   /** Icon for diagram mode toggle button */
@@ -55,6 +53,8 @@ export interface DesignerShellProps {
   diagramEditor: React.ReactNode;
   /** The XML editor element (shown when editorMode === 'xml') */
   xmlEditor: React.ReactNode;
+  /** When true, warn before leaving page due to unsaved changes */
+  hasUnsavedChanges?: boolean;
 }
 
 export const DesignerShell = ({
@@ -81,8 +81,12 @@ export const DesignerShell = ({
   onCloseSnackbar,
   diagramEditor,
   xmlEditor,
+  hasUnsavedChanges = false,
 }: DesignerShellProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Warn before leaving when there are unsaved changes
+  useUnsavedChangesPrompt(hasUnsavedChanges);
 
   const handleOpenFile = () => {
     fileInputRef.current?.click();
@@ -177,6 +181,7 @@ export const DesignerShell = ({
       >
         <Alert onClose={onCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
           {snackbar.message}
+          {snackbar.link && <Box component="span" ml=".3em"><Link to={snackbar.link.url}>{snackbar.link.text}</Link></Box>}
         </Alert>
       </Snackbar>
     </Box>
