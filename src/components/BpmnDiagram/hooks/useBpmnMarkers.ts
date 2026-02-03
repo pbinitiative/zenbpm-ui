@@ -50,41 +50,24 @@ export function useBpmnMarkers({
     selectedElementRef.current = selectedElement;
   }, [selectedElement]);
 
-  // Apply history markers (completed elements and connecting sequence flows)
+  // Apply history markers (completed elements and sequence flows)
   const applyHistory = useCallback(() => {
     if (!viewerRef.current || !historyRef.current.length) return;
     const canvas = viewerRef.current.get('canvas') as BpmnCanvas;
     const elementRegistry = viewerRef.current.get('elementRegistry') as BpmnElementRegistry;
-
-    // Create a set of completed element IDs for quick lookup
-    const completedElementIds = new Set(historyRef.current.map((h) => h.elementId));
-    const markedConnections = new Set<string>();
 
     historyRef.current.forEach(({ elementId }) => {
       const element = elementRegistry.get(elementId);
       if (!element) return;
 
       try {
-        // Mark the element as completed
-        canvas.addMarker(elementId, 'element-completed');
-
-        // Mark outgoing sequence flows that lead to other completed elements
-        const outgoing = element.businessObject?.outgoing || [];
-        outgoing.forEach((flow) => {
-          // Get the target of this flow
-          const flowElement = elementRegistry.get(flow.id);
-          if (flowElement && !markedConnections.has(flow.id)) {
-            // Check if the target element is also completed
-            const flowBusinessObject = flowElement.businessObject as
-              | { targetRef?: { id: string } }
-              | undefined;
-            const targetId = flowBusinessObject?.targetRef?.id;
-            if (targetId && completedElementIds.has(targetId)) {
-              canvas.addMarker(flow.id, 'connection-completed');
-              markedConnections.add(flow.id);
-            }
-          }
-        });
+        if (element.waypoints) {
+          // Sequence flow — mark with connection style
+          canvas.addMarker(elementId, 'connection-completed');
+        } else {
+          // Flow node (task, event, gateway) — mark with element style
+          canvas.addMarker(elementId, 'element-completed');
+        }
       } catch (err) {
         console.warn(`Failed to add marker for element ${elementId}:`, err);
       }
