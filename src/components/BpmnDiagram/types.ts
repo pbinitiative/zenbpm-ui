@@ -2,6 +2,8 @@
 export interface BpmnElement {
   id: string;
   type: string;
+  /** Present on connection elements (sequence flows), absent on shapes */
+  waypoints?: Array<{ x: number; y: number }>;
   businessObject?: {
     outgoing?: Array<{ id: string }>;
     targetRef?: { id: string };
