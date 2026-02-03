@@ -14,8 +14,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { DataTable, type Column } from '@components/DataTable';
 import { AddVariableDialog } from '../modals/AddVariableDialog';
 import { EditVariableDialog } from '../modals/EditVariableDialog';
-import { DeleteVariableDialog } from '../modals/DeleteVariableDialog';
 import { updateProcessInstanceVariables, deleteProcessInstanceVariable } from '@base/openapi';
+import { useConfirmDialog } from '@components/ConfirmDialog';
 
 // Helper to safely stringify any value
 const stringify = (val: unknown): string => {
@@ -50,11 +50,12 @@ export const VariablesTab = ({
   onShowNotification,
 }: VariablesTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance]);
+  // confirm dialog hook via global Modals system
+  const { openConfirm } = useConfirmDialog();
 
   // Dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editVariable, setEditVariable] = useState<Variable | null>(null);
-  const [deleteVariable, setDeleteVariable] = useState<Variable | null>(null);
 
   // Convert variables object to array for table display
   const variablesArray: Variable[] = useMemo(() => {
@@ -98,7 +99,6 @@ export const VariablesTab = ({
     } catch {
       onShowNotification(t('processInstance:messages.variableDeleteFailed'), 'error');
     }
-    setDeleteVariable(null);
   }, [processInstanceKey, onRefetch, onShowNotification, t]);
 
   const columns: Column<Variable>[] = useMemo(
@@ -156,9 +156,19 @@ export const VariablesTab = ({
             </IconButton>
             <IconButton
               size="small"
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation();
-                setDeleteVariable(row);
+                const ok = await openConfirm({
+                  title: t('processInstance:dialogs.deleteVariable.title'),
+                  message: t('processInstance:dialogs.deleteVariable.confirmation', { name: row.name }),
+                  confirmText: t('common:actions.delete'),
+                  cancelText: t('common:actions.cancel'),
+                  confirmColor: 'error',
+                  maxWidth: 'xs',
+                });
+                if (ok) {
+                  await handleDeleteVariable(row.name);
+                }
               }}
               title={t('common:actions.delete')}
               color="error"
@@ -169,7 +179,7 @@ export const VariablesTab = ({
         ),
       },
     ],
-    [t]
+    [t, openConfirm, handleDeleteVariable]
   );
 
   return (
@@ -207,14 +217,6 @@ export const VariablesTab = ({
           variable={editVariable}
           onClose={() => setEditVariable(null)}
           onSave={handleEditVariable}
-        />
-      )}
-      {deleteVariable && (
-        <DeleteVariableDialog
-          open={true}
-          variableName={deleteVariable.name}
-          onClose={() => setDeleteVariable(null)}
-          onDelete={handleDeleteVariable}
         />
       )}
     </Box>
