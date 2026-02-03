@@ -61,6 +61,12 @@ export const getProcessInstanceColumns = (
       render: (row) => formatDate(row.createdAt),
     },
     {
+      id: 'businessKey',
+      label: t('processes:fields.businessKey'),
+      sortable: true,
+      render: (row) => row.businessKey || '-',
+    },
+    {
       id: 'activeElementInstances',
       label: t('processes:fields.activities'),
       render: (row) => {

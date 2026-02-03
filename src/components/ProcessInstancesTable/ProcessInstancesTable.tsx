@@ -147,6 +147,9 @@ export const ProcessInstancesTable = ({
           apiParams.createdTo = createdAt.to;
         }
       }
+      if (params.filters?.businessKey && typeof params.filters.businessKey === 'string') {
+        apiParams.businessKey = params.filters.businessKey;
+      }
 
       // Add sorting
       if (params.sortBy) {

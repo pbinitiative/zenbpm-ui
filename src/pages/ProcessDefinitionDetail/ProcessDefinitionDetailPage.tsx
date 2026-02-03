@@ -88,7 +88,6 @@ export const ProcessDefinitionDetailPage = () => {
       name={processDefinition.bpmnProcessName}
       version={processDefinition.version}
       versions={versions}
-      resourceName={processDefinition.bpmnResourceName}
       additionalFields={additionalFields}
       onVersionChange={handleVersionChange}
       actions={metadataActions}

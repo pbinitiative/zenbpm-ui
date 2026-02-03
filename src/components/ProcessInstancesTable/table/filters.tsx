@@ -93,6 +93,14 @@ export const getProcessInstanceFilters = (
     colSpan: 2,
   });
 
+  // Add businessKey filter
+  hideableItems.push({
+    id: 'businessKey',
+    label: t('processes:fields.businessKey'),
+    type: 'text',
+    colSpan: 3,
+  });
+
   // Add hideable group if there are items
   if (hideableItems.length > 0) {
     filters.push({

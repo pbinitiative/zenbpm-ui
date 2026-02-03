@@ -18,6 +18,7 @@ import {
   MenuItem,
   Autocomplete,
 } from '@mui/material';
+
 import CloseIcon from '@mui/icons-material/Close';
 import { JsonEditor } from '@components/JsonEditor';
 import {
@@ -53,6 +54,7 @@ export const StartInstanceDialog = ({
 }: StartInstanceDialogProps) => {
   const { t } = useTranslation([ns.common, ns.processes]);
   const [variables, setVariables] = useState('{}');
+  const [businessKey, setBusinessKey] = useState<string | null>();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -139,6 +141,7 @@ export const StartInstanceDialog = ({
   useEffect(() => {
     if (open) {
       setVariables('{}');
+      setBusinessKey(null);
       setError(null);
       setLoading(false);
       setSelectedProcessId(null);
@@ -180,6 +183,7 @@ export const StartInstanceDialog = ({
       const data = await createProcessInstance({
         processDefinitionKey,
         variables: JSON.parse(variables) as Record<string, unknown>,
+        ...(businessKey ? { businessKey } : {}),
       });
       onSuccess?.(data.key);
       onClose();
@@ -188,7 +192,7 @@ export const StartInstanceDialog = ({
     } finally {
       setLoading(false);
     }
-  }, [isValidJson, processDefinitionKey, variables, onSuccess, onClose, t]);
+  }, [isValidJson, processDefinitionKey, variables, businessKey, onSuccess, onClose, t]);
 
   // Handle process selection from autocomplete
   const handleProcessChange = useCallback((_: unknown, value: ProcessOption | null) => {
@@ -294,6 +298,17 @@ export const StartInstanceDialog = ({
               </Select>
             </FormControl>
           </Box>
+
+          {/* Business key */}
+          <TextField
+            label={t('processes:fields.businessKey')}
+            value={businessKey ?? ''}
+            onChange={(e) => setBusinessKey(e.target.value || null)}
+            size="small"
+            fullWidth
+            sx={{ mt: 2 }}
+          />
+
         </Box>
 
         {/* Variables editor */}
