@@ -89,6 +89,7 @@ export const ProcessDesignerPage = () => {
       />
 
       <FormDesignDialog
+        key={formDialog.elementId}
         open={formDialog.open}
         initialJson={formDialog.initialJson}
         onSubmit={handleFormDesignSubmit}
