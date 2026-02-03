@@ -102,7 +102,10 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
             value: o.outputValue,
           })) || [],
         matchedRuleIndices:
-          extended.matchedRules?.map((r) => r.ruleIndex).filter((idx): idx is number => idx !== undefined) || [],
+          extended.matchedRules
+            ?.map((r) => r.ruleIndex)
+            .filter((idx): idx is number => idx !== undefined)
+            .map((idx) => idx - 1) || [],
       };
     });
   }, [instance]);
