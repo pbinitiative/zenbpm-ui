@@ -183,7 +183,13 @@ export function usePartitionedData<T extends object>({
   // Calculate max count from any partition (for pagination - all partitions paginate together)
   const maxPartitionCount = useMemo(() => {
     if (!data?.partitions) return 0;
-    return Math.max(...data.partitions.map((p) => p.count ?? p.items.length));
+    // Use per-partition counts when available
+    const hasPartitionCounts = data.partitions.some((p) => p.count != null);
+    if (hasPartitionCounts) {
+      return Math.max(...data.partitions.map((p) => p.count ?? p.items.length));
+    }
+    // Fall back to response-level totalCount (e.g. single-partition endpoints like incidents)
+    return data.totalCount ?? 0;
   }, [data]);
 
   return {
