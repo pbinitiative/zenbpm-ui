@@ -14,7 +14,7 @@ import {
 import { JsonEditor } from '@components/JsonEditor';
 import type { Job } from '../types';
 
-interface CompleteJobDialogProps {
+export interface CompleteJobDialogProps {
   open: boolean;
   job: Job;
   onClose: () => void;

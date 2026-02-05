@@ -9,6 +9,7 @@ import {
   getProcessDefinitions,
   useGetProcessDefinitionElementStatistics,
 } from '@base/openapi';
+import { useStartInstanceDialog } from '@components/StartInstanceDialog';
 import type { ProcessDefinition, SnackbarState } from '../types';
 import { extractActivityIds } from '../utils';
 
@@ -24,7 +25,6 @@ interface UseProcessDefinitionDataResult {
   error: string | null;
   elementStatistics: ElementStatistics | undefined;
   selectedActivityId: string | undefined;
-  startDialogOpen: boolean;
   snackbar: SnackbarState;
   additionalFields: MetadataField[];
   refreshKey: number;
@@ -32,7 +32,6 @@ interface UseProcessDefinitionDataResult {
   handleElementClick: (elementId: string) => void;
   handleActivityFilterChange: (activityId: string | undefined) => void;
   handleStartInstance: () => void;
-  handleStartDialogClose: () => void;
   handleInstanceCreated: (instanceKey: string) => void;
   handleEditDefinition: () => void;
   handleSnackbarClose: () => void;
@@ -45,6 +44,7 @@ export function useProcessDefinitionData({
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useTranslation([ns.common, ns.processes]);
+  const { openStartInstance } = useStartInstanceDialog();
 
   // State
   const [processDefinition, setProcessDefinition] = useState<ProcessDefinition | null>(null);
@@ -52,7 +52,6 @@ export function useProcessDefinitionData({
   const [activityIds, setActivityIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [startDialogOpen, setStartDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
@@ -142,14 +141,6 @@ export function useProcessDefinitionData({
     setSearchParams(newParams, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  const handleStartInstance = useCallback(() => {
-    setStartDialogOpen(true);
-  }, []);
-
-  const handleStartDialogClose = useCallback(() => {
-    setStartDialogOpen(false);
-  }, []);
-
   const handleInstanceCreated = useCallback(
     (instanceKey: string) => {
       setSnackbar({
@@ -161,6 +152,15 @@ export function useProcessDefinitionData({
     },
     [t]
   );
+
+  const handleStartInstance = useCallback(() => {
+    if (!processDefinition) return;
+    openStartInstance({
+      processDefinitionKey: processDefinition.key,
+      processName: processDefinition.bpmnProcessName || processDefinition.bpmnProcessId,
+      onSuccess: handleInstanceCreated,
+    });
+  }, [processDefinition, openStartInstance, handleInstanceCreated]);
 
   const handleEditDefinition = useCallback(() => {
     void navigate(`/designer/process/${processDefinitionKey}`);
@@ -197,7 +197,6 @@ export function useProcessDefinitionData({
     error,
     elementStatistics,
     selectedActivityId,
-    startDialogOpen,
     snackbar,
     additionalFields,
     refreshKey,
@@ -205,7 +204,6 @@ export function useProcessDefinitionData({
     handleElementClick,
     handleActivityFilterChange,
     handleStartInstance,
-    handleStartDialogClose,
     handleInstanceCreated,
     handleEditDefinition,
     handleSnackbarClose,

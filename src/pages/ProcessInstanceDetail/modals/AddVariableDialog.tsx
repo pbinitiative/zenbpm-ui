@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { JsonEditor } from '@components/JsonEditor';
 
-interface AddVariableDialogProps {
+export interface AddVariableDialogProps {
   open: boolean;
   existingVariables: string[];
   onClose: () => void;

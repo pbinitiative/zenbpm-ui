@@ -9,7 +9,7 @@ import EditNoteIcon from '@mui/icons-material/EditNote';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { PageHeader } from '@components/PageHeader';
 import { SubTabs, type SubTab } from '@components/SubTabs';
-import { StartInstanceDialog } from '@components/StartInstanceDialog';
+import { useStartInstanceDialog } from '@components/StartInstanceDialog';
 import { ProcessDefinitionsTab } from './tabs/ProcessDefinitionsTab';
 import { ProcessInstancesTab } from './tabs/ProcessInstancesTab';
 import { createProcessDefinition } from '@base/openapi';
@@ -23,11 +23,11 @@ export const ProcessesPage = () => {
   const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { openStartInstance } = useStartInstanceDialog();
 
   // Shared state
   const [refreshKey, setRefreshKey] = useState(0);
   const [uploading, setUploading] = useState(false);
-  const [startDialogOpen, setStartDialogOpen] = useState(false);
   const [createdInstanceKey, setCreatedInstanceKey] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -100,14 +100,6 @@ export const ProcessesPage = () => {
     void navigate('/designer/process');
   }, [navigate]);
 
-  const handleStartInstance = useCallback(() => {
-    setStartDialogOpen(true);
-  }, []);
-
-  const handleStartDialogClose = useCallback(() => {
-    setStartDialogOpen(false);
-  }, []);
-
   const handleInstanceCreated = useCallback((instanceKey: string) => {
     setCreatedInstanceKey(instanceKey);
     setSnackbar({
@@ -118,6 +110,10 @@ export const ProcessesPage = () => {
     // Refresh instances tab if currently viewing it
     setRefreshKey((k) => k + 1);
   }, [t]);
+
+  const handleStartInstance = useCallback(() => {
+    openStartInstance({ onSuccess: handleInstanceCreated });
+  }, [openStartInstance, handleInstanceCreated]);
 
   // Actions displayed next to tabs
   const actions = (
@@ -188,13 +184,6 @@ export const ProcessesPage = () => {
 
       {activeTab === 'definitions' && <ProcessDefinitionsTab refreshKey={refreshKey} />}
       {activeTab === 'instances' && <ProcessInstancesTab refreshKey={refreshKey} />}
-
-      {/* Start Instance Dialog */}
-      <StartInstanceDialog
-        open={startDialogOpen}
-        onClose={handleStartDialogClose}
-        onSuccess={handleInstanceCreated}
-      />
 
       {/* Snackbar for feedback */}
       <Snackbar

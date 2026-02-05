@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import type { Job } from '../types';
 
-interface UpdateRetriesDialogProps {
+export interface UpdateRetriesDialogProps {
   open: boolean;
   job: Job;
   onClose: () => void;

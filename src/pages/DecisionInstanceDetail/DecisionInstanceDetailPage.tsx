@@ -5,7 +5,6 @@ import { Box, Typography, CircularProgress, Alert } from '@mui/material';
 import { DmnViewer } from '@components/DmnViewer';
 import { DiagramDetailLayout, MetadataPanel } from '@components/DiagramDetailLayout';
 import { useDecisionInstanceData } from './hooks';
-import { OutputDialog, InputOutputDialog } from './components';
 
 export const DecisionInstanceDetailPage = () => {
   const { decisionInstanceKey } = useParams<{ decisionInstanceKey: string }>();
@@ -19,12 +18,7 @@ export const DecisionInstanceDetailPage = () => {
     diagramOverlays,
     additionalFields,
     definitionInfo,
-    dialogData,
-    showOutputDialog,
-    setShowOutputDialog,
     handleOverlayClick,
-    closeDialog,
-    getDecisionName,
   } = useDecisionInstanceData(decisionInstanceKey);
 
   if (loading) {
@@ -85,14 +79,6 @@ export const DecisionInstanceDetailPage = () => {
         rightSection={diagramContent}
         rightTitle={t('decisions:detail.diagram')}
       />
-
-      <OutputDialog
-        open={showOutputDialog}
-        onClose={() => setShowOutputDialog(false)}
-        output={instance.decisionOutput}
-      />
-
-      <InputOutputDialog data={dialogData} onClose={closeDialog} getDecisionName={getDecisionName} />
     </Box>
   );
 };

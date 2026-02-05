@@ -1,5 +1,6 @@
+import type { FC } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from '@mui/material';
-import React from 'react';
+// BaseDialog was removed; use MUI Dialog directly
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -13,7 +14,7 @@ export interface ConfirmDialogProps {
   onConfirm: () => void;
 }
 
-export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
+export const ConfirmDialog: FC<ConfirmDialogProps> = ({
   open,
   title,
   message,
@@ -26,7 +27,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 }) => {
   return (
     <Dialog open={open} onClose={onClose} maxWidth={maxWidth} fullWidth>
-      {title ? <DialogTitle>{title}</DialogTitle> : null}
+      {title && <DialogTitle>{title}</DialogTitle>}
       <DialogContent>
         <Typography>{message}</Typography>
       </DialogContent>
