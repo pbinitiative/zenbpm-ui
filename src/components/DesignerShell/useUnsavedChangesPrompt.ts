@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useBeforeUnload, useBlocker } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
@@ -27,25 +27,20 @@ export function useUnsavedChangesPrompt(hasUnsavedChanges: boolean, message?: st
   // In-app navigation blocker
   const blocker = useBlocker(hasUnsavedChanges);
 
-  const isPromptingRef = useRef(false);
   const { openConfirm } = useConfirmDialog();
 
   useEffect(() => {
-    if (blocker.state !== 'blocked' || isPromptingRef.current) return;
-    isPromptingRef.current = true;
+    if (blocker.state !== 'blocked') return;
 
     void openConfirm({
-      title: t('designer:messages.unsavedChangesLeaveTitle', 'Unsaved changes'),
+      title: t('designer:messages.unsavedChangesLeaveTitle'),
       message: promptMessage,
-      confirmText: t('common:actions.leave', 'Leave'),
-      cancelText: t('common:actions.stay', 'Stay'),
+      confirmText: t('common:actions.leave'),
+      cancelText: t('common:actions.stay'),
       confirmColor: 'error',
-      maxWidth: 'xs',
     }).then((ok) => {
       if (ok) blocker.proceed();
       else blocker.reset();
-    }).finally(() => {
-      isPromptingRef.current = false;
-    });
-  }, [blocker, promptMessage, openConfirm, t]);
+    })
+  }, [blocker, promptMessage]);
 }

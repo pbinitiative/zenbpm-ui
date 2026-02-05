@@ -1,19 +1,21 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import type { AnyProps, DefineModalFn, OpenModalFn, CloseModalFn, ModalsContextValue, ModalComponent } from './ModalsContextBase';
+import type { DefineModalFn, OpenModalFn, CloseModalFn, ModalsContextValue, ModalComponent, ModalBaseProps } from './ModalsContextBase';
 import { ModalsContext } from './ModalsContextBase';
 
-interface ActiveEntry { Component: ModalComponent; props: AnyProps }
+interface ActiveEntry { Component: ModalComponent; props: ModalBaseProps }
 
 export function ModalsProvider({ children }: { children: React.ReactNode }) {
   const [active, setActive] = useState<Map<string, ActiveEntry>>(new Map());
 
   const defineModal = useCallback<DefineModalFn>(() => {
+    // This function is currently not used but is part of the context API
   }, []);
 
   const openModal = useCallback<OpenModalFn>((modalId, Component, props) => {
     setActive((prev) => {
       const next = new Map(prev);
-      next.set(modalId, { Component: Component as ModalComponent, props: { ...(props ?? {}) } });
+      const fullProps: ModalBaseProps = { ...props, open: true, onClose: () => { /* no-op, handled by provider */ } };
+      next.set(modalId, { Component: Component as ModalComponent, props: fullProps });
       return next;
     });
   }, []);
@@ -34,12 +36,14 @@ export function ModalsProvider({ children }: { children: React.ReactNode }) {
       {children}
       {Array.from(active.entries()).map(([id, entry]) => {
         const { Component, props } = entry;
-        const userOnClose = (props.onClose ?? undefined) as (() => void) | undefined;
+        
+        const userOnClose = props.onClose;
         const handleClose = () => {
           try { userOnClose?.(); } finally { closeModal(id); }
         };
+
         return (
-          <Component key={id} {...props} onClose={handleClose} open />
+          <Component key={id} {...props} onClose={handleClose} open={true} />
         );
       })}
     </ModalsContext.Provider>

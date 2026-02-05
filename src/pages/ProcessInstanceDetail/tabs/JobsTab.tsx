@@ -20,10 +20,10 @@ import EditIcon from '@mui/icons-material/Edit';
 import { DataTable, type Column, type SortOrder } from '@components/DataTable';
 import type { Job } from '../types';
 import { JOB_STATE_COLORS } from '../types';
-import { CompleteJobDialog } from '../modals/CompleteJobDialog';
-import { AssignJobDialog } from '../modals/AssignJobDialog';
-import { UpdateRetriesDialog } from '../modals/UpdateRetriesDialog';
+import { useCompleteJobDialog } from '../modals/useCompleteJobDialog';
+import { useAssignJobDialog } from '../modals/useAssignJobDialog';
 import { completeJobByKey, assignJob, customInstance } from '@base/openapi';
+import {useUpdateRetriesDialog} from "@pages/ProcessInstanceDetail/modals/useUpdateRetriesDialog.ts";
 
 // updateJobRetries is not in generated API, use direct axios call
 const updateJobRetries = async (jobKey: string, retries: number): Promise<void> => {
@@ -46,9 +46,9 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
   // Dialog state
-  const [completeDialogJob, setCompleteDialogJob] = useState<Job | null>(null);
-  const [assignDialogJob, setAssignDialogJob] = useState<Job | null>(null);
-  const [updateRetriesDialogJob, setUpdateRetriesDialogJob] = useState<Job | null>(null);
+  const { openCompleteJobDialog } = useCompleteJobDialog();
+  const { openAssignJobDialog } = useAssignJobDialog();
+  const { openUpdateRetriesDialog } = useUpdateRetriesDialog();
 
   // Menu state
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -73,7 +73,6 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
     } catch {
       onShowNotification(t('processInstance:messages.jobCompleteFailed'), 'error');
     }
-    setCompleteDialogJob(null);
   }, [onRefetch, onShowNotification, t]);
 
   const handleAssignJob = useCallback(async (jobKey: string, assignee: string) => {
@@ -84,7 +83,6 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
     } catch {
       onShowNotification(t('processInstance:messages.jobAssignFailed'), 'error');
     }
-    setAssignDialogJob(null);
   }, [onRefetch, onShowNotification, t]);
 
   const handleUpdateRetries = useCallback(async (jobKey: string, retries: number) => {
@@ -95,7 +93,6 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
     } catch {
       onShowNotification(t('processInstance:messages.retriesUpdateFailed'), 'error');
     }
-    setUpdateRetriesDialogJob(null);
   }, [onRefetch, onShowNotification, t]);
 
   const columns: Column<Job>[] = useMemo(
@@ -214,10 +211,9 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
                 <Button
                   size="small"
                   variant="outlined"
-                  startIcon={<PlayArrowIcon sx={{ fontSize: 16 }} />}
-                  onClick={(e) => {
+                  startIcon={<PlayArrowIcon sx={{ fontSize: 16 }} />}                  onClick={(e) => {
                     e.stopPropagation();
-                    setCompleteDialogJob(row);
+                    openCompleteJobDialog({ job: row, onComplete: handleCompleteJob });
                   }}
                   sx={{ textTransform: 'none', fontSize: '0.75rem' }}
                 >
@@ -237,8 +233,13 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
         },
       },
     ],
-    [t, handleMenuOpen]
-  );
+    // [t, handleMenuOpen, openCompleteJobDialog, handleCompleteJob, openAssignJobDialog, handleAssignJob, openUpdateRetriesDialog, handleUpdateRetries]
+    [
+      t,
+      handleMenuOpen,
+      openCompleteJobDialog,
+      handleCompleteJob,
+    ]);
 
   return (
     <Box data-testid="jobs-tab">
@@ -269,7 +270,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
         {menuJob?.type === 'user-task' && (
           <MenuItem
             onClick={() => {
-              setAssignDialogJob(menuJob);
+              openAssignJobDialog({ job: menuJob, onAssign: handleAssignJob });
               handleMenuClose();
             }}
           >
@@ -281,7 +282,9 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
         )}
         <MenuItem
           onClick={() => {
-            setUpdateRetriesDialogJob(menuJob);
+            if (menuJob) {
+              openUpdateRetriesDialog({ job: menuJob, onUpdate: handleUpdateRetries });
+            }
             handleMenuClose();
           }}
         >
@@ -293,30 +296,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
       </Menu>
 
       {/* Dialogs */}
-      {completeDialogJob && (
-        <CompleteJobDialog
-          open={true}
-          job={completeDialogJob}
-          onClose={() => setCompleteDialogJob(null)}
-          onComplete={handleCompleteJob}
-        />
-      )}
-      {assignDialogJob && (
-        <AssignJobDialog
-          open={true}
-          job={assignDialogJob}
-          onClose={() => setAssignDialogJob(null)}
-          onAssign={handleAssignJob}
-        />
-      )}
-      {updateRetriesDialogJob && (
-        <UpdateRetriesDialog
-          open={true}
-          job={updateRetriesDialogJob}
-          onClose={() => setUpdateRetriesDialogJob(null)}
-          onUpdate={handleUpdateRetries}
-        />
-      )}
+
     </Box>
   );
 };

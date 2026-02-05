@@ -14,7 +14,6 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import EditIcon from '@mui/icons-material/Edit';
 import { BpmnDiagram } from '@components/BpmnDiagram';
 import { DiagramDetailLayout, MetadataPanel } from '@components/DiagramDetailLayout';
-import { StartInstanceDialog } from '@components/StartInstanceDialog';
 import { ProcessInstancesTable } from '@components/ProcessInstancesTable';
 import { useProcessDefinitionData } from './hooks';
 
@@ -30,7 +29,6 @@ export const ProcessDefinitionDetailPage = () => {
     error,
     elementStatistics,
     selectedActivityId,
-    startDialogOpen,
     snackbar,
     additionalFields,
     refreshKey,
@@ -38,8 +36,6 @@ export const ProcessDefinitionDetailPage = () => {
     handleElementClick,
     handleActivityFilterChange,
     handleStartInstance,
-    handleStartDialogClose,
-    handleInstanceCreated,
     handleEditDefinition,
     handleSnackbarClose,
     navigateToInstance,
@@ -141,14 +137,6 @@ export const ProcessDefinitionDetailPage = () => {
         rightTitle={t('processes:detail.diagram')}
         bottomSection={instancesContent}
         bottomTitle={t('processes:detail.instances')}
-      />
-
-      <StartInstanceDialog
-        open={startDialogOpen}
-        onClose={handleStartDialogClose}
-        processDefinitionKey={processDefinition.key}
-        processName={processDefinition.bpmnProcessName || processDefinition.bpmnProcessId}
-        onSuccess={handleInstanceCreated}
       />
 
       <Snackbar

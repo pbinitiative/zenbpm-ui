@@ -27,7 +27,7 @@ interface Variable {
   rawValue: unknown;
 }
 
-interface EditVariableDialogProps {
+export interface EditVariableDialogProps {
   open: boolean;
   variable: Variable;
   onClose: () => void;
