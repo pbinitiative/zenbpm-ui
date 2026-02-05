@@ -22,7 +22,9 @@
     "downloadFailed": "Failed to download file",
     "loadDefinitionFailed": "Failed to load process definition",
     "xmlExportFailed": "Failed to export XML",
-    "xmlImportFailed": "Failed to import XML"
+    "xmlImportFailed": "Failed to import XML",
+    "unsavedChangesLeaveTitle": "You have unsaved changes. Leave this page?",
+    "unsavedChangesLeavePrompt": "You have unsaved changes. Leave this page?"
   },
   "cards": {
     "process": {

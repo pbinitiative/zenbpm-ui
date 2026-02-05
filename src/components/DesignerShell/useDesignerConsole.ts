@@ -19,19 +19,23 @@ export function useDesignerConsole(): UseDesignerConsoleResult {
 
   // Add message to console
   const addConsoleMessage = useCallback(
-    (type: ConsoleMessageType, message: string, options?: AddConsoleMessageOptions) => {
+    (
+      type: ConsoleMessageType,
+      message: string,
+      options?: AddConsoleMessageOptions
+    ) => {
+      const { details, link, preventOpenConsole } = options ?? {};
       const newMessage: ConsoleMessage = {
         id: generateMessageId(),
         type,
         message,
-        details: options?.details,
-        link: options?.link,
+        details: details,
+        link: link,
         timestamp: new Date(),
       };
       setConsoleMessages((prev) => [...prev, newMessage]);
 
-      // Auto-open console on error
-      if (type === 'error' && options?.autoOpenOnError !== false) {
+      if (!preventOpenConsole) {
         setConsoleOpen(true);
       }
     },
