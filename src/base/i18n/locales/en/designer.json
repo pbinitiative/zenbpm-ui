@@ -25,7 +25,7 @@
     "loadDefinitionFailed": "Failed to load process definition",
     "xmlExportFailed": "Failed to export XML",
     "xmlImportFailed": "Failed to import XML",
-    "unsavedChangesLeaveTitle": "You have unsaved changes. Leave this page?",
+    "unsavedChangesLeaveTitle": "Unsaved changes",
     "unsavedChangesLeavePrompt": "You have unsaved changes. Leave this page?",
     "jsonParseError": "Invalid JSON format. Please fix the JSON before switching to Designer view."
   },

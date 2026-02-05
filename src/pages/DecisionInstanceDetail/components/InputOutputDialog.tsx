@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import type { OverlayDialogData } from '../types';
 
-interface InputOutputDialogProps {
+export interface InputOutputDialogProps {
   data: OverlayDialogData | null;
   onClose: () => void;
   getDecisionName: (decisionId: string) => string;

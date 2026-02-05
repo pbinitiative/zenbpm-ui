@@ -3,7 +3,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 
-interface OutputDialogProps {
+export interface OutputDialogProps {
   open: boolean;
   onClose: () => void;
   output: unknown;

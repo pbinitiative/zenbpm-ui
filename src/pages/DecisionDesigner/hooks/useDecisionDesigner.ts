@@ -192,6 +192,7 @@ export function useDecisionDesigner({
       });
 
       setInitialXml(xml);
+      setHasUnsavedChanges(false)
 
     } catch (err) {
       // Extract detailed error information

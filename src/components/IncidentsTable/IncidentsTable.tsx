@@ -6,8 +6,8 @@ import {
   type FilterValues,
 } from '@components/TableWithFilters';
 import type { PartitionedResponse } from '@components/PartitionedTable';
-import { IncidentDetailModal } from './components/IncidentDetailModal';
-import { StackTraceModal } from './components/StackTraceModal';
+import { useIncidentDetailModal } from './components/useIncidentDetailModal';
+import { useStackTraceModal } from './components/useStackTraceModal';
 import { getIncidentColumns } from './table/columns';
 import { getIncidentFilters } from './table/filters';
 import {
@@ -37,6 +37,8 @@ export const IncidentsTable = ({
 }: IncidentsTableProps) => {
   const { t } = useTranslation([ns.common, ns.incidents]);
   const [internalRefreshKey, setInternalRefreshKey] = useState(0);
+  const { openStackTrace } = useStackTraceModal();
+  const { openIncidentDetail } = useIncidentDetailModal();
 
   const refreshKey = externalRefreshKey || internalRefreshKey;
 
@@ -103,13 +105,18 @@ export const IncidentsTable = ({
 
   // Handle view details
   const handleViewDetails = useCallback((incident: Incident) => {
-    setSelectedIncident(incident);
-  }, []);
+    openIncidentDetail({
+      incident,
+      onResolve: incident.resolvedAt ? undefined : (incidentKey) => {
+      void handleResolveIncident(incidentKey);
+    },
+    });
+  }, [openIncidentDetail, handleResolveIncident]);
 
   // Handle message click to show stack trace
   const handleMessageClick = useCallback((message: string) => {
-    setStackTraceMessage(message);
-  }, []);
+    openStackTrace({ message });
+  }, [openStackTrace]);
 
   // Get columns from extracted definition
   const columns = useMemo(
@@ -144,25 +151,6 @@ export const IncidentsTable = ({
         syncWithUrl={false}
         data-testid="incidents-table"
       />
-
-      {/* Incident Detail Modal */}
-      {selectedIncident && (
-        <IncidentDetailModal
-          open={true}
-          incident={selectedIncident}
-          onClose={() => setSelectedIncident(null)}
-          onResolve={selectedIncident.resolvedAt ? undefined : handleResolveIncident}
-        />
-      )}
-
-      {/* Stack Trace Modal */}
-      {stackTraceMessage && (
-        <StackTraceModal
-          open={true}
-          message={stackTraceMessage}
-          onClose={() => setStackTraceMessage(null)}
-        />
-      )}
     </>
   );
 };

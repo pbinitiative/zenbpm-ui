@@ -1,13 +1,18 @@
 import React from 'react';
 
-export interface AnyProps {
-  // Allow arbitrary props but recognize optional onClose provided by consumers
-  [key: string]: unknown;
-  onClose?: () => void;
+export interface ModalBaseProps {
+  open: boolean;
+  onClose: () => void;
 }
 
-export type ModalComponent<T extends AnyProps = AnyProps> = React.ComponentType<T>;
-export type OpenModalFn = <T extends AnyProps>(modalId: string, component: ModalComponent<T>, props?: T) => void;
+export type ModalComponent<T extends ModalBaseProps = ModalBaseProps> = React.ComponentType<T>;
+
+export type OpenModalFn = <T extends ModalBaseProps>(
+  modalId: string,
+  component: ModalComponent<T>,
+  props: Omit<T, keyof ModalBaseProps> // Omit 'open' and 'onClose'
+) => void;
+
 export type CloseModalFn = (modalId: string) => void;
 export type DefineModalFn = (modalId: string, component: ModalComponent) => void;
 
