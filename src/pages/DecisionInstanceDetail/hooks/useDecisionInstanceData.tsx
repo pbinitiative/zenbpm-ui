@@ -96,11 +96,25 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
             name: i.inputName || i.inputId || 'input',
             value: i.inputValue,
           })) || [],
-        outputs:
-          extended.outputs?.map((o) => ({
-            name: o.outputName || o.outputId || 'output',
-            value: o.outputValue,
-          })) || [],
+        outputs: (() => {
+          // Use direct outputs if available (e.g. Literal Expression decisions)
+          if (extended.outputs && extended.outputs.length > 0) {
+            return extended.outputs.map((o) => ({
+              name: o.outputName || o.outputId || 'output',
+              value: o.outputValue,
+            }));
+          }
+          // Fall back to outputs from matched rules (Decision Tables)
+          if (extended.matchedRules && extended.matchedRules.length > 0) {
+            return extended.matchedRules.flatMap((rule) =>
+              (rule.evaluatedOutputs || []).map((o) => ({
+                name: o.outputName || o.outputId || 'output',
+                value: o.outputValue,
+              })),
+            );
+          }
+          return [];
+        })(),
         matchedRuleIndices:
           extended.matchedRules
             ?.map((r) => r.ruleIndex)
