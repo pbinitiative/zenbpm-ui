@@ -9,7 +9,7 @@ import { useConfirmDialog } from '@components/ConfirmDialog';
  * Uses native beforeunload for refresh/close and react-router blocker for in-app navigation.
  */
 export function useUnsavedChangesPrompt(hasUnsavedChanges: boolean, message?: string) {
-  const { t } = useTranslation([ns.designer]);
+  const { t } = useTranslation([ns.common, ns.designer]);
   const promptMessage = message ?? t('designer:messages.unsavedChangesLeavePrompt');
 
   // Browser tab close / refresh
@@ -33,7 +33,7 @@ export function useUnsavedChangesPrompt(hasUnsavedChanges: boolean, message?: st
     if (blocker.state !== 'blocked') return;
 
     void openConfirm({
-      title: t('designer:messages.unsavedChangesLeaveTitle'),
+      title: t('designer:messages.unsavedChangesTitle'),
       message: promptMessage,
       confirmText: t('common:actions.leave'),
       cancelText: t('common:actions.stay'),
@@ -42,5 +42,5 @@ export function useUnsavedChangesPrompt(hasUnsavedChanges: boolean, message?: st
       if (ok) blocker.proceed();
       else blocker.reset();
     })
-  }, [blocker, promptMessage]);
+  }, [blocker, promptMessage, openConfirm, t]);
 }

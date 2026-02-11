@@ -7,6 +7,7 @@ import { useProcessDesigner } from './hooks';
 
 export const ProcessDesignerPage = () => {
   const { processDefinitionKey } = useParams<{ processDefinitionKey?: string }>();
+  const designerPrefix = "process-designer"
 
   const {
     editorRef,
@@ -27,7 +28,8 @@ export const ProcessDesignerPage = () => {
     toggleConsole,
     clearConsole,
     hasUnsavedChanges,
-  } = useProcessDesigner({ processDefinitionKey });
+    setHasUnsavedChanges,
+  } = useProcessDesigner({ processDefinitionKey, designerPrefix });
 
   return (
     <DesignerShell
@@ -39,7 +41,7 @@ export const ProcessDesignerPage = () => {
       snackbar={snackbar}
       fileAccept=".bpmn,.xml"
       diagramModeIcon={<AccountTreeIcon fontSize="small" sx={{ mr: 0.5 }} />}
-      testIdPrefix="process-designer"
+      designerPrefix={designerPrefix}
       onModeChange={handleModeChange}
       onFileUpload={handleFileUpload}
       onDownload={handleDownload}
@@ -50,6 +52,9 @@ export const ProcessDesignerPage = () => {
       diagramEditor={<BpmnEditor ref={editorRef} height="100%" initialXml={initialXml} onChange={setXmlContent} />}
       xmlEditor={<XmlEditor value={xmlContent} onChange={setXmlContent} height="100%" />}
       hasUnsavedChanges={hasUnsavedChanges}
+      setHasUnsavedChanges={setHasUnsavedChanges}
+      initialXml={initialXml}
+      xmlContent={xmlContent}
     />
   );
 };

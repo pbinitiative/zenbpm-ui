@@ -23,8 +23,9 @@
     "loadDefinitionFailed": "Failed to load process definition",
     "xmlExportFailed": "Failed to export XML",
     "xmlImportFailed": "Failed to import XML",
-    "unsavedChangesLeaveTitle": "Unsaved changes",
-    "unsavedChangesLeavePrompt": "You have unsaved changes. Leave this page?"
+    "unsavedChangesTitle": "Unsaved changes",
+    "unsavedChangesLeavePrompt": "You have unsaved changes. Leave this page?",
+    "restoreUnsavedPrompt": "Restore last unsaved changes?"
   },
   "cards": {
     "process": {
