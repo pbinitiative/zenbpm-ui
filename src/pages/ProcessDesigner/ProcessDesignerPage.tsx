@@ -15,6 +15,7 @@ interface FormDesignDialogState {
 
 export const ProcessDesignerPage = () => {
   const { processDefinitionKey } = useParams<{ processDefinitionKey?: string }>();
+  const designerPrefix = "process-designer"
 
   const {
     editorRef,
@@ -35,7 +36,8 @@ export const ProcessDesignerPage = () => {
     toggleConsole,
     clearConsole,
     hasUnsavedChanges,
-  } = useProcessDesigner({ processDefinitionKey });
+    setHasUnsavedChanges,
+  } = useProcessDesigner({ processDefinitionKey, designerPrefix });
 
   // Form design dialog state
   const [formDialog, setFormDialog] = useState<FormDesignDialogState>({
@@ -77,7 +79,7 @@ export const ProcessDesignerPage = () => {
         snackbar={snackbar}
         fileAccept=".bpmn,.xml"
         diagramModeIcon={<AccountTreeIcon fontSize="small" sx={{ mr: 0.5 }} />}
-        testIdPrefix="process-designer"
+        designerPrefix={designerPrefix}
         onModeChange={handleModeChange}
         onFileUpload={handleFileUpload}
         onDownload={handleDownload}
@@ -88,14 +90,9 @@ export const ProcessDesignerPage = () => {
         diagramEditor={<BpmnEditor ref={editorRef} height="100%" initialXml={initialXml} onChange={setXmlContent} />}
         xmlEditor={<XmlEditor value={xmlContent} onChange={setXmlContent} height="100%" />}
         hasUnsavedChanges={hasUnsavedChanges}
-      />
-
-      <FormDesignDialog
-        key={formDialog.elementId}
-        open={formDialog.open}
-        initialJson={formDialog.initialJson}
-        onSubmit={handleFormDesignSubmit}
-        onClose={handleFormDesignClose}
+        setHasUnsavedChanges={setHasUnsavedChanges}
+        initialXml={initialXml}
+        xmlContent={xmlContent}
       />
     </>
   );

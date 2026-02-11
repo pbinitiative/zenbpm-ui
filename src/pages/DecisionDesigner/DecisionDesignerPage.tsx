@@ -7,6 +7,7 @@ import { useDecisionDesigner } from './hooks';
 
 export const DecisionDesignerPage = () => {
   const { decisionDefinitionKey } = useParams<{ decisionDefinitionKey?: string }>();
+  const designerPrefix = "decision-designer"
 
   const {
     editorRef,
@@ -27,7 +28,8 @@ export const DecisionDesignerPage = () => {
     toggleConsole,
     clearConsole,
     hasUnsavedChanges,
-  } = useDecisionDesigner({ decisionDefinitionKey });
+    setHasUnsavedChanges,
+  } = useDecisionDesigner({ decisionDefinitionKey, designerPrefix });
 
   return (
     <DesignerShell
@@ -39,7 +41,7 @@ export const DecisionDesignerPage = () => {
       snackbar={snackbar}
       fileAccept=".dmn,.xml"
       diagramModeIcon={<AccountTreeIcon fontSize="small" sx={{ mr: 0.5 }} />}
-      testIdPrefix="decision-designer"
+      designerPrefix="decision-designer"
       onModeChange={handleModeChange}
       onFileUpload={handleFileUpload}
       onDownload={handleDownload}
@@ -50,6 +52,9 @@ export const DecisionDesignerPage = () => {
       diagramEditor={<DmnEditor ref={editorRef} height="100%" initialXml={initialXml} onChange={setXmlContent} />}
       xmlEditor={<XmlEditor value={xmlContent} onChange={setXmlContent} height="100%" />}
       hasUnsavedChanges={hasUnsavedChanges}
+      setHasUnsavedChanges={setHasUnsavedChanges}
+      initialXml={initialXml}
+      xmlContent={xmlContent}
     />
   );
 };

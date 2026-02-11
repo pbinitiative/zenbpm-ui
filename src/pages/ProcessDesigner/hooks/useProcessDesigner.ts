@@ -9,9 +9,11 @@ import {
   useDesignerConsole
 } from '@components/DesignerShell';
 import type { SnackbarState } from "@components/DesignerShell/types.ts";
+import {useConfirmDialog} from "@components/ConfirmDialog";
 
 interface UseProcessDesignerOptions {
   processDefinitionKey?: string;
+  designerPrefix: string;
 }
 
 interface UseProcessDesignerResult {
@@ -33,10 +35,12 @@ interface UseProcessDesignerResult {
   toggleConsole: () => void;
   clearConsole: () => void;
   hasUnsavedChanges: boolean;
+  setHasUnsavedChanges: (hasUnsavedChanges: boolean) => void;
 }
 
 export function useProcessDesigner({
   processDefinitionKey,
+  designerPrefix,
 }: UseProcessDesignerOptions): UseProcessDesignerResult {
   const { t } = useTranslation([ns.common, ns.designer]);
   const editorRef = useRef<BpmnEditorRef>(null);
@@ -47,10 +51,6 @@ export function useProcessDesigner({
   const [editorMode, setEditorMode] = useState<EditorMode>('diagram');
   const [xmlContent, setXmlContent] = useState<string>('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const normalize = (s?: string) => (s ?? '').trim();
-  useEffect(() => {
-    setHasUnsavedChanges(normalize(initialXml) !== normalize(xmlContent));
-  }, [initialXml, xmlContent]);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
     message: '',
@@ -66,8 +66,20 @@ export function useProcessDesigner({
   } = useDesignerConsole()
 
   // Load process definition if key is provided
+  const { openConfirm } = useConfirmDialog();
   useEffect(() => {
-    if (!processDefinitionKey) return;
+    if (!processDefinitionKey) {
+      const unsavedXml = localStorage.getItem(`${designerPrefix}-unsaved-changes`)
+      if (unsavedXml) {
+        void openConfirm({
+          title: t('designer:messages.unsavedChangesTitle'),
+          message: t('designer:messages.restoreUnsavedPrompt'),
+        }).then((ok) => {
+          if (ok) setInitialXml(unsavedXml)
+        })
+      }
+      return;
+    }
 
     const loadDefinition = async () => {
       setLoadingDefinition(true);
@@ -94,7 +106,7 @@ export function useProcessDesigner({
     };
 
     void loadDefinition();
-  }, [processDefinitionKey, t]);
+  }, [processDefinitionKey, designerPrefix, openConfirm, t]);
 
   // Handle mode change
   const handleModeChange = useCallback(
@@ -190,6 +202,7 @@ export function useProcessDesigner({
 
       setInitialXml(xml);
       setHasUnsavedChanges(false)
+      localStorage.removeItem(`${designerPrefix}-unsaved-changes`)
 
     } catch (err) {
       // Extract detailed error information
@@ -237,7 +250,7 @@ export function useProcessDesigner({
     } finally {
       setDeploying(false);
     }
-  }, [t, editorMode, xmlContent, addConsoleMessage]);
+  }, [t, editorMode, xmlContent, addConsoleMessage, designerPrefix]);
 
   // Handle file upload
   const handleFileUpload = useCallback(
@@ -329,5 +342,6 @@ export function useProcessDesigner({
     toggleConsole,
     clearConsole,
     hasUnsavedChanges,
+    setHasUnsavedChanges,
   };
 }

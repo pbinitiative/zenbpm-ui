@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import {useEffect, useRef} from 'react';
 import { Box, Snackbar, Alert, CircularProgress } from '@mui/material';
 import { ConsolePanel } from './ConsolePanel';
 import { DesignerToolbar } from './DesignerToolbar';
@@ -34,7 +34,7 @@ export interface DesignerShellProps {
   /** Whether to hide the console button and panel */
   hideConsole?: boolean;
   /** Test ID prefix for data-testid attributes */
-  testIdPrefix: string;
+  designerPrefix: string;
   /** Called when editor mode changes */
   onModeChange: (event: React.MouseEvent<HTMLElement>, newMode: EditorMode | null) => void;
   /** Called when a file is uploaded */
@@ -55,6 +55,9 @@ export interface DesignerShellProps {
   xmlEditor: React.ReactNode;
   /** When true, warn before leaving page due to unsaved changes */
   hasUnsavedChanges?: boolean;
+  setHasUnsavedChanges: (hasUnsavedChanges: boolean) => void;
+  initialXml: string | undefined;
+  xmlContent: string;
 }
 
 export const DesignerShell = ({
@@ -71,7 +74,7 @@ export const DesignerShell = ({
   xmlModeIcon,
   deployDisabled,
   hideConsole,
-  testIdPrefix,
+  designerPrefix,
   onModeChange,
   onFileUpload,
   onDownload,
@@ -82,8 +85,19 @@ export const DesignerShell = ({
   diagramEditor,
   xmlEditor,
   hasUnsavedChanges = false,
+  setHasUnsavedChanges,
+  initialXml,
+  xmlContent,
 }: DesignerShellProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const normalize = (s?: string) => (s ?? '').trim();
+  useEffect(() => {
+    if (xmlContent && normalize(initialXml) !== normalize(xmlContent)) {
+      setHasUnsavedChanges(true);
+      localStorage.setItem(`${designerPrefix}-unsaved-changes`, xmlContent)
+    }
+  }, [initialXml, xmlContent, setHasUnsavedChanges, designerPrefix]);
 
   // Warn before leaving when there are unsaved changes
   useUnsavedChangesPrompt(hasUnsavedChanges);
@@ -101,7 +115,7 @@ export const DesignerShell = ({
   }
 
   return (
-    <Box sx={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }} data-testid={`${testIdPrefix}-page`}>
+    <Box sx={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }} data-testid={`${designerPrefix}-page`}>
       {/* Hidden file input */}
       <Box
         component="input"
@@ -110,7 +124,7 @@ export const DesignerShell = ({
         accept={fileAccept}
         onChange={onFileUpload}
         sx={{ display: 'none' }}
-        data-testid={`${testIdPrefix}-file-input`}
+        data-testid={`${designerPrefix}-file-input`}
       />
 
       {/* Editor container */}
@@ -124,7 +138,7 @@ export const DesignerShell = ({
           bgcolor: 'background.paper',
           position: 'relative',
         }}
-        data-testid={`${testIdPrefix}-editor-container`}
+        data-testid={`${designerPrefix}-editor-container`}
       >
         {/* Diagram Editor - always mounted, hidden when in XML mode */}
         <Box
