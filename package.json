@@ -23,6 +23,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@bpmn-io/form-js": "^1.18.0",
     "@bpmn-io/properties-panel": "^3.34.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",

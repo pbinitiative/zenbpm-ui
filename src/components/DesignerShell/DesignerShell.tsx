@@ -25,6 +25,16 @@ export interface DesignerShellProps {
   fileAccept: string;
   /** Icon for diagram mode toggle button */
   diagramModeIcon: React.ReactNode;
+  /** Custom label for the diagram mode toggle */
+  diagramModeLabel?: string;
+  /** Custom label for the xml/code mode toggle */
+  xmlModeLabel?: string;
+  /** Custom icon for the xml/code mode toggle */
+  xmlModeIcon?: React.ReactNode;
+  /** Whether the deploy button is always disabled (e.g., for form designer) */
+  deployDisabled?: boolean;
+  /** Whether to hide the console button and panel */
+  hideConsole?: boolean;
   /** Test ID prefix for data-testid attributes */
   testIdPrefix: string;
   /** Called when editor mode changes */
@@ -56,6 +66,11 @@ export const DesignerShell = ({
   snackbar,
   fileAccept,
   diagramModeIcon,
+  diagramModeLabel,
+  xmlModeLabel,
+  xmlModeIcon,
+  deployDisabled,
+  hideConsole,
   testIdPrefix,
   onModeChange,
   onFileUpload,
@@ -119,15 +134,19 @@ export const DesignerShell = ({
         </Box>
 
         {/* XML Editor - shown when in XML mode */}
-        {editorMode === 'xml' && xmlEditor}
+        {editorMode === 'xml' && (
+          <Box sx={{ width: '100%', height: '100%' }}>{xmlEditor}</Box>
+        )}
 
         {/* Console Panel */}
-        <ConsolePanel
-          messages={consoleMessages}
-          open={consoleOpen}
-          onClear={onClearConsole}
-          onClose={onToggleConsole}
-        />
+        {!hideConsole && (
+          <ConsolePanel
+            messages={consoleMessages}
+            open={consoleOpen}
+            onClear={onClearConsole}
+            onClose={onToggleConsole}
+          />
+        )}
       </Box>
 
       {/* Bottom toolbar */}
@@ -137,6 +156,11 @@ export const DesignerShell = ({
         consoleOpen={consoleOpen}
         consoleMessageCount={consoleMessages.length}
         diagramModeIcon={diagramModeIcon}
+        diagramModeLabel={diagramModeLabel}
+        xmlModeLabel={xmlModeLabel}
+        xmlModeIcon={xmlModeIcon}
+        deployDisabled={deployDisabled}
+        hideConsole={hideConsole}
         onModeChange={onModeChange}
         onOpenFile={handleOpenFile}
         onDownload={onDownload}
