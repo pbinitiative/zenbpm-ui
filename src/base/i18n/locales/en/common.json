@@ -38,7 +38,8 @@
     "close": "Close",
     "copy": "Copy to clipboard",
     "copied": "Copied!",
-    "prettify": "Format JSON"
+    "prettify": "Format JSON",
+    "submit": "Submit"
   },
   "all": "All",
   "pagination": {
