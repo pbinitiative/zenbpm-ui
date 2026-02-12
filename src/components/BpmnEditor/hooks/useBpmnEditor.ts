@@ -65,7 +65,9 @@ export function useBpmnEditor({
     await importXml(emptyDiagram());
   }, [importXml]);
 
-  // Update the ZEN_FORM zeebe:Property on a user task element
+  // Update the ZEN_FORM zeebe:Input mapping on a user task element.
+  // Stores the form JSON as a FEEL string literal so it becomes a
+  // process variable at runtime — no deploy-time transformation needed.
   const updateZenFormProperty = useCallback((elementId: string, value: string) => {
     const modeler = modelerRef.current;
     if (!modeler) return;
@@ -77,6 +79,15 @@ export function useBpmnEditor({
 
     const element = elementRegistry.get(elementId);
     if (!element) return;
+
+    // Minify and convert to FEEL string literal
+    let minified = value;
+    try {
+      minified = JSON.stringify(JSON.parse(value));
+    } catch {
+      // use raw value
+    }
+    const feelSource = '="' + minified.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
 
     const bo = element.businessObject;
     const commands: any[] = [];
@@ -91,39 +102,45 @@ export function useBpmnEditor({
       });
     }
 
-    let zeebeProperties = (extensionElements.values || []).find(
-      (e: any) => e.$type === 'zeebe:Properties',
+    let ioMapping = (extensionElements.values || []).find(
+      (e: any) => e.$type === 'zeebe:IoMapping',
     );
-    if (!zeebeProperties) {
-      zeebeProperties = bpmnFactory.create('zeebe:Properties', { properties: [] });
-      zeebeProperties.$parent = extensionElements;
+    if (!ioMapping) {
+      ioMapping = bpmnFactory.create('zeebe:IoMapping', {
+        inputParameters: [],
+        outputParameters: [],
+      });
+      ioMapping.$parent = extensionElements;
       commands.push({
         cmd: 'element.updateModdleProperties',
         context: {
           element,
           moddleElement: extensionElements,
-          properties: { values: [...(extensionElements.values || []), zeebeProperties] },
+          properties: { values: [...(extensionElements.values || []), ioMapping] },
         },
       });
     }
 
-    const properties = zeebeProperties.properties || [];
-    const existingProp = properties.find((p: any) => p.name === 'ZEN_FORM');
+    const inputs = ioMapping.inputParameters || [];
+    const existingInput = inputs.find((p: any) => p.target === 'ZEN_FORM');
 
-    if (existingProp) {
+    if (existingInput) {
       commands.push({
         cmd: 'element.updateModdleProperties',
-        context: { element, moddleElement: existingProp, properties: { value } },
+        context: { element, moddleElement: existingInput, properties: { source: feelSource } },
       });
     } else {
-      const newProp = bpmnFactory.create('zeebe:Property', { name: 'ZEN_FORM', value });
-      newProp.$parent = zeebeProperties;
+      const newInput = bpmnFactory.create('zeebe:Input', {
+        source: feelSource,
+        target: 'ZEN_FORM',
+      });
+      newInput.$parent = ioMapping;
       commands.push({
         cmd: 'element.updateModdleProperties',
         context: {
           element,
-          moddleElement: zeebeProperties,
-          properties: { properties: [...properties, newProp] },
+          moddleElement: ioMapping,
+          properties: { inputParameters: [...inputs, newInput] },
         },
       });
     }

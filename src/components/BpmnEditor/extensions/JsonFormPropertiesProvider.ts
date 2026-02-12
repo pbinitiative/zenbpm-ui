@@ -3,21 +3,28 @@ import { useService } from 'bpmn-js-properties-panel';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-/** Read the ZEN_FORM zeebe:Property value from an element */
+/** Read the ZEN_FORM value from a zeebe:Input mapping on the element */
 function getZenFormValue(element: any): string {
   const bo = element.businessObject;
   const extensionElements = bo.extensionElements;
   if (!extensionElements) return '';
 
-  const zeebeProperties = extensionElements.values?.find(
-    (e: any) => e.$type === 'zeebe:Properties',
+  const ioMapping = extensionElements.values?.find(
+    (e: any) => e.$type === 'zeebe:IoMapping',
   );
-  if (!zeebeProperties) return '';
+  if (!ioMapping) return '';
 
-  const prop = zeebeProperties.properties?.find(
-    (p: any) => p.name === 'ZEN_FORM',
+  const input = (ioMapping.inputParameters || []).find(
+    (p: any) => p.target === 'ZEN_FORM',
   );
-  return prop?.value || '';
+  if (!input?.source) return '';
+
+  // Parse FEEL string literal: ="..." → raw JSON
+  const src: string = input.source;
+  if (src.startsWith('="') && src.endsWith('"')) {
+    return src.slice(2, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  }
+  return src;
 }
 
 /**

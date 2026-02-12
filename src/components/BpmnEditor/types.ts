@@ -14,7 +14,7 @@ export interface BpmnEditorRef {
   importXml: (xml: string) => Promise<void>;
   /** Create new empty diagram */
   createNew: () => Promise<void>;
-  /** Update the ZEN_FORM zeebe:Property on a user task element */
+  /** Update the ZEN_FORM zeebe:Input mapping on a user task element */
   updateZenFormProperty: (elementId: string, value: string) => void;
 }
 
