@@ -22,7 +22,6 @@ import type { Job } from '../types';
 import { JOB_STATE_COLORS } from '../types';
 import { useCompleteJobDialog } from '../modals/useCompleteJobDialog';
 import { useAssignJobDialog } from '../modals/useAssignJobDialog';
-import { CompleteFormJobDialog } from '../modals/CompleteFormJobDialog';
 import {useUpdateRetriesDialog} from "@pages/ProcessInstanceDetail/modals/useUpdateRetriesDialog.ts";
 import { completeJobByKey, assignJob, customInstance } from '@base/openapi';
 

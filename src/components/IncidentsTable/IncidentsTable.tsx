@@ -42,10 +42,6 @@ export const IncidentsTable = ({
 
   const refreshKey = externalRefreshKey || internalRefreshKey;
 
-  // Modal state
-  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
-  const [stackTraceMessage, setStackTraceMessage] = useState<string | null>(null);
-
   // Fetch incidents data using per-instance API endpoint
   const fetchData = useCallback(
     async (params: {
@@ -92,7 +88,6 @@ export const IncidentsTable = ({
     } catch {
       // Silently continue - the resolve may have succeeded with a new incident created
     } finally {
-      setSelectedIncident(null);
       setInternalRefreshKey((k) => k + 1);
       onIncidentResolved?.();
     }
