@@ -27,17 +27,18 @@ export function useUnsavedChangesPrompt(hasUnsavedChanges: boolean, message?: st
   // In-app navigation blocker
   const blocker = useBlocker(hasUnsavedChanges);
 
-  const { openConfirm } = useConfirmDialog();
+  const { openConfirm } = useConfirmDialog({
+    title: t('designer:messages.unsavedChangesTitle'),
+    confirmText: t('common:actions.leave'),
+    cancelText: t('common:actions.stay'),
+    confirmColor: 'error',
+  });
 
   useEffect(() => {
     if (blocker.state !== 'blocked') return;
 
     void openConfirm({
-      title: t('designer:messages.unsavedChangesTitle'),
       message: promptMessage,
-      confirmText: t('common:actions.leave'),
-      cancelText: t('common:actions.stay'),
-      confirmColor: 'error',
     }).then((ok) => {
       if (ok) blocker.proceed();
       else blocker.reset();

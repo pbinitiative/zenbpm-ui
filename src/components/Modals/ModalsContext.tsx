@@ -14,7 +14,11 @@ export function ModalsProvider({ children }: { children: React.ReactNode }) {
   const openModal = useCallback<OpenModalFn>((modalId, Component, props) => {
     setActive((prev) => {
       const next = new Map(prev);
-      const fullProps: ModalBaseProps = { ...props, open: true, onClose: () => { /* no-op, handled by provider */ } };
+      const fullProps: ModalBaseProps = {
+        ...props,
+        open: true,
+        onClose: props.onClose || (() => {}),
+      };
       next.set(modalId, { Component: Component as ModalComponent, props: fullProps });
       return next;
     });

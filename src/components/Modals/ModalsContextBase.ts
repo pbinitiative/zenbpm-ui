@@ -10,7 +10,7 @@ export type ModalComponent<T extends ModalBaseProps = ModalBaseProps> = React.Co
 export type OpenModalFn = <T extends ModalBaseProps>(
   modalId: string,
   component: ModalComponent<T>,
-  props: Omit<T, keyof ModalBaseProps> // Omit 'open' and 'onClose'
+  props: Omit<T,'open'>
 ) => void;
 
 export type CloseModalFn = (modalId: string) => void;

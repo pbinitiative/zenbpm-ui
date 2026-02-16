@@ -233,7 +233,6 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
         },
       },
     ],
-    // [t, handleMenuOpen, openCompleteJobDialog, handleCompleteJob, openAssignJobDialog, handleAssignJob, openUpdateRetriesDialog, handleUpdateRetries]
     [
       t,
       handleMenuOpen,

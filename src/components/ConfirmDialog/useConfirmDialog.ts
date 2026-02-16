@@ -6,8 +6,9 @@ import { useModal } from '@components/Modals/useModal';
 const CONFIRM_DIALOG_ID = 'global-confirm-dialog';
 
 export type OpenConfirmOptions = Omit<ConfirmDialogProps, 'open' | 'onClose' | 'onConfirm'>;
+export type OpenConfirmOptionsDefault = Omit<OpenConfirmOptions, 'message'>;
 
-export function useConfirmDialog() {
+export function useConfirmDialog(defaultOpts?: OpenConfirmOptionsDefault) {
   const {openModal, closeModal} = useModal<ConfirmDialogProps>(CONFIRM_DIALOG_ID, ConfirmDialog);
 
   const openModalRef = useRef(openModal);
@@ -21,6 +22,7 @@ export function useConfirmDialog() {
   const openConfirm = useCallback((opts: OpenConfirmOptions) => {
     return new Promise<boolean>((resolve) => {
       openModalRef.current({
+        ...defaultOpts || {},
         ...opts,
         onClose: () => {
           resolve(false);
@@ -32,7 +34,7 @@ export function useConfirmDialog() {
         },
       });
     });
-  }, []); // Empty array = stable function reference
+  }, [defaultOpts]); // Empty array = stable function reference
 
   return {openConfirm} as const;
 }

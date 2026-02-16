@@ -1,8 +1,7 @@
-import type { FC } from 'react';
+import { type FC } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from '@mui/material';
 import {ns} from "@base/i18n";
 import {useTranslation} from "react-i18next";
-// BaseDialog was removed; use MUI Dialog directly
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -35,7 +34,9 @@ export const ConfirmDialog: FC<ConfirmDialogProps> = ({
         <Typography>{message}</Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{cancelText || t('common:no')}</Button>
+        <Button onClick={onClose}>
+          {cancelText || t('common:no')}
+        </Button>
         <Button onClick={onConfirm} variant="contained" color={confirmColor}>
           {confirmText || t('common:yes')}
         </Button>
