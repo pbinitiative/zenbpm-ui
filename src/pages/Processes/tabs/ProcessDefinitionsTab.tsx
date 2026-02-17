@@ -85,15 +85,16 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
 
       // 2. Fetch statistics separately - if it fails, we still show definitions with zero stats
       // Use string keys because json-bigint converts large numbers to strings to preserve precision
-      const statisticsMap = new Map<string, { instanceCounts: InstanceCounts; incidentCounts: IncidentCounts }>();
+      const statisticsMap = new Map<string, { instanceCounts: InstanceCounts }>();
       if (definitions.length > 0) {
         try {
           const statisticsData = await getProcessDefinitionStatistics({ size: 100, onlyLatest: apiParams.onlyLatest });
-          for (const stat of statisticsData.items || []) {
-            statisticsMap.set(stat.key, {
-              instanceCounts: stat.instanceCounts,
-              incidentCounts: stat.incidentCounts,
-            });
+          for (const partition of statisticsData.partitions || []) {
+            for (const stat of partition.items || []) {
+              statisticsMap.set(stat.key, {
+                instanceCounts: stat.instanceCounts,
+              });
+            }
           }
         } catch (statsError) {
           // Statistics failed - log but continue with definitions
@@ -110,7 +111,6 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
         return {
           ...def,
           instanceCounts: stats.instanceCounts,
-          incidentCounts: stats.incidentCounts,
         };
       });
 
@@ -182,15 +182,15 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
         ),
       },
       {
-        id: 'incidentCounts.unresolved',
+        id: 'instanceCounts.failed',
         label: t('processes:statistics.incidents'),
         width: 100,
         align: 'center' as const,
         render: (row) =>
-          row.incidentCounts.unresolved > 0 ? (
+          row.instanceCounts.failed > 0 ? (
             <Chip
               size="small"
-              label={row.incidentCounts.unresolved}
+              label={row.instanceCounts.failed}
               sx={{
                 bgcolor: 'error.main',
                 color: 'white',

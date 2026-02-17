@@ -606,7 +606,7 @@ paths:
   /process-definitions/statistics:
     get:
       operationId: getProcessDefinitionStatistics
-      summary: Get process definition statistics
+      summary: "Get process definition statistics"
       tags:
         - process-definition
       parameters:
@@ -617,7 +617,7 @@ paths:
             format: int32
             minimum: 1
             default: 1
-          description: Page number (1-based indexing)
+          description: "Page number (1-based indexing)"
         - name: size
           in: query
           schema:
@@ -626,35 +626,45 @@ paths:
             minimum: 1
             maximum: 100
             default: 10
-          description: Number of items per page (max 100)
+          description: "Number of items per page (max 100)"
         - name: onlyLatest
           in: query
           schema:
             type: boolean
             default: false
-          description: If true, returns only the latest version of each process definition
-        - name: bpmnProcessId
+          description: "If true, returns only the latest version of each process definition"
+        - name: bpmnProcessIdIn
           in: query
           schema:
-            type: string
-          description: Filter by BPMN process ID
+            type: array
+            items:
+              type: string
+          description: "Filter by BPMN process ID"
+        - name: bpmnProcessDefinitionKeyIn
+          in: query
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+          description: "Filter by process definition key"
         - name: name
           in: query
           schema:
             type: string
-          description: Filter by name (partial match)
+          description: "Filter by name (partial match)"
         - name: sortBy
           in: query
           schema:
             type: string
             enum: [name, bpmnProcessId, version, instanceCount, incidentCount]
-          description: Sort field
+          description: "Sort field"
         - name: sortOrder
           in: query
           schema:
             type: string
             enum: [asc, desc]
-          description: Sort direction
+          description: "Sort direction"
       responses:
         200:
           description: Process definition statistics
@@ -2195,6 +2205,86 @@ components:
           incidentCount:
             type: integer
             description: Number of incidents on this element
+    ProcessDefinitionStatisticsPage:
+      type: object
+      required:
+        - partitions
+        - page
+        - size
+        - count
+        - totalCount
+      properties:
+        partitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartitionProcessDefinitionStatistics"
+        page:
+          type: integer
+        size:
+          type: integer
+        count:
+          type: integer
+          description: "Number of items in current page"
+        totalCount:
+          type: integer
+          description: "Total number of items across all pages"
+    PartitionProcessDefinitionStatistics:
+      type: object
+      required:
+        - partition
+        - items
+      properties:
+        partition:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProcessDefinitionStatistics"
+    ProcessDefinitionStatistics:
+      type: object
+      required:
+        - key
+        - version
+        - bpmnProcessId
+        - instanceCounts
+        - incidentCounts
+      properties:
+        key:
+          type: integer
+          format: int64
+        version:
+          type: integer
+        bpmnProcessId:
+          type: string
+        name:
+          type: string
+          description: "Process name from BPMN"
+        instanceCounts:
+          $ref: "#/components/schemas/InstanceCounts"
+    InstanceCounts:
+      type: object
+      required:
+        - total
+        - active
+        - completed
+        - terminated
+        - failed
+      properties:
+        total:
+          type: integer
+          description: "Total number of process instances"
+        active:
+          type: integer
+          description: "Number of active instances"
+        completed:
+          type: integer
+          description: "Number of completed instances"
+        terminated:
+          type: integer
+          description: "Number of terminated instances"
+        failed:
+          type: integer
+          description: "Number of failed instances"
     ProcessInstancePage:
       type: object
       allOf:
@@ -2608,91 +2698,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/EvaluatedOutput"
-    ProcessDefinitionStatisticsPage:
-      type: object
-      required:
-        - items
-        - page
-        - size
-        - count
-        - totalCount
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/ProcessDefinitionStatistics"
-        page:
-          type: integer
-        size:
-          type: integer
-        count:
-          type: integer
-          description: Number of items in current page
-        totalCount:
-          type: integer
-          description: Total number of items across all pages
-    ProcessDefinitionStatistics:
-      type: object
-      required:
-        - key
-        - version
-        - bpmnProcessId
-        - instanceCounts
-        - incidentCounts
-      properties:
-        key:
-          type: integer
-          format: int64
-        version:
-          type: integer
-        bpmnProcessId:
-          type: string
-        name:
-          type: string
-          description: Process name from BPMN
-        bpmnResourceName:
-          type: string
-          description: BPMN resource file name
-        instanceCounts:
-          $ref: "#/components/schemas/InstanceCounts"
-        incidentCounts:
-          $ref: "#/components/schemas/IncidentCounts"
-    InstanceCounts:
-      type: object
-      required:
-        - total
-        - active
-        - completed
-        - terminated
-        - failed
-      properties:
-        total:
-          type: integer
-          description: Total number of process instances
-        active:
-          type: integer
-          description: Number of active instances
-        completed:
-          type: integer
-          description: Number of completed instances
-        terminated:
-          type: integer
-          description: Number of terminated instances
-        failed:
-          type: integer
-          description: Number of failed instances
-    IncidentCounts:
-      type: object
-      required:
-        - total
-        - unresolved
-      properties:
-        total:
-          type: integer
-          description: Total number of incidents
-        unresolved:
-          type: integer
-          description: Number of unresolved incidents
   parameters:
     sortOrder:
       name: sortOrder
