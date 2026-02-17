@@ -776,9 +776,6 @@ paths:
                       completed: 1180
                       terminated: 20
                       failed: 5
-                    incidentCounts:
-                      total: 12
-                      unresolved: 3
                   - key: 4503599627370510
                     version: 1
                     bpmnProcessId: "order-fulfillment"
@@ -790,9 +787,6 @@ paths:
                       completed: 750
                       terminated: 15
                       failed: 5
-                    incidentCounts:
-                      total: 8
-                      unresolved: 2
                 page: 1
                 size: 10
                 count: 2
@@ -2265,7 +2259,6 @@ components:
         - version
         - bpmnProcessId
         - instanceCounts
-        - incidentCounts
       properties:
         key:
           type: integer
