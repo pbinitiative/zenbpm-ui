@@ -1,6 +1,7 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { validateResponse } from '@/mocks/validation/validator';
 import { axiosResponseTransformer, stringifyWithBigInt } from '@/base/utils/jsonBigInt';
+import { setupAuthInterceptor } from '@/base/auth/authInterceptor';
 
 export const AXIOS_INSTANCE = axios.create({
   baseURL: '/v1',
@@ -50,6 +51,9 @@ AXIOS_INSTANCE.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Set up auth interceptor (no-op when VITE_AUTH_ENABLED !== 'true')
+setupAuthInterceptor(AXIOS_INSTANCE);
 
 export const customInstance = <T>(
   config: AxiosRequestConfig,
