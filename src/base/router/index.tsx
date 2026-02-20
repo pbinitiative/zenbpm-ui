@@ -1,5 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { MainLayout } from '@components/layouts/MainLayout';
+import { AuthGuard } from '@base/auth/AuthGuard';
+import { AuthCallbackPage } from '@pages/AuthCallback/AuthCallbackPage';
 import { HomePage } from '@pages/Home/HomePage';
 import { ProcessesPage } from '@pages/Processes/ProcessesPage';
 import { ProcessDefinitionDetailPage } from '@pages/ProcessDefinitionDetail';
@@ -14,8 +16,16 @@ import { DecisionInstanceDetailPage } from '@pages/DecisionInstanceDetail';
 
 export const router = createBrowserRouter([
   {
+    path: '/auth/callback',
+    element: <AuthCallbackPage />,
+  },
+  {
     path: '/',
-    element: <MainLayout />,
+    element: (
+      <AuthGuard>
+        <MainLayout />
+      </AuthGuard>
+    ),
     children: [
       {
         index: true,

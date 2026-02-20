@@ -4,6 +4,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { theme } from '@base/theme';
 import { router } from '@base/router';
+import { AuthProvider } from '@base/auth';
 import { NotificationProvider } from '@base/contexts';
 import '@base/i18n';
 
@@ -21,9 +22,11 @@ export const App = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <NotificationProvider>
-          <RouterProvider router={router} />
-        </NotificationProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <RouterProvider router={router} />
+          </NotificationProvider>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

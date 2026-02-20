@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
+import { useAuth } from '@base/auth';
 import {
   AppBar,
   Avatar,
   Box,
   Button,
+  Divider,
   Drawer,
   IconButton,
   List,
@@ -14,6 +16,8 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Menu,
+  MenuItem,
   TextField,
   Toolbar,
   Typography,
@@ -23,6 +27,7 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import RuleIcon from '@mui/icons-material/Rule';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 const navItems = [
   {
@@ -80,12 +85,33 @@ const Logo = ({ showText = true, onClick, appName }: LogoProps) => (
 );
 
 export const MainLayout = () => {
-  const { t } = useTranslation([ns.common]);
+  const { t } = useTranslation([ns.common, ns.auth]);
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userMenuAnchor, setUserMenuAnchor] = useState<HTMLElement | null>(null);
+
+  const userInitials = useMemo(() => {
+    if (!user) return 'JD';
+    if (user.given_name && user.family_name) {
+      return `${user.given_name[0]}${user.family_name[0]}`.toUpperCase();
+    }
+    if (user.name) {
+      const parts = user.name.split(' ');
+      return parts.length >= 2
+        ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+        : user.name.substring(0, 2).toUpperCase();
+    }
+    return 'U';
+  }, [user]);
+
+  const handleLogout = () => {
+    setUserMenuAnchor(null);
+    void logout();
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -278,19 +304,42 @@ export const MainLayout = () => {
               }}
             />
 
-            {/* Avatar */}
+            {/* Avatar + User Menu */}
             <Avatar
+              onClick={user ? (e) => setUserMenuAnchor(e.currentTarget) : undefined}
               sx={{
                 width: 32,
                 height: 32,
                 bgcolor: 'primary.main',
                 fontSize: '0.75rem',
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: user ? 'pointer' : 'default',
               }}
             >
-              JD
+              {userInitials}
             </Avatar>
+            {user && (
+              <Menu
+                anchorEl={userMenuAnchor}
+                open={Boolean(userMenuAnchor)}
+                onClose={() => setUserMenuAnchor(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              >
+                <MenuItem disabled>
+                  <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500 }}>
+                    {user.name ?? user.preferred_username ?? user.email ?? ''}
+                  </Typography>
+                </MenuItem>
+                <Divider />
+                <MenuItem onClick={handleLogout}>
+                  <ListItemIcon>
+                    <LogoutIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>{t('auth:user.signOut')}</ListItemText>
+                </MenuItem>
+              </Menu>
+            )}
           </Box>
         </Toolbar>
       </AppBar>

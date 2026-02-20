@@ -31,6 +31,24 @@ interface ImportMetaEnv {
    * Example: "/jobs/**,/messages"
    */
   readonly VITE_LIVE_ENDPOINTS?: string;
+
+  /** Enable OIDC authentication ('true' to enable) */
+  readonly VITE_AUTH_ENABLED?: string;
+
+  /** OIDC Issuer URL (e.g., https://keycloak.example.com/realms/myrealm) */
+  readonly VITE_OIDC_ISSUER?: string;
+
+  /** OIDC Client ID */
+  readonly VITE_OIDC_CLIENT_ID?: string;
+
+  /** OIDC Redirect URI after login */
+  readonly VITE_OIDC_REDIRECT_URI?: string;
+
+  /** OIDC Redirect URI after logout */
+  readonly VITE_OIDC_POST_LOGOUT_REDIRECT_URI?: string;
+
+  /** OIDC Scopes (default: 'openid profile email') */
+  readonly VITE_OIDC_SCOPE?: string;
 }
 
 interface ImportMeta {
