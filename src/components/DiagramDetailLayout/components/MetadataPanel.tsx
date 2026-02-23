@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import { Box, Divider } from '@mui/material';
+import {Box, Button, Divider} from '@mui/material';
 import { NavButton } from '@components/NavButton';
 import { MetadataItem } from './MetadataItem';
 import type { MetadataField, VersionInfo, DefinitionInfo } from '../types';
 import { useMetadataFields } from '../hooks';
+import CancelIcon from "@mui/icons-material/Cancel";
+import {cancelProcessInstance} from "@base/openapi";
 
 // Re-export types for backward compatibility
 export type { MetadataField, VersionInfo, DefinitionInfo };
@@ -109,6 +111,12 @@ export const MetadataPanel = ({
   const hasLinks = definitionInfo || processInstanceKey;
   const hasBottomSection = hasLinks || actions;
 
+  const cancelProcess = async () => {
+    // TODO rebase and add confirm dialog
+    if (entityKey) {
+      await cancelProcessInstance(entityKey as string)
+    }
+  }
   // Simple render if no links or actions
   if (!hasBottomSection) {
     return (
@@ -138,7 +146,21 @@ export const MetadataPanel = ({
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {/* Action buttons */}
         {actions}
-
+        {/* Cancel Process Button  */}
+        {definitionInfo && definitionInfo.type === 'process' && state !== 'terminated'
+          && (<Button
+            onClick={cancelProcess}
+            variant="outlined"
+            size="small"
+            endIcon={<CancelIcon />}
+            color={"primary"}
+            sx={{
+              justifyContent: 'space-between',
+            }}
+          >
+            Cancel Process
+          </Button>)
+        }
         {/* Navigation links */}
         {definitionInfo && (
           <NavButton
