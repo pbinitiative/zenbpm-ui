@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { callId: 'CALL-001', caller: 'system' },
     activeElementInstances: [{ key: '3100000000000000067', elementId: 'callActivity', elementType: 'callActivity' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { callId: 'CALL-002', caller: 'admin' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { callId: 'CALL-003', caller: 'user1' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

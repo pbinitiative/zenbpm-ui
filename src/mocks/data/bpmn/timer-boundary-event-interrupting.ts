@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { timeoutDuration: 'PT2H', taskStarted: hoursAgo(1) },
     activeElementInstances: [{ key: '3100000000000000225', elementId: 'service-task-id', elementType: 'serviceTask' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { timeoutDuration: 'PT1H', timedOut: false },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { timeoutDuration: 'PT30M', timedOut: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -56,6 +59,7 @@ export const instances: MockProcessInstance[] = [
     variables: { timeoutDuration: 'PT1H', timedOut: false },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 3,
   },
 ];

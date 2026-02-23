@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { instanceKeys } from '../../fixtures/instance-keys';
+
+const { ACTIVE_INSTANCE_KEY, COMPLETED_INSTANCE_KEY, TERMINATED_INSTANCE_KEY } = instanceKeys;
 
 test.describe('Process Instance Detail Page', () => {
-  // Use an active process instance from mock data (from showcase-process)
-  const processInstanceKey = '3100000000000000014';
-
   test.beforeEach(async ({ page }) => {
-    await page.goto(`/process-instances/${processInstanceKey}`);
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}`);
   });
 
   test('should display process instance metadata', async ({ page }) => {
@@ -13,7 +13,7 @@ test.describe('Process Instance Detail Page', () => {
     await expect(page.getByText('Instance Details')).toBeVisible();
 
     // Check metadata content
-    await expect(page.getByText(processInstanceKey)).toBeVisible();
+    await expect(page.getByText(ACTIVE_INSTANCE_KEY)).toBeVisible();
     // State chip in metadata section
     await expect(page.getByText('Active').first()).toBeVisible();
   });
@@ -89,8 +89,10 @@ test.describe('Process Instance Detail Page', () => {
 
 test.describe('Process Instance Detail - Navigation', () => {
   test('should navigate from process definition detail', async ({ page }) => {
+    const { SHOWCASE_PROCESS_DEFINITION_KEY } = instanceKeys;
+
     // Go to a process definition detail page (Showcase Process)
-    await page.goto('/process-definitions/3000000000000000033');
+    await page.goto(`/process-definitions/${SHOWCASE_PROCESS_DEFINITION_KEY}`);
 
     // Wait for instances table to load
     await expect(page.getByText('Process Instances')).toBeVisible();
@@ -117,8 +119,7 @@ test.describe('Process Instance Detail - Navigation', () => {
 
 test.describe('Process Instance Detail - State Display', () => {
   test('should display active state correctly', async ({ page }) => {
-    // Use an active instance
-    await page.goto('/process-instances/3100000000000000014');
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}`);
 
     await expect(page.getByText('Instance Details')).toBeVisible();
 
@@ -127,8 +128,7 @@ test.describe('Process Instance Detail - State Display', () => {
   });
 
   test('should display completed state correctly', async ({ page }) => {
-    // Use a completed instance
-    await page.goto('/process-instances/2097302399374458883');
+    await page.goto(`/process-instances/${COMPLETED_INSTANCE_KEY}`);
 
     await expect(page.getByText('Instance Details')).toBeVisible();
 
@@ -137,8 +137,7 @@ test.describe('Process Instance Detail - State Display', () => {
   });
 
   test('should display terminated state correctly', async ({ page }) => {
-    // Use a terminated instance (2097302399374461029 is terminated in mock data)
-    await page.goto('/process-instances/2097302399374461029');
+    await page.goto(`/process-instances/${TERMINATED_INSTANCE_KEY}`);
 
     await expect(page.getByText('Instance Details')).toBeVisible();
 
@@ -147,10 +146,131 @@ test.describe('Process Instance Detail - State Display', () => {
   });
 });
 
+test.describe('Process Instance Detail - Cancel Process', () => {
+  test('should show cancel button for active instance', async ({ page }) => {
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}`);
+    await expect(page.getByText('Instance Details')).toBeVisible();
+
+    const cancelButton = page.getByRole('button', { name: /cancel process/i });
+    await expect(cancelButton).toBeVisible();
+  });
+
+  test('should NOT show cancel button for completed instance', async ({ page }) => {
+    await page.goto(`/process-instances/${COMPLETED_INSTANCE_KEY}`);
+    await expect(page.getByText('Instance Details')).toBeVisible();
+
+    const cancelButton = page.getByRole('button', { name: /cancel process/i });
+    await expect(cancelButton).not.toBeVisible();
+  });
+
+  test('should NOT show cancel button for terminated instance', async ({ page }) => {
+    await page.goto(`/process-instances/${TERMINATED_INSTANCE_KEY}`);
+    await expect(page.getByText('Instance Details')).toBeVisible();
+
+    const cancelButton = page.getByRole('button', { name: /cancel process/i });
+    await expect(cancelButton).not.toBeVisible();
+  });
+
+  test('should show confirm dialog when cancel button is clicked', async ({ page }) => {
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}`);
+    await expect(page.getByText('Instance Details')).toBeVisible();
+
+    await page.getByRole('button', { name: /cancel process/i }).click();
+
+    // Dialog should appear with the correct title and message
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByRole('dialog').getByRole('heading', { name: 'Cancel Process' })).toBeVisible();
+    await expect(
+      page.getByRole('dialog').getByText('Are you sure you want to cancel process?')
+    ).toBeVisible();
+  });
+
+  test('should dismiss dialog without canceling when "No" is clicked', async ({ page }) => {
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}`);
+    await expect(page.getByText('Instance Details')).toBeVisible();
+
+    await page.getByRole('button', { name: /cancel process/i }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+
+    // Click "No" to dismiss
+    await page.getByRole('dialog').getByRole('button', { name: 'No' }).click();
+
+    // Dialog should close and the cancel button should still be visible
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /cancel process/i })).toBeVisible();
+  });
+});
+
+// This test permanently mutates state (MSW in-memory or real server), so it runs
+// serially in isolation.
+//
+// In mock mode: we use the pre-seeded ACTIVE_INSTANCE_KEY directly, because the MSW
+// POST handler does not persist new instances in its in-memory store, so a
+// dynamically created instance would 404 on subsequent GET calls.
+//
+// In live mode: we create a fresh instance via the API so we don't pollute shared
+// pre-seeded data with a permanent cancellation.
+test.describe.serial('Process Instance Detail - Cancel Process (full flow)', () => {
+  const E2E_MODE = process.env.E2E_MODE ?? 'mocks';
+  let instanceKeyForCancelFlow: string;
+
+  test.beforeEach(async ({ page }) => {
+    if (E2E_MODE === 'mocks') {
+      // Use the pre-seeded active instance — it exists in MSW's in-memory store
+      // and its state will be mutated to 'terminated' by the cancel action.
+      instanceKeyForCancelFlow = ACTIVE_INSTANCE_KEY;
+    } else {
+      // Create a fresh active instance so the cancellation doesn't pollute shared data
+      const { SHOWCASE_PROCESS_DEFINITION_KEY } = instanceKeys;
+      const response = await page.request.post('/v1/process-instances', {
+        data: { processDefinitionKey: SHOWCASE_PROCESS_DEFINITION_KEY },
+      });
+      const body = await response.json();
+      instanceKeyForCancelFlow = body.key;
+    }
+  });
+
+  test('should cancel process and update UI when confirmed', async ({ page }) => {
+    await page.goto(`/process-instances/${instanceKeyForCancelFlow}`);
+    await expect(page.getByText('Instance Details')).toBeVisible();
+
+    await page.getByRole('button', { name: /cancel process/i }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+
+    // Confirm cancellation
+    await page.getByRole('dialog').getByRole('button', { name: 'Yes' }).click();
+
+    // Dialog should close
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+
+    // Wait for the auto-refresh to pick up the terminated state.
+    // The auto-refresh polls every 5s; we wait for a GET response containing "terminated".
+    await page.waitForResponse(
+      async (res) => {
+        if (!res.url().includes(`/process-instances/${instanceKeyForCancelFlow}`) || res.request().method() !== 'GET') {
+          return false;
+        }
+        try {
+          const body = await res.json();
+          return body?.state === 'terminated';
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 15000 }
+    );
+
+    // Cancel button should disappear (state is now 'terminated')
+    await expect(page.getByRole('button', { name: /cancel process/i })).not.toBeVisible({ timeout: 5000 });
+
+    // State badge should reflect the terminated state
+    await expect(page.getByText(/terminated/i).first()).toBeVisible();
+  });
+});
+
 test.describe('Process Instance Detail - Incidents', () => {
   test('should show incident indicator when instance has incidents', async ({ page }) => {
-    // Use an instance with incidents
-    await page.goto('/process-instances/3100000000000000014');
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}`);
 
     // Wait for page to load
     await expect(page.getByText('Instance Details')).toBeVisible();
@@ -162,8 +282,7 @@ test.describe('Process Instance Detail - Incidents', () => {
   });
 
   test('should show resolve button for unresolved incidents', async ({ page }) => {
-    // Use an instance with incidents
-    await page.goto('/process-instances/3100000000000000014');
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}`);
 
     // Go to incidents tab
     await page.getByRole('tab', { name: /Incidents/i }).click();

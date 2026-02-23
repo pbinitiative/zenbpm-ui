@@ -55,7 +55,8 @@
     "assign": "Assign",
     "retry": "Retry",
     "updateRetries": "Update Retries",
-    "addVariable": "Add Variable"
+    "addVariable": "Add Variable",
+    "cancelProcess": "Cancel Process"
   },
   "messages": {
     "jobCompleted": "Job completed successfully",
@@ -73,7 +74,9 @@
     "variableUpdated": "Variable updated successfully",
     "variableUpdateFailed": "Failed to update variable",
     "variableDeleted": "Variable deleted successfully",
-    "variableDeleteFailed": "Failed to delete variable"
+    "variableDeleteFailed": "Failed to delete variable",
+    "processCancelled": "Process cancelled successfully",
+    "processCancelFailed": "Failed to cancel process"
   },
   "dialogs": {
     "completeJob": {
@@ -133,6 +136,10 @@
     "deleteVariable": {
       "title": "Delete Variable",
       "confirmation": "Are you sure you want to delete the variable \"{{name}}\"? This action cannot be undone."
+    },
+    "cancelProcess": {
+      "title": "Cancel Process",
+      "message": "Are you sure you want to cancel process?"
     }
   }
 }

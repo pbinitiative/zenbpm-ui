@@ -234,7 +234,7 @@ export const processDefinitionHandlers = [
       const paginatedItems = allItems.slice(startIndex, endIndex);
 
       return HttpResponse.json({
-        items: paginatedItems,
+        partitions: [{ partition: 1, items: paginatedItems }],
         page,
         size,
         count: paginatedItems.length,
@@ -291,7 +291,9 @@ export const processDefinitionHandlers = [
       // Compute element statistics from actual mock data
       const elementStatistics = computeElementStatistics(processDefinitionKey as string);
 
-      return HttpResponse.json(elementStatistics);
+      return HttpResponse.json({
+        partitions: [{ partition: 1, items: elementStatistics }],
+      });
     })
   ),
 

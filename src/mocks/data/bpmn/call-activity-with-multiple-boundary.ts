@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { retryCount: 0, maxRetries: 3 },
     activeElementInstances: [{ key: '3100000000000000074', elementId: 'callActivity', elementType: 'callActivity' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { retryCount: 3, maxRetries: 3, errorCode: 'TIMEOUT' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { retryCount: 1, maxRetries: 3 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -56,6 +59,7 @@ export const instances: MockProcessInstance[] = [
     variables: { retryCount: 0, maxRetries: 3 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 3,
   },
 ];

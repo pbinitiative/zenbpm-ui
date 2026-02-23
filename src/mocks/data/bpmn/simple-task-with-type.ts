@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { taskType: 'email-sender', recipient: 'user@example.com' },
     activeElementInstances: [{ key: '3100000000000000206', elementId: 'id', elementType: 'serviceTask' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { taskType: 'email-sender', recipient: 'admin@example.com', sent: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { taskType: 'email-sender', recipient: 'support@example.com', sent: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -56,6 +59,7 @@ export const instances: MockProcessInstance[] = [
     variables: { taskType: 'email-sender', recipient: 'sales@example.com', sent: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 3,
   },
 ];

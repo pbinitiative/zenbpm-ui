@@ -100,6 +100,7 @@ const createInstance = (
     bpmnProcessId: 'simple-business-rule-task-local',
     createdAt,
     state,
+    processType: 'default' as const,
     variables,
     activeElementInstances: activeElementId
       ? [{ key: `${key}00${stoppedAtTask === 1 ? 2 : stoppedAtTask === 2 ? 3 : 4}`, elementId: activeElementId, elementType: 'businessRuleTask' }]

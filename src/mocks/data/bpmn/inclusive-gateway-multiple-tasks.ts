@@ -26,6 +26,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000110', elementId: 'task-b', elementType: 'serviceTask' },
     ],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -37,6 +38,7 @@ export const instances: MockProcessInstance[] = [
     variables: { selectedPaths: ['A', 'C'], completed: ['A', 'C'] },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -48,6 +50,7 @@ export const instances: MockProcessInstance[] = [
     variables: { selectedPaths: ['B'], completed: ['B'] },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -59,6 +62,7 @@ export const instances: MockProcessInstance[] = [
     variables: { selectedPaths: ['A', 'B', 'C'], completed: ['A', 'B', 'C'] },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 3,
   },
 ];

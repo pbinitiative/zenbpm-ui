@@ -63,6 +63,7 @@ const createInstance = (
     bpmnProcessId: 'simple-user-task',
     createdAt,
     state,
+    processType: 'default' as const,
     variables,
     activeElementInstances:
       state === 'active'

@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { messagesReceived: 1, totalExpected: 3 },
     activeElementInstances: [{ key: '3100000000000000154', elementId: 'IntermediateCatchEvent_2', elementType: 'intermediateCatchEvent' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { messagesReceived: 3, totalExpected: 3 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { messagesReceived: 3, totalExpected: 3 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -56,6 +59,7 @@ export const instances: MockProcessInstance[] = [
     variables: { messagesReceived: 1, terminationReason: 'timeout' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 3,
   },
 ];

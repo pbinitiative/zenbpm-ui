@@ -70,6 +70,7 @@ const createInstance = (
     bpmnProcessId: 'Simple_Task_Process',
     createdAt,
     state,
+    processType: 'default' as const,
     variables,
     activeElementInstances:
       state === 'active' || state === 'failed'

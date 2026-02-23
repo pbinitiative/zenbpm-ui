@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { linkTarget: 'NonExistent', error: 'Link target not found' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];

@@ -121,6 +121,7 @@ export const processInstanceHandlers = [
         bpmnProcessId: pi.bpmnProcessId,
         createdAt: pi.createdAt,
         state: pi.state,
+        processType: pi.processType,
         variables: pi.variables,
         activeElementInstances: pi.activeElementInstances.map((ei) => ({
           elementInstanceKey: ei.key,
@@ -185,6 +186,7 @@ export const processInstanceHandlers = [
         bpmnProcessId: instance.bpmnProcessId,
         createdAt: instance.createdAt,
         state: instance.state,
+        processType: instance.processType,
         variables: instance.variables,
         activeElementInstances: instance.activeElementInstances.map((ei) => ({
           elementInstanceKey: ei.key,
@@ -214,6 +216,7 @@ export const processInstanceHandlers = [
           processDefinitionKey: body.processDefinitionKey,
           createdAt,
           state: 'active',
+          processType: 'default',
           variables: body.variables || {},
           activeElementInstances: [],
         },
@@ -368,8 +371,8 @@ export const processInstanceHandlers = [
     })
   ),
 
-  // PUT /process-instances/:processInstanceKey/variables - Update variables
-  http.put(
+  // PATCH /process-instances/:processInstanceKey/variables - Update variables
+  http.patch(
     `${BASE_URL}/process-instances/:processInstanceKey/variables`,
     withValidation(async ({ params, request }) => {
       const { processInstanceKey } = params;
@@ -389,7 +392,30 @@ export const processInstanceHandlers = [
 
       // In a real implementation, we'd update the variables
       // For mock purposes, just return success
-      return new HttpResponse(null, { status: 200 });
+      return new HttpResponse(null, { status: 204 });
+    })
+  ),
+
+  // POST /process-instances/:processInstanceKey/cancel - Cancel a process instance
+  http.post(
+    `${BASE_URL}/process-instances/:processInstanceKey/cancel`,
+    withValidation(({ params }) => {
+      const { processInstanceKey } = params;
+      const instance = findProcessInstanceByKey(processInstanceKey as string);
+
+      if (!instance) {
+        return HttpResponse.json(
+          {
+            code: 'NOT_FOUND',
+            message: `Process instance with key ${processInstanceKey} not found`,
+          },
+          { status: 404 }
+        );
+      }
+
+      // Mutate state so subsequent GETs return the updated state
+      instance.state = 'terminated';
+      return new HttpResponse(null, { status: 204 });
     })
   ),
 
@@ -413,7 +439,7 @@ export const processInstanceHandlers = [
 
       // In a real implementation, we'd delete the variable
       // For mock purposes, just return success
-      return new HttpResponse(null, { status: 200 });
+      return new HttpResponse(null, { status: 204 });
     })
   ),
 ];

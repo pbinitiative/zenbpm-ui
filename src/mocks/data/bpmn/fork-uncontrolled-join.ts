@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { executionCount: 2 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];

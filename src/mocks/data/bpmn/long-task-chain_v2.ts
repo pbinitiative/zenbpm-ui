@@ -25,6 +25,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000129', elementId: 'Activity_0yd39ao', elementType: 'serviceTask' },
     ],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -38,6 +39,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000131', elementId: 'Activity_Validation', elementType: 'serviceTask' },
     ],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -49,6 +51,7 @@ export const instances: MockProcessInstance[] = [
     variables: { currentStep: 13, totalSteps: 13, validated: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];

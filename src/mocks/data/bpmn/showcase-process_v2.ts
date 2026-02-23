@@ -31,6 +31,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000053', elementId: 'task-notify', elementType: 'serviceTask' },
     ],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -48,6 +49,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000055', elementId: 'task-a', elementType: 'userTask' },
     ],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -64,6 +66,7 @@ export const instances: MockProcessInstance[] = [
     },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   // Partition 2
@@ -82,6 +85,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000058', elementId: 'task-b', elementType: 'userTask' },
     ],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -97,6 +101,7 @@ export const instances: MockProcessInstance[] = [
     },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { route: 'A', priority: 'high' },
     activeElementInstances: [{ key: '3100000000000000082', elementId: 'task-a', elementType: 'serviceTask' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { route: 'B', priority: 'medium' },
     activeElementInstances: [{ key: '3100000000000000084', elementId: 'task-b', elementType: 'serviceTask' }],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { route: 'C', priority: 'low' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -56,6 +59,7 @@ export const instances: MockProcessInstance[] = [
     variables: { route: 'A', priority: 'high' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 3,
   },
   {
@@ -67,6 +71,7 @@ export const instances: MockProcessInstance[] = [
     variables: { route: 'B', priority: 'low', terminatedBy: 'admin' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

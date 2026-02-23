@@ -5,9 +5,14 @@
 import type { MockProcessDefinition, MockProcessInstance, MockIncident } from '../types';
 import { hoursAgo, daysAgo, addMinutes } from '../types';
 import bpmnData from './showcase-process.bpmn?raw';
+import {
+  SHOWCASE_PROCESS_DEFINITION_KEY,
+  SHOWCASE_ACTIVE_INSTANCE_KEY,
+  SHOWCASE_COMPLETED_INSTANCE_KEY,
+} from '../well-known-keys';
 
 export const definition: MockProcessDefinition = {
-  key: '3000000000000000033',
+  key: SHOWCASE_PROCESS_DEFINITION_KEY,
   version: 1,
   bpmnProcessId: 'showcase-process',
   bpmnProcessName: 'Showcase Process',
@@ -121,6 +126,7 @@ const createInstance = (
     bpmnProcessId: 'showcase-process',
     createdAt,
     state,
+    processType: 'default' as const,
     variables,
     activeElementInstances,
     history,
@@ -131,7 +137,7 @@ const createInstance = (
 export const instances: MockProcessInstance[] = [
   // Partition 1
   createInstance(
-    '3100000000000000014',
+    SHOWCASE_ACTIVE_INSTANCE_KEY,
     hoursAgo(2),
     'active',
     {
@@ -159,7 +165,7 @@ export const instances: MockProcessInstance[] = [
     true // High value path
   ),
   createInstance(
-    '2097302399374458883',
+    SHOWCASE_COMPLETED_INSTANCE_KEY,
     daysAgo(1),
     'completed',
     {

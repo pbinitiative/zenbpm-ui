@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderId: 'ORD-501', waitingForConfirmation: true },
     activeElementInstances: [{ key: '3100000000000000141', elementId: 'id-1', elementType: 'intermediateCatchEvent' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderId: 'ORD-502', waitingForConfirmation: true },
     activeElementInstances: [{ key: '3100000000000000143', elementId: 'id-1', elementType: 'intermediateCatchEvent' }],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderId: 'ORD-503', confirmed: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -56,6 +59,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderId: 'ORD-504', confirmed: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 3,
   },
 ];

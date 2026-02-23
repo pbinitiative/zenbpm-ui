@@ -3,6 +3,7 @@
 import type { MockProcessDefinition, MockProcessInstance, MockIncident } from '../types';
 import { hoursAgo, daysAgo, addMinutes } from '../types';
 import bpmnData from './user-tasks-with-assignments.bpmn?raw';
+import { USER_TASKS_TERMINATED_INSTANCE_KEY } from '../well-known-keys';
 
 export const definition: MockProcessDefinition = {
   key: '3000000000000000054',
@@ -89,6 +90,7 @@ const createInstance = (
     bpmnProcessId: 'user-tasks-with-assignments',
     createdAt,
     state,
+    processType: 'default' as const,
     variables,
     activeElementInstances,
     history,
@@ -168,7 +170,7 @@ export const instances: MockProcessInstance[] = [
     'assignee-task'
   ),
   createInstance(
-    '2097302399374461029',
+    USER_TASKS_TERMINATED_INSTANCE_KEY,
     daysAgo(1),
     'terminated',
     { employeeId: 'EMP-305', employeeName: 'Alexander Young' },

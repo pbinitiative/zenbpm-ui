@@ -26,6 +26,7 @@ export interface MockProcessInstance {
   bpmnProcessId: string;
   createdAt: string;
   state: 'active' | 'completed' | 'terminated' | 'failed';
+  processType: 'default' | 'multiInstance' | 'subprocess' | 'callActivity';
   variables: Record<string, unknown>;
   activeElementInstances: Array<{
     key: string;

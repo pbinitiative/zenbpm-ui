@@ -25,6 +25,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000230', elementId: 'user-task', elementType: 'userTask' },
     ],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -38,6 +39,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000232', elementId: 'review-task', elementType: 'userTask' },
     ],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -49,6 +51,7 @@ export const instances: MockProcessInstance[] = [
     variables: { assignee: 'donna.paulsen', taskTitle: 'Schedule Meeting', approved: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];

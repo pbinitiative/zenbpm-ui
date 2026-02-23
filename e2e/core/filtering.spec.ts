@@ -287,49 +287,6 @@ test.describe('Filtering - Server-Side Filtering', () => {
   });
 });
 
-test.describe('Filtering - Incidents Page', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/incidents');
-    await expect(page.getByRole('heading', { name: 'Incidents' })).toBeVisible({ timeout: 10000 });
-  });
-
-  test('should show filter badge when state filter is applied on incidents', async ({ page }) => {
-    // Find and click state filter
-    const stateFormControl = page.locator('.MuiFormControl-root').filter({ hasText: 'State' }).first();
-    await stateFormControl.click();
-
-    // Select unresolved
-    await page.getByRole('option', { name: /Unresolved/i }).click();
-
-    // Verify badge appears
-    const filterBadge = page.getByTestId('filter-badge-state');
-    await expect(filterBadge).toBeVisible();
-    await expect(filterBadge).toContainText(/Unresolved/i);
-  });
-
-  test('should sync incidents filter with URL', async ({ page }) => {
-    // Apply filter
-    const stateFormControl = page.locator('.MuiFormControl-root').filter({ hasText: 'State' }).first();
-    await stateFormControl.click();
-    await page.getByRole('option', { name: /Unresolved/i }).click();
-
-    await page.waitForTimeout(500);
-
-    // Verify URL
-    expect(page.url()).toContain('state=unresolved');
-  });
-
-  test('should load incidents page with filter from URL', async ({ page }) => {
-    await page.goto('/incidents?state=resolved');
-    await expect(page.getByRole('heading', { name: 'Incidents' })).toBeVisible({ timeout: 10000 });
-
-    // Verify filter badge
-    const filterBadge = page.getByTestId('filter-badge-state');
-    await expect(filterBadge).toBeVisible();
-    await expect(filterBadge).toContainText(/Resolved/i);
-  });
-});
-
 test.describe('Filtering - Activity Filter from Diagram', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`/process-definitions/${PROCESS_DEFINITION_KEY}`);

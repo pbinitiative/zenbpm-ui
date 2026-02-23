@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { category: 'premium', discount: 20 },
     activeElementInstances: [{ key: '3100000000000000092', elementId: 'task-a', elementType: 'serviceTask' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { category: 'standard', discount: 5 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { category: 'unknown', discount: 0, usedDefault: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];
