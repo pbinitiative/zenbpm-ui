@@ -1,11 +1,14 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import { Box, Divider } from '@mui/material';
+import {Box, Button, Divider} from '@mui/material';
 import { NavButton } from '@components/NavButton';
 import { MetadataItem } from './MetadataItem';
 import type { MetadataField, VersionInfo, DefinitionInfo } from '../types';
 import { useMetadataFields } from '../hooks';
+import CancelIcon from "@mui/icons-material/Cancel";
+import {cancelProcessInstance} from "@base/openapi";
+import { useConfirmDialog } from '@/components/ConfirmDialog';
 
 // Re-export types for backward compatibility
 export type { MetadataField, VersionInfo, DefinitionInfo };
@@ -88,7 +91,7 @@ export const MetadataPanel = ({
   gap = 1.5,
   actions,
 }: MetadataPanelProps) => {
-  const { t } = useTranslation([ns.common]);
+      const { t } = useTranslation([ns.common, ns.processInstance]);
 
   const fields = useMetadataFields({
     entityKey,
@@ -108,7 +111,17 @@ export const MetadataPanel = ({
 
   const hasLinks = definitionInfo || processInstanceKey;
   const hasBottomSection = hasLinks || actions;
+  const { openConfirm: confirmCancelDialog } = useConfirmDialog({
+      title: t('processInstance:dialogs.cancelProcess.title'),
+      message: t('processInstance:dialogs.cancelProcess.message'),
+      confirmColor: 'error',
+    })
 
+  const cancelProcess = async () => {
+    if (entityKey && await confirmCancelDialog()) {
+      await cancelProcessInstance(entityKey as string)
+    }
+  }
   // Simple render if no links or actions
   if (!hasBottomSection) {
     return (
@@ -138,7 +151,21 @@ export const MetadataPanel = ({
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {/* Action buttons */}
         {actions}
-
+        {/* Cancel Process Button  */}
+        {definitionInfo?.type === 'process' && !['terminated', 'completed'].includes(state || "")
+          && (<Button
+            onClick={cancelProcess}
+            variant="outlined"
+            size="small"
+            endIcon={<CancelIcon />}
+            color={"primary"}
+            sx={{
+              justifyContent: 'space-between',
+            }}
+          >
+            {t('processInstance:actions.cancelProcess')}
+          </Button>)
+        }
         {/* Navigation links */}
         {definitionInfo && (
           <NavButton

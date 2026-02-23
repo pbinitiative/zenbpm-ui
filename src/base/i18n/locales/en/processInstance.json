@@ -55,7 +55,8 @@
     "assign": "Assign",
     "retry": "Retry",
     "updateRetries": "Update Retries",
-    "addVariable": "Add Variable"
+    "addVariable": "Add Variable",
+    "cancelProcess": "Cancel Process"
   },
   "messages": {
     "jobCompleted": "Job completed successfully",
@@ -133,6 +134,10 @@
     "deleteVariable": {
       "title": "Delete Variable",
       "confirmation": "Are you sure you want to delete the variable \"{{name}}\"? This action cannot be undone."
+    },
+    "cancelProcess": {
+      "title": "Cancel Process",
+      "message": "Are you sure you want to cancel process?"
     }
   }
 }
