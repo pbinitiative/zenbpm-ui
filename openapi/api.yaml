@@ -603,106 +603,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /process-definitions/statistics:
-    get:
-      operationId: getProcessDefinitionStatistics
-      summary: Get process definition statistics
-      tags:
-        - process-definition
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            format: int32
-            minimum: 1
-            default: 1
-          description: Page number (1-based indexing)
-        - name: size
-          in: query
-          schema:
-            type: integer
-            format: int32
-            minimum: 1
-            maximum: 100
-            default: 10
-          description: Number of items per page (max 100)
-        - name: onlyLatest
-          in: query
-          schema:
-            type: boolean
-            default: false
-          description: If true, returns only the latest version of each process definition
-        - name: bpmnProcessId
-          in: query
-          schema:
-            type: string
-          description: Filter by BPMN process ID
-        - name: name
-          in: query
-          schema:
-            type: string
-          description: Filter by name (partial match)
-        - name: sortBy
-          in: query
-          schema:
-            type: string
-            enum: [name, bpmnProcessId, version, instanceCount, incidentCount]
-          description: Sort field
-        - name: sortOrder
-          in: query
-          schema:
-            type: string
-            enum: [asc, desc]
-          description: Sort direction
-      responses:
-        200:
-          description: Process definition statistics
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProcessDefinitionStatisticsPage"
-              example:
-                items:
-                  - key: 4503599627370498
-                    version: 3
-                    bpmnProcessId: "loan-application"
-                    name: "Loan Application Process"
-                    bpmnResourceName: "loan-application.bpmn"
-                    instanceCounts:
-                      total: 1250
-                      active: 45
-                      completed: 1180
-                      terminated: 20
-                      failed: 5
-                    incidentCounts:
-                      total: 12
-                      unresolved: 3
-                  - key: 4503599627370510
-                    version: 1
-                    bpmnProcessId: "order-fulfillment"
-                    name: "Order Fulfillment"
-                    bpmnResourceName: "order-fulfillment.bpmn"
-                    instanceCounts:
-                      total: 890
-                      active: 120
-                      completed: 750
-                      terminated: 15
-                      failed: 5
-                    incidentCounts:
-                      total: 8
-                      unresolved: 2
-                page: 1
-                size: 10
-                count: 2
-                totalCount: 2
-        500:
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
   /process-definitions/{processDefinitionKey}:
     get:
       operationId: getProcessDefinition
@@ -768,29 +668,135 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ElementStatistics"
+                $ref: "#/components/schemas/ElementStatisticsPartitions"
               example:
-                StartEvent_1:
-                  activeCount: 0
-                  incidentCount: 0
-                Task_SubmitApplication:
-                  activeCount: 5
-                  incidentCount: 0
-                Task_ReviewApplication:
-                  activeCount: 12
-                  incidentCount: 2
-                Task_CreditCheck:
-                  activeCount: 3
-                  incidentCount: 1
-                Gateway_Approved:
-                  activeCount: 0
-                  incidentCount: 0
-                Task_ProcessPayment:
-                  activeCount: 8
-                  incidentCount: 0
-                EndEvent_Approved:
-                  activeCount: 0
-                  incidentCount: 0
+                partitions:
+                  - partition: 1
+                    items:
+                      Task_CheckApplication:
+                        activeCount: 5
+                        incidentCount: 2
+                      Task_CreditCheck:
+                        activeCount: 3
+                        incidentCount: 1
+                  - partition: 2
+                    items:
+                      Task_CheckApplication:
+                        activeCount: 4
+                        incidentCount: 0
+                      Task_CreditCheck:
+                        activeCount: 6
+                        incidentCount: 3
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /process-definitions/statistics:
+    get:
+      operationId: getProcessDefinitionStatistics
+      summary: "Get process definition statistics"
+      tags:
+        - process-definition
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 1
+          description: "Page number (1-based indexing)"
+        - name: size
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: "Number of items per page (max 100)"
+        - name: onlyLatest
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: "If true, returns only the latest version of each process definition"
+        - name: bpmnProcessIdIn
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          description: "Filter by BPMN process ID"
+        - name: bpmnProcessDefinitionKeyIn
+          in: query
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+          description: "Filter by process definition key"
+        - name: name
+          in: query
+          schema:
+            type: string
+          description: "Filter by name (partial match)"
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [name, bpmnProcessId, version, instanceCount, incidentCount]
+          description: "Sort field"
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+          description: "Sort direction"
+      responses:
+        200:
+          description: Process definition statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessDefinitionStatisticsPage"
+              example:
+                items:
+                  - key: 4503599627370498
+                    version: 3
+                    bpmnProcessId: "loan-application"
+                    name: "Loan Application Process"
+                    bpmnResourceName: "loan-application.bpmn"
+                    instanceCounts:
+                      total: 1250
+                      active: 45
+                      completed: 1180
+                      terminated: 20
+                      failed: 5
+                    incidentCounts:
+                      total: 12
+                      unresolved: 3
+                  - key: 4503599627370510
+                    version: 1
+                    bpmnProcessId: "order-fulfillment"
+                    name: "Order Fulfillment"
+                    bpmnResourceName: "order-fulfillment.bpmn"
+                    instanceCounts:
+                      total: 890
+                      active: 120
+                      completed: 750
+                      terminated: 15
+                      failed: 5
+                    incidentCounts:
+                      total: 8
+                      unresolved: 2
+                page: 1
+                size: 10
+                count: 2
+                totalCount: 2
         500:
           description: Internal server error
           content:
@@ -2180,21 +2186,123 @@ components:
           properties:
             bpmnData:
               type: string
-    ElementStatistics:
+    ElementStatisticCounts:
+      type: object
+      description: Active and incident counts for a single BPMN element
+      required:
+        - activeCount
+        - incidentCount
+      properties:
+        activeCount:
+          type: integer
+          description: Number of active element instances
+        incidentCount:
+          type: integer
+          description: Number of incidents on this element
+    ElementStatistic:
       type: object
       description: Map of elementId to active/incident counts
       additionalProperties:
-        type: object
-        required:
-          - activeCount
-          - incidentCount
-        properties:
-          activeCount:
-            type: integer
-            description: Number of active element instances
-          incidentCount:
-            type: integer
-            description: Number of incidents on this element
+        $ref: "#/components/schemas/ElementStatisticCounts"
+    PartitionElementStatistics:
+      type: object
+      required:
+        - partition
+        - items
+      properties:
+        partition:
+          type: integer
+        items:
+          $ref: "#/components/schemas/ElementStatistic"
+    ElementStatisticsPartitions:
+      type: object
+      required:
+        - partitions
+      properties:
+        partitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartitionElementStatistics"
+    ProcessDefinitionStatisticsPage:
+      type: object
+      required:
+        - partitions
+        - page
+        - size
+        - count
+        - totalCount
+      properties:
+        partitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartitionProcessDefinitionStatistics"
+        page:
+          type: integer
+        size:
+          type: integer
+        count:
+          type: integer
+          description: "Number of items in current page"
+        totalCount:
+          type: integer
+          description: "Total number of items across all pages"
+    PartitionProcessDefinitionStatistics:
+      type: object
+      required:
+        - partition
+        - items
+      properties:
+        partition:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProcessDefinitionStatistics"
+    ProcessDefinitionStatistics:
+      type: object
+      required:
+        - key
+        - version
+        - bpmnProcessId
+        - instanceCounts
+        - incidentCounts
+      properties:
+        key:
+          type: integer
+          format: int64
+        version:
+          type: integer
+        bpmnProcessId:
+          type: string
+        name:
+          type: string
+          description: "Process name from BPMN"
+        instanceCounts:
+          $ref: "#/components/schemas/InstanceCounts"
+    InstanceCounts:
+      type: object
+      required:
+        - total
+        - active
+        - completed
+        - terminated
+        - failed
+      properties:
+        total:
+          type: integer
+          description: "Total number of process instances"
+        active:
+          type: integer
+          description: "Number of active instances"
+        completed:
+          type: integer
+          description: "Number of completed instances"
+        terminated:
+          type: integer
+          description: "Number of terminated instances"
+        failed:
+          type: integer
+          description: "Number of failed instances"
     ProcessInstancePage:
       type: object
       allOf:
@@ -2608,91 +2716,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/EvaluatedOutput"
-    ProcessDefinitionStatisticsPage:
-      type: object
-      required:
-        - items
-        - page
-        - size
-        - count
-        - totalCount
-      properties:
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/ProcessDefinitionStatistics"
-        page:
-          type: integer
-        size:
-          type: integer
-        count:
-          type: integer
-          description: Number of items in current page
-        totalCount:
-          type: integer
-          description: Total number of items across all pages
-    ProcessDefinitionStatistics:
-      type: object
-      required:
-        - key
-        - version
-        - bpmnProcessId
-        - instanceCounts
-        - incidentCounts
-      properties:
-        key:
-          type: integer
-          format: int64
-        version:
-          type: integer
-        bpmnProcessId:
-          type: string
-        name:
-          type: string
-          description: Process name from BPMN
-        bpmnResourceName:
-          type: string
-          description: BPMN resource file name
-        instanceCounts:
-          $ref: "#/components/schemas/InstanceCounts"
-        incidentCounts:
-          $ref: "#/components/schemas/IncidentCounts"
-    InstanceCounts:
-      type: object
-      required:
-        - total
-        - active
-        - completed
-        - terminated
-        - failed
-      properties:
-        total:
-          type: integer
-          description: Total number of process instances
-        active:
-          type: integer
-          description: Number of active instances
-        completed:
-          type: integer
-          description: Number of completed instances
-        terminated:
-          type: integer
-          description: Number of terminated instances
-        failed:
-          type: integer
-          description: Number of failed instances
-    IncidentCounts:
-      type: object
-      required:
-        - total
-        - unresolved
-      properties:
-        total:
-          type: integer
-          description: Total number of incidents
-        unresolved:
-          type: integer
-          description: Number of unresolved incidents
   parameters:
     sortOrder:
       name: sortOrder

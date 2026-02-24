@@ -4,6 +4,7 @@ import '@bpmn-io/form-js/dist/assets/form-js.css';
 import '@bpmn-io/form-js/dist/assets/form-js-editor.css';
 import '@bpmn-io/form-js/dist/assets/properties-panel.css';
 import type { FormSchema, FormBuilderRef } from './types';
+import {Box} from "@mui/material";
 
 const DEFAULT_SCHEMA: FormSchema = {
   type: 'default',
@@ -77,7 +78,7 @@ export const FormBuilder = forwardRef<FormBuilderRef, FormBuilderProps>(
       [getSchema, importSchema],
     );
 
-    return <div ref={containerRef} style={{ height, width: '100%' }} />;
+    return <Box ref={containerRef} sx={{ height, width: '100%' }} />;
   },
 );
 
