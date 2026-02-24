@@ -5,12 +5,37 @@ import { ns } from '@base/i18n';
 import type { MetadataField, VersionInfo } from '@components/DiagramDetailLayout';
 import type { ElementStatistics } from '@components/BpmnDiagram';
 import {
+  type ElementStatisticsPartitions,
   getProcessDefinition,
   getProcessDefinitions,
   useGetProcessDefinitionElementStatistics,
 } from '@base/openapi';
 import type { ProcessDefinition, SnackbarState } from '../types';
 import { extractActivityIds } from '../utils';
+
+function transformProcessDefinitionStatisticsToElementStatistics(
+  data: ElementStatisticsPartitions | undefined
+): ElementStatistics | undefined {
+  if (!data?.partitions) {
+    return undefined;
+  }
+  const result: ElementStatistics = {};
+  for (const partition of data.partitions) {
+    for (const [key, value] of Object.entries(partition.items)) {
+      if (!result[key]) {
+        result[key] = {
+          activeCount: 0,
+          incidentCount: 0
+        }
+      }
+      result[key] = {
+        activeCount: result[key].activeCount + value.activeCount,
+        incidentCount: result[key].incidentCount + value.incidentCount
+      }
+    }
+  }
+  return result;
+}
 
 interface UseProcessDefinitionDataOptions {
   processDefinitionKey: string | undefined;
@@ -63,14 +88,19 @@ export function useProcessDefinitionData({
   const selectedActivityId = searchParams.get('activityId') || undefined;
 
   // Fetch element statistics for diagram overlays
-  const { data: elementStatistics } = useGetProcessDefinitionElementStatistics(
-    processDefinitionKey ?? '',
+  const { data: rawElementStatistics } = useGetProcessDefinitionElementStatistics(
+    processDefinitionKey ?? "",
     {
       query: {
         enabled: !!processDefinitionKey && !!processDefinition,
         refetchInterval: 10000,
       },
     }
+  );
+
+  const elementStatistics = useMemo(
+    () => transformProcessDefinitionStatisticsToElementStatistics(rawElementStatistics),
+    [rawElementStatistics]
   );
 
   // Fetch process definition
