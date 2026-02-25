@@ -33,7 +33,8 @@
     "jobs": "Jobs",
     "history": "History",
     "incidents": "Incidents",
-    "variables": "Variables"
+    "variables": "Variables",
+    "childProcesses": "Child Processes"
   },
   "jobStates": {
     "activatable": "Activatable",

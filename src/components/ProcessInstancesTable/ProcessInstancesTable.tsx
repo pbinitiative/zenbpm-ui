@@ -13,6 +13,7 @@ import { getProcessInstanceFilters } from './table/filters';
 import {
   getProcessInstances,
   getProcessDefinitions,
+  getChildProcessInstances,
   type ProcessInstance,
   type ProcessDefinitionSimple,
 } from '@base/openapi';
@@ -26,6 +27,8 @@ export type ProcessDefinitionOption = Pick<ProcessDefinitionSimple, 'key' | 'bpm
 export interface ProcessInstancesTableProps {
   /** Fixed process definition key - when set, instances are filtered by this key and the process filter is hidden */
   processDefinitionKey?: string;
+  /** Parent process instance key - when set, fetches child processes instead of all processes */
+  parentProcessInstanceKey?: string;
   /** Activity IDs available for filtering (typically extracted from BPMN) */
   activityIds?: string[];
   /** External filter values - when provided, the component is controlled */
@@ -44,6 +47,7 @@ export interface ProcessInstancesTableProps {
 
 export const ProcessInstancesTable = ({
   processDefinitionKey,
+  parentProcessInstanceKey,
   activityIds = [],
   filterValues: externalFilterValues,
   onFilterChange: externalOnFilterChange,
@@ -137,6 +141,9 @@ export const ProcessInstancesTable = ({
       if (params.filters?.activityId && typeof params.filters.activityId === 'string') {
         apiParams.activityId = params.filters.activityId;
       }
+      if (params.filters?.includeChildProcesses !== undefined) {
+        apiParams.includeChildProcesses = params.filters.includeChildProcesses === 'true';
+      }
       if (params.filters?.createdAt && typeof params.filters.createdAt === 'object') {
         const createdAt = params.filters.createdAt as { from?: string; to?: string };
         // Dates are already in ISO format from DateRangePicker
@@ -154,7 +161,9 @@ export const ProcessInstancesTable = ({
         apiParams.sortOrder = params.sortOrder || 'asc';
       }
 
-      const data = await getProcessInstances(apiParams);
+      const data = parentProcessInstanceKey 
+        ? await getChildProcessInstances(parentProcessInstanceKey, apiParams)
+        : await getProcessInstances(apiParams);
 
       // Data is already in the correct ProcessInstance format from the API
       return {
@@ -166,7 +175,7 @@ export const ProcessInstancesTable = ({
       };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [processDefinitionKey, refreshKey]
+    [processDefinitionKey, parentProcessInstanceKey, refreshKey]
   );
 
   // Get columns from extracted definition
@@ -184,10 +193,11 @@ export const ProcessInstancesTable = ({
     () =>
       getProcessInstanceFilters(t, {
         showProcessFilter: !processDefinitionKey,
+        showIncludeChildProcesses: !parentProcessInstanceKey,
         processOptions,
         activityIds,
       }),
-    [t, processDefinitionKey, processOptions, activityIds]
+    [t, processDefinitionKey, parentProcessInstanceKey, processOptions, activityIds]
   );
 
   // Handlers
