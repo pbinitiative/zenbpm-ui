@@ -8,6 +8,26 @@ import { getJobsByProcessInstanceKey } from '../data/jobs';
 import { getIncidentsByProcessInstanceKey } from '../data/incidents';
 import { withValidation } from '../validation';
 
+// Helper to transform a process instance to response format (reused across handlers)
+function transformInstance(pi: (typeof processInstances)[0]) {
+  return {
+    key: pi.key,
+    processDefinitionKey: pi.processDefinitionKey,
+    bpmnProcessId: pi.bpmnProcessId,
+    createdAt: pi.createdAt,
+    state: pi.state,
+    variables: pi.variables,
+    processType: pi.processType ?? 'default',
+    ...(pi.parentProcessInstanceKey ? { parentProcessInstanceKey: pi.parentProcessInstanceKey } : {}),
+    activeElementInstances: pi.activeElementInstances.map((ei) => ({
+      elementInstanceKey: ei.key,
+      createdAt: pi.createdAt,
+      state: 'active',
+      elementId: ei.elementId,
+    })),
+  };
+}
+
 const BASE_URL = '/v1';
 
 // Helper to compute element statistics for a specific process instance
@@ -129,11 +149,18 @@ export const processInstanceHandlers = [
       const sortBy = url.searchParams.get('sortBy');
       const sortOrder = url.searchParams.get('sortOrder');
 
+      const includeChildProcesses = url.searchParams.get('includeChildProcesses') === 'true';
+
       let filteredInstances = filterInstances(processInstances, {
         processDefinitionKey,
         bpmnProcessId,
         state,
       });
+
+      // By default, hide child processes (those with a parentProcessInstanceKey)
+      if (!includeChildProcesses) {
+        filteredInstances = filteredInstances.filter((pi) => !pi.parentProcessInstanceKey);
+      }
 
       // Sort before grouping
       filteredInstances = sortItems(filteredInstances, sortBy, sortOrder);
@@ -211,21 +238,7 @@ export const processInstanceHandlers = [
         );
       }
 
-      return HttpResponse.json({
-        key: instance.key,
-        processDefinitionKey: instance.processDefinitionKey,
-        bpmnProcessId: instance.bpmnProcessId,
-        createdAt: instance.createdAt,
-        state: instance.state,
-        processType: instance.processType,
-        variables: instance.variables,
-        activeElementInstances: instance.activeElementInstances.map((ei) => ({
-          elementInstanceKey: ei.key,
-          createdAt: instance.createdAt,
-          state: 'active',
-          elementId: ei.elementId,
-        })),
-      });
+      return HttpResponse.json(transformInstance(instance));
     })
   ),
 
@@ -253,6 +266,47 @@ export const processInstanceHandlers = [
         },
         { status: 201 }
       );
+    })
+  ),
+
+  // GET /process-instances/:processInstanceKey/child-processes - Get child processes
+  http.get(
+    `${BASE_URL}/process-instances/:processInstanceKey/child-processes`,
+    withValidation(({ params, request }) => {
+      const { processInstanceKey } = params;
+      const url = new URL(request.url);
+      const page = parseInt(url.searchParams.get('page') || '1', 10);
+      const size = parseInt(url.searchParams.get('size') || '10', 10);
+      const state = url.searchParams.get('state');
+
+      let children = processInstances.filter(
+        (pi) => pi.parentProcessInstanceKey === (processInstanceKey as string)
+      );
+
+      if (state) {
+        children = children.filter((pi) => pi.state === state);
+      }
+
+      // Group by partition
+      const partitionMap = groupByPartition(children);
+      const startIndex = (page - 1) * size;
+      const endIndex = startIndex + size;
+
+      const partitionsResponse = [1, 2, 3, 4].map((p) => {
+        const partitionData = partitionMap.get(p) || [];
+        const paginatedItems = partitionData.slice(startIndex, endIndex).map(transformInstance);
+        return { partition: p, items: paginatedItems, count: partitionData.length };
+      });
+
+      const totalCount = children.length;
+
+      return HttpResponse.json({
+        partitions: partitionsResponse,
+        page,
+        size,
+        count: partitionsResponse.reduce((sum, p) => sum + p.items.length, 0),
+        totalCount,
+      });
     })
   ),
 

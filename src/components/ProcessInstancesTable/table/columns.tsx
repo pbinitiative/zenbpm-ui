@@ -3,6 +3,7 @@ import { StateBadge } from '@components/StateBadge';
 import { MonoText } from '@components/MonoText';
 import type { Column } from '@components/DataTable';
 import type { ProcessInstance, ProcessDefinitionOption } from '../ProcessInstancesTable';
+import { formatDate } from '@/components/DiagramDetailLayout/utils';
 
 // Translation function type - ESLint validates keys via i18n-namespace-match rule
 type TranslateFunction = (key: string) => string;
@@ -55,6 +56,11 @@ export const getProcessInstanceColumns = (
       ),
     },
     {
+      id: 'processType',
+      label: t('processes:fields.type'),
+      render: (row) => row.processType ? t(`processes:types.${row.processType}`) : '-',
+    },
+    {
       id: 'createdAt',
       label: t('processes:fields.createdAt'),
       sortable: true,
@@ -94,17 +100,3 @@ export const getProcessInstanceColumns = (
   return columns;
 };
 
-function formatDate(dateString: string): string {
-  try {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
-  } catch {
-    return dateString;
-  }
-}

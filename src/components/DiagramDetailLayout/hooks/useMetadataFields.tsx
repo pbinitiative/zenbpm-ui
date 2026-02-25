@@ -13,6 +13,7 @@ interface UseMetadataFieldsOptions {
   stateField?: MetadataField;
   state?: string;
   incidentsCount?: number;
+  processType?: string;
   createdAt?: string;
   businessKey?: string;
   name?: string;
@@ -30,6 +31,7 @@ export function useMetadataFields({
   stateField,
   state,
   incidentsCount,
+  processType,
   createdAt,
   businessKey,
   name,
@@ -41,7 +43,7 @@ export function useMetadataFields({
   keyLabel,
   directFields,
 }: UseMetadataFieldsOptions): MetadataField[] {
-  const { t } = useTranslation([ns.common, ns.processInstance]);
+  const { t } = useTranslation([ns.common, ns.processInstance, ns.processes]);
 
   return useMemo((): MetadataField[] => {
     // If direct fields provided, use them
@@ -56,7 +58,7 @@ export function useMetadataFields({
 
     const result: MetadataField[] = [];
 
-    // 1. State (first when present, for instances)
+    // State (first when present, for instances)
     if (stateField) {
       result.push(stateField);
     } else if (state) {
@@ -75,13 +77,21 @@ export function useMetadataFields({
       });
     }
 
-    // 2. Key
+    // Key
     result.push({
       label: keyLabel || t('common:fields.key'),
       value: <MonoText>{entityKey}</MonoText>,
     });
 
-    // 3. Name
+    // Process Type
+    if (processType) {
+      result.push({
+        label: t('common:fields.type'),
+        value: t(`processes:types.${processType}`) as string,
+      });
+    }
+
+    // Name
     if (name) {
       result.push({
         label: t('common:fields.name'),
@@ -89,7 +99,7 @@ export function useMetadataFields({
       });
     }
 
-    // 4. Version (with selector if multiple versions available)
+    // Version
     if (version !== undefined) {
       if (versions.length > 1 && onVersionChange) {
         result.push({
@@ -137,7 +147,7 @@ export function useMetadataFields({
       }
     }
 
-    // 5. Created at
+    // Created at
     if (createdAt) {
       result.push({
         label: t('common:fields.createdAt'),
@@ -145,7 +155,7 @@ export function useMetadataFields({
       });
     }
 
-    // 6. Business key
+    // Business key
     if (businessKey) {
       result.push({
         label: t('common:fields.businessKey'),
@@ -153,7 +163,7 @@ export function useMetadataFields({
       });
     }
 
-    // 7. Additional fields
+    // Additional fields
     result.push(...additionalFields);
 
     return result;
@@ -163,6 +173,7 @@ export function useMetadataFields({
     stateField,
     state,
     incidentsCount,
+    processType,
     createdAt,
     name,
     version,

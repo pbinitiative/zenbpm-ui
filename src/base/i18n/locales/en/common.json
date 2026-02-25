@@ -42,7 +42,8 @@
     "prettify": "Format JSON",
     "submit": "Submit",
     "leave": "Leave",
-    "stay": "Stay"
+    "stay": "Stay",
+    "clickToView": "Click to view"
   },
   "all": "All",
   "pagination": {
@@ -147,8 +148,11 @@
     "definition": "Definition",
     "processDefinition": "Process Definition",
     "processInstance": "Process Instance",
+    "parentProcessInstance": "Parent Process Instance",
     "decisionDefinition": "Decision Definition",
     "decisionInstance": "Decision Instance",
-    "businessKey": "Business Key"
+    "businessKey": "Business Key",
+    "type": "Type",
+    "variables": "Variables"
   }
 }

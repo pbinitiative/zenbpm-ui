@@ -49,13 +49,22 @@ export const getBpmnContainerStyles = (isInteractive: boolean): SxProps<Theme> =
     stroke: `${themeColors.bpmn.completedStroke} !important`,
     strokeWidth: '2px !important',
   },
-  // Highlight active elements - same glow effect as selected
+  // Highlight active elements - green glow
   '& .element-active .djs-visual': {
     filter: `drop-shadow(0 0 4px ${themeColors.bpmn.selectionGlow}) drop-shadow(0 0 8px ${themeColors.bpmn.selectionGlowLight}) !important`,
   },
-  // Highlight selected element (from filter) - shadow/glow effect
+  // Highlight selected element - strong border stroke to distinguish from active
+  '& .element-selected .djs-visual rect, & .element-selected .djs-visual polygon, & .element-selected .djs-visual circle':
+    {
+      stroke: `${themeColors.bpmn.selectedStroke} !important`,
+      strokeWidth: '3px !important',
+    },
+  '& .element-selected .djs-visual path': {
+    stroke: `${themeColors.bpmn.selectedStroke} !important`,
+    strokeWidth: '3px !important',
+  },
   '& .element-selected .djs-visual': {
-    filter: `drop-shadow(0 0 4px ${themeColors.bpmn.selectionGlow}) drop-shadow(0 0 8px ${themeColors.bpmn.selectionGlowLight}) !important`,
+    filter: `drop-shadow(0 0 6px ${themeColors.bpmn.selectedGlow}) !important`,
   },
   // Interactive styles (hover effect and pointer cursor) - only when interactive
   ...(isInteractive && {

@@ -75,6 +75,9 @@ const colors = {
     selectionGlow: 'rgba(16, 188, 105, 0.8)',
     selectionGlowLight: 'rgba(16, 188, 105, 0.5)',
     hoverGlow: 'rgba(16, 188, 105, 0.8)',
+    // Selected element - distinct strong border
+    selectedStroke: '#1976d2',
+    selectedGlow: 'rgba(25, 118, 210, 0.6)',
   },
 
   // DMN Viewer colors

@@ -29,6 +29,9 @@ export interface MetadataPanelProps {
   /** Number of unresolved incidents - shows warning icon next to state */
   incidentsCount?: number;
 
+  /** Process type (e.g. default, multiInstance, subprocess, callActivity) */
+  processType?: string;
+
   /** Created at timestamp - formatted automatically */
   createdAt?: string;
 
@@ -51,7 +54,7 @@ export interface MetadataPanelProps {
   definitionInfo?: DefinitionInfo;
 
   /** Related process instance key (displayed as link) */
-  processInstanceKey?: number | string;
+  parentProcessInstanceKey?: number | string;
 
   /** Additional fields to display */
   additionalFields?: MetadataField[];
@@ -80,6 +83,7 @@ export const MetadataPanel = ({
   stateField,
   state,
   incidentsCount,
+  processType,
   createdAt,
   businessKey,
   name,
@@ -87,7 +91,7 @@ export const MetadataPanel = ({
   versions = [],
   onVersionChange,
   definitionInfo,
-  processInstanceKey,
+  parentProcessInstanceKey,
   additionalFields = [],
   keyLabel,
   fields: directFields,
@@ -101,6 +105,7 @@ export const MetadataPanel = ({
     stateField,
     state,
     incidentsCount,
+    processType,
     createdAt,
     businessKey,
     name,
@@ -112,7 +117,7 @@ export const MetadataPanel = ({
     directFields,
   });
 
-  const hasLinks = definitionInfo || processInstanceKey;
+  const hasLinks = definitionInfo || parentProcessInstanceKey;
   const hasBottomSection = hasLinks || actions;
   const { openConfirm: confirmCancelDialog } = useConfirmDialog({
       title: t('processInstance:dialogs.cancelProcess.title'),
@@ -193,8 +198,8 @@ export const MetadataPanel = ({
               : t('common:fields.decisionDefinition')}
           </NavButton>
         )}
-        {processInstanceKey && (
-          <NavButton to={`/process-instances/${processInstanceKey}`}>{t('common:fields.processInstance')}</NavButton>
+        {parentProcessInstanceKey && (
+          <NavButton to={`/process-instances/${parentProcessInstanceKey}`}>{t('common:fields.parentProcessInstance')}</NavButton>
         )}
       </Box>
     </Box>

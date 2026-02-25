@@ -37,12 +37,13 @@ test.describe('Process Instance Detail Page', () => {
     await expect(definitionLink).toHaveAttribute('href', /\/process-definitions\//);
   });
 
-  test('should display tabs for jobs, history, incidents, variables', async ({ page }) => {
+  test('should display tabs for jobs, history, incidents, variables, child processes', async ({ page }) => {
     // Check tabs are visible
     await expect(page.getByRole('tab', { name: /Jobs/i })).toBeVisible();
     await expect(page.getByRole('tab', { name: /History/i })).toBeVisible();
     await expect(page.getByRole('tab', { name: /Incidents/i })).toBeVisible();
     await expect(page.getByRole('tab', { name: /Variables/i })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /Called Processes/i })).toBeVisible();
   });
 
   test('should show jobs in jobs tab', async ({ page }) => {
@@ -293,5 +294,104 @@ test.describe('Process Instance Detail - Incidents', () => {
     if (await resolveButton.count() > 0) {
       await expect(resolveButton.first()).toBeVisible();
     }
+  });
+});
+
+test.describe('Process Instance Detail - Process Type Display', () => {
+  // call-activity-simple instance has processType: 'callActivity'
+  const callActivityInstanceKey = '3100000000000000066';
+
+  test('should show Type field in metadata for call-activity instance', async ({ page }) => {
+    await page.goto(`/process-instances/${callActivityInstanceKey}`);
+    await expect(page.getByText('Instance Details')).toBeVisible({ timeout: 10000 });
+
+    // Type field label should appear in metadata panel (scope to avoid strict-mode ambiguity)
+    const metadataPanel = page.getByTestId('process-instance-metadata-panel');
+    await expect(metadataPanel.getByText('Type')).toBeVisible();
+    // Translated value 'Call Activity' should appear
+    await expect(metadataPanel.getByText('Call Activity', { exact: true })).toBeVisible();
+  });
+
+  test('should show Type column in process instances table', async ({ page }) => {
+    await page.goto('/processes/instances');
+    await expect(page.getByRole('columnheader', { name: /type/i }).first()).toBeVisible({ timeout: 10000 });
+  });
+
+  test('should show Call Activity type value in process instances table', async ({ page }) => {
+    await page.goto('/processes/instances');
+    await expect(page.getByText('Call Activity').first()).toBeVisible({ timeout: 10000 });
+  });
+});
+
+test.describe('Process Instance Detail - Jobs Tab Variables Column', () => {
+  // Use showcase process active instance which has jobs with variables
+  const instanceKey = '3100000000000000014';
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`/process-instances/${instanceKey}`);
+    await expect(page.getByText('Instance Details')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('should show Variables column header in jobs table', async ({ page }) => {
+    // Jobs tab is active by default
+    await expect(page.getByRole('columnheader', { name: /variables/i }).first()).toBeVisible({ timeout: 5000 });
+  });
+
+  test('should show job variables content in jobs table', async ({ page }) => {
+    // The job for this instance has { customerId: 'CUST-001', ... }
+    // Variables column should render some JSON content or key names
+    const jobsTable = page.getByTestId('jobs-table');
+    await expect(jobsTable).toBeVisible({ timeout: 5000 });
+
+    // There should be a variables cell with content (non-empty)
+    const variablesCells = jobsTable.locator('tbody tr td').filter({ hasText: /CUST-001|customerId|loanAmount/ });
+    await expect(variablesCells.first()).toBeVisible();
+  });
+
+  test('should open variables dialog when clicking variables cell', async ({ page }) => {
+    const jobsTable = page.getByTestId('jobs-table');
+    await expect(jobsTable).toBeVisible({ timeout: 5000 });
+
+    // Click a variables cell that has content
+    const variablesCell = jobsTable.locator('tbody tr td').filter({ hasText: /CUST-001|customerId|loanAmount/ }).first();
+    await variablesCell.click();
+
+    // A dialog should open
+    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 });
+
+    // Dialog should show the variables heading
+    await expect(page.getByRole('dialog').getByText(/variables/i).first()).toBeVisible();
+  });
+});
+
+test.describe('Process Instance Detail - Include Child Processes Filter', () => {
+  test('should show Include child processes switch on process instances list', async ({ page }) => {
+    await page.goto('/processes/instances');
+    await expect(page.getByRole('columnheader', { name: /state/i }).first()).toBeVisible({ timeout: 10000 });
+
+    // The filter section may need to be expanded; look for the switch label
+    const filterToggle = page.getByRole('button', { name: /more filters|filters/i });
+    if (await filterToggle.count() > 0) {
+      await filterToggle.first().click();
+      await page.waitForTimeout(300);
+    }
+
+    await expect(page.getByText('Include child processes')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('should not show Include child processes filter on process definition detail instances tab', async ({ page }) => {
+    // When viewing instances for a specific process definition, the include-child-processes
+    // filter should be hidden (parentProcessInstanceKey is already set in that context)
+    await page.goto('/process-definitions/3000000000000000033');
+    await expect(page.getByText('Process Instances')).toBeVisible({ timeout: 10000 });
+
+    // Switch to instances sub-tab if needed
+    const instancesBtn = page.getByRole('button', { name: /instances/i });
+    if (await instancesBtn.count() > 0) {
+      await instancesBtn.first().click();
+      await page.waitForTimeout(300);
+    }
+
+    await expect(page.getByText('Include child processes')).not.toBeVisible();
   });
 });
