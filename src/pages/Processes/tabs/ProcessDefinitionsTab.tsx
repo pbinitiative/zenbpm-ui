@@ -17,14 +17,12 @@ import {
   getProcessDefinitionStatistics,
   type ProcessDefinitionSimple,
   type InstanceCounts,
-  type IncidentCounts,
   type GetProcessDefinitionsParams,
 } from '@base/openapi';
 
 // Combined type for display: definition data + statistics
 interface ProcessDefinitionWithStats extends ProcessDefinitionSimple {
   instanceCounts: InstanceCounts;
-  incidentCounts: IncidentCounts;
 }
 
 interface ProcessDefinitionsTabProps {
@@ -106,7 +104,6 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
       const merged: ProcessDefinitionWithStats[] = definitions.map((def) => {
         const stats = statisticsMap.get(def.key) || {
           instanceCounts: { total: 0, active: 0, completed: 0, terminated: 0, failed: 0 },
-          incidentCounts: { total: 0, unresolved: 0 },
         };
         return {
           ...def,

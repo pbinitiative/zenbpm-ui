@@ -12,6 +12,7 @@ import {
   getProcessInstanceJobs,
   getHistory,
   getIncidents,
+  getChildProcessInstances,
 } from '@base/openapi';
 
 // States that indicate the process instance is finished and doesn't need periodic refresh
@@ -26,12 +27,14 @@ interface UseInstanceDataResult {
   jobs: Job[];
   history: FlowElementHistory[];
   incidents: Incident[];
+  childProcesses: ProcessInstance[];
   loading: boolean;
   error: string | null;
   refetchJobs: () => Promise<void>;
   refetchIncidents: () => Promise<void>;
   refetchVariables: () => Promise<void>;
   refetchHistory: () => Promise<void>;
+  refetchChildProcesses: () => Promise<void>;
   refetchAll: () => Promise<void>;
 }
 
@@ -41,6 +44,7 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
   const [jobs, setJobs] = useState<Job[]>([]);
   const [history, setHistory] = useState<FlowElementHistory[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [childProcesses, setChildProcesses] = useState<ProcessInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,6 +92,19 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
     }
   }, [processInstanceKey]);
 
+  // Fetch child processes for the process instance
+  const fetchChildProcesses = useCallback(async () => {
+    if (!processInstanceKey) return;
+    try {
+      const data = await getChildProcessInstances(processInstanceKey, { page: 1, size: 100 });
+      // Flatten partitions into a single list of process instances
+      const instances = (data.partitions || []).flatMap(p => p.items || []);
+      setChildProcesses(instances as ProcessInstance[]);
+    } catch (err) {
+      console.error('Failed to fetch child processes:', err);
+    }
+  }, [processInstanceKey]);
+
   // Fetch all data (useful after actions that can affect multiple things)
   const fetchAll = useCallback(async () => {
     if (!processInstanceKey) return;
@@ -96,8 +113,9 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
       fetchJobs(),
       fetchHistory(),
       fetchIncidents(),
+      fetchChildProcesses(),
     ]);
-  }, [processInstanceKey, fetchProcessInstance, fetchJobs, fetchHistory, fetchIncidents]);
+  }, [processInstanceKey, fetchProcessInstance, fetchJobs, fetchHistory, fetchIncidents, fetchChildProcesses]);
 
   // Initial data fetch
   useEffect(() => {
@@ -121,28 +139,23 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
           // Process definition fetch failure is not critical
         }
 
-        // Fetch jobs
+        // Fetch jobs, history, incidents, child processes in parallel
         try {
-          const jobsData = await getProcessInstanceJobs(processInstanceKey, { page: 1, size: 100 });
+          const [jobsData, historyData, incidentsData, childProcessesData] = await Promise.all([
+            getProcessInstanceJobs(processInstanceKey, { page: 1, size: 100 }).catch(() => ({ items: [] })),
+            getHistory(processInstanceKey, { page: 1, size: 100 }).catch(() => ({ items: [] })),
+            getIncidents(processInstanceKey, { page: 1, size: 100 }).catch(() => ({ items: [] })),
+            getChildProcessInstances(processInstanceKey, { page: 1, size: 100 }).catch(() => ({ partitions: [] })),
+          ]);
+
           setJobs((jobsData.items || []) as Job[]);
-        } catch {
-          // Jobs fetch failure is not critical
-        }
-
-        // Fetch history
-        try {
-          const historyData = await getHistory(processInstanceKey, { page: 1, size: 100 });
           setHistory((historyData.items || []) as FlowElementHistory[]);
-        } catch {
-          // History fetch failure is not critical
-        }
-
-        // Fetch incidents
-        try {
-          const incidentsData = await getIncidents(processInstanceKey, { page: 1, size: 100 });
           setIncidents((incidentsData.items || []) as Incident[]);
+          
+          const instances = (childProcessesData.partitions || []).flatMap(p => p.items || []);
+          setChildProcesses(instances as ProcessInstance[]);
         } catch {
-          // Incidents fetch failure is not critical
+          // Individual fetch failures are handled by .catch above
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load process instance');
@@ -176,12 +189,14 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
     jobs,
     history,
     incidents,
+    childProcesses,
     loading,
     error,
     refetchJobs: fetchJobs,
     refetchIncidents: fetchIncidents,
     refetchVariables: fetchProcessInstance,
     refetchHistory: fetchHistory,
+    refetchChildProcesses: fetchChildProcesses,
     refetchAll: fetchAll,
   };
 };
