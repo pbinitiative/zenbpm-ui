@@ -1,7 +1,8 @@
+
 // OpenAPI response/request validator for MSW handlers and live backend
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import { schemas, endpointSchemas } from './openapi-schemas';
+import { schemas, endpointSchemas } from '@base/openapi/generated-api/generated-openapi-schemas.ts';
 
 /**
  * Check if API validation is enabled via environment variable.
@@ -18,6 +19,11 @@ const ajv = new Ajv({
   validateFormats: true,
 });
 addFormats(ajv);
+
+// Add all schemas to AJV instance
+for (const [name, schema] of Object.entries(schemas)) {
+  ajv.addSchema(schema, `#/components/schemas/${name}`);
+}
 
 // Compile all schemas
 const compiledSchemas: Record<string, ReturnType<typeof ajv.compile>> = {};
@@ -122,7 +128,7 @@ function matchEndpoint(method: string, url: string): string | null {
 
   // Try exact match first
   const exactKey = `${method} ${urlPath}`;
-  if (endpointSchemas[exactKey]) {
+  if ((endpointSchemas as Record<string, { request?: string; response?: string }>)[exactKey]) {
     return exactKey;
   }
 
@@ -153,7 +159,8 @@ export function validateRequest(method: string, url: string, body: unknown): Val
     return { valid: true }; // No schema defined, skip validation
   }
 
-  const schemaInfo = endpointSchemas[endpointKey];
+  // const schemaInfo = endpointSchemas[endpointKey];
+  const schemaInfo = (endpointSchemas as Record<string, { request?: string; response?: string }>)[endpointKey];
   if (!schemaInfo?.request) {
     return { valid: true }; // No request schema defined
   }
@@ -177,7 +184,8 @@ export function validateResponse(method: string, url: string, body: unknown): Va
     return { valid: true }; // No schema defined, skip validation
   }
 
-  const schemaInfo = endpointSchemas[endpointKey];
+  // const schemaInfo = endpointSchemas[endpointKey];
+  const schemaInfo = (endpointSchemas as Record<string, { request?: string; response?: string }>)[endpointKey];
   if (!schemaInfo?.response) {
     return { valid: true }; // No response schema defined
   }
