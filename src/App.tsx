@@ -7,6 +7,7 @@ import { router } from '@base/router';
 import { AuthProvider } from '@base/auth';
 import { NotificationProvider } from '@base/contexts';
 import '@base/i18n';
+import {ModalsProvider} from "@components/Modals";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,7 +25,9 @@ export const App = () => {
         <CssBaseline />
         <AuthProvider>
           <NotificationProvider>
-            <RouterProvider router={router} />
+            <ModalsProvider>
+              <RouterProvider router={router} />
+            </ModalsProvider>
           </NotificationProvider>
         </AuthProvider>
       </ThemeProvider>

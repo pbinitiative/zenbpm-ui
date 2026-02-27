@@ -19,5 +19,12 @@ export interface ConsoleMessage {
 export interface AddConsoleMessageOptions {
   details?: string;
   link?: ConsoleMessageLink;
-  autoOpenOnError?: boolean;
+  preventOpenConsole?: boolean;
+}
+
+export interface SnackbarState {
+  open: boolean;
+  message: string;
+  link?: ConsoleMessageLink;
+  severity: 'success' | 'error';
 }
