@@ -24,7 +24,7 @@ import { CompleteJobDialog } from '../modals/CompleteJobDialog';
 import { CompleteFormJobDialog } from '../modals/CompleteFormJobDialog';
 import { AssignJobDialog } from '../modals/AssignJobDialog';
 import { UpdateRetriesDialog } from '../modals/UpdateRetriesDialog';
-import { completeJobByKey, assignJob, customInstance } from '@base/openapi';
+import { assignJob, completeJob, customInstance } from '@base/openapi';
 
 // updateJobRetries is not in generated API, use direct axios call
 const updateJobRetries = async (jobKey: string, retries: number): Promise<void> => {
@@ -68,7 +68,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
 
   const handleCompleteJob = useCallback(async (jobKey: string, variables: Record<string, unknown>) => {
     try {
-      await completeJobByKey(jobKey, { variables });
+      await completeJob(jobKey, { variables });
       onShowNotification(t('processInstance:messages.jobCompleted'), 'success');
       await onRefetch();
     } catch {
@@ -267,7 +267,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
         open={Boolean(menuAnchorEl)}
         onClose={handleMenuClose}
       >
-        {menuJob?.type === 'user-task' && (
+        {menuJob?.type === 'user-task-type' && (
           <MenuItem
             onClick={() => {
               setAssignDialogJob(menuJob);

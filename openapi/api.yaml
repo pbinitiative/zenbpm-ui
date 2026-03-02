@@ -117,12 +117,7 @@ paths:
             type: string
             enum: [dmnDefinitionName, dmnResourceDefinitionId, version, key]
           description: Sort field
-        - name: sortOrder
-          in: query
-          schema:
-            type: string
-            enum: [asc, desc]
-          description: Sort direction
+        - $ref: "#/components/parameters/sortOrder"
         - name: dmnResourceDefinitionId
           in: query
           schema:
@@ -142,7 +137,7 @@ paths:
                 $ref: "#/components/schemas/DmnResourceDefinitionsPage"
               example:
                 items:
-                  - key: 4503599627370495
+                  - key: 4503599627370496
                     version: 2
                     dmnResourceDefinitionId: "loan-approval"
                     dmnDefinitionName: "Loan Approval Decision"
@@ -189,11 +184,9 @@ paths:
                 dmnDefinitionName: "Loan Approval Decision"
                 dmnData: |
                   <?xml version="1.0" encoding="UTF-8"?>
-                  <definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" id="loan-drd">
-                    <decision id="loan-approval" name="Loan Approval Decision">
-                      <decisionTable id="decisionTable_1">
-                        ...
-                      </decisionTable>
+                  <definitions>
+                    <decision id="loan-approval" name="Loan Approval">
+                      ...
                     </decision>
                   </definitions>
         400:
@@ -237,7 +230,7 @@ paths:
                     - latest
                     - deployment #TODO: unsupported
                     - versionTag
-                decisionDefinitionId:
+                dmnResourceDefinitionId:
                   description: Can be used in combination with bindingType latest
                   type: string
                 versionTag:
@@ -264,7 +257,7 @@ paths:
                     decisionType: "DECISION_TABLE"
                     decisionDefinitionVersion: 1
                     dmnResourceDefinitionKey: 4503599627370495
-                    decisionDefinitionId: "loan-approval"
+                    dmnResourceDefinitionId: "loan-approval"
                     matchedRules:
                       - ruleId: "rule1"
                         ruleIndex: 0
@@ -319,13 +312,13 @@ paths:
           schema:
             type: string
             format: date-time
-          description: "Filter: evaluated after this date"
+          description: Filter - evaluated after this date
         - name: evaluatedTo
           in: query
           schema:
             type: string
             format: date-time
-          description: "Filter: evaluated before this date"
+          description: Filter - evaluated before this date
         - name: page
           in: query
           schema:
@@ -349,12 +342,7 @@ paths:
             type: string
             enum: [evaluatedAt, key]
           description: Sort field
-        - name: sortOrder
-          in: query
-          schema:
-            type: string
-            enum: [asc, desc]
-          description: Sort direction
+        - $ref: "#/components/parameters/sortOrder"
       responses:
         200:
           description: List of decision instances
@@ -390,6 +378,12 @@ paths:
                 size: 10
                 count: 2
                 totalCount: 254
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         500:
           description: Internal server error
           content:
@@ -459,6 +453,8 @@ paths:
                   approved: true
         404:
           description: Decision instance not found
+        500:
+          description: Internal server error
           content:
             application/json:
               schema:
@@ -492,6 +488,7 @@ paths:
             encoding:
               resource:
                 contentType: application/octet-stream
+
       responses:
         201:
           description: Process definition deployed
@@ -578,24 +575,18 @@ paths:
               example:
                 items:
                   - key: 4503599627370498
-                    version: 3
-                    bpmnProcessId: "customer-onboarding"
-                    name: "Customer Onboarding Process"
-                    bpmnResourceName: "customer-onboarding.bpmn"
-                  - key: 4503599627370512
+                    version: 1
+                    bpmnProcessId: "loan-application"
+                  - key: 4503599627370499
                     version: 2
                     bpmnProcessId: "loan-application"
-                    name: "Loan Application Process"
-                    bpmnResourceName: "loan-application.bpmn"
-                  - key: 4503599627370520
+                  - key: 4503599627370500
                     version: 1
-                    bpmnProcessId: "order-fulfillment"
-                    name: "Order Fulfillment"
-                    bpmnResourceName: "order-fulfillment.bpmn"
+                    bpmnProcessId: "credit-check"
                 page: 1
                 size: 10
-                count: 3
-                totalCount: 3
+                count: 2
+                totalCount: 2
         500:
           description: Internal server error
           content:
@@ -697,7 +688,7 @@ paths:
   /process-definitions/statistics:
     get:
       operationId: getProcessDefinitionStatistics
-      summary: "Get process definition statistics"
+      summary: Get process definition statistics
       tags:
         - process-definition
       parameters:
@@ -708,7 +699,7 @@ paths:
             format: int32
             minimum: 1
             default: 1
-          description: "Page number (1-based indexing)"
+          description: Page number (1-based indexing)
         - name: size
           in: query
           schema:
@@ -717,20 +708,20 @@ paths:
             minimum: 1
             maximum: 100
             default: 10
-          description: "Number of items per page (max 100)"
+          description: Number of items per page (max 100)
         - name: onlyLatest
           in: query
           schema:
             type: boolean
             default: false
-          description: "If true, returns only the latest version of each process definition"
+          description: If true, returns only the latest version of each process definition
         - name: bpmnProcessIdIn
           in: query
           schema:
             type: array
             items:
               type: string
-          description: "Filter by BPMN process ID"
+          description: Filter by BPMN process ID
         - name: bpmnProcessDefinitionKeyIn
           in: query
           schema:
@@ -738,24 +729,24 @@ paths:
             items:
               type: integer
               format: int64
-          description: "Filter by process definition key"
+          description: Filter by process definition key
         - name: name
           in: query
           schema:
             type: string
-          description: "Filter by name (partial match)"
+          description: Filter by name (partial match)
         - name: sortBy
           in: query
           schema:
             type: string
             enum: [name, bpmnProcessId, version, instanceCount, incidentCount]
-          description: "Sort field"
+          description: Sort field
         - name: sortOrder
           in: query
           schema:
             type: string
             enum: [asc, desc]
-          description: "Sort direction"
+          description: Sort direction
       responses:
         200:
           description: Process definition statistics
@@ -853,6 +844,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        404:
+          description: Not found (e.g. process definition was not found)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         500:
           description: Internal server error
           content:
@@ -925,13 +922,13 @@ paths:
           schema:
             type: string
             format: date-time
-          description: "Filter: created after this date"
+          description: Filter - created after this date
         - name: createdTo
           in: query
           schema:
             type: string
             format: date-time
-          description: "Filter: created before this date"
+          description: Filter - created before this date
         - name: state
           in: query
           schema:
@@ -943,7 +940,6 @@ paths:
           schema:
             type: string
           description: Filter by current activity element ID
-
       responses:
         200:
           description: List of running process instances
@@ -1042,8 +1038,8 @@ paths:
                   taskAssignee: "john.doe"
                   currentStatus: "Application review"
 
-        400:
-          description: Bad request
+        404:
+          description: Not Found
           content:
             application/json:
               schema:
@@ -1101,6 +1097,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        404:
+          description: Not found (e.g process instance is not found)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        409:
+          description: Conflict (e.g process instance is not in correct state for this operation)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         502:
           description: Failed to redirect request to responsible node
           content:
@@ -1138,13 +1152,73 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
         404:
-          description: Variable not found
+          description: Not found (e.g. process instance or variable not found)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        409:
+          description: Conflict (e.g process instance is not in correct state for this operation)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        500:
+          description: Internal server error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         502:
           description: Failed to redirect request to responsible node
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /process-instances/{processInstanceKey}/cancel:
+    post:
+      operationId: cancelProcessInstance
+      summary: Cancels a process instance
+      tags:
+        - process-instance
+      parameters:
+        - name: processInstanceKey
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 4503599627370501
+      responses:
+        204:
+          description: Process instance cancelled
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Not found (e.g. process instance is not found)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        409:
+          description: Conflict (e.g process instance is not in cancellable state)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        502:
+          description: Failed to redirect request to responsible node
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        500:
+          description: Internal server error
           content:
             application/json:
               schema:
@@ -1293,6 +1367,12 @@ paths:
                 totalCount: 3
         400:
           description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        500:
+          description: Internal server error
           content:
             application/json:
               schema:
@@ -1500,46 +1580,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-    post:
-      operationId: completeJob
-      tags:
-        - job
-      summary: Complete a job
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - jobKey
-              properties:
-                jobKey:
-                  type: integer
-                  format: int64
-                variables:
-                  type: object
-            example:
-              jobKey: 4503599627370540
-              variables:
-                result: "success"
-                transactionId: "tx-789-xyz"
-                processedAt: "2025-08-22T15:15:30Z"
-      responses:
-        201:
-          description: Job completed
-        400:
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        502:
-          description: Failed to redirect request to responsible node
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
 
   /jobs/{jobKey}:
     get:
@@ -1575,14 +1615,14 @@ paths:
                   formKey: "loan-review-form"
                   applicationId: "APP-12345"
                   customerName: "Alice Johnson"
-        400:
-          description: Bad request
+        404:
+          description: Not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-        404:
-          description: Job not found
+        500:
+          description: Internal server error
           content:
             application/json:
               schema:
@@ -1645,14 +1685,10 @@ paths:
 
   /jobs/{jobKey}/complete:
     post:
-      operationId: completeJobByKey
-      summary: Complete a job with variables (improved API)
-      description: |
-        Improved RESTful endpoint for completing a job. Takes the job key as a
-        path parameter instead of in the request body. Preferred over POST /jobs
-        (completeJob) for better REST semantics.
+      operationId: completeJob
       tags:
         - job
+      summary: Complete a job
       parameters:
         - name: jobKey
           in: path
@@ -1662,6 +1698,7 @@ paths:
             format: int64
           example: 4503599627370540
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -1671,19 +1708,14 @@ paths:
                   type: object
             example:
               variables:
-                approved: true
-                comment: "Approved after review"
+                result: "success"
+                transactionId: "tx-789-xyz"
+                processedAt: "2025-08-22T15:15:30Z"
       responses:
-        204:
+        201:
           description: Job completed
         400:
           description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        404:
-          description: Job not found
           content:
             application/json:
               schema:
@@ -1795,7 +1827,7 @@ paths:
                   type: object
                 startingElementIds:
                   type: array
-                  description: "Allows for a start at chosen element id"
+                  description: Allows for a start at chosen element id
                   items:
                     type: string
             example:
@@ -1852,17 +1884,17 @@ paths:
                   format: int64
                 variables:
                   type: object
-                  description: "Sets process instance variables."
+                  description: Sets process instance variables.
                 elementInstancesToStart:
                   type: array
                   items:
                     $ref: "#/components/schemas/StartElementInstanceData"
-                  description: "Starts execution token."
+                  description: Starts execution token.
                 elementInstancesToTerminate:
                   type: array
                   items:
                     $ref: "#/components/schemas/TerminateElementInstanceData"
-                  description: "Terminates execution token."
+                  description: Terminates execution token.
       responses:
         201:
           description: Process instance modified
@@ -1896,10 +1928,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /tests/{nodeId}/start-cpu-profile:
+  /tests/{nodeId}/start-pprof-server:
     post:
-      operationId: testStartCpuProfile
-      summary: start a cpu profiler
+      operationId: testStartPprofServer
+      summary: start pprof server
       tags:
         - test
       parameters:
@@ -1909,20 +1941,20 @@ paths:
           schema:
             type: string
             pattern: "^[a-zA-Z0-9-_]+$"
-          description: ID of the node to profile
+          description: ID of the node to start pprof server on
       responses:
         200:
-          description: Cpu profiler starter
+          description: Pprof server started
         500:
           description: Internal server error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-  /tests/{nodeId}/stop-cpu-profile:
+  /tests/{nodeId}/stop-pprof-server:
     post:
-      operationId: testStopCpuProfile
-      summary: stop a cpu profiler
+      operationId: testStopPprofServer
+      summary: stop pprof server
       tags:
         - test
       parameters:
@@ -1932,18 +1964,10 @@ paths:
           schema:
             type: string
             pattern: "^[a-zA-Z0-9-_]+$"
-          description: ID of the node to stop profiling
+          description: ID of the node to stop pprof server on
       responses:
         200:
-          description: Cpu profiler stopped
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  pprof:
-                    type: string
-                    format: byte
+          description: Pprof server stopped
         500:
           description: Internal server error
           content:
@@ -1953,6 +1977,146 @@ paths:
 
 components:
   schemas:
+    DecisionInstancePartitionPage:
+      type: object
+      allOf:
+        - type: object
+          required:
+            - partitions
+          properties:
+            partitions:
+              type: array
+              items:
+                $ref: "#/components/schemas/PartitionDecisionInstances"
+        - $ref: "#/components/schemas/PartitionedPageMetadata"
+    PartitionDecisionInstances:
+      type: object
+      required:
+        - partition
+        - items
+      properties:
+        partition:
+          type: integer
+        count:
+          type: integer
+          description: Total decision instances in this partition
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DecisionInstanceSummary"
+    DecisionInstanceSummary:
+      type: object
+      required:
+        - key
+        - dmnResourceDefinitionKey
+        - evaluatedAt
+      properties:
+        key:
+          type: integer
+          format: int64
+        dmnResourceDefinitionKey:
+          type: integer
+          format: int64
+        processInstanceKey:
+          type: integer
+          format: int64
+        flowElementInstanceKey:
+          type: integer
+          format: int64
+          description: Key of the flow element instance that triggered this decision
+        evaluatedAt:
+          type: string
+          format: date-time
+    DecisionInstanceDetail:
+      type: object
+      required:
+        - key
+        - dmnResourceDefinitionKey
+        - evaluatedAt
+        - evaluatedDecisions
+      properties:
+        key:
+          type: integer
+          format: int64
+        dmnResourceDefinitionKey:
+          type: integer
+          format: int64
+        processInstanceKey:
+          type: integer
+          format: int64
+        flowElementInstanceKey:
+          type: integer
+          format: int64
+          description: Key of the flow element instance that triggered this decision
+        evaluatedAt:
+          type: string
+          format: date-time
+        evaluatedDecisions:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvaluatedDecision"
+        decisionOutput:
+          type: string
+          format: json
+          x-go-type: json.RawMessage
+          description: Final output of the requested decision
+    EvaluatedDecision:
+      type: object
+      properties:
+        decisionId:
+          type: string
+        decisionName:
+          type: string
+        decisionType:
+          type: string
+          enum: [ DECISION_TABLE, LITERAL_EXPRESSION ]
+        evaluationOrder:
+          type: integer
+          description: Order in which this decision was evaluated
+        inputs:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvaluatedInput"
+        outputs:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvaluatedOutput"
+        matchedRules:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchedRule"
+          description: For DECISION_TABLE type only
+    EvaluatedInput:
+      type: object
+      properties:
+        inputId:
+          type: string
+        inputName:
+          type: string
+        inputExpression:
+          type: string
+        inputValue:
+          description: The evaluated input value (any type)
+    EvaluatedOutput:
+      type: object
+      properties:
+        outputId:
+          type: string
+        outputName:
+          type: string
+        outputValue:
+          description: The output value (any type)
+    MatchedRule:
+      type: object
+      properties:
+        ruleId:
+          type: string
+        ruleIndex:
+          type: integer
+        evaluatedOutputs:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvaluatedOutput"
     PartitionedPageMetadata:
       type: object
       required:
@@ -2001,9 +2165,6 @@ components:
       properties:
         partition:
           type: integer
-        count:
-          type: integer
-          description: Total instances in this partition
         items:
           type: array
           items:
@@ -2037,7 +2198,6 @@ components:
           type: string
         dmnDefinitionName:
           type: string
-          description: Decision name from DMN
     DmnResourceDefinitionDetail:
       type: object
       required:
@@ -2051,9 +2211,13 @@ components:
     EvaluatedDRDResult:
       type: object
       required:
+        - decisionInstanceKey
         - evaluatedDecisions
         - decisionOutput
       properties:
+        decisionInstanceKey:
+          type: integer
+          format: int64
         evaluatedDecisions:
           type: array
           items:
@@ -2067,7 +2231,7 @@ components:
         - decisionType
         - decisionDefinitionVersion
         - dmnResourceDefinitionKey
-        - decisionDefinitionId
+        - dmnResourceDefinitionId
         - matchedRules
         - decisionOutput
         - evaluatedInputs
@@ -2083,7 +2247,7 @@ components:
         dmnResourceDefinitionKey:
           type: integer
           format: int64
-        decisionDefinitionId:
+        dmnResourceDefinitionId:
           type: string
         matchedRules:
           type: array
@@ -2167,9 +2331,6 @@ components:
         bpmnProcessName:
           type: string
           description: Process name from BPMN
-        bpmnResourceName:
-          type: string
-          description: BPMN resource file name
     ProcessDefinitionDetail:
       type: object
       required:
@@ -2236,10 +2397,10 @@ components:
           type: integer
         count:
           type: integer
-          description: "Number of items in current page"
+          description: Number of items in current page
         totalCount:
           type: integer
-          description: "Total number of items across all pages"
+          description: Total number of items across all pages
     PartitionProcessDefinitionStatistics:
       type: object
       required:
@@ -2269,7 +2430,7 @@ components:
           type: string
         name:
           type: string
-          description: "Process name from BPMN"
+          description: Process name from BPMN
         instanceCounts:
           $ref: "#/components/schemas/InstanceCounts"
     InstanceCounts:
@@ -2283,19 +2444,19 @@ components:
       properties:
         total:
           type: integer
-          description: "Total number of process instances"
+          description: Total number of process instances
         active:
           type: integer
-          description: "Number of active instances"
+          description: Number of active instances
         completed:
           type: integer
-          description: "Number of completed instances"
+          description: Number of completed instances
         terminated:
           type: integer
-          description: "Number of terminated instances"
+          description: Number of terminated instances
         failed:
           type: integer
-          description: "Number of failed instances"
+          description: Number of failed instances
     ProcessInstancePage:
       type: object
       allOf:
@@ -2326,7 +2487,6 @@ components:
           format: int64
         bpmnProcessId:
           type: string
-          description: BPMN process ID
         businessKey:
           type: string
         createdAt:
@@ -2414,10 +2574,6 @@ components:
           type: object
         assignee:
           type: string
-          description: Assignee (user assigned to this job)
-        retries:
-          type: integer
-          description: Remaining retries
     JobState:
       type: string
       enum:
@@ -2470,7 +2626,7 @@ components:
       properties:
         elementId:
           type: string
-          description: "Element instance is created at this element."
+          description: Element instance is created at this element.
       example:
         elementId: "flow-node-1"
     FlowElementHistory:
@@ -2550,165 +2706,6 @@ components:
       example:
         code: "NOT_FOUND"
         message: "Process instance with key 4503599627370501 not found"
-    DecisionInstancePartitionPage:
-      type: object
-      allOf:
-        - type: object
-          required:
-            - partitions
-          properties:
-            partitions:
-              type: array
-              items:
-                $ref: "#/components/schemas/PartitionDecisionInstances"
-        - $ref: "#/components/schemas/PartitionedPageMetadata"
-    PartitionDecisionInstances:
-      type: object
-      required:
-        - partition
-        - items
-      properties:
-        partition:
-          type: integer
-        count:
-          type: integer
-          description: Total decision instances in this partition
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/DecisionInstanceSummary"
-    DecisionInstanceSummary:
-      type: object
-      required:
-        - key
-        - dmnResourceDefinitionKey
-        - dmnResourceDefinitionId
-        - evaluatedAt
-      properties:
-        key:
-          type: integer
-          format: int64
-        dmnResourceDefinitionKey:
-          type: integer
-          format: int64
-        dmnResourceDefinitionId:
-          type: string
-        processInstanceKey:
-          type: integer
-          format: int64
-        flowElementInstanceKey:
-          type: integer
-          format: int64
-          description: Key of the flow element instance that triggered this decision
-        evaluatedAt:
-          type: string
-          format: date-time
-        inputCount:
-          type: integer
-          description: Number of input variables
-        outputCount:
-          type: integer
-          description: Number of output variables
-    DecisionInstanceDetail:
-      type: object
-      required:
-        - key
-        - dmnResourceDefinitionKey
-        - dmnResourceDefinitionId
-        - evaluatedAt
-        - evaluatedDecisions
-      properties:
-        key:
-          type: integer
-          format: int64
-        dmnResourceDefinitionKey:
-          type: integer
-          format: int64
-        dmnResourceDefinitionId:
-          type: string
-        dmnResourceDefinitionVersion:
-          type: integer
-        processInstanceKey:
-          type: integer
-          format: int64
-        flowElementInstanceKey:
-          type: integer
-          format: int64
-          description: Key of the flow element instance that triggered this decision
-        evaluatedAt:
-          type: string
-          format: date-time
-        decisionRequirementsKey:
-          type: integer
-          format: int64
-          description: Key of the DRD
-        decisionRequirementsId:
-          type: string
-          description: ID of the DRD
-        evaluatedDecisions:
-          type: array
-          items:
-            $ref: "#/components/schemas/EvaluatedDecision"
-        decisionOutput:
-          type: object
-          description: Final output of the requested decision
-    EvaluatedDecision:
-      type: object
-      properties:
-        decisionId:
-          type: string
-        decisionName:
-          type: string
-        decisionType:
-          type: string
-          enum: [DECISION_TABLE, LITERAL_EXPRESSION]
-        evaluationOrder:
-          type: integer
-          description: Order in which this decision was evaluated
-        inputs:
-          type: array
-          items:
-            $ref: "#/components/schemas/EvaluatedInput"
-        outputs:
-          type: array
-          items:
-            $ref: "#/components/schemas/EvaluatedOutput"
-        matchedRules:
-          type: array
-          items:
-            $ref: "#/components/schemas/MatchedRule"
-          description: For DECISION_TABLE type only
-    EvaluatedInput:
-      type: object
-      properties:
-        inputId:
-          type: string
-        inputName:
-          type: string
-        inputExpression:
-          type: string
-        inputValue:
-          description: The evaluated input value (any type)
-    EvaluatedOutput:
-      type: object
-      properties:
-        outputId:
-          type: string
-        outputName:
-          type: string
-        outputValue:
-          description: The output value (any type)
-    MatchedRule:
-      type: object
-      properties:
-        ruleId:
-          type: string
-        ruleIndex:
-          type: integer
-        evaluatedOutputs:
-          type: array
-          items:
-            $ref: "#/components/schemas/EvaluatedOutput"
   parameters:
     sortOrder:
       name: sortOrder
@@ -2716,4 +2713,4 @@ components:
       schema:
         type: string
         enum: [asc, desc]
-      description: "Sort direction"
+      description: Sort direction
