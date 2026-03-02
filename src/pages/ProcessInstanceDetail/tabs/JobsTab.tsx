@@ -24,7 +24,9 @@ import { CompleteJobDialog } from '../modals/CompleteJobDialog';
 import { CompleteFormJobDialog } from '../modals/CompleteFormJobDialog';
 import { AssignJobDialog } from '../modals/AssignJobDialog';
 import { UpdateRetriesDialog } from '../modals/UpdateRetriesDialog';
-import { completeJobByKey, assignJob, customInstance } from '@base/openapi';
+// TODO: Enable assign when assignee is available in API
+// import { assignJob, completeJob, customInstance } from '@base/openapi';
+import { completeJob, customInstance } from '@base/openapi';
 
 // updateJobRetries is not in generated API, use direct axios call
 const updateJobRetries = async (jobKey: string, retries: number): Promise<void> => {
@@ -68,7 +70,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
 
   const handleCompleteJob = useCallback(async (jobKey: string, variables: Record<string, unknown>) => {
     try {
-      await completeJobByKey(jobKey, { variables });
+      await completeJob(jobKey, { variables });
       onShowNotification(t('processInstance:messages.jobCompleted'), 'success');
       await onRefetch();
     } catch {
@@ -79,7 +81,8 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
 
   const handleAssignJob = useCallback(async (jobKey: string, assignee: string) => {
     try {
-      await assignJob(jobKey, { assignee });
+      // TODO: Enable assign when assignee is available in API
+      // await assignJob(jobKey, { assignee });
       onShowNotification(t('processInstance:messages.jobAssigned'), 'success');
       await onRefetch();
     } catch {
@@ -267,7 +270,8 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
         open={Boolean(menuAnchorEl)}
         onClose={handleMenuClose}
       >
-        {menuJob?.type === 'user-task' && (
+        {/* TODO: Enable assign when assignee is available in API */}
+        {menuJob?.type === 'user-task-type' && false && (
           <MenuItem
             onClick={() => {
               setAssignDialogJob(menuJob);
