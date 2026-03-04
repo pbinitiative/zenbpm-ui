@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import type { Job } from '../types';
 
-interface AssignJobDialogProps {
+export interface AssignJobDialogProps {
   open: boolean;
   job: Job;
   onClose: () => void;

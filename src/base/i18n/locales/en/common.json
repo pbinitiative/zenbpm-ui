@@ -35,11 +35,14 @@
     "upload": "Upload",
     "add": "Add",
     "update": "Update",
+    "open": "Open",
     "close": "Close",
     "copy": "Copy to clipboard",
     "copied": "Copied!",
     "prettify": "Format JSON",
-    "submit": "Submit"
+    "submit": "Submit",
+    "leave": "Leave",
+    "stay": "Stay"
   },
   "all": "All",
   "pagination": {

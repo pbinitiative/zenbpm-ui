@@ -19,7 +19,7 @@ import type { FormSchema, FormBuilderRef } from '@components/FormBuilder';
 
 type DialogMode = 'designer' | 'json';
 
-interface FormDesignDialogProps {
+export interface FormDesignDialogProps {
   open: boolean;
   initialJson: string;
   onSubmit: (json: string) => void;

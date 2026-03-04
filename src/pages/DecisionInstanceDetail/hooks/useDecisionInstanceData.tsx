@@ -5,7 +5,9 @@ import { getDecisionInstance, getDmnResourceDefinition } from '@base/openapi';
 import type { DecisionInstanceDetail } from '@base/openapi';
 import type { DecisionOverlay } from '@components/DmnViewer';
 import type { MetadataField, DefinitionInfo } from '@components/DiagramDetailLayout';
-import type { DmnResourceDefinition, EvaluatedDecisionExtended, OverlayDialogData } from '../types';
+import { useInputOutputDialog } from '../components/useInputOutputDialog';
+import { useOutputDialog } from '../components/useOutputDialog';
+import type { DmnResourceDefinition, EvaluatedDecisionExtended } from '../types';
 import { Box } from '@mui/material';
 
 interface UseDecisionInstanceDataResult {
@@ -16,28 +18,24 @@ interface UseDecisionInstanceDataResult {
   diagramOverlays: DecisionOverlay[];
   additionalFields: MetadataField[];
   definitionInfo: DefinitionInfo | undefined;
-  dialogData: OverlayDialogData | null;
-  showOutputDialog: boolean;
-  setShowOutputDialog: (show: boolean) => void;
   handleOverlayClick: (
     decisionId: string,
     inputs: Array<{ name: string; value: unknown }>,
     outputs: Array<{ name: string; value: unknown }>
   ) => void;
-  closeDialog: () => void;
   getDecisionName: (decisionId: string) => string;
 }
 
 export function useDecisionInstanceData(decisionInstanceKey: string | undefined): UseDecisionInstanceDataResult {
   const { t } = useTranslation([ns.common, ns.decisions]);
+  const { openInputOutputDialog } = useInputOutputDialog();
+  const { openOutputDialog } = useOutputDialog();
 
   // State
   const [instance, setInstance] = useState<DecisionInstanceDetail | null>(null);
   const [definition, setDefinition] = useState<DmnResourceDefinition | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dialogData, setDialogData] = useState<OverlayDialogData | null>(null);
-  const [showOutputDialog, setShowOutputDialog] = useState(false);
 
   // Fetch instance and DMN data
   useEffect(() => {
@@ -70,17 +68,22 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
     void fetchData();
   }, [decisionInstanceKey]);
 
+  // Find decision name for dialog title
+  const getDecisionName = useCallback(
+    (decisionId: string) => {
+      const decision = instance?.evaluatedDecisions?.find((d) => d.decisionId === decisionId);
+      return decision?.decisionName || decisionId;
+    },
+    [instance]
+  );
+
   // Handle overlay click to show modal
   const handleOverlayClick = useCallback(
     (decisionId: string, inputs: Array<{ name: string; value: unknown }>, outputs: Array<{ name: string; value: unknown }>) => {
-      setDialogData({ decisionId, inputs, outputs });
+      openInputOutputDialog({ data: { decisionId, inputs, outputs }, getDecisionName });
     },
-    []
+    [openInputOutputDialog, getDecisionName]
   );
-
-  const closeDialog = useCallback(() => {
-    setDialogData(null);
-  }, []);
 
   // Create overlays for the DMN diagram with input/output data
   const diagramOverlays = useMemo((): DecisionOverlay[] => {
@@ -150,7 +153,7 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
         label: t('decisions:fields.output'),
         value: (
           <Box
-            onClick={() => setShowOutputDialog(true)}
+            onClick={() => openOutputDialog({ output: instance.decisionOutput })}
             component="code"
             sx={{
               display: 'block',
@@ -175,7 +178,7 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
     }
 
     return fields;
-  }, [instance, t]);
+  }, [instance, t, openOutputDialog]);
 
   // Build definition info
   const definitionInfo = useMemo((): DefinitionInfo | undefined => {
@@ -187,15 +190,6 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
     };
   }, [instance?.dmnResourceDefinitionKey]);
 
-  // Find decision name for dialog title
-  const getDecisionName = useCallback(
-    (decisionId: string) => {
-      const decision = instance?.evaluatedDecisions?.find((d) => d.decisionId === decisionId);
-      return decision?.decisionName || decisionId;
-    },
-    [instance]
-  );
-
   return {
     instance,
     definition,
@@ -204,11 +198,7 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
     diagramOverlays,
     additionalFields,
     definitionInfo,
-    dialogData,
-    showOutputDialog,
-    setShowOutputDialog,
     handleOverlayClick,
-    closeDialog,
     getDecisionName,
   };
 }

@@ -25,6 +25,9 @@
     "loadDefinitionFailed": "Failed to load process definition",
     "xmlExportFailed": "Failed to export XML",
     "xmlImportFailed": "Failed to import XML",
+    "unsavedChangesTitle": "Unsaved changes",
+    "unsavedChangesLeavePrompt": "You have unsaved changes. Leave this page?",
+    "restoreUnsavedPrompt": "Restore last unsaved changes?",
     "jsonParseError": "Invalid JSON format. Please fix the JSON before switching to Designer view."
   },
   "cards": {

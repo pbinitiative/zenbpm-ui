@@ -16,7 +16,7 @@ import { StateBadge } from '@components/StateBadge';
 import { MonoLink } from '@components/MonoLink';
 import type { Incident } from '../IncidentsTable';
 
-interface IncidentDetailModalProps {
+export interface IncidentDetailModalProps {
   open: boolean;
   incident: Incident;
   onClose: () => void;

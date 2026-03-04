@@ -3,16 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { getProcessDefinition, createProcessDefinition } from '@base/openapi';
 import type { BpmnEditorRef } from '@components/BpmnEditor';
-import type { EditorMode, ConsoleMessage, ConsoleMessageType, ConsoleMessageLink } from '@components/DesignerShell';
-
-interface SnackbarState {
-  open: boolean;
-  message: string;
-  severity: 'success' | 'error';
-}
+import {
+  type EditorMode,
+  type ConsoleMessage,
+  useDesignerConsole
+} from '@components/DesignerShell';
+import type { SnackbarState } from "@components/DesignerShell/types.ts";
+import {useConfirmDialog} from "@components/ConfirmDialog";
 
 interface UseProcessDesignerOptions {
   processDefinitionKey?: string;
+  designerPrefix: string;
 }
 
 interface UseProcessDesignerResult {
@@ -33,14 +34,13 @@ interface UseProcessDesignerResult {
   setXmlContent: (content: string) => void;
   toggleConsole: () => void;
   clearConsole: () => void;
+  hasUnsavedChanges: boolean;
+  setHasUnsavedChanges: (hasUnsavedChanges: boolean) => void;
 }
-
-// Generate unique ID for console messages
-let messageIdCounter = 0;
-const generateMessageId = () => `msg-${Date.now()}-${++messageIdCounter}`;
 
 export function useProcessDesigner({
   processDefinitionKey,
+  designerPrefix,
 }: UseProcessDesignerOptions): UseProcessDesignerResult {
   const { t } = useTranslation([ns.common, ns.designer]);
   const editorRef = useRef<BpmnEditorRef>(null);
@@ -50,55 +50,36 @@ export function useProcessDesigner({
   const [initialXml, setInitialXml] = useState<string | undefined>(undefined);
   const [editorMode, setEditorMode] = useState<EditorMode>('diagram');
   const [xmlContent, setXmlContent] = useState<string>('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
     message: '',
     severity: 'success',
   });
 
-  // Console state
-  const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
-  const [consoleOpen, setConsoleOpen] = useState(false);
-
-  // Add message to console
-  const addConsoleMessage = useCallback(
-    (
-      type: ConsoleMessageType,
-      message: string,
-      options?: { details?: string; link?: ConsoleMessageLink; autoOpenOnError?: boolean }
-    ) => {
-      const { details, link, autoOpenOnError = true } = options ?? {};
-      const newMessage: ConsoleMessage = {
-        id: generateMessageId(),
-        type,
-        message,
-        details,
-        link,
-        timestamp: new Date(),
-      };
-      setConsoleMessages((prev) => [...prev, newMessage]);
-
-      // Auto-open console on error
-      if (autoOpenOnError && type === 'error') {
-        setConsoleOpen(true);
-      }
-    },
-    []
-  );
-
-  // Toggle console
-  const toggleConsole = useCallback(() => {
-    setConsoleOpen((prev) => !prev);
-  }, []);
-
-  // Clear console
-  const clearConsole = useCallback(() => {
-    setConsoleMessages([]);
-  }, []);
+  const {
+    consoleMessages,
+    consoleOpen,
+    addConsoleMessage,
+    toggleConsole,
+    clearConsole,
+  } = useDesignerConsole()
 
   // Load process definition if key is provided
+  const { openConfirm } = useConfirmDialog();
   useEffect(() => {
-    if (!processDefinitionKey) return;
+    if (!processDefinitionKey) {
+      const unsavedXml = localStorage.getItem(`${designerPrefix}-unsaved-changes`)
+      if (unsavedXml) {
+        void openConfirm({
+          title: t('designer:messages.unsavedChangesTitle'),
+          message: t('designer:messages.restoreUnsavedPrompt'),
+        }).then((ok) => {
+          if (ok) setInitialXml(unsavedXml)
+        })
+      }
+      return;
+    }
 
     const loadDefinition = async () => {
       setLoadingDefinition(true);
@@ -112,6 +93,7 @@ export function useProcessDesigner({
         }
 
         setInitialXml(xml);
+        setXmlContent(xml)
       } catch {
         setSnackbar({
           open: true,
@@ -124,7 +106,7 @@ export function useProcessDesigner({
     };
 
     void loadDefinition();
-  }, [processDefinitionKey, t]);
+  }, [processDefinitionKey, designerPrefix, openConfirm, t]);
 
   // Handle mode change
   const handleModeChange = useCallback(
@@ -157,7 +139,7 @@ export function useProcessDesigner({
   // Handle deploy
   const handleDeploy = useCallback(async () => {
     setDeploying(true);
-    addConsoleMessage('info', 'Starting deployment...', { autoOpenOnError: false });
+    addConsoleMessage('info', 'Starting deployment...');
 
     try {
       let xml: string;
@@ -200,22 +182,28 @@ export function useProcessDesigner({
         .filter(Boolean)
         .join('\n');
 
+      const link = result?.processDefinitionKey
+        ? {
+          text: `${t('common:actions.open')} v${version ?? '?'}`,
+          url: `/process-definitions/${result.processDefinitionKey}`,
+        }
+        : undefined;
       addConsoleMessage('success', successMessage, {
         details: detailsText,
-        link: result?.processDefinitionKey
-          ? {
-              text: `Open v${version ?? '?'}`,
-              url: `/process-definitions/${result.processDefinitionKey}`,
-            }
-          : undefined,
-        autoOpenOnError: false,
+        link: link,
       });
 
       setSnackbar({
         open: true,
         message: successMessage,
+        link: link,
         severity: 'success',
       });
+
+      setInitialXml(xml);
+      setHasUnsavedChanges(false)
+      localStorage.removeItem(`${designerPrefix}-unsaved-changes`)
+
     } catch (err) {
       // Extract detailed error information
       let errorMessage = t('designer:messages.deployFailed');
@@ -262,7 +250,7 @@ export function useProcessDesigner({
     } finally {
       setDeploying(false);
     }
-  }, [t, editorMode, xmlContent, addConsoleMessage]);
+  }, [t, editorMode, xmlContent, addConsoleMessage, designerPrefix]);
 
   // Handle file upload
   const handleFileUpload = useCallback(
@@ -353,5 +341,7 @@ export function useProcessDesigner({
     setXmlContent,
     toggleConsole,
     clearConsole,
+    hasUnsavedChanges,
+    setHasUnsavedChanges,
   };
 }

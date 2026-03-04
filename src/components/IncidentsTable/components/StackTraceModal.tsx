@@ -15,7 +15,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 import ErrorIcon from '@mui/icons-material/Error';
 
-interface StackTraceModalProps {
+export interface StackTraceModalProps {
   open: boolean;
   message: string;
   onClose: () => void;
