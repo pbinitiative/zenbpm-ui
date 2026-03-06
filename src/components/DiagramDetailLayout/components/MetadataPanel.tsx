@@ -23,6 +23,9 @@ export interface MetadataPanelProps {
   /** Number of unresolved incidents - shows warning icon next to state */
   incidentsCount?: number;
 
+  /** Process type (e.g. default, multiInstance, subprocess, callActivity) */
+  processType?: string;
+
   /** Created at timestamp - formatted automatically */
   createdAt?: string;
 
@@ -74,6 +77,7 @@ export const MetadataPanel = ({
   stateField,
   state,
   incidentsCount,
+  processType,
   createdAt,
   name,
   version,
@@ -95,6 +99,7 @@ export const MetadataPanel = ({
     stateField,
     state,
     incidentsCount,
+    processType,
     createdAt,
     name,
     version,

@@ -55,6 +55,12 @@ export const getProcessInstanceColumns = (
       ),
     },
     {
+      id: 'processType',
+      label: t('processes:fields.type'),
+      sortable: true,
+      render: (row) => row.processType ? t(`processes:types.${row.processType}`) : '-',
+    },
+    {
       id: 'createdAt',
       label: t('processes:fields.createdAt'),
       sortable: true,

@@ -20,7 +20,7 @@ import { BpmnDiagram } from '@components/BpmnDiagram';
 import { MetadataPanel } from '@components/DiagramDetailLayout';
 import type { DefinitionInfo } from '@components/DiagramDetailLayout';
 import { useInstanceData } from './hooks';
-import { JobsTab, VariablesTab, IncidentsTab, HistoryTab } from './tabs';
+import { JobsTab, VariablesTab, IncidentsTab, HistoryTab, ChildProcessesTab } from './tabs';
 
 // Tab panel component
 interface TabPanelProps {
@@ -46,6 +46,7 @@ const TAB_MAP: Record<string, number> = {
   history: 1,
   incidents: 2,
   variables: 3,
+  'child-processes': 4,
 };
 
 export const ProcessInstanceDetailPage = () => {
@@ -85,6 +86,7 @@ export const ProcessInstanceDetailPage = () => {
     jobs,
     history,
     incidents,
+    childProcesses,
     loading,
     error,
     refetchAll,
@@ -175,11 +177,13 @@ export const ProcessInstanceDetailPage = () => {
               entityKey={processInstance.key}
               state={processInstance.state}
               incidentsCount={unresolvedIncidentsCount}
+              processType={processInstance.processType}
               name={processDefinition?.bpmnProcessName}
               version={processDefinition?.version}
               resourceName={processDefinition?.bpmnResourceName}
               createdAt={processInstance.createdAt}
               definitionInfo={{ key: processInstance.processDefinitionKey, type: 'process' } as DefinitionInfo}
+              processInstanceKey={processInstance.parentProcessInstanceKey}
               keyLabel={t('processInstance:fields.key')}
             />
           </Paper>
@@ -228,6 +232,15 @@ export const ProcessInstanceDetailPage = () => {
             }
           />
           <Tab data-testid="process-instance-tab-variables" label={t('processInstance:tabs.variables')} />
+          <Tab
+            data-testid="process-instance-tab-child-processes"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {t('processInstance:tabs.childProcesses')}
+                <Chip label={childProcesses.length} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
+              </Box>
+            }
+          />
         </Tabs>
 
         <Box sx={{ p: { xs: 1.5, sm: 2 } }}>
@@ -262,6 +275,11 @@ export const ProcessInstanceDetailPage = () => {
               onRefetch={refetchAll}
               onShowNotification={showNotification}
             />
+          </TabPanel>
+
+          {/* Child Processes Tab */}
+          <TabPanel value={activeTab} index={4}>
+            <ChildProcessesTab processInstanceKey={processInstanceKey} />
           </TabPanel>
         </Box>
       </Paper>
