@@ -48,7 +48,7 @@ const legacyJobs: MockJob[] = [
     key: '5000000000000000011',
     elementId: 'Task_Approval',
     elementName: 'Final Approval',
-    type: 'user-task',
+    type: 'user-task-type',
     processInstanceKey: '3100000000000000021',
     processDefinitionKey: '1997302399374458880',
     state: 'active',
@@ -85,7 +85,7 @@ const legacyJobs: MockJob[] = [
     key: '5000000000000000002',
     elementId: 'Task_Manager',
     elementName: 'Manager Review',
-    type: 'user-task',
+    type: 'user-task-type',
     processInstanceKey: '3100000000000000002',
     processDefinitionKey: '1997302353098702848',
     state: 'active',
@@ -103,7 +103,7 @@ const legacyJobs: MockJob[] = [
     key: '5000000000000000003',
     elementId: 'Task_HR',
     elementName: 'HR Verification',
-    type: 'user-task',
+    type: 'user-task-type',
     processInstanceKey: '3100000000000000003',
     processDefinitionKey: '1997302353098702848',
     state: 'active',
@@ -166,12 +166,12 @@ export const jobs: MockJob[] = [
 
 // Helper to get user tasks only
 export const getUserTasks = (): MockJob[] => {
-  return jobs.filter((j) => j.type === 'user-task');
+  return jobs.filter((j) => j.type === 'user-task-type');
 };
 
 // Helper to get active user tasks
 export const getActiveUserTasks = (): MockJob[] => {
-  return jobs.filter((j) => j.type === 'user-task' && j.state === 'active');
+  return jobs.filter((j) => j.type === 'user-task-type' && j.state === 'active');
 };
 
 // Helper to get jobs by process instance key

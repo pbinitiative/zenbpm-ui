@@ -203,7 +203,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
         width: 140,
         render: (row) => {
           const isActive = row.state === 'activatable' || row.state === 'activated' || row.state === 'active';
-          const isUserTask = row.type === 'user-task';
+          const isUserTask = row.type === 'user-task-type';
 
           return (
             <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -211,7 +211,8 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
                 <Button
                   size="small"
                   variant="outlined"
-                  startIcon={<PlayArrowIcon sx={{ fontSize: 16 }} />}                  onClick={(e) => {
+                  startIcon={<PlayArrowIcon sx={{ fontSize: 16 }} />}
+                  onClick={(e) => {
                     e.stopPropagation();
                     openCompleteJobDialog({ job: row, onComplete: handleCompleteJob });
                   }}
