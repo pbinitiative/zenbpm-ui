@@ -16,7 +16,7 @@ import type { FormViewerRef } from '@components/FormBuilder';
 import type { FormSchema } from '@components/FormBuilder';
 import type { Job } from '../types';
 
-interface CompleteFormJobDialogProps {
+export interface CompleteFormJobDialogProps {
   open: boolean;
   job: Job;
   onClose: () => void;
