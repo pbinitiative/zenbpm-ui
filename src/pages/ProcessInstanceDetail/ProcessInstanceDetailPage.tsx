@@ -20,7 +20,7 @@ import { BpmnDiagram } from '@components/BpmnDiagram';
 import { MetadataPanel } from '@components/DiagramDetailLayout';
 import type { DefinitionInfo } from '@components/DiagramDetailLayout';
 import { useInstanceData } from './hooks';
-import { JobsTab, VariablesTab, IncidentsTab, HistoryTab } from './tabs';
+import { JobsTab, VariablesTab, IncidentsTab, HistoryTab, DecisionInstancesTab } from './tabs';
 
 // Tab panel component
 interface TabPanelProps {
@@ -46,6 +46,7 @@ const TAB_MAP: Record<string, number> = {
   history: 1,
   incidents: 2,
   variables: 3,
+  decisions: 4,
 };
 
 export const ProcessInstanceDetailPage = () => {
@@ -228,6 +229,7 @@ export const ProcessInstanceDetailPage = () => {
             }
           />
           <Tab data-testid="process-instance-tab-variables" label={t('processInstance:tabs.variables')} />
+          <Tab data-testid="process-instance-tab-decisions" label={t('processInstance:tabs.decisions')} />
         </Tabs>
 
         <Box sx={{ p: { xs: 1.5, sm: 2 } }}>
@@ -262,6 +264,11 @@ export const ProcessInstanceDetailPage = () => {
               onRefetch={refetchAll}
               onShowNotification={showNotification}
             />
+          </TabPanel>
+
+          {/* Decision Instances Tab */}
+          <TabPanel value={activeTab} index={4}>
+            <DecisionInstancesTab processInstanceKey={processInstanceKey} />
           </TabPanel>
         </Box>
       </Paper>

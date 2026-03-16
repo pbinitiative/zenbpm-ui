@@ -26,6 +26,8 @@ export type DecisionDefinitionOption = Pick<DmnResourceDefinitionSimple, 'key' |
 export interface DecisionInstancesTableProps {
   /** Fixed DMN resource definition key - when set, instances are filtered by this key and the decision filter is hidden */
   dmnResourceDefinitionKey?: string;
+  /** Fixed process instance key - when set, instances are filtered by this process instance */
+  processInstanceKey?: string;
   /** External filter values - when provided, the component is controlled */
   filterValues?: FilterValues;
   /** Callback when filter values change */
@@ -38,6 +40,7 @@ export interface DecisionInstancesTableProps {
 
 export const DecisionInstancesTable = ({
   dmnResourceDefinitionKey,
+  processInstanceKey,
   filterValues: externalFilterValues,
   onFilterChange: externalOnFilterChange,
   refreshKey: externalRefreshKey = 0,
@@ -107,6 +110,11 @@ export const DecisionInstancesTable = ({
         apiParams.dmnResourceDefinitionKey = dmnResourceDefinitionKey;
       }
 
+      // Add fixed process instance key filter
+      if (processInstanceKey) {
+        apiParams.processInstanceKey = processInstanceKey;
+      }
+
       // Add filters
       if (params.filters?.search && typeof params.filters.search === 'string') {
         apiParams.search = params.filters.search;
@@ -147,7 +155,7 @@ export const DecisionInstancesTable = ({
       };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dmnResourceDefinitionKey, refreshKey]
+    [dmnResourceDefinitionKey, processInstanceKey, refreshKey]
   );
 
   // Get columns from extracted definition
