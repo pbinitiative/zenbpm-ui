@@ -26,6 +26,9 @@ export interface MetadataPanelProps {
   /** Created at timestamp - formatted automatically */
   createdAt?: string;
 
+  /** Business key */
+  businessKey?: string;
+
   /** Entity name */
   name?: string;
 
@@ -34,9 +37,6 @@ export interface MetadataPanelProps {
 
   /** All available versions for version selector */
   versions?: VersionInfo[];
-
-  /** Resource file name */
-  resourceName?: string;
 
   /** Callback when version is changed */
   onVersionChange?: (key: string) => void;
@@ -75,10 +75,10 @@ export const MetadataPanel = ({
   state,
   incidentsCount,
   createdAt,
+  businessKey,
   name,
   version,
   versions = [],
-  resourceName,
   onVersionChange,
   definitionInfo,
   processInstanceKey,
@@ -96,10 +96,10 @@ export const MetadataPanel = ({
     state,
     incidentsCount,
     createdAt,
+    businessKey,
     name,
     version,
     versions,
-    resourceName,
     onVersionChange,
     additionalFields,
     keyLabel,

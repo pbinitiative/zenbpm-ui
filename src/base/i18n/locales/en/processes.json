@@ -21,6 +21,7 @@
     "bpmnProcessId": "BPMN Process ID",
     "resourceName": "Resource Name",
     "version": "Version",
+    "businessKey": "Business Key",
     "key": "Key",
     "createdAt": "Created At",
     "state": "State",

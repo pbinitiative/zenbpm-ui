@@ -148,6 +148,7 @@
     "processDefinition": "Process Definition",
     "processInstance": "Process Instance",
     "decisionDefinition": "Decision Definition",
-    "decisionInstance": "Decision Instance"
+    "decisionInstance": "Decision Instance",
+    "businessKey": "Business Key"
   }
 }

@@ -177,8 +177,8 @@ export const ProcessInstanceDetailPage = () => {
               incidentsCount={unresolvedIncidentsCount}
               name={processDefinition?.bpmnProcessName}
               version={processDefinition?.version}
-              resourceName={processDefinition?.bpmnResourceName}
               createdAt={processInstance.createdAt}
+              businessKey={processInstance.businessKey}
               definitionInfo={{ key: processInstance.processDefinitionKey, type: 'process' } as DefinitionInfo}
               keyLabel={t('processInstance:fields.key')}
             />

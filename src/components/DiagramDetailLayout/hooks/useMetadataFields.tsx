@@ -14,10 +14,11 @@ interface UseMetadataFieldsOptions {
   state?: string;
   incidentsCount?: number;
   createdAt?: string;
+  businessKey?: string;
   name?: string;
   version?: number;
   versions?: VersionInfo[];
-  resourceName?: string;
+  id?: string;
   onVersionChange?: (key: string) => void;
   additionalFields?: MetadataField[];
   keyLabel?: string;
@@ -30,10 +31,11 @@ export function useMetadataFields({
   state,
   incidentsCount,
   createdAt,
+  businessKey,
   name,
   version,
   versions = [],
-  resourceName,
+  id,
   onVersionChange,
   additionalFields = [],
   keyLabel,
@@ -135,19 +137,19 @@ export function useMetadataFields({
       }
     }
 
-    // 5. Resource name
-    if (resourceName) {
-      result.push({
-        label: t('common:fields.resourceName'),
-        value: resourceName,
-      });
-    }
-
-    // 6. Created at
+    // 5. Created at
     if (createdAt) {
       result.push({
         label: t('common:fields.createdAt'),
         value: formatDate(createdAt),
+      });
+    }
+
+    // 6. Business key
+    if (businessKey) {
+      result.push({
+        label: t('common:fields.businessKey'),
+        value: businessKey,
       });
     }
 
@@ -165,7 +167,7 @@ export function useMetadataFields({
     name,
     version,
     versions,
-    resourceName,
+    id,
     onVersionChange,
     additionalFields,
     t,
