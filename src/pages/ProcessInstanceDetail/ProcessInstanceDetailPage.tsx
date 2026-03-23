@@ -85,6 +85,7 @@ export const ProcessInstanceDetailPage = () => {
     jobs,
     history,
     incidents,
+    elementStatistics,
     loading,
     error,
     refetchAll,
@@ -145,6 +146,7 @@ export const ProcessInstanceDetailPage = () => {
                 diagramData={processDefinition.bpmnData}
                 history={historyElements}
                 activeElements={activeElements}
+                elementStatistics={elementStatistics}
               />
             ) : (
               <Box

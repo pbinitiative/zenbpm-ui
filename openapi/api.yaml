@@ -73,6 +73,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         502:
           description: Failed to redirect request to responsible node
           content:
@@ -149,6 +155,18 @@ paths:
                 size: 10
                 count: 2
                 totalCount: 2
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         502:
           description: Failed to redirect request to responsible node
           content:
@@ -191,6 +209,18 @@ paths:
                   </definitions>
         400:
           description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        500:
+          description: Internal server error
           content:
             application/json:
               schema:
@@ -276,13 +306,42 @@ paths:
                         inputExpression: "income"
                         inputValue: { "income": 50000 }
                 decisionOutput: { "approved": true }
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "BAD_REQUEST"
+                message: "The request parameters are invalid"
+        404:
+          description: Not Found (e.g. decision definition was not found)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "NOT_FOUND"
+                message: "No decision definition found for the given decisionId"
         500:
           description: Internal server error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
+              example:
+                code: "INTERNAL_SERVER_ERROR"
+                message: "An unexpected error occurred while evaluating the decision"
+        502:
+          description: Failed to redirect request to responsible node
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "BAD_GATEWAY"
+                message: "Failed to redirect request to responsible node"
   /decision-instances:
     get:
       operationId: getDecisionInstances
@@ -384,18 +443,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+              example:
+                code: "BAD_REQUEST"
+                message: "The request parameters are invalid"
         500:
           description: Internal server error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+              example:
+                code: "INTERNAL_SERVER_ERROR"
+                message: "An unexpected error occurred while retrieving decision instances"
         502:
           description: Failed to collect data from responsible nodes
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+              example:
+                code: "BAD_GATEWAY"
+                message: "Failed to collect data from responsible nodes"
 
   /decision-instances/{decisionInstanceKey}:
     get:
@@ -453,18 +521,31 @@ paths:
                   approved: true
         404:
           description: Decision instance not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "NOT_FOUND"
+                message: "No decision instance found for the given key"
         500:
           description: Internal server error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+              example:
+                code: "INTERNAL_SERVER_ERROR"
+                message: "An unexpected error occurred while retrieving decision instance"
         502:
           description: Failed to collect data from responsible node
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+              example:
+                code: "BAD_GATEWAY"
+                message: "Failed to collect data from responsible node"
 
   /process-definitions:
     post:
@@ -1010,7 +1091,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [ createdAt, key, state ]
+            enum: [ createdAt, key, state, businessKey ]
           description: Sort field (applies globally across partitions)
         - $ref: "#/components/parameters/sortOrder"
         - name: createdFrom
@@ -1679,6 +1760,65 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /process-instances/{processInstanceKey}/statistics:
+    get:
+      operationId: getProcessInstanceElementStatistics
+      summary: Get running and incident counts per BPMN element for a process instance
+      tags:
+        - process-instance
+      parameters:
+        - name: processInstanceKey
+          required: true
+          in: path
+          schema:
+            type: integer
+            format: int64
+          example: 4503599627370501
+      responses:
+        200:
+          description: Element statistics as a map of elementId to counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ElementStatisticsPartitions"
+              example:
+                partitions:
+                  - partition: 1
+                    items:
+                      Task_CheckApplication:
+                        activeCount: 1
+                        incidentCount: 0
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "BAD_REQUEST"
+                message: "The provided processInstanceKey is invalid"
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "NOT_FOUND"
+                message: "No process instance found for the given key"
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        502:
+          description: Failed to collect data from responsible node
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /jobs:
     get:
       operationId: getJobs
@@ -2001,12 +2141,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+              example:
+                code: "BAD_REQUEST"
+                message: "Invalid request payload"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "NOT_FOUND"
+                message: "The requested resource was not found"
+        500:
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "TECHNICAL_ERROR"
+                message: "An unexpected error occurred while processing the request"
         502:
           description: Failed to redirect request to responsible node
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+              example:
+                code: "CLUSTER_ERROR"
+                message: "Failed to redirect request to responsible node"
 
   /incidents/{incidentKey}/resolve:
     post:
@@ -2027,6 +2191,18 @@ paths:
           description: Incident resolved
         400:
           description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        500:
+          description: Internal server error
           content:
             application/json:
               schema:

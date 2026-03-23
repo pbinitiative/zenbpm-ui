@@ -10,6 +10,37 @@ import { withValidation } from '../validation';
 
 const BASE_URL = '/v1';
 
+// Helper to compute element statistics for a specific process instance
+function computeInstanceElementStatistics(processInstanceKey: string) {
+  const elementStats: Record<string, { activeCount: number; incidentCount: number }> = {};
+
+  const getInstanceStat = (elementId: string) => {
+    if (!elementStats[elementId]) {
+      elementStats[elementId] = { activeCount: 0, incidentCount: 0 };
+    }
+    return elementStats[elementId];
+  };
+
+  const instance = findProcessInstanceByKey(processInstanceKey);
+  if (instance) {
+    // Count active elements from the instance's active element instances
+    instance.activeElementInstances.forEach((elem) => {
+      getInstanceStat(elem.elementId).activeCount++;
+    });
+  }
+
+  // Count unresolved incidents for this instance per element
+  const instanceIncidents = getIncidentsByProcessInstanceKey(processInstanceKey);
+  instanceIncidents
+    .filter((i) => !i.resolvedAt)
+    .forEach((incident) => {
+      getInstanceStat(incident.elementId).incidentCount++;
+    });
+
+  return elementStats;
+}
+
+
 // Helper to sort items by a field
 function sortItems<T>(items: T[], sortBy: string | null, sortOrder: string | null): T[] {
   if (!sortBy) return items;
@@ -440,6 +471,31 @@ export const processInstanceHandlers = [
       // In a real implementation, we'd delete the variable
       // For mock purposes, just return success
       return new HttpResponse(null, { status: 204 });
+    })
+  ),
+
+  // GET /process-instances/:processInstanceKey/statistics - Get element statistics
+  http.get(
+    `${BASE_URL}/process-instances/:processInstanceKey/statistics`,
+    withValidation(({ params }) => {
+      const { processInstanceKey } = params;
+
+      const instance = findProcessInstanceByKey(processInstanceKey as string);
+
+      if (!instance) {
+        return HttpResponse.json(
+          {
+            code: 'NOT_FOUND',
+            message: `Process instance with key ${processInstanceKey} not found`,
+          },
+          { status: 404 }
+        );
+      }
+
+      const items = computeInstanceElementStatistics(processInstanceKey as string);
+      return HttpResponse.json({
+        partitions: [{ partition: instance.partition, items }],
+      });
     })
   ),
 ];
