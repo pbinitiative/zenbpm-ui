@@ -29,6 +29,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000005', elementId: 'task-a', elementType: 'task' },
     ],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -43,6 +44,7 @@ export const instances: MockProcessInstance[] = [
     },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   // Partition 2
@@ -60,6 +62,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000006', elementId: 'task-b', elementType: 'task' },
     ],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -77,6 +80,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000007', elementId: 'task-a', elementType: 'task' },
     ],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   // Partition 3
@@ -94,6 +98,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000008', elementId: 'task-a', elementType: 'task' },
     ],
     history: [],
+    processType: 'default',
     partition: 3,
   },
   // Partition 4
@@ -106,6 +111,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderId: 'ORD-2024-301', orderTotal: 459.99 },
     activeElementInstances: [{ key: '3100000000000000009', elementId: 'task-a', elementType: 'task' }],
     history: [],
+    processType: 'default',
     partition: 4,
   },
   {
@@ -117,6 +123,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderId: 'ORD-2024-302', orderTotal: 789.50 },
     activeElementInstances: [{ key: '3100000000000000010', elementId: 'task-b', elementType: 'task' }],
     history: [],
+    processType: 'default',
     partition: 4,
   },
   {
@@ -128,6 +135,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderId: 'ORD-2024-303', orderTotal: 129.00 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 4,
   },
   {
@@ -139,6 +147,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderId: 'ORD-2024-304', orderTotal: 2499.99 },
     activeElementInstances: [{ key: '3100000000000000011', elementId: 'task-a', elementType: 'task' }],
     history: [],
+    processType: 'default',
     partition: 4,
   },
   {
@@ -150,6 +159,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderId: 'ORD-2024-305', orderTotal: 349.99 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 4,
   },
   {
@@ -161,6 +171,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderId: 'ORD-2024-306', orderTotal: 899.00 },
     activeElementInstances: [{ key: '3100000000000000012', elementId: 'task-b', elementType: 'task' }],
     history: [],
+    processType: 'default',
     partition: 4,
   },
   {
@@ -172,6 +183,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderId: 'ORD-2024-307', orderTotal: 59.99 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 4,
   },
   {
@@ -183,6 +195,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderId: 'ORD-2024-308', orderTotal: 1599.00 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 4,
   },
 ];

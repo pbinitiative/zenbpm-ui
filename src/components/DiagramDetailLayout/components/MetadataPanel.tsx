@@ -1,11 +1,17 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import { Box, Divider } from '@mui/material';
+import { Box, Button, Divider } from '@mui/material';
 import { NavButton } from '@components/NavButton';
 import { MetadataItem } from './MetadataItem';
 import type { MetadataField, VersionInfo, DefinitionInfo } from '../types';
 import { useMetadataFields } from '../hooks';
+import CancelIcon from '@mui/icons-material/Cancel';
+import { cancelProcessInstance, type ProcessInstanceState } from '@base/openapi';
+import { useConfirmDialog } from '@/components/ConfirmDialog';
+import { useNotification } from '@base/contexts';
+import axios from "axios";
+import { TERMINAL_STATES } from "@pages/ProcessInstanceDetail/hooks/useInstanceData.ts";
 
 // Re-export types for backward compatibility
 export type { MetadataField, VersionInfo, DefinitionInfo };
@@ -18,7 +24,7 @@ export interface MetadataPanelProps {
   stateField?: MetadataField;
 
   /** Entity state - when provided, renders StateBadge automatically (simpler than stateField) */
-  state?: string;
+  state?: ProcessInstanceState;
 
   /** Number of unresolved incidents - shows warning icon next to state */
   incidentsCount?: number;
@@ -88,7 +94,7 @@ export const MetadataPanel = ({
   gap = 1.5,
   actions,
 }: MetadataPanelProps) => {
-  const { t } = useTranslation([ns.common]);
+      const { t } = useTranslation([ns.common, ns.processInstance]);
 
   const fields = useMetadataFields({
     entityKey,
@@ -108,7 +114,27 @@ export const MetadataPanel = ({
 
   const hasLinks = definitionInfo || processInstanceKey;
   const hasBottomSection = hasLinks || actions;
+  const { openConfirm: confirmCancelDialog } = useConfirmDialog({
+      title: t('processInstance:dialogs.cancelProcess.title'),
+      message: t('processInstance:dialogs.cancelProcess.message'),
+      confirmColor: 'error',
+    })
+  const { showSuccess, showError } = useNotification();
 
+  const cancelProcess = async () => {
+    if (entityKey && await confirmCancelDialog()) {
+      try {
+        await cancelProcessInstance(entityKey as string);
+        showSuccess(t('processInstance:messages.processCancelled'));
+      } catch(error) {
+        const data = axios.isAxiosError(error)
+          ? (error.response?.data as { code?: string; message?: string } | undefined)
+          : undefined;
+        showError(t('processInstance:messages.processCancelFailed') + `: ${data?.code}`);
+        console.error('Failed to cancel process:', data?.code, ':', data?.message, error);
+      }
+    }
+  }
   // Simple render if no links or actions
   if (!hasBottomSection) {
     return (
@@ -138,7 +164,21 @@ export const MetadataPanel = ({
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         {/* Action buttons */}
         {actions}
-
+        {/* Cancel Process Button  */}
+        {definitionInfo?.type === 'process' && !TERMINAL_STATES.includes(state || "")
+          && (<Button
+            onClick={cancelProcess}
+            variant="outlined"
+            size="small"
+            endIcon={<CancelIcon />}
+            color={"primary"}
+            sx={{
+              justifyContent: 'space-between',
+            }}
+          >
+            {t('processInstance:actions.cancelProcess')}
+          </Button>)
+        }
         {/* Navigation links */}
         {definitionInfo && (
           <NavButton

@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { invalidInput: null, expectedError: true },
     activeElementInstances: [{ key: '3100000000000000179', elementId: 'invalid-input', elementType: 'serviceTask' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { invalidInput: 'malformed', error: 'Input validation failed' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

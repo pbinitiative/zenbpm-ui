@@ -25,6 +25,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000165', elementId: 'event-1', elementType: 'intermediateCatchEvent' },
     ],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -36,6 +37,7 @@ export const instances: MockProcessInstance[] = [
     variables: { parallelEventsReceived: 2, parallelEventsExpected: 2 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

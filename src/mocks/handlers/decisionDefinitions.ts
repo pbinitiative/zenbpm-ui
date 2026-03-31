@@ -384,9 +384,9 @@ export const decisionDefinitionHandlers = [
     })
   ),
 
-  // POST /decisions/:decisionId/evaluate - Evaluate a decision
+  // POST /decision-definitions/:decisionId/evaluate - Evaluate a decision
   http.post(
-    `${BASE_URL}/decisions/:decisionId/evaluate`,
+    `${BASE_URL}/decision-definitions/:decisionId/evaluate`,
     withValidation(async ({ params, request }) => {
       const { decisionId } = params;
       const body = (await request.json()) as {
@@ -408,26 +408,45 @@ export const decisionDefinitionHandlers = [
         }
 
         return HttpResponse.json({
+          decisionInstanceKey: Date.now(),
           evaluatedDecisions: [
             {
               decisionId: 'location',
               decisionName: 'Location',
               decisionType: 'DECISION_TABLE',
+              decisionDefinitionVersion: 1,
+              dmnResourceDefinitionKey: `4000000000000000001`,
+              dmnResourceDefinitionId: 'drd_sports',
               evaluationOrder: 1,
-              matchedRules: [{ ruleId: weather === 'good' ? 'DecisionRule_13tngwo' : 'DecisionRule_165n4nx', ruleIndex: weather === 'good' ? 0 : 1 }],
+              matchedRules: [
+                {
+                  ruleId: weather === 'good' ? 'DecisionRule_13tngwo' : 'DecisionRule_165n4nx',
+                  ruleIndex: weather === 'good' ? 0 : 1,
+                  evaluatedOutputs: [{ outputId: 'OutputClause_0bsor1g', outputName: 'location', outputValue: { location } }],
+                },
+              ],
               decisionOutput: { location },
-              evaluatedInputs: [{ inputId: 'InputClause_0jms81j', inputName: 'weather', inputValue: weather }],
+              evaluatedInputs: [{ inputId: 'InputClause_0jms81j', inputName: 'weather', inputExpression: 'weather', inputValue: weather }],
             },
             {
               decisionId: 'sport',
               decisionName: 'Sport',
               decisionType: 'DECISION_TABLE',
+              decisionDefinitionVersion: 1,
+              dmnResourceDefinitionKey: `4000000000000000001`,
+              dmnResourceDefinitionId: 'drd_sports',
               evaluationOrder: 2,
-              matchedRules: [{ ruleId: 'DecisionRule_1nszbio', ruleIndex: 0 }],
+              matchedRules: [
+                {
+                  ruleId: 'DecisionRule_1nszbio',
+                  ruleIndex: 0,
+                  evaluatedOutputs: [{ outputId: 'Output_1', outputName: 'sport', outputValue: { sport } }],
+                },
+              ],
               decisionOutput: { sport },
               evaluatedInputs: [
-                { inputId: 'Input_1', inputName: 'equipment', inputValue: equipment },
-                { inputId: 'InputClause_1e9jmc5', inputName: 'location', inputValue: location },
+                { inputId: 'Input_1', inputName: 'equipment', inputExpression: 'equipment', inputValue: equipment },
+                { inputId: 'InputClause_1e9jmc5', inputName: 'location', inputExpression: 'Location.location', inputValue: location },
               ],
             },
           ],
@@ -448,17 +467,27 @@ export const decisionDefinitionHandlers = [
       }
 
       return HttpResponse.json({
+        decisionInstanceKey: Date.now(),
         evaluatedDecisions: [
           {
             decisionId: decisionId as string,
             decisionName: 'Decision of auto liquidation',
             decisionType: 'DECISION_TABLE',
+            decisionDefinitionVersion: 1,
+            dmnResourceDefinitionKey: `4000000000000000003`,
+            dmnResourceDefinitionId: 'example_canAutoLiquidate',
             evaluationOrder: 1,
-            matchedRules: [{ ruleId: canAutoLiquidate ? 'DecisionRule_1k1p1ib' : 'DecisionRule_0sbgnlq', ruleIndex: canAutoLiquidate ? 0 : 2 }],
+            matchedRules: [
+              {
+                ruleId: canAutoLiquidate ? 'DecisionRule_1k1p1ib' : 'DecisionRule_0sbgnlq',
+                ruleIndex: canAutoLiquidate ? 0 : 2,
+                evaluatedOutputs: [{ outputId: 'Output_1', outputName: 'canAutoLiquidate', outputValue: { canAutoLiquidate } }],
+              },
+            ],
             decisionOutput: { canAutoLiquidate },
             evaluatedInputs: [
-              { inputId: 'Input_1', inputName: 'Value', inputValue: amount },
-              { inputId: 'InputClause_137jnlm', inputName: 'Insurance Type', inputValue: insuranceType },
+              { inputId: 'Input_1', inputName: 'Value', inputExpression: 'claim.amountOfDamage', inputValue: amount },
+              { inputId: 'InputClause_137jnlm', inputName: 'Insurance Type', inputExpression: 'claim.insuranceType', inputValue: insuranceType },
             ],
           },
         ],
@@ -505,7 +534,7 @@ export const decisionDefinitionHandlers = [
         key,
         version,
         dmnResourceDefinitionId: decisionDefinitionId,
-        name,
+        dmnDefinitionName: name,
         resourceName,
       }));
 
@@ -540,7 +569,7 @@ export const decisionDefinitionHandlers = [
         key: definition.key,
         version: definition.version,
         dmnResourceDefinitionId: definition.decisionDefinitionId,
-        name: definition.name,
+        dmnDefinitionName: definition.name,
         resourceName: definition.resourceName,
         dmnData: definition.dmnData,
       });

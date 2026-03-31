@@ -31,6 +31,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000061', elementId: 'task-audit', elementType: 'userTask' },
     ],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -48,6 +49,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000063', elementId: 'task-a', elementType: 'userTask' },
     ],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   // Partition 2
@@ -66,6 +68,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000065', elementId: 'task-b', elementType: 'userTask' },
     ],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

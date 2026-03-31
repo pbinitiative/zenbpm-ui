@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { selectedMessage: 'MessageA', alternativeIgnored: 'MessageB' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { selectedMessage: 'MessageB', alternativeIgnored: 'MessageA' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

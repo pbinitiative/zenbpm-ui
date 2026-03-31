@@ -15,7 +15,7 @@ import {
 } from '@base/openapi';
 
 // States that indicate the process instance is finished and doesn't need periodic refresh
-const TERMINAL_STATES = ['completed', 'terminated', 'canceled'];
+export const TERMINAL_STATES = ['completed', 'terminated'];
 
 // Refresh interval in milliseconds (5 seconds)
 const AUTO_REFRESH_INTERVAL = 5000;

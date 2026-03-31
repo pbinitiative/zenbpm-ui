@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { boundaryTriggered: false, timeout: 30000 },
     activeElementInstances: [{ key: '3100000000000000071', elementId: 'callActivity', elementType: 'callActivity' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { boundaryTriggered: true, timeout: 30000 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

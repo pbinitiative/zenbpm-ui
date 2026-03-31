@@ -88,7 +88,7 @@ export const jobHandlers = [
 
       // In a real implementation, we'd update the job state
       // For mock purposes, just return success
-      return new HttpResponse(null, { status: 200 });
+      return new HttpResponse(null, { status: 201 });
     })
   ),
 
@@ -113,7 +113,7 @@ export const jobHandlers = [
 
       // In a real implementation, we'd update the job's assignee
       // For mock purposes, just return success
-      return new HttpResponse(null, { status: 200 });
+      return new HttpResponse(null, { status: 204 });
     })
   ),
 

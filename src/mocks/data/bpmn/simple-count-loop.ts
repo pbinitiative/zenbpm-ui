@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { counter: 3, maxIterations: 10 },
     activeElementInstances: [{ key: '3100000000000000186', elementId: 'id-increaseCounter', elementType: 'serviceTask' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { counter: 10, maxIterations: 10, loopCompleted: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { counter: 5, maxIterations: 5 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];

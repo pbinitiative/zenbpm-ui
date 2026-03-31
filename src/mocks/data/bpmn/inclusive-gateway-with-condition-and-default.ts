@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderType: 'express', requiresApproval: true },
     activeElementInstances: [{ key: '3100000000000000117', elementId: 'task-a', elementType: 'serviceTask' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderType: 'standard', requiresApproval: false },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderType: 'unknown', usedDefault: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];

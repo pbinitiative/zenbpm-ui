@@ -26,6 +26,7 @@ export const instances: MockProcessInstance[] = [
       { key: '3100000000000000169', elementId: 'id-b-2', elementType: 'serviceTask' },
     ],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -37,6 +38,7 @@ export const instances: MockProcessInstance[] = [
     variables: { branches: ['A', 'B', 'C'], completedBranches: ['A', 'B', 'C'] },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -48,6 +50,7 @@ export const instances: MockProcessInstance[] = [
     variables: { branches: ['A', 'B', 'C'], completedBranches: ['A', 'B', 'C'] },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -59,6 +62,7 @@ export const instances: MockProcessInstance[] = [
     variables: { branches: ['A', 'B', 'C'], completedBranches: ['A', 'B', 'C'] },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 3,
   },
   {
@@ -70,6 +74,7 @@ export const instances: MockProcessInstance[] = [
     variables: { branches: ['A', 'B', 'C'], terminatedBy: 'system' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

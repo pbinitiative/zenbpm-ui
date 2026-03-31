@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { approver: 'manager@example.com', approved: null },
     activeElementInstances: [{ key: '3100000000000000079', elementId: 'userTask', elementType: 'userTask' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { approver: 'admin@example.com', approved: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { taskId: 'TASK-101', awaitingInterrupt: true },
     activeElementInstances: [{ key: '3100000000000000134', elementId: 'service-task-id', elementType: 'serviceTask' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { taskId: 'TASK-102', interrupted: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { taskId: 'TASK-103', interrupted: false },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];

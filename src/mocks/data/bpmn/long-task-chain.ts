@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { currentStep: 3, totalSteps: 10, payload: { data: 'processing' } },
     activeElementInstances: [{ key: '3100000000000000121', elementId: 'Activity_0tpyafm', elementType: 'serviceTask' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { currentStep: 7, totalSteps: 10, payload: { data: 'almost done' } },
     activeElementInstances: [{ key: '3100000000000000123', elementId: 'Activity_06lgjnc', elementType: 'serviceTask' }],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { currentStep: 10, totalSteps: 10, completedAt: daysAgo(0) },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -56,6 +59,7 @@ export const instances: MockProcessInstance[] = [
     variables: { currentStep: 10, totalSteps: 10 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 3,
   },
   {
@@ -67,6 +71,7 @@ export const instances: MockProcessInstance[] = [
     variables: { currentStep: 5, totalSteps: 10, error: 'Connection timeout' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -78,6 +83,7 @@ export const instances: MockProcessInstance[] = [
     variables: { currentStep: 10, totalSteps: 10 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];

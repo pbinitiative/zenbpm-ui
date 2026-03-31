@@ -24,6 +24,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderId: 'ORD-2024-309', orderTotal: 279.50 },
     activeElementInstances: [{ key: '3100000000000000013', elementId: 'IntermediateCatchEvent_1', elementType: 'intermediateCatchEvent' }],
     history: [],
+    processType: 'default',
     partition: 4,
   },
   {
@@ -35,6 +36,7 @@ export const instances: MockProcessInstance[] = [
     variables: { orderId: 'ORD-2024-310', orderTotal: 499.99 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 4,
   },
 ];

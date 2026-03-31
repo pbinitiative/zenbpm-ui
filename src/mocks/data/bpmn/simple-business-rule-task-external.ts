@@ -63,6 +63,7 @@ const createInstance = (
     bpmnProcessId: 'simple-business-rule-task-external',
     createdAt,
     state,
+    processType: 'default' as const,
     variables,
     activeElementInstances:
       state === 'active' || state === 'failed'

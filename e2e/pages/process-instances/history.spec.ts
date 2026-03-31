@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { instanceKeys } from '../../fixtures/instance-keys';
+
+const { ACTIVE_INSTANCE_KEY, COMPLETED_INSTANCE_KEY } = instanceKeys;
 
 test.describe('Process Instance History - Green Path Visualization', () => {
-  // Use a process instance with history data (from showcase-process)
-  const processInstanceKey = '3100000000000000014';
+  const processInstanceKey = ACTIVE_INSTANCE_KEY;
 
   test.beforeEach(async ({ page }) => {
     await page.goto(`/process-instances/${processInstanceKey}`);
@@ -64,8 +66,7 @@ test.describe('Process Instance History - Green Path Visualization', () => {
 });
 
 test.describe('Process Instance History - Completed Instance', () => {
-  // Use a completed process instance (from showcase-process)
-  const completedInstanceKey = '2097302399374458883';
+  const completedInstanceKey = COMPLETED_INSTANCE_KEY;
 
   test('should show full green path for completed instance', async ({ page }) => {
     await page.goto(`/process-instances/${completedInstanceKey}`);
@@ -107,7 +108,7 @@ test.describe('Process Instance History - Completed Instance', () => {
 });
 
 test.describe('Process Definition Detail - BPMN Diagram', () => {
-  const processDefinitionKey = '3000000000000000033'; // Showcase Process
+  const processDefinitionKey = instanceKeys.SHOWCASE_PROCESS_DEFINITION_KEY;
 
   test('should load BPMN diagram', async ({ page }) => {
     await page.goto(`/process-definitions/${processDefinitionKey}`);

@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { timerDuration: 'PT1H', scheduledFire: hoursAgo(4) },
     activeElementInstances: [{ key: '3100000000000000150', elementId: 'timer1', elementType: 'intermediateCatchEvent' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { timerDuration: 'PT30M', timerFired: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { timerDuration: 'PT2H', timerFired: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];

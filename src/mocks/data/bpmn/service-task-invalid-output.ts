@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { inputValid: true, outputMapping: 'invalid_expression' },
     activeElementInstances: [{ key: '3100000000000000182', elementId: 'invalid-output', elementType: 'serviceTask' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { inputValid: true, error: 'Output mapping failed' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

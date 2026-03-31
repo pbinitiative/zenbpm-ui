@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { timerDuration: 'invalid', errorExpected: true },
     activeElementInstances: [{ key: '3100000000000000147', elementId: 'Event_1uc8qla', elementType: 'intermediateCatchEvent' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { timerDuration: 'invalid', error: 'Invalid timer expression' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

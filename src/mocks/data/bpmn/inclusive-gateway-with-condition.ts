@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { score: 85, threshold: 70 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { score: 45, threshold: 70 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

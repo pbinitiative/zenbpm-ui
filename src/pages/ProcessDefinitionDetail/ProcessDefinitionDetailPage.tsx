@@ -62,9 +62,9 @@ export const ProcessDefinitionDetailPage = () => {
       <Button
         variant="outlined"
         size="small"
-        startIcon={<PlayArrowIcon />}
+        endIcon={<PlayArrowIcon />}
         onClick={handleStartInstance}
-        sx={{ justifyContent: 'flex-start' }}
+        sx={{ justifyContent: 'space-between' }}
         data-testid="process-definition-start-instance-button"
       >
         {t('processes:actions.startInstance')}
@@ -72,9 +72,9 @@ export const ProcessDefinitionDetailPage = () => {
       <Button
         variant="outlined"
         size="small"
-        startIcon={<EditIcon />}
+        endIcon={<EditIcon />}
         onClick={handleEditDefinition}
-        sx={{ justifyContent: 'flex-start' }}
+        sx={{ justifyContent: 'space-between' }}
         data-testid="process-definition-edit-button"
       >
         {t('processes:actions.editDefinition')}

@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { customTaskId: 'CUSTOM-001' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { customTaskId: 'CUSTOM-002' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { parallelBranches: 2, completedBranches: 1 },
     activeElementInstances: [{ key: '3100000000000000098', elementId: 'id-a-2', elementType: 'serviceTask' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { parallelBranches: 2, completedBranches: 2 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { parallelBranches: 2, completedBranches: 2 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];

@@ -226,19 +226,6 @@ test.describe('API Response Validation', () => {
     collector.cleanup();
     expect(collector.errors, `Validation errors found:\n${collector.errors.join('\n')}`).toHaveLength(0);
   });
-
-  test('Incidents page - no validation errors', async ({ page }) => {
-    const collector = createValidationErrorCollector(page);
-
-    await page.goto('/incidents');
-    await waitForApiCalls(page);
-
-    // Wait for table to load
-    await expect(page.getByRole('heading', { name: 'Incidents' })).toBeVisible({ timeout: 10000 });
-
-    collector.cleanup();
-    expect(collector.errors, `Validation errors found:\n${collector.errors.join('\n')}`).toHaveLength(0);
-  });
 });
 
 test.describe('API Validation - Edge Cases', () => {

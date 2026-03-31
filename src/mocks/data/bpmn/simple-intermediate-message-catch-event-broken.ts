@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { brokenConfig: true, errorExpected: true },
     activeElementInstances: [{ key: '3100000000000000197', elementId: 'msg', elementType: 'intermediateCatchEvent' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { brokenConfig: true, error: 'Message subscription failed' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { forkPath: 'left', joinedAt: '2024-12-08T10:00:00Z' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { forkPath: 'right', joinedAt: '2024-12-05T14:30:00Z' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];

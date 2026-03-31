@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { correlationId: 'CORR-001', waitingFor: ['MessageA', 'MessageB'] },
     activeElementInstances: [{ key: '3100000000000000129', elementId: 'EventBasedGateway_1', elementType: 'eventBasedGateway' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { correlationId: 'CORR-002', receivedMessage: 'MessageA' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { correlationId: 'CORR-003', receivedMessage: 'MessageB' },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];

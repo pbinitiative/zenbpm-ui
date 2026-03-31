@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { awaitingMerge: true, receivedEvents: ['Event1'] },
     activeElementInstances: [{ key: '3100000000000000161', elementId: 'event-1-id', elementType: 'intermediateCatchEvent' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { awaitingMerge: false, receivedEvents: ['Event1', 'Event2'] },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { awaitingMerge: false, receivedEvents: ['Event1', 'Event2'] },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];

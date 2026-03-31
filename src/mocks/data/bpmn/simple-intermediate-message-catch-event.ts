@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { correlationKey: 'MSG-001', awaiting: true },
     activeElementInstances: [{ key: '3100000000000000193', elementId: 'IntermediateCatchEvent_1', elementType: 'intermediateCatchEvent' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { correlationKey: 'MSG-002', messageReceived: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { correlationKey: 'MSG-003', messageReceived: true },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];

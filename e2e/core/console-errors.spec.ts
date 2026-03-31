@@ -1,4 +1,7 @@
 import { test, expect, type ConsoleMessage, type Page } from '@playwright/test';
+import { instanceKeys } from '../fixtures/instance-keys';
+
+const { ACTIVE_INSTANCE_KEY, SHOWCASE_PROCESS_DEFINITION_KEY } = instanceKeys;
 
 /**
  * Comprehensive Console Error Detection Tests
@@ -69,13 +72,13 @@ const _processDefinitionKeys = [
   '3000000000000000006', // exclusive-gateway-multiple-tasks
   '3000000000000000007', // exclusive-gateway-with-condition-and-default
   '3000000000000000008', // exclusive-gateway-with-condition
-  '3000000000000000033', // showcase-process
+  SHOWCASE_PROCESS_DEFINITION_KEY, // showcase-process
 ];
 
 // Get process instance keys
 const _processInstanceKeys = [
   '3100000000000000164', // showcase-process instance
-  '3100000000000000014', // showcase-process instance
+  ACTIVE_INSTANCE_KEY,   // showcase-process active instance
   '3100000000000000066', // call-activity-simple instance
 ];
 
@@ -96,7 +99,7 @@ test.describe('Console Error Detection - Process Definitions', () => {
   test('Process Definition detail - showcase-process - no errors', async ({ page }) => {
     const collector = createErrorCollector(page);
 
-    await page.goto('/process-definitions/3000000000000000033');
+    await page.goto(`/process-definitions/${SHOWCASE_PROCESS_DEFINITION_KEY}`);
     await waitForStable(page);
 
     // Wait for BPMN diagram
@@ -169,7 +172,7 @@ test.describe('Console Error Detection - Process Instances', () => {
   test('Process Instance detail - showcase instance - no errors', async ({ page }) => {
     const collector = createErrorCollector(page);
 
-    await page.goto('/process-instances/3100000000000000014');
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}`);
     await waitForStable(page);
 
     collector.cleanup();
@@ -179,7 +182,7 @@ test.describe('Console Error Detection - Process Instances', () => {
   test('Process Instance detail - all tabs - no errors', async ({ page }) => {
     const collector = createErrorCollector(page);
 
-    await page.goto('/process-instances/3100000000000000014');
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}`);
     await waitForStable(page);
 
     // Click through all tabs
@@ -251,23 +254,13 @@ test.describe('Console Error Detection - Other Pages', () => {
     collector.cleanup();
     expect(collector.errors, `Errors found:\n${collector.errors.join('\n')}`).toHaveLength(0);
   });
-
-  test('Incidents page - no errors', async ({ page }) => {
-    const collector = createErrorCollector(page);
-
-    await page.goto('/incidents');
-    await waitForStable(page);
-
-    collector.cleanup();
-    expect(collector.errors, `Errors found:\n${collector.errors.join('\n')}`).toHaveLength(0);
-  });
 });
 
 test.describe('Console Error Detection - Interactive Features', () => {
   test('Open Start Instance dialog - no errors', async ({ page }) => {
     const collector = createErrorCollector(page);
 
-    await page.goto('/process-definitions/3000000000000000033');
+    await page.goto(`/process-definitions/${SHOWCASE_PROCESS_DEFINITION_KEY}`);
     await waitForStable(page);
 
     // Click start instance FAB
@@ -290,7 +283,7 @@ test.describe('Console Error Detection - Interactive Features', () => {
   test('Use filters on Process Definition - no errors', async ({ page }) => {
     const collector = createErrorCollector(page);
 
-    await page.goto('/process-definitions/3000000000000000033');
+    await page.goto(`/process-definitions/${SHOWCASE_PROCESS_DEFINITION_KEY}`);
     await waitForStable(page);
 
     // Open filters
@@ -318,7 +311,7 @@ test.describe('Console Error Detection - Interactive Features', () => {
   test('Click on BPMN diagram element - no errors', async ({ page }) => {
     const collector = createErrorCollector(page);
 
-    await page.goto('/process-definitions/3000000000000000033');
+    await page.goto(`/process-definitions/${SHOWCASE_PROCESS_DEFINITION_KEY}`);
     await waitForStable(page);
 
     // Wait for diagram

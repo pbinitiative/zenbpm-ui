@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { inputData: { name: 'test', value: 123 }, outputData: null },
     activeElementInstances: [{ key: '3100000000000000175', elementId: 'service-task-1', elementType: 'serviceTask' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { inputData: { name: 'order', value: 456 }, outputData: { result: 'success', processedValue: 912 } },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
   {
@@ -45,6 +47,7 @@ export const instances: MockProcessInstance[] = [
     variables: { inputData: { name: 'batch', value: 789 }, outputData: { result: 'success', processedValue: 1578 } },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 1,
   },
 ];

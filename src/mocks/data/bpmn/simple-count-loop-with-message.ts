@@ -23,6 +23,7 @@ export const instances: MockProcessInstance[] = [
     variables: { counter: 2, awaitingMessage: true },
     activeElementInstances: [{ key: '3100000000000000190', elementId: 'id-msg', elementType: 'intermediateCatchEvent' }],
     history: [],
+    processType: 'default',
     partition: 1,
   },
   {
@@ -34,6 +35,7 @@ export const instances: MockProcessInstance[] = [
     variables: { counter: 5, messagesReceived: 5 },
     activeElementInstances: [],
     history: [],
+    processType: 'default',
     partition: 2,
   },
 ];
