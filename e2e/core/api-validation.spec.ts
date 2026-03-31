@@ -171,6 +171,24 @@ test.describe('API Response Validation', () => {
     expect(collector.errors, `Validation errors found:\n${collector.errors.join('\n')}`).toHaveLength(0);
   });
 
+  test('Process Instance Detail - statistics endpoint - no validation errors', async ({ page }) => {
+    const collector = createValidationErrorCollector(page);
+
+    // Use the dedicated statistics instance: has activeCount + incidentCount on task-a.
+    // This ensures the /process-instances/{key}/statistics endpoint is exercised
+    // and its response is validated against the OpenAPI schema.
+    await page.goto('/process-instances/3100000000000000250');
+    await waitForApiCalls(page);
+
+    await expect(page.getByText('Instance Details')).toBeVisible({ timeout: 10000 });
+    // Wait for the BPMN diagram to load, which triggers the statistics request
+    await expect(page.locator('.bjs-container')).toBeVisible({ timeout: 10000 });
+    await waitForApiCalls(page);
+
+    collector.cleanup();
+    expect(collector.errors, `Validation errors found:\n${collector.errors.join('\n')}`).toHaveLength(0);
+  });
+
   test('Decisions page (definitions tab) - no validation errors', async ({ page }) => {
     const collector = createValidationErrorCollector(page);
 

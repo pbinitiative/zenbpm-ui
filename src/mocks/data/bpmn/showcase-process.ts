@@ -305,6 +305,17 @@ export const instances: MockProcessInstance[] = [
     4,
     'task-a'
   ),
+  // Dedicated instance for statistics overlay testing.
+  // task-a has activeCount: 1 (active element) AND incidentCount: 1 (unresolved incident below).
+  // Key chosen above the current highest used key (3100000000000000233) to avoid collisions.
+  createInstance(
+    '3100000000000000250',
+    hoursAgo(3),
+    'active',
+    { customerId: 'CUST-STATS-001', customerName: 'Statistics Test User', loanAmount: 25000 },
+    1,
+    'task-a'
+  ),
 ];
 
 export const incidents: MockIncident[] = [
@@ -363,6 +374,18 @@ Caused by: java.net.ConnectException: Connection refused (Connection refused)
 \tat java.base/java.lang.Thread.run(Thread.java:833)`,
     createdAt: hoursAgo(5),
     executionToken: 'token-123457',
+  },
+  // Unresolved incident for the dedicated statistics test instance (3100000000000000250).
+  // Together with its active element, task-a will have activeCount: 1 AND incidentCount: 1.
+  {
+    key: '3097302399374458899',
+    elementInstanceKey: '3100000000000000250002',
+    elementId: 'task-a',
+    processInstanceKey: '3100000000000000250',
+    processDefinitionKey: '3000000000000000033',
+    message: 'Statistics test incident: service unavailable',
+    createdAt: hoursAgo(3),
+    executionToken: 'token-stats-001',
   },
 ];
 

@@ -1,3 +1,5 @@
+import type { ElementStatisticsPartitions } from '@base/openapi';
+
 // bpmn-js type definitions (library has poor TypeScript support)
 export interface BpmnElement {
   id: string;
@@ -39,6 +41,30 @@ export interface BpmnEventBus {
 
 // Element statistics from API - map of elementId to counts
 export type ElementStatistics = Record<string, { activeCount: number; incidentCount: number }>;
+
+/**
+ * Transforms the partitioned API response into a flat elementId → counts map,
+ * summing counts across all partitions. Shared between process definition and
+ * process instance statistics.
+ */
+export function transformStatisticsToElementStatistics(
+  data: ElementStatisticsPartitions | undefined
+): ElementStatistics | undefined {
+  if (!data?.partitions) {
+    return undefined;
+  }
+  const result: ElementStatistics = {};
+  for (const partition of data.partitions) {
+    for (const [key, value] of Object.entries(partition.items)) {
+      if (!result[key]) {
+        result[key] = { activeCount: 0, incidentCount: 0 };
+      }
+      result[key].activeCount += value.activeCount;
+      result[key].incidentCount += value.incidentCount;
+    }
+  }
+  return result;
+}
 
 export interface BpmnDiagramProps {
   /** BPMN XML data (string or base64 encoded) */

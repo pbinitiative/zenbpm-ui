@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type {
   ProcessInstance,
   ProcessDefinition,
@@ -12,7 +12,10 @@ import {
   getProcessInstanceJobs,
   getHistory,
   getIncidents,
+  useGetProcessInstanceElementStatistics,
 } from '@base/openapi';
+import { transformStatisticsToElementStatistics } from '@components/BpmnDiagram';
+import type { ElementStatistics } from '@components/BpmnDiagram';
 
 // States that indicate the process instance is finished and doesn't need periodic refresh
 export const TERMINAL_STATES = ['completed', 'terminated'];
@@ -26,6 +29,7 @@ interface UseInstanceDataResult {
   jobs: Job[];
   history: FlowElementHistory[];
   incidents: Incident[];
+  elementStatistics: ElementStatistics | undefined;
   loading: boolean;
   error: string | null;
   refetchJobs: () => Promise<void>;
@@ -170,12 +174,29 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
     return () => clearInterval(intervalId);
   }, [processInstanceKey, loading, isActiveInstance]);
 
+  // Fetch element statistics for the BPMN diagram overlays
+  const { data: rawElementStatistics } = useGetProcessInstanceElementStatistics(
+    processInstanceKey ?? '',
+    {
+      query: {
+        enabled: !!processInstanceKey && !!processDefinition,
+        refetchInterval: AUTO_REFRESH_INTERVAL,
+      },
+    }
+  );
+
+  const elementStatistics = useMemo(
+    () => transformStatisticsToElementStatistics(rawElementStatistics),
+    [rawElementStatistics]
+  );
+
   return {
     processInstance,
     processDefinition,
     jobs,
     history,
     incidents,
+    elementStatistics,
     loading,
     error,
     refetchJobs: fetchJobs,
