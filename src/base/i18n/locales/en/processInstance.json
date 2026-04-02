@@ -27,13 +27,17 @@
     "retries": "Retries",
     "currentRetries": "Current Retries",
     "errorType": "Error Type",
-    "errorMessage": "Error Message"
+    "errorMessage": "Error Message",
+    "childProcess": "Child Process",
+    "childProcessKey": "Child Process Key"
   },
   "tabs": {
     "jobs": "Jobs",
     "history": "History",
     "incidents": "Incidents",
-    "variables": "Variables"
+    "variables": "Variables",
+    "calledProcesses": "Called Processes",
+    "decisions": "Decisions"
   },
   "jobStates": {
     "activatable": "Activatable",

@@ -16,6 +16,7 @@ export interface BpmnCanvas {
   addMarker: (elementId: string, marker: string) => void;
   removeMarker: (elementId: string, marker: string) => void;
   zoom: (type: string) => void;
+  scrollToElement: (elementId: string) => void;
 }
 
 export interface BpmnElementRegistry {
@@ -40,7 +41,7 @@ export interface BpmnEventBus {
 }
 
 // Element statistics from API - map of elementId to counts
-export type ElementStatistics = Record<string, { activeCount: number; incidentCount: number }>;
+export type ElementStatistics = Record<string, { activeCount: number; incidentCount: number; completedCount?: number }>;
 
 /**
  * Transforms the partitioned API response into a flat elementId → counts map,

@@ -1,10 +1,11 @@
-import { Dialog, DialogTitle, DialogContent, Typography, IconButton, Box, Grid } from '@mui/material';
+  import { Dialog, DialogTitle, DialogContent, Typography, IconButton, Box, Grid } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import type { OverlayDialogData } from '../types';
 
 export interface InputOutputDialogProps {
+  open: boolean;
   data: OverlayDialogData | null;
   onClose: () => void;
   getDecisionName: (decisionId: string) => string;

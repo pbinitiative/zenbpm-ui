@@ -100,7 +100,7 @@ export function useBpmnMarkers({
     const overlays = viewerRef.current.get('overlays') as BpmnOverlays;
     const elementRegistry = viewerRef.current.get('elementRegistry') as BpmnElementRegistry;
 
-    Object.entries(stats).forEach(([elementId, { activeCount, incidentCount }]) => {
+    Object.entries(stats).forEach(([elementId, { activeCount, incidentCount, completedCount }]) => {
       // Check if element exists in the diagram before adding overlay
       const element = elementRegistry.get(elementId);
       if (!element) {
@@ -113,12 +113,16 @@ export function useBpmnMarkers({
         // If only one: centered in top right area
         const hasIncidents = incidentCount > 0;
         const hasActive = activeCount > 0;
+        const hasProgress = completedCount !== undefined;
 
-        // Active count badge (green) - top right, offset left if incidents also exist
-        if (hasActive) {
+        // Active/progress count badge (green) - top right, offset left if incidents also exist
+        if (hasActive || hasProgress) {
+          // When completedCount is provided, show "completed/total" (e.g. "2/3")
+          const total = hasProgress ? completedCount! + activeCount : activeCount;
+          const label = hasProgress ? `${completedCount}/${total}` : `${activeCount}`;
           overlays.add(elementId, 'active-count', {
             position: { top: -8, right: hasIncidents ? 32 : 8 },
-            html: `<div class="bpmn-overlay count-badge running-badge">${activeCount}</div>`,
+            html: `<div class="bpmn-overlay count-badge running-badge" style="width:auto;min-width:24px;padding:0 4px;">${label}</div>`,
           });
         }
 
@@ -150,12 +154,13 @@ export function useBpmnMarkers({
       }
     });
 
-    // Add marker to selected element
+    // Add marker to selected element and scroll it into view
     if (selectedElementRef.current) {
       const element = elementRegistry.get(selectedElementRef.current);
       if (element) {
         try {
           canvas.addMarker(selectedElementRef.current, 'element-selected');
+          canvas.scrollToElement(selectedElementRef.current);
         } catch (err) {
           console.warn(`Failed to add selected marker for element ${selectedElementRef.current}:`, err);
         }

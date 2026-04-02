@@ -43,7 +43,7 @@ export const DecisionInstanceDetailPage = () => {
       definitionInfo={definitionInfo}
       name={definition?.dmnDefinitionName}
       version={definition?.version}
-      processInstanceKey={instance.processInstanceKey}
+      parentProcessInstanceKey={instance.processInstanceKey}
       additionalFields={additionalFields}
       keyLabel={t('decisions:fields.key')}
     />

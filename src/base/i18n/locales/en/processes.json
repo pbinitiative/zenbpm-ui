@@ -28,7 +28,14 @@
     "partition": "Partition",
     "variables": "Variables",
     "activities": "Activities",
-    "activityFilter": "Activity"
+    "activityFilter": "Activity",
+    "type": "Type"
+  },
+  "types": {
+    "default": "Default",
+    "multiInstance": "Multi Instance",
+    "subprocess": "Subprocess",
+    "callActivity": "Call Activity"
   },
   "states": {
     "active": "Active",
@@ -58,6 +65,7 @@
     "createdFrom": "Created From",
     "createdTo": "Created To",
     "hasIncident": "Has Incidents",
+    "includeChildProcesses": "Include child processes",
     "searchPlaceholder": "Filter processes..."
   },
   "dialogs": {

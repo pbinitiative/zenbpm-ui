@@ -1,16 +1,14 @@
 import { Dialog, DialogTitle, DialogContent, Typography, IconButton, Box } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { useTranslation } from 'react-i18next';
-import { ns } from '@base/i18n';
 
 export interface OutputDialogProps {
   open: boolean;
   onClose: () => void;
-  output: unknown;
+  output?: unknown;
+  title?: string;
 }
 
-export const OutputDialog = ({ open, onClose, output }: OutputDialogProps) => {
-  const { t } = useTranslation([ns.decisions]);
+export const OutputDialog = ({ open, onClose, output, title }: OutputDialogProps) => {
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -24,7 +22,7 @@ export const OutputDialog = ({ open, onClose, output }: OutputDialogProps) => {
         }}
       >
         <Typography variant="h6" sx={{ fontSize: '1rem' }}>
-          {t('decisions:instance.finalOutput')}
+          {title ?? ""}
         </Typography>
         <IconButton onClick={onClose} size="small">
           <CloseIcon />

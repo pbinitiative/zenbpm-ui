@@ -6,13 +6,17 @@ import type {
   FlowElementHistory,
   Incident,
 } from '../types';
+import type { DecisionInstanceSummary } from '@base/openapi';
 import {
   getProcessInstance,
   getProcessDefinition,
   getProcessInstanceJobs,
   getHistory,
   getIncidents,
+  getChildProcessInstances,
+  getProcessInstanceElementStatistics,
   useGetProcessInstanceElementStatistics,
+  getDecisionInstances,
 } from '@base/openapi';
 import { transformStatisticsToElementStatistics } from '@components/BpmnDiagram';
 import type { ElementStatistics } from '@components/BpmnDiagram';
@@ -29,6 +33,14 @@ interface UseInstanceDataResult {
   jobs: Job[];
   history: FlowElementHistory[];
   incidents: Incident[];
+  childProcesses: ProcessInstance[];
+  childProcessesTotalCount: number | undefined;
+  childProcessJobs: Record<string, Job[]>;
+  childProcessIncidents: Record<string, Incident[]>;
+  grandchildProcesses: Record<string, ProcessInstance[]>;
+  childProcessHistory: FlowElementHistory[];
+  decisionInstances: DecisionInstanceSummary[];
+  childProcessDecisionInstances: Record<string, DecisionInstanceSummary[]>;
   elementStatistics: ElementStatistics | undefined;
   loading: boolean;
   error: string | null;
@@ -36,6 +48,8 @@ interface UseInstanceDataResult {
   refetchIncidents: () => Promise<void>;
   refetchVariables: () => Promise<void>;
   refetchHistory: () => Promise<void>;
+  refetchChildProcesses: () => Promise<void>;
+  refetchDecisionInstances: () => Promise<void>;
   refetchAll: () => Promise<void>;
 }
 
@@ -45,6 +59,15 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
   const [jobs, setJobs] = useState<Job[]>([]);
   const [history, setHistory] = useState<FlowElementHistory[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [childProcesses, setChildProcesses] = useState<ProcessInstance[]>([]);
+  const [childProcessesTotalCount, setChildProcessesTotalCount] = useState<number>();
+  const [childProcessJobs, setChildProcessJobs] = useState<Record<string, Job[]>>({});
+  const [childProcessIncidents, setChildProcessIncidents] = useState<Record<string, Incident[]>>({});
+  const [grandchildProcesses, setGrandchildProcesses] = useState<Record<string, ProcessInstance[]>>({});
+  const [childProcessHistory, setChildProcessHistory] = useState<FlowElementHistory[]>([]);
+  const [subprocessElementStatistics, setSubprocessElementStatistics] = useState<ElementStatistics | undefined>(undefined);
+  const [decisionInstances, setDecisionInstances] = useState<DecisionInstanceSummary[]>([]);
+  const [childProcessDecisionInstances, setChildProcessDecisionInstances] = useState<Record<string, DecisionInstanceSummary[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,6 +115,186 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
     }
   }, [processInstanceKey]);
 
+  // Fetch decision instances for the root process instance
+  const fetchDecisionInstances = useCallback(async () => {
+    if (!processInstanceKey) return;
+    try {
+      const data = await getDecisionInstances({ processInstanceKey, size: 100 });
+      const items = (data.partitions || []).flatMap((p) => p.items || []);
+      setDecisionInstances(items);
+    } catch (err) {
+      console.error('Failed to fetch decision instances:', err);
+    }
+  }, [processInstanceKey]);
+
+  // Fetch child processes, their jobs, and grandchild process instances
+  const fetchChildProcesses = useCallback(async () => {
+    if (!processInstanceKey) return;
+    try {
+      const data = await getChildProcessInstances(processInstanceKey, { page: 1, size: 100 });
+      // Flatten partitions into a single list of process instances
+      const instances = (data.partitions || []).flatMap(p => p.items || []);
+      setChildProcesses(instances as ProcessInstance[]);
+      setChildProcessesTotalCount((data as { totalCount?: number }).totalCount);
+
+      // Fetch jobs, grandchild processes, history, incidents, and decision instances for each child in parallel
+      const [jobResults, grandchildResults, historyResults, incidentResults, decisionResults] = await Promise.all([
+        Promise.all(
+          instances.map(async (child) => {
+            try {
+              const jobData = await getProcessInstanceJobs(child.key, { page: 1, size: 100 });
+              return [child.key, (jobData.items || []) as Job[]] as const;
+            } catch {
+              return [child.key, [] as Job[]] as const;
+            }
+          })
+        ),
+        Promise.all(
+          instances.map(async (child) => {
+            try {
+              const grandchildData = await getChildProcessInstances(child.key, { page: 1, size: 100 });
+              const grandchildren = (grandchildData.partitions || []).flatMap(p => p.items || []);
+              return [child.key, grandchildren as ProcessInstance[]] as const;
+            } catch {
+              return [child.key, [] as ProcessInstance[]] as const;
+            }
+          })
+        ),
+        Promise.all(
+          instances.map(async (child) => {
+            try {
+              const historyData = await getHistory(child.key, { page: 1, size: 100 });
+              return (historyData.items || []) as FlowElementHistory[];
+            } catch {
+              return [] as FlowElementHistory[];
+            }
+          })
+        ),
+        Promise.all(
+          instances.map(async (child) => {
+            try {
+              const incidentData = await getIncidents(child.key, { page: 1, size: 100 });
+              return [child.key, (incidentData.items || []) as Incident[]] as const;
+            } catch {
+              return [child.key, [] as Incident[]] as const;
+            }
+          })
+        ),
+        Promise.all(
+          instances.map(async (child) => {
+            try {
+              const decisionData = await getDecisionInstances({ processInstanceKey: child.key, size: 100 });
+              const items = (decisionData.partitions || []).flatMap((p) => p.items || []);
+              return [child.key, items] as const;
+            } catch {
+              return [child.key, [] as DecisionInstanceSummary[]] as const;
+            }
+          })
+        ),
+      ]);
+
+      setGrandchildProcesses(Object.fromEntries(grandchildResults));
+      setChildProcessHistory(historyResults.flat());
+
+      const grandchildSubprocessJobResults = await Promise.all(
+        grandchildResults.flatMap(([, grandchildren]) =>
+          (grandchildren as ProcessInstance[])
+            .filter((gc) => gc.processType === 'subprocess')
+            .map(async (gc) => {
+              try {
+                const jobData = await getProcessInstanceJobs(gc.key, { page: 1, size: 100 });
+                return [gc.key, (jobData.items || []) as Job[]] as const;
+              } catch {
+                return [gc.key, [] as Job[]] as const;
+              }
+            })
+        )
+      );
+
+      // Fetch incidents for subprocess-grandchildren as well
+      const grandchildSubprocessIncidentResults = await Promise.all(
+        grandchildResults.flatMap(([, grandchildren]) =>
+          (grandchildren as ProcessInstance[])
+            .filter((gc) => gc.processType === 'subprocess')
+            .map(async (gc) => {
+              try {
+                const incidentData = await getIncidents(gc.key, { page: 1, size: 100 });
+                return [gc.key, (incidentData.items || []) as Incident[]] as const;
+              } catch {
+                return [gc.key, [] as Incident[]] as const;
+              }
+            })
+        )
+      );
+
+      // Fetch decision instances for subprocess-grandchildren as well
+      const grandchildSubprocessDecisionResults = await Promise.all(
+        grandchildResults.flatMap(([, grandchildren]) =>
+          (grandchildren as ProcessInstance[])
+            .filter((gc) => gc.processType === 'subprocess')
+            .map(async (gc) => {
+              try {
+                const decisionData = await getDecisionInstances({ processInstanceKey: gc.key, size: 100 });
+                const items = (decisionData.partitions || []).flatMap((p) => p.items || []);
+                return [gc.key, items] as const;
+              } catch {
+                return [gc.key, [] as DecisionInstanceSummary[]] as const;
+              }
+            })
+        )
+      );
+
+      // Merge direct-child jobs and subprocess-grandchild jobs into a single map
+      setChildProcessJobs(Object.fromEntries([...jobResults, ...grandchildSubprocessJobResults]));
+
+      // Merge direct-child incidents and subprocess-grandchild incidents into a single map
+      setChildProcessIncidents(Object.fromEntries([...incidentResults, ...grandchildSubprocessIncidentResults]));
+
+      // Merge direct-child decisions and subprocess-grandchild decisions into a single map
+      setChildProcessDecisionInstances(Object.fromEntries([...decisionResults, ...grandchildSubprocessDecisionResults]));
+
+      // Fetch element statistics for subprocess-type children and grandchildren
+      // These are embedded subprocesses whose elements appear in the parent BPMN diagram
+      const subprocessInstances = [
+        ...instances.filter((child) => child.processType === 'subprocess'),
+        ...grandchildResults.flatMap(([, grandchildren]) =>
+          (grandchildren as ProcessInstance[]).filter((gc) => gc.processType === 'subprocess')
+        ),
+      ];
+
+      if (subprocessInstances.length > 0) {
+        const subprocessStatResults = await Promise.all(
+          subprocessInstances.map(async (sp) => {
+            try {
+              const statsData = await getProcessInstanceElementStatistics(sp.key);
+              return transformStatisticsToElementStatistics(statsData);
+            } catch {
+              return undefined;
+            }
+          })
+        );
+
+        // Merge all subprocess element statistics into a single map, summing counts per elementId
+        const merged: ElementStatistics = {};
+        for (const stats of subprocessStatResults) {
+          if (!stats) continue;
+          for (const [elementId, counts] of Object.entries(stats)) {
+            if (!merged[elementId]) {
+              merged[elementId] = { activeCount: 0, incidentCount: 0 };
+            }
+            merged[elementId].activeCount += counts.activeCount;
+            merged[elementId].incidentCount += counts.incidentCount;
+          }
+        }
+        setSubprocessElementStatistics(Object.keys(merged).length > 0 ? merged : undefined);
+      } else {
+        setSubprocessElementStatistics(undefined);
+      }
+    } catch (err) {
+      console.error('Failed to fetch child processes:', err);
+    }
+  }, [processInstanceKey]);
+
   // Fetch all data (useful after actions that can affect multiple things)
   const fetchAll = useCallback(async () => {
     if (!processInstanceKey) return;
@@ -100,8 +303,10 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
       fetchJobs(),
       fetchHistory(),
       fetchIncidents(),
+      fetchChildProcesses(),
+      fetchDecisionInstances(),
     ]);
-  }, [processInstanceKey, fetchProcessInstance, fetchJobs, fetchHistory, fetchIncidents]);
+  }, [processInstanceKey, fetchProcessInstance, fetchJobs, fetchHistory, fetchIncidents, fetchChildProcesses, fetchDecisionInstances]);
 
   // Initial data fetch
   useEffect(() => {
@@ -125,29 +330,20 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
           // Process definition fetch failure is not critical
         }
 
-        // Fetch jobs
-        try {
-          const jobsData = await getProcessInstanceJobs(processInstanceKey, { page: 1, size: 100 });
-          setJobs((jobsData.items || []) as Job[]);
-        } catch {
-          // Jobs fetch failure is not critical
-        }
-
-        // Fetch history
-        try {
-          const historyData = await getHistory(processInstanceKey, { page: 1, size: 100 });
-          setHistory((historyData.items || []) as FlowElementHistory[]);
-        } catch {
-          // History fetch failure is not critical
-        }
-
-        // Fetch incidents
-        try {
-          const incidentsData = await getIncidents(processInstanceKey, { page: 1, size: 100 });
-          setIncidents((incidentsData.items || []) as Incident[]);
-        } catch {
-          // Incidents fetch failure is not critical
-        }
+        // Fetch jobs, history, incidents, child processes (with their sub-data), and decision instances in parallel
+        await Promise.all([
+          getProcessInstanceJobs(processInstanceKey, { page: 1, size: 100 })
+            .then((d) => setJobs((d.items || []) as Job[]))
+            .catch(() => {}),
+          getHistory(processInstanceKey, { page: 1, size: 100 })
+            .then((d) => setHistory((d.items || []) as FlowElementHistory[]))
+            .catch(() => {}),
+          getIncidents(processInstanceKey, { page: 1, size: 100 })
+            .then((d) => setIncidents((d.items || []) as Incident[]))
+            .catch(() => {}),
+          fetchChildProcesses(),
+          fetchDecisionInstances(),
+        ]);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load process instance');
       } finally {
@@ -156,7 +352,7 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
     };
 
     void fetchData();
-  }, [processInstanceKey]);
+  }, [processInstanceKey, fetchChildProcesses, fetchDecisionInstances]);
 
   // Track if auto-refresh should be active
   const isActiveInstance = processInstance && !TERMINAL_STATES.includes(processInstance.state);
@@ -186,8 +382,24 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
   );
 
   const elementStatistics = useMemo(
-    () => transformStatisticsToElementStatistics(rawElementStatistics),
-    [rawElementStatistics]
+    () => {
+      const base = transformStatisticsToElementStatistics(rawElementStatistics);
+      if (!subprocessElementStatistics) return base;
+      if (!base) return subprocessElementStatistics;
+      // Merge subprocess statistics into the base stats, summing counts per elementId
+      const merged: ElementStatistics = { ...base };
+      for (const [elementId, counts] of Object.entries(subprocessElementStatistics)) {
+        if (!merged[elementId]) {
+          merged[elementId] = { activeCount: 0, incidentCount: 0 };
+        }
+        merged[elementId] = {
+          activeCount: merged[elementId].activeCount + counts.activeCount,
+          incidentCount: merged[elementId].incidentCount + counts.incidentCount,
+        };
+      }
+      return merged;
+    },
+    [rawElementStatistics, subprocessElementStatistics]
   );
 
   return {
@@ -196,6 +408,14 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
     jobs,
     history,
     incidents,
+    childProcesses,
+    childProcessesTotalCount,
+    childProcessJobs,
+    childProcessIncidents,
+    grandchildProcesses,
+    childProcessHistory,
+    decisionInstances,
+    childProcessDecisionInstances,
     elementStatistics,
     loading,
     error,
@@ -203,6 +423,8 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
     refetchIncidents: fetchIncidents,
     refetchVariables: fetchProcessInstance,
     refetchHistory: fetchHistory,
+    refetchChildProcesses: fetchChildProcesses,
+    refetchDecisionInstances: fetchDecisionInstances,
     refetchAll: fetchAll,
   };
 };

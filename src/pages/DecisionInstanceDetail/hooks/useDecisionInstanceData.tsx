@@ -29,7 +29,7 @@ interface UseDecisionInstanceDataResult {
 export function useDecisionInstanceData(decisionInstanceKey: string | undefined): UseDecisionInstanceDataResult {
   const { t } = useTranslation([ns.common, ns.decisions]);
   const { openInputOutputDialog } = useInputOutputDialog();
-  const { openOutputDialog } = useOutputDialog();
+  const { openOutputDialog } = useOutputDialog({title: t('decisions:instance.finalOutput')});
 
   // State
   const [instance, setInstance] = useState<DecisionInstanceDetail | null>(null);

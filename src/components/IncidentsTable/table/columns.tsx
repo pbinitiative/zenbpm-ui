@@ -4,6 +4,7 @@ import { MonoText } from '@components/MonoText';
 import { StateBadge } from '@components/StateBadge';
 import type { Column } from '@components/DataTable';
 import type { Incident } from '../IncidentsTable';
+import { formatDate } from '@/components/DiagramDetailLayout/utils';
 
 // Translation function type - ESLint validates keys via i18n-namespace-match rule
 type TranslateFunction = (key: string) => string;
@@ -15,13 +16,15 @@ interface ColumnOptions {
   onResolve: (incidentKey: string) => void;
   /** Callback when message is clicked to show stack trace */
   onMessageClick: (message: string) => void;
+  /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
+  onElementIdClick?: (elementId: string) => void;
 }
 
 export const getIncidentColumns = (
   t: TranslateFunction,
   options: ColumnOptions
 ): Column<Incident>[] => {
-  const { onViewDetails, onResolve, onMessageClick } = options;
+  const { onViewDetails, onResolve, onMessageClick, onElementIdClick } = options;
 
   return [
     {
@@ -36,7 +39,27 @@ export const getIncidentColumns = (
       label: t('incidents:fields.elementId'),
       sortable: true,
       width: 150,
-      render: (row) => <MonoText>{row.elementId}</MonoText>,
+      render: (row) => (
+        <Link
+          component="button"
+          variant="body2"
+          onClick={(e) => {
+            (e as React.MouseEvent).stopPropagation();
+            onElementIdClick?.(row.elementId);
+          }}
+          sx={{
+            textAlign: 'left',
+            textDecoration: 'underline',
+            textDecorationColor: 'text.disabled',
+            color: 'text.primary',
+            fontFamily: '"SF Mono", Monaco, monospace',
+            fontSize: '0.75rem',
+            '&:hover': { color: 'primary.main' },
+          }}
+        >
+          {row.elementId}
+        </Link>
+      ),
     },
     {
       id: 'message',
@@ -68,6 +91,7 @@ export const getIncidentColumns = (
           </Link>
         </Tooltip>
       ),
+      width: 160,
     },
     {
       id: 'createdAt',
@@ -122,17 +146,3 @@ export const getIncidentColumns = (
   ];
 };
 
-function formatDate(dateString: string): string {
-  try {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
-  } catch {
-    return dateString;
-  }
-}

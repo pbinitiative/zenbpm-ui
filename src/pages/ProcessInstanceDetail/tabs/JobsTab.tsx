@@ -8,6 +8,7 @@ import {
   Chip,
   Tooltip,
   IconButton,
+  Link,
   Menu,
   MenuItem,
   ListItemIcon,
@@ -17,27 +18,103 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import EditIcon from '@mui/icons-material/Edit';
-import { DataTable, type Column, type SortOrder } from '@components/DataTable';
-import type { Job } from '../types';
+import { DataTable, type Column, type SortOrder, type DataTableSection } from '@components/DataTable';
+import type { Job, ProcessInstance } from '../types';
 import { JOB_STATE_COLORS } from '../types';
 import { useCompleteJobDialog } from '../modals/useCompleteJobDialog';
 import { useAssignJobDialog } from '../modals/useAssignJobDialog';
-import {useUpdateRetriesDialog} from "@pages/ProcessInstanceDetail/modals/useUpdateRetriesDialog.ts";
+import { useUpdateRetriesDialog } from '@pages/ProcessInstanceDetail/modals/useUpdateRetriesDialog.ts';
+import { useOutputDialog } from '@pages/DecisionInstanceDetail/components/useOutputDialog';
 import { assignJob, completeJob, customInstance } from '@base/openapi';
+import { MonoText } from "@components/MonoText";
+import { formatDate } from "@components/DiagramDetailLayout/utils";
 
 // updateJobRetries is not in generated API, use direct axios call
 const updateJobRetries = async (jobKey: string, retries: number): Promise<void> => {
   await customInstance({ url: `/jobs/${jobKey}/retries`, method: 'POST', data: { retries } });
 };
 
+// processType display order — determines section ordering after the main instance
+const PROCESS_TYPE_ORDER: Record<string, number> = {
+  default: 0,
+  callActivity: 1,
+  subprocess: 2,
+  multiInstance: 3,
+};
+
 interface JobsTabProps {
   jobs: Job[];
+  childProcessJobs?: Record<string, Job[]>;
+  /** Child process instances — used to label sections with processType and key. */
+  childProcesses?: ProcessInstance[];
+  /** Grandchild process instances keyed by direct-child instance key. */
+  grandchildProcesses?: Record<string, ProcessInstance[]>;
   onRefetch: () => Promise<void>;
   onShowNotification: (message: string, severity: 'success' | 'error') => void;
+  /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
+  onElementIdClick?: (elementId: string) => void;
 }
 
-export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) => {
-  const { t } = useTranslation([ns.common, ns.processInstance]);
+export const JobsTab = ({
+  jobs,
+  childProcessJobs = {},
+  childProcesses = [],
+  grandchildProcesses = {},
+  onRefetch,
+  onShowNotification,
+  onElementIdClick,
+}: JobsTabProps) => {
+  const { t } = useTranslation([ns.common, ns.processInstance, ns.processes]);
+
+  // Build a flat lookup: instanceKey → ProcessInstance, covering both direct
+  // children and subprocess-grandchildren (the only grandchildren whose jobs
+  // are fetched).
+  const instanceByKey = useMemo<Record<string, ProcessInstance>>(() => {
+    const map: Record<string, ProcessInstance> = {};
+    for (const cp of childProcesses) {
+      map[cp.key] = cp;
+    }
+    for (const grandchildren of Object.values(grandchildProcesses)) {
+      for (const gc of grandchildren) {
+        map[gc.key] = gc;
+      }
+    }
+    return map;
+  }, [childProcesses, grandchildProcesses]);
+
+  // Build sections: first section is the main instance (no header), then one
+  // section per child/grandchild process key that has jobs.
+  const sections = useMemo<DataTableSection<Job>[]>(() => {
+    const result: DataTableSection<Job>[] = [];
+
+    // Section 0 — main instance jobs (rendered without a header label)
+    if (jobs.length > 0) {
+      result.push({ label: '', data: jobs });
+    }
+
+    // Remaining sections — one per child process key, sorted by processType then key
+    const childEntries = Object.entries(childProcessJobs).filter(([, jobList]) => jobList.length > 0);
+
+    childEntries.sort(([keyA], [keyB]) => {
+      const typeA = instanceByKey[keyA]?.processType ?? '';
+      const typeB = instanceByKey[keyB]?.processType ?? '';
+      const orderA = PROCESS_TYPE_ORDER[typeA] ?? 99;
+      const orderB = PROCESS_TYPE_ORDER[typeB] ?? 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return keyA.localeCompare(keyB);
+    });
+
+    for (const [instanceKey, jobList] of childEntries) {
+      const instance = instanceByKey[instanceKey];
+      const typeLabel = instance?.processType
+        ? t(`processes:types.${instance.processType}`)
+        : t('processInstance:fields.childProcess');
+      const label = `${typeLabel}: ${instanceKey}`;
+      result.push({ label, data: jobList });
+    }
+
+    return result;
+  }, [jobs, childProcessJobs, instanceByKey, t]);
 
   // Table state
   const [page, setPage] = useState(0);
@@ -49,6 +126,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
   const { openCompleteJobDialog } = useCompleteJobDialog();
   const { openAssignJobDialog } = useAssignJobDialog();
   const { openUpdateRetriesDialog } = useUpdateRetriesDialog();
+  const { openOutputDialog } = useOutputDialog({ title: t('common:fields.variables') });
 
   // Menu state
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -103,16 +181,38 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
         sortable: true,
         width: 180,
         render: (row) => (
-          <Typography
-            variant="body2"
-            sx={{
-              fontFamily: '"SF Mono", Monaco, monospace',
-              fontSize: '0.75rem',
-            }}
-          >
-            {row.key}
-          </Typography>
+          <MonoText>{row.key}</MonoText>
         ),
+      },
+      {
+        id: 'variables',
+        label: t('common:fields.variables'),
+        sortable: true,
+        width: 150,
+        render: (row) => {
+          const { ZEN_FORM: _, ...displayVariables } = row.variables ?? {};
+          const value = JSON.stringify(displayVariables);
+          return (
+            <Tooltip title="Click to view" placement="top-start">
+              <Typography
+                variant="body2"
+                onClick={() => openOutputDialog({ output: displayVariables })}
+                sx={{
+                  fontFamily: '"SF Mono", Monaco, monospace',
+                  display: 'block',
+                  maxWidth: 150,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  '&:hover': { opacity: 0.7 },
+                }}
+              >
+                {value}
+              </Typography>
+            </Tooltip>
+          );
+        },
       },
       {
         id: 'elementId',
@@ -120,20 +220,37 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
         sortable: true,
         render: (row) => (
           <Box>
-            <Typography variant="body2">{row.elementName || row.elementId}</Typography>
+            <Link
+              component="button"
+              variant="body2"
+              onClick={(e) => {
+                (e as React.MouseEvent).stopPropagation();
+                onElementIdClick?.(row.elementId);
+              }}
+              sx={{
+                textAlign: 'left',
+                textDecoration: 'underline',
+                textDecorationColor: 'text.disabled',
+                color: 'text.primary',
+                '&:hover': { color: 'primary.main' },
+              }}
+            >
+              {row.elementName || row.elementId}
+            </Link>
             {row.elementName && (
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="text.secondary" display="block">
                 {row.elementId}
               </Typography>
             )}
           </Box>
         ),
+        width: 150,
       },
       {
         id: 'type',
         label: t('processInstance:fields.jobType'),
         sortable: true,
-        width: 120,
+        width: 150,
         render: (row) => (
           <Chip
             label={row.type}
@@ -239,13 +356,51 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
       handleMenuOpen,
       openCompleteJobDialog,
       handleCompleteJob,
+      openOutputDialog,
+      onElementIdClick,
     ]);
+
+  // Derive the flat list for totalCount (sections may omit empty ones)
+  const totalCount = useMemo(
+    () => sections.reduce((acc, s) => acc + s.data.length, 0),
+    [sections]
+  );
+
+  // Only pass sections with a label; the main instance section (label='') is
+  // rendered without a header — we pass it as plain `data` and the labelled
+  // child sections via `sections`.
+  const mainJobs = useMemo(
+    () => sections.find((s) => s.label === '')?.data ?? [],
+    [sections]
+  );
+  const childSections = useMemo(
+    () => sections.filter((s) => s.label !== ''),
+    [sections]
+  );
+
+  // Build the final sections array passed to DataTable:
+  // If there are child sections, we use the sections prop so headers appear.
+  // Main jobs are prepended as an unlabelled section only when mixing with
+  // labelled ones (otherwise a single flat table is cleaner).
+  const tableSections = useMemo<DataTableSection<Job>[] | undefined>(() => {
+    if (childSections.length === 0) return undefined;
+    const result: DataTableSection<Job>[] = [];
+    if (mainJobs.length > 0) result.push({ label: '', data: mainJobs });
+    result.push(...childSections);
+    return result;
+  }, [childSections, mainJobs]);
+
+  const tableData = useMemo(
+    () => (tableSections ? [] : mainJobs),
+    [tableSections, mainJobs]
+  );
 
   return (
     <Box data-testid="jobs-tab">
       <DataTable
         columns={columns}
-        data={jobs}
+        data={tableData}
+        sections={tableSections}
         rowKey="key"
         data-testid="jobs-table"
         page={page}
@@ -258,7 +413,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
           setSortBy(newSortBy);
           setSortOrder(newSortOrder);
         }}
-        totalCount={jobs.length}
+        totalCount={totalCount}
       />
 
       {/* Actions Menu */}
@@ -294,23 +449,7 @@ export const JobsTab = ({ jobs, onRefetch, onShowNotification }: JobsTabProps) =
           <ListItemText>{t('processInstance:actions.updateRetries')}</ListItemText>
         </MenuItem>
       </Menu>
-
     </Box>
   );
 };
 
-// Helper function for date formatting
-function formatDate(dateString: string): string {
-  try {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
-  } catch {
-    return dateString;
-  }
-}

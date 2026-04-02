@@ -15,6 +15,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import { StateBadge } from '@components/StateBadge';
 import { MonoLink } from '@components/MonoLink';
 import type { Incident } from '../IncidentsTable';
+import { formatDate } from '@/components/DiagramDetailLayout/utils';
 
 export interface IncidentDetailModalProps {
   open: boolean;
@@ -152,18 +153,3 @@ const DetailRow = ({ label, children }: DetailRowProps) => (
   </Box>
 );
 
-// Helper function
-function formatDate(dateString: string): string {
-  try {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
-  } catch {
-    return dateString;
-  }
-}

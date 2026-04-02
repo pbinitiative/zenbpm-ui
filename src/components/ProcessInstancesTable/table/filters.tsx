@@ -7,6 +7,8 @@ type TranslateFunction = (key: string) => string;
 interface FilterOptions {
   /** Whether to show the process filter */
   showProcessFilter: boolean;
+  /** Whether to show the include child processes filter */
+  showIncludeChildProcesses?: boolean;
   /** Process options for the dropdown */
   processOptions: FilterOption[];
   /** Activity IDs available for filtering */
@@ -17,7 +19,7 @@ export const getProcessInstanceFilters = (
   t: TranslateFunction,
   options: FilterOptions
 ): FilterConfig[] => {
-  const { showProcessFilter, processOptions, activityIds } = options;
+  const { showProcessFilter, showIncludeChildProcesses = true, processOptions, activityIds } = options;
 
   const filters: FilterConfig[] = [
     {
@@ -98,8 +100,17 @@ export const getProcessInstanceFilters = (
     id: 'businessKey',
     label: t('processes:fields.businessKey'),
     type: 'text',
-    colSpan: 3,
+    colSpan: 1,
   });
+
+  // Add include child processes filter
+  if (showIncludeChildProcesses) {
+    hideableItems.push({
+      id: 'includeChildProcesses',
+      label: t('processes:filters.includeChildProcesses'),
+      type: 'switch',
+    });
+  }
 
   // Add hideable group if there are items
   if (hideableItems.length > 0) {
