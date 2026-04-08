@@ -14,8 +14,8 @@ export function useEditVariableDialog() {
     (props: Omit<EditVariableDialogProps, 'open' | 'onClose'>) => {
       openModal({
         ...props,
-        onSave: async (name: string, value: unknown) => {
-          void (props.onSave as (name: string, value: unknown) => Promise<void>)?.(name, value);
+        onSave: async (name: string, value: unknown, instanceKey: string) => {
+          void (props.onSave as (name: string, value: unknown, instanceKey: string) => Promise<void>)?.(name, value, instanceKey);
           closeModal();
         },
       });

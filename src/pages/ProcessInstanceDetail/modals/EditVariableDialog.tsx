@@ -25,13 +25,14 @@ interface Variable {
   name: string;
   value: string;
   rawValue: unknown;
+  instanceKey: string;
 }
 
 export interface EditVariableDialogProps {
   open: boolean;
   variable: Variable;
   onClose: () => void;
-  onSave: (name: string, value: unknown) => Promise<void>;
+  onSave: (name: string, value: unknown, instanceKey: string) => Promise<void>;
 }
 
 // Detect the type of a value
@@ -156,7 +157,7 @@ export const EditVariableDialog = ({
 
     setLoading(true);
     try {
-      await onSave(variable.name, finalValue);
+      await onSave(variable.name, finalValue, variable.instanceKey);
     } finally {
       setLoading(false);
     }

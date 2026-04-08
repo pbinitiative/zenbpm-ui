@@ -43,6 +43,8 @@ interface Variable {
   name: string;
   value: string;
   rawValue: unknown;
+  /** The process instance key that owns this variable */
+  instanceKey: string;
   /** True when this variable belongs to a child/grandchild process (read-only) */
   readonly: boolean;
 }
@@ -92,18 +94,19 @@ export const VariablesTab = ({
 
   // Convert a variables object to a Variable array.
   const toRows = useCallback(
-    (vars: Record<string, unknown>, readonly: boolean): Variable[] =>
+    (vars: Record<string, unknown>, instanceKey: string, readonly: boolean): Variable[] =>
       Object.entries(vars).map(([name, value]) => ({
         name,
         value: stringify(value),
         rawValue: value,
+        instanceKey,
         readonly,
       })),
     [],
   );
 
   // Root section rows
-  const rootRows = useMemo(() => toRows(variables ?? {}, false), [variables, toRows]);
+  const rootRows = useMemo(() => toRows(variables ?? {}, processInstanceKey, false), [variables, processInstanceKey, toRows]);
 
   // Build sections: root (no label) + one per child/grandchild that has variables,
   // sorted by processType order then lexicographically by key.
@@ -117,10 +120,13 @@ export const VariablesTab = ({
     // Collect all child+grandchild instances that have at least one variable
     const childEntries: Array<{ instanceKey: string; rows: Variable[] }> = [];
 
+    const displaySubProcessVariablesAsReadOnly =
+      import.meta.env.VITE_DISPLAY_SUBPROCESS_VARIABLES_AS_READONLY === 'true';
+
     for (const cp of childProcesses) {
       const vars = cp.variables as Record<string, unknown> | undefined;
       if (vars && Object.keys(vars).length > 0) {
-        childEntries.push({ instanceKey: cp.key, rows: toRows(vars, true) });
+        childEntries.push({ instanceKey: cp.key, rows: toRows(vars, cp.key, displaySubProcessVariablesAsReadOnly) });
       }
     }
 
@@ -128,7 +134,7 @@ export const VariablesTab = ({
       for (const gc of grandchildren) {
         const vars = gc.variables as Record<string, unknown> | undefined;
         if (vars && Object.keys(vars).length > 0) {
-          childEntries.push({ instanceKey: gc.key, rows: toRows(vars, true) });
+          childEntries.push({ instanceKey: gc.key, rows: toRows(vars, gc.key, displaySubProcessVariablesAsReadOnly) });
         }
       }
     }
@@ -187,16 +193,22 @@ export const VariablesTab = ({
     }
   }, [processInstanceKey, variables, onRefetch, onShowNotification, t]);
 
-  const handleEditVariable = useCallback(async (name: string, value: unknown) => {
+  const handleEditVariable = useCallback(async (name: string, value: unknown, instanceKey: string) => {
     try {
-      const updatedVariables = { ...variables, [name]: value };
-      await updateProcessInstanceVariables(processInstanceKey, { variables: updatedVariables });
+      // Determine the correct variables snapshot for the owning instance
+      const owningInstance = instanceByKey[instanceKey];
+      const currentVars: Record<string, unknown> =
+        instanceKey === processInstanceKey
+          ? (variables ?? {})
+          : ((owningInstance?.variables as Record<string, unknown>) ?? {});
+      const updatedVariables = { ...currentVars, [name]: value };
+      await updateProcessInstanceVariables(instanceKey, { variables: updatedVariables });
       onShowNotification(t('processInstance:messages.variableUpdated'), 'success');
       await onRefetch();
     } catch {
       onShowNotification(t('processInstance:messages.variableUpdateFailed'), 'error');
     }
-  }, [processInstanceKey, variables, onRefetch, onShowNotification, t]);
+  }, [processInstanceKey, variables, instanceByKey, onRefetch, onShowNotification, t]);
 
   const handleDeleteVariable = useCallback(async (name: string) => {
     try {
