@@ -108,7 +108,7 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
   const fetchHistory = useCallback(async () => {
     if (!processInstanceKey) return;
     try {
-      const data = await getHistory(processInstanceKey, { page: 1, size: 100 });
+      const data = await getHistory(processInstanceKey, { page: 1, size: -1 });
       setHistory((data.items || []) as FlowElementHistory[]);
     } catch (err) {
       console.error('Failed to fetch history:', err);
@@ -163,7 +163,7 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
         Promise.all(
           instances.map(async (child) => {
             try {
-              const historyData = await getHistory(child.key, { page: 1, size: 100 });
+              const historyData = await getHistory(child.key, { page: 1, size: -1 });
               return (historyData.items || []) as FlowElementHistory[];
             } catch {
               return [] as FlowElementHistory[];
@@ -194,55 +194,66 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
       ]);
 
       setGrandchildProcesses(Object.fromEntries(grandchildResults));
-      setChildProcessHistory(historyResults.flat());
 
-      const grandchildSubprocessJobResults = await Promise.all(
-        grandchildResults.flatMap(([, grandchildren]) =>
-          (grandchildren as ProcessInstance[])
-            .filter((gc) => gc.processType === 'subprocess')
-            .map(async (gc) => {
-              try {
-                const jobData = await getProcessInstanceJobs(gc.key, { page: 1, size: 100 });
-                return [gc.key, (jobData.items || []) as Job[]] as const;
-              } catch {
-                return [gc.key, [] as Job[]] as const;
-              }
-            })
-        )
+      // Collect all subprocess-typed grandchildren for the next fetch round
+      const subprocessGrandchildren = grandchildResults.flatMap(([, grandchildren]) =>
+        (grandchildren as ProcessInstance[]).filter((gc) => gc.processType === 'subprocess')
       );
 
-      // Fetch incidents for subprocess-grandchildren as well
-      const grandchildSubprocessIncidentResults = await Promise.all(
-        grandchildResults.flatMap(([, grandchildren]) =>
-          (grandchildren as ProcessInstance[])
-            .filter((gc) => gc.processType === 'subprocess')
-            .map(async (gc) => {
-              try {
-                const incidentData = await getIncidents(gc.key, { page: 1, size: 100 });
-                return [gc.key, (incidentData.items || []) as Incident[]] as const;
-              } catch {
-                return [gc.key, [] as Incident[]] as const;
-              }
-            })
-        )
-      );
+      // Fetch jobs, incidents, decisions, and history for subprocess-grandchildren in parallel
+      const [
+        grandchildSubprocessJobResults,
+        grandchildSubprocessIncidentResults,
+        grandchildSubprocessDecisionResults,
+        grandchildSubprocessHistoryResults,
+      ] = await Promise.all([
+        Promise.all(
+          subprocessGrandchildren.map(async (gc) => {
+            try {
+              const jobData = await getProcessInstanceJobs(gc.key, { page: 1, size: 100 });
+              return [gc.key, (jobData.items || []) as Job[]] as const;
+            } catch {
+              return [gc.key, [] as Job[]] as const;
+            }
+          })
+        ),
+        // Fetch incidents for subprocess-grandchildren
+        Promise.all(
+          subprocessGrandchildren.map(async (gc) => {
+            try {
+              const incidentData = await getIncidents(gc.key, { page: 1, size: 100 });
+              return [gc.key, (incidentData.items || []) as Incident[]] as const;
+            } catch {
+              return [gc.key, [] as Incident[]] as const;
+            }
+          })
+        ),
+        // Fetch decision instances for subprocess-grandchildren
+        Promise.all(
+          subprocessGrandchildren.map(async (gc) => {
+            try {
+              const decisionData = await getDecisionInstances({ processInstanceKey: gc.key, size: 100 });
+              const items = (decisionData.partitions || []).flatMap((p) => p.items || []);
+              return [gc.key, items] as const;
+            } catch {
+              return [gc.key, [] as DecisionInstanceSummary[]] as const;
+            }
+          })
+        ),
+        // Fetch history for subprocess-grandchildren
+        Promise.all(
+          subprocessGrandchildren.map(async (gc) => {
+            try {
+              const historyData = await getHistory(gc.key, { page: 1, size: -1 });
+              return (historyData.items || []) as FlowElementHistory[];
+            } catch {
+              return [] as FlowElementHistory[];
+            }
+          })
+        ),
+      ]);
 
-      // Fetch decision instances for subprocess-grandchildren as well
-      const grandchildSubprocessDecisionResults = await Promise.all(
-        grandchildResults.flatMap(([, grandchildren]) =>
-          (grandchildren as ProcessInstance[])
-            .filter((gc) => gc.processType === 'subprocess')
-            .map(async (gc) => {
-              try {
-                const decisionData = await getDecisionInstances({ processInstanceKey: gc.key, size: 100 });
-                const items = (decisionData.partitions || []).flatMap((p) => p.items || []);
-                return [gc.key, items] as const;
-              } catch {
-                return [gc.key, [] as DecisionInstanceSummary[]] as const;
-              }
-            })
-        )
-      );
+      setChildProcessHistory([...historyResults.flat(), ...grandchildSubprocessHistoryResults.flat()]);
 
       // Merge direct-child jobs and subprocess-grandchild jobs into a single map
       setChildProcessJobs(Object.fromEntries([...jobResults, ...grandchildSubprocessJobResults]));
@@ -257,9 +268,7 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
       // These are embedded subprocesses whose elements appear in the parent BPMN diagram
       const subprocessInstances = [
         ...instances.filter((child) => child.processType === 'subprocess'),
-        ...grandchildResults.flatMap(([, grandchildren]) =>
-          (grandchildren as ProcessInstance[]).filter((gc) => gc.processType === 'subprocess')
-        ),
+        ...subprocessGrandchildren,
       ];
 
       if (subprocessInstances.length > 0) {
@@ -335,7 +344,7 @@ export const useInstanceData = (processInstanceKey: string | undefined): UseInst
           getProcessInstanceJobs(processInstanceKey, { page: 1, size: 100 })
             .then((d) => setJobs((d.items || []) as Job[]))
             .catch(() => {}),
-          getHistory(processInstanceKey, { page: 1, size: 100 })
+          getHistory(processInstanceKey, { page: 1, size: -1 })
             .then((d) => setHistory((d.items || []) as FlowElementHistory[]))
             .catch(() => {}),
           getIncidents(processInstanceKey, { page: 1, size: 100 })

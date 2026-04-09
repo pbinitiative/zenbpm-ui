@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { Link, Typography } from '@mui/material';
-import { DataTable, type Column, type DataTableSection } from '@components/DataTable';
+import { ClientSideDataTable, type Column, type DataTableSection } from '@components/DataTable';
 import type { FlowElementHistory, ProcessInstance } from '../types';
 import { formatDate } from '@/components/DiagramDetailLayout/utils';
 
@@ -35,10 +35,6 @@ export const HistoryTab = ({
   onElementIdClick,
 }: HistoryTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance, ns.processes]);
-
-  // Table state
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
 
   // Flat lookup: instanceKey → ProcessInstance
   const instanceByKey = useMemo<Record<string, ProcessInstance>>(() => {
@@ -151,6 +147,7 @@ export const HistoryTab = ({
         label: t('processInstance:fields.createdAt'),
         width: 160,
         render: (row) => formatDate(row.createdAt),
+        sortable: true,
       },
       {
         id: 'completedAt',
@@ -162,19 +159,14 @@ export const HistoryTab = ({
     [t, onElementIdClick]
   );
 
-  const totalCount = history.length + childProcessHistory.length;
-
   return (
-    <DataTable
+    <ClientSideDataTable
       columns={columns}
       data={sections ? [] : history}
       sections={sections}
       rowKey="key"
-      page={page}
-      pageSize={pageSize}
-      onPageChange={setPage}
-      onPageSizeChange={setPageSize}
-      totalCount={totalCount}
+      defaultSortBy="createdAt"
+      defaultSortOrder="asc"
       data-testid="history-table"
     />
   );

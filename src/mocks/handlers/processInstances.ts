@@ -442,9 +442,11 @@ export const processInstanceHandlers = [
           ];
 
       // Paginate
+      // size=-1 means "return all" (used by client-side pagination to fetch the full dataset at once)
       const startIndex = (page - 1) * size;
-      const endIndex = startIndex + size;
-      const paginatedItems = historyItems.slice(startIndex, endIndex);
+      const paginatedItems = size <= 0
+        ? historyItems
+        : historyItems.slice(startIndex, startIndex + size);
 
       return HttpResponse.json({
         items: paginatedItems,

@@ -106,60 +106,20 @@ export const DataTable = <T extends object>({
   const handlePageSizeChange = useCallback(
     (newSize: number) => {
       onPageSizeChange?.(newSize);
-      onPageChange?.(0);
+      // Note: TablePagination already calls onPageChange(0) when page size
+      // changes, so we must NOT call it here to avoid a double reset.
     },
-    [onPageSizeChange, onPageChange]
+    [onPageSizeChange]
   );
 
-  // When sections are provided, derive the flat list from them for pagination.
-  const flatData = useMemo(
+  // DataTable is a pure renderer — it displays whatever rows it receives.
+  // All slicing is done by the caller (e.g. ClientSideDataTable).
+  const displayedData = useMemo(
     () => (sections ? sections.flatMap((s) => s.data) : data),
     [sections, data]
   );
 
-  const displayedData = useMemo(() => {
-    // If pagination is server-side, just return data as-is
-    if (onPageChange && totalCount !== undefined) {
-      return flatData;
-    }
-
-    // Client-side pagination
-    const start = page * pageSize;
-    return flatData.slice(start, start + pageSize);
-  }, [flatData, page, pageSize, onPageChange, totalCount]);
-
-  // When sections are used with client-side pagination, we need to know which
-  // rows of the current page belong to which section.
-  const displayedSections = useMemo(() => {
-    if (!sections) return null;
-
-    const start = (onPageChange && totalCount !== undefined) ? 0 : page * pageSize;
-    const end = start + displayedData.length;
-    let offset = 0;
-    const result: Array<{ label: string; rows: T[] }> = [];
-
-    for (const section of sections) {
-      const sectionStart = offset;
-      const sectionEnd = offset + section.data.length;
-
-      // Rows of this section that fall within the current page window
-      const visibleStart = Math.max(start, sectionStart) - sectionStart;
-      const visibleEnd = Math.min(end, sectionEnd) - sectionStart;
-
-      if (visibleEnd > visibleStart) {
-        result.push({
-          label: section.label,
-          rows: section.data.slice(visibleStart, visibleEnd),
-        });
-      }
-
-      offset = sectionEnd;
-    }
-
-    return result;
-  }, [sections, displayedData.length, page, pageSize, onPageChange, totalCount]);
-
-  const effectiveTotalCount = totalCount ?? flatData.length;
+  const effectiveTotalCount = totalCount ?? displayedData.length;
 
   const getCellValue = (row: T, column: Column<T>): React.ReactNode => {
     if (column.render) {
@@ -172,9 +132,9 @@ export const DataTable = <T extends object>({
     return String(value);
   };
 
-  const renderDataRow = (row: T) => (
+  const renderDataRow = (row: T, sectionKey?: string) => (
     <TableRow
-      key={String(row[rowKey])}
+      key={sectionKey !== undefined ? `s${sectionKey}-${String(row[rowKey])}` : String(row[rowKey])}
       hover={!!onRowClick}
       onClick={() => onRowClick?.(row)}
       sx={{ cursor: onRowClick ? 'pointer' : 'default' }}
@@ -214,40 +174,43 @@ export const DataTable = <T extends object>({
     }
 
     // Sectioned rendering
-    if (displayedSections) {
-      return displayedSections.map((section, index) => (
-        <Fragment key={section.label || `section-${index}`}>
-          {section.label && (
-            <TableRow
-              data-testid="section-header"
-              sx={{ bgcolor: themeColors.bgLight }}
-            >
-              <TableCell
-                colSpan={columns.length}
-                sx={{ py: 1, px: 2.5, borderBottom: `1px solid ${themeColors.borderLight}` }}
+    if (sections) {
+      return sections.map((section, index) => {
+        const sectionKey = section.key ?? section.label ?? `section-${index}`;
+        return (
+          <Fragment key={sectionKey}>
+            {section.label && (
+              <TableRow
+                data-testid="section-header"
+                sx={{ bgcolor: themeColors.bgLight }}
               >
-                <Typography sx={{ fontSize: '0.8125rem', color: themeColors.textSecondary }}>
-                  {(() => {
-                    const sepIdx = section.label.indexOf(': ');
-                    if (sepIdx === -1) return <strong>{section.label}</strong>;
-                    return (
-                      <>
-                        <strong>{section.label.slice(0, sepIdx + 2)}</strong>
-                        {section.label.slice(sepIdx + 2)}
-                      </>
-                    );
-                  })()}
-                </Typography>
-              </TableCell>
-            </TableRow>
-          )}
-          {section.rows.map(renderDataRow)}
-        </Fragment>
-      ));
+                <TableCell
+                  colSpan={columns.length}
+                  sx={{ py: 1, px: 2.5, borderBottom: `1px solid ${themeColors.borderLight}` }}
+                >
+                  <Typography sx={{ fontSize: '0.8125rem', color: themeColors.textSecondary }}>
+                    {(() => {
+                      const sepIdx = section.label.indexOf(': ');
+                      if (sepIdx === -1) return <strong>{section.label}</strong>;
+                      return (
+                        <>
+                          <strong>{section.label.slice(0, sepIdx + 2)}</strong>
+                          {section.label.slice(sepIdx + 2)}
+                        </>
+                      );
+                    })()}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
+            {section.data.map((row) => renderDataRow(row, sectionKey))}
+          </Fragment>
+        );
+      });
     }
 
-    // Flat rendering (original behaviour)
-    return displayedData.map(renderDataRow);
+    // Flat rendering
+    return displayedData.map((row) => renderDataRow(row));
   };
 
   return (
