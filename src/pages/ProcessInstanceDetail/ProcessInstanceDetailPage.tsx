@@ -111,6 +111,16 @@ export const ProcessInstanceDetailPage = () => {
     loading,
     error,
     refetchAll,
+    // Tree + pagination (available for future tab migrations)
+    instanceTree: _instanceTree,
+    jobsPagination: _jobsPagination,
+    incidentsPagination: _incidentsPagination,
+    decisionsPagination: _decisionsPagination,
+    childrenPagination: _childrenPagination,
+    refetchNodeJobs: _refetchNodeJobs,
+    refetchNodeIncidents: _refetchNodeIncidents,
+    refetchNodeDecisions: _refetchNodeDecisions,
+    refetchNodeChildren: _refetchNodeChildren,
   } = useInstanceData(processInstanceKey);
 
   // Count of process instances that are actually shown in the Child Processes tab
