@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import {
   Box,
+  Link,
   Table,
   TableBody,
   TableCell,
@@ -31,12 +32,21 @@ export type SortOrder = 'asc' | 'desc';
 /**
  * A named group of rows rendered under a section header row inside DataTable.
  * When `sections` is provided on DataTable, the flat `data` prop is ignored —
- * all rows are derived from the sections. Pagination spans the combined total.
+ * all rows are derived from the sections.
+ *
+ * The table has one global paginator. Each section's `data` must already be
+ * pre-sliced to the current page by the caller.
  */
 export interface DataTableSection<T> {
   /** Label displayed in the section header row. */
   label: string;
-  /** Rows belonging to this section. */
+  /**
+   * Optional breadcrumb path of calling element IDs for this section.
+   * When present and non-empty the section header renders a clickable
+   * breadcrumb below the label.
+   */
+  callPath?: string[];
+  /** Rows for this section, pre-sliced to the current page by the caller. */
   data: T[];
 }
 
@@ -46,8 +56,8 @@ export interface DataTableProps<T> {
   data: T[];
   /**
    * When provided, rows are rendered grouped under labelled section headers.
-   * The `data` prop is ignored. Pagination spans all sections combined.
-   * Sorting (if enabled) is applied independently within each section.
+   * The `data` prop is ignored. The single global paginator spans the combined
+   * total across all sections.
    */
   sections?: DataTableSection<T>[];
   loading?: boolean;
@@ -64,6 +74,10 @@ export interface DataTableProps<T> {
   'data-testid'?: string;
   /** Optional toolbar content displayed above the table */
   toolbar?: React.ReactNode;
+  /**
+   * Called when a breadcrumb element-ID link in a section header is clicked.
+   */
+  onElementIdClick?: (elementId: string) => void;
 }
 
 export const DataTable = <T extends object>({
@@ -83,13 +97,13 @@ export const DataTable = <T extends object>({
   rowKey,
   'data-testid': testId,
   toolbar,
+  onElementIdClick,
 }: DataTableProps<T>) => {
   const { t } = useTranslation([ns.common]);
 
   const handleSortClick = useCallback(
     (columnId: string) => {
       if (!onSortChange) return;
-
       const isAsc = sortBy === columnId && sortOrder === 'asc';
       onSortChange(columnId, isAsc ? 'desc' : 'asc');
     },
@@ -97,23 +111,19 @@ export const DataTable = <T extends object>({
   );
 
   const handlePageChange = useCallback(
-    (newPage: number) => {
-      onPageChange?.(newPage);
-    },
+    (newPage: number) => { onPageChange?.(newPage); },
     [onPageChange]
   );
 
   const handlePageSizeChange = useCallback(
     (newSize: number) => {
       onPageSizeChange?.(newSize);
-      // Note: TablePagination already calls onPageChange(0) when page size
-      // changes, so we must NOT call it here to avoid a double reset.
+      // TablePagination already calls onPageChange(0) on size change
     },
     [onPageSizeChange]
   );
 
-  // DataTable is a pure renderer — it displays whatever rows it receives.
-  // All slicing is done by the caller (e.g. ClientSideDataTable).
+  // DataTable is a pure renderer — all slicing is done by the caller.
   const displayedData = useMemo(
     () => (sections ? sections.flatMap((s) => s.data) : data),
     [sections, data]
@@ -122,13 +132,9 @@ export const DataTable = <T extends object>({
   const effectiveTotalCount = totalCount ?? displayedData.length;
 
   const getCellValue = (row: T, column: Column<T>): React.ReactNode => {
-    if (column.render) {
-      return column.render(row);
-    }
+    if (column.render) return column.render(row);
     const value = row[column.id as keyof T];
-    if (value === null || value === undefined) {
-      return '-';
-    }
+    if (value === null || value === undefined) return '-';
     return String(value);
   };
 
@@ -176,30 +182,74 @@ export const DataTable = <T extends object>({
     // Sectioned rendering
     if (sections) {
       return sections.map((section, index) => {
-        const sectionKey = section.key ?? section.label ?? `section-${index}`;
+        const sectionKey = (section as { key?: string }).key ?? section.label ?? `section-${index}`;
+
+        // Deduplicate consecutive identical entries in callPath
+        const dedupedPath = section.callPath
+          ? section.callPath.filter((id, i, arr) => i === 0 || id !== arr[i - 1])
+          : undefined;
+
+        const hasHeader = !!(section.label || (dedupedPath && dedupedPath.length > 0));
+
         return (
           <Fragment key={sectionKey}>
-            {section.label && (
+            {hasHeader && (
               <TableRow
                 data-testid="section-header"
                 sx={{ bgcolor: themeColors.bgLight }}
               >
                 <TableCell
                   colSpan={columns.length}
-                  sx={{ py: 1, px: 2.5, borderBottom: `1px solid ${themeColors.borderLight}` }}
+                  sx={{ py: 0.5, px: 2.5, borderBottom: `1px solid ${themeColors.borderLight}` }}
                 >
-                  <Typography sx={{ fontSize: '0.8125rem', color: themeColors.textSecondary }}>
-                    {(() => {
-                      const sepIdx = section.label.indexOf(': ');
-                      if (sepIdx === -1) return <strong>{section.label}</strong>;
-                      return (
-                        <>
-                          <strong>{section.label.slice(0, sepIdx + 2)}</strong>
-                          {section.label.slice(sepIdx + 2)}
-                        </>
-                      );
-                    })()}
-                  </Typography>
+                  <Box sx={{ minHeight: 36, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    {/* Title line */}
+                    {section.label && (
+                      <Typography sx={{ fontSize: '0.8125rem', color: themeColors.textSecondary }}>
+                        {(() => {
+                          const sepIdx = section.label.indexOf(': ');
+                          if (sepIdx === -1) return <strong>{section.label}</strong>;
+                          return (
+                            <>
+                              <strong>{section.label.slice(0, sepIdx + 2)}</strong>
+                              {section.label.slice(sepIdx + 2)}
+                            </>
+                          );
+                        })()}
+                      </Typography>
+                    )}
+                    {/* Breadcrumb line */}
+                    {dedupedPath && dedupedPath.length > 0 && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', mt: section.label ? 0.25 : 0 }}>
+                        {dedupedPath.map((elementId, i) => (
+                          <Fragment key={elementId}>
+                            {i > 0 && (
+                              <Typography component="span" sx={{ fontSize: '0.75rem', color: themeColors.textSecondary, mx: 0.25 }}>
+                                {'>'}
+                              </Typography>
+                            )}
+                            <Link
+                              component="button"
+                              onClick={() => onElementIdClick?.(elementId)}
+                              sx={{
+                                fontSize: '0.75rem',
+                                color: themeColors.textSecondary,
+                                textDecoration: 'underline',
+                                textDecorationColor: 'transparent',
+                                '&:hover': { color: 'primary.main', textDecorationColor: 'primary.main' },
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                p: 0,
+                              }}
+                            >
+                              {elementId}
+                            </Link>
+                          </Fragment>
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
                 </TableCell>
               </TableRow>
             )}
@@ -223,36 +273,19 @@ export const DataTable = <T extends object>({
       }}
       data-testid={testId}
     >
-      {/* Toolbar row */}
       {toolbar && (
-        <Box
-          sx={{
-            p: 2,
-            display: 'flex',
-            alignItems: 'center',
-            borderBottom: 1,
-            borderColor: 'divider',
-          }}
-        >
+        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', borderBottom: 1, borderColor: 'divider' }}>
           {toolbar}
         </Box>
       )}
 
       <TableContainer sx={{ position: 'relative' }}>
-        {/* Loading overlay - shows on top of existing data */}
         {loading && displayedData.length > 0 && (
           <Box
             sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
               bgcolor: themeColors.overlay.loading,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1,
             }}
           >
             <CircularProgress size={32} />
@@ -262,11 +295,7 @@ export const DataTable = <T extends object>({
           <TableHead>
             <TableRow>
               {columns.map((column) => (
-                <TableCell
-                  key={String(column.id)}
-                  align={column.align || 'left'}
-                  sx={{ width: column.width }}
-                >
+                <TableCell key={String(column.id)} align={column.align || 'left'} sx={{ width: column.width }}>
                   {column.sortable && onSortChange ? (
                     <TableSortLabel
                       active={sortBy === column.id}
@@ -288,7 +317,7 @@ export const DataTable = <T extends object>({
         </Table>
       </TableContainer>
 
-      {/* Pagination */}
+      {/* Global paginator — always rendered (shared across all sections) */}
       <TablePagination
         count={effectiveTotalCount}
         page={page}

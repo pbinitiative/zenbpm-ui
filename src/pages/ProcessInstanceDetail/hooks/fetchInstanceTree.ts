@@ -21,9 +21,9 @@ export const MAX_TREE_DEPTH = 8;
 export const CHILDREN_PAGE_SIZE = 100;
 
 /** Default page sizes for datasets */
-export const JOBS_PAGE_SIZE = 100;
-export const INCIDENTS_PAGE_SIZE = 100;
-export const DECISIONS_PAGE_SIZE = 100;
+export const JOBS_PAGE_SIZE = 10;
+export const INCIDENTS_PAGE_SIZE = 10;
+export const DECISIONS_PAGE_SIZE = 10;
 
 // ---------------------------------------------------------------------------
 // Options
@@ -36,6 +36,7 @@ export interface FetchInstanceTreeOptions {
   jobsPageSize?: number;
   incidentsPage?: number;
   incidentsPageSize?: number;
+  decisionsPage?: number;
   decisionsPageSize?: number;
 }
 
@@ -44,10 +45,17 @@ export interface FetchInstanceTreeOptions {
 // ---------------------------------------------------------------------------
 
 /** Create a bare node with empty dataset arrays */
-function makeNode(instance: ProcessInstance, depth: number): ProcessInstanceNode {
+function makeNode(
+  instance: ProcessInstance,
+  depth: number,
+  callElementId?: string,
+  parentCallPath: string[] = [],
+): ProcessInstanceNode {
   return {
     instance,
     depth,
+    callElementId,
+    callPath: callElementId ? [...parentCallPath, callElementId] : [],
     jobs: [],
     jobsTotalCount: 0,
     incidents: [],
@@ -58,6 +66,38 @@ function makeNode(instance: ProcessInstance, depth: number): ProcessInstanceNode
     children: [],
     childrenTotalCount: 0,
   };
+}
+
+/**
+ * Infer the calling element ID from the parent's history.
+ *
+ * Strategy: find the history entry in the parent whose `createdAt` is
+ * closest-before (or equal to) the child's `createdAt`.  In call-activity
+ * and subprocess patterns this will be the element that spawned the child.
+ *
+ * Falls back to the most-recently-created history entry overall if no entry
+ * satisfies the time constraint (can happen with clock skew or missing data).
+ */
+function inferCallElementId(
+  parentHistory: ProcessInstanceNode['history'],
+  childCreatedAt: string,
+): string | undefined {
+  if (parentHistory.length === 0) return undefined;
+
+  const childTime = new Date(childCreatedAt).getTime();
+
+  // Entries whose createdAt <= child's createdAt, sorted descending
+  const candidates = parentHistory
+    .filter((h) => new Date(h.createdAt).getTime() <= childTime)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  if (candidates.length > 0) return candidates[0].elementId;
+
+  // Fallback: just the most recent entry overall
+  const sorted = [...parentHistory].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+  return sorted[0]?.elementId;
 }
 
 // ---------------------------------------------------------------------------
@@ -73,7 +113,7 @@ async function fetchNodeDatasets(
   node: ProcessInstanceNode,
   opts: Required<Pick<
     FetchInstanceTreeOptions,
-    'jobsPage' | 'jobsPageSize' | 'incidentsPage' | 'incidentsPageSize' | 'decisionsPageSize'
+    'jobsPage' | 'jobsPageSize' | 'incidentsPage' | 'incidentsPageSize' | 'decisionsPage' | 'decisionsPageSize'
   >>,
 ): Promise<void> {
   const key = node.instance.key;
@@ -81,7 +121,7 @@ async function fetchNodeDatasets(
   const [jobsResult, incidentsResult, decisionsResult, historyResult] = await Promise.allSettled([
     getProcessInstanceJobs(key, { page: opts.jobsPage, size: opts.jobsPageSize }),
     getIncidents(key, { page: opts.incidentsPage, size: opts.incidentsPageSize }),
-    getDecisionInstances({ processInstanceKey: key, size: opts.decisionsPageSize }),
+    getDecisionInstances({ processInstanceKey: key, page: opts.decisionsPage, size: opts.decisionsPageSize }),
     getHistory(key, { page: 1, size: -1 }),
   ]);
 
@@ -137,6 +177,7 @@ export async function fetchInstanceTree(
     jobsPageSize: opts.jobsPageSize ?? JOBS_PAGE_SIZE,
     incidentsPage: opts.incidentsPage ?? 1,
     incidentsPageSize: opts.incidentsPageSize ?? INCIDENTS_PAGE_SIZE,
+    decisionsPage: opts.decisionsPage ?? 1,
     decisionsPageSize: opts.decisionsPageSize ?? DECISIONS_PAGE_SIZE,
   };
 
@@ -146,6 +187,9 @@ export async function fetchInstanceTree(
   const root = makeNode(rootInstance as unknown as ProcessInstance, 0);
 
   const visited = new Set<string>([rootKey]);
+
+  // Track parent node for each child so we can derive callElementId in Phase 3
+  const parentMap = new Map<ProcessInstanceNode, ProcessInstanceNode>();
 
   // BFS queue holds the nodes whose children we still need to fetch
   let currentLevel: ProcessInstanceNode[] = [root];
@@ -176,7 +220,9 @@ export async function fetchInstanceTree(
         for (const childInstance of instances) {
           if (visited.has(childInstance.key)) continue; // cycle guard
           visited.add(childInstance.key);
+          // callElementId and callPath are filled in Phase 3 after history is available
           const childNode = makeNode(childInstance, node.depth + 1);
+          parentMap.set(childNode, node);
           node.children.push(childNode);
           nextLevel.push(childNode);
         }
@@ -198,6 +244,21 @@ export async function fetchInstanceTree(
   }
 
   await Promise.all(allNodes.map((node) => fetchNodeDatasets(node, datasetOpts)));
+
+  // ── Phase 3: derive callElementId for each non-root node ─────────────────
+  // Now that history is populated, infer which element in the parent called
+  // each child and build the callPath breadcrumb.
+  for (const node of allNodes) {
+    if (node === root) continue; // root has no parent
+    const parent = parentMap.get(node);
+    if (!parent) continue;
+    const callElem = inferCallElementId(parent.history, node.instance.createdAt);
+    node.callElementId = callElem;
+    // callPath = parent's callPath + this callElementId
+    node.callPath = callElem
+      ? [...parent.callPath, callElem]
+      : [...parent.callPath];
+  }
 
   return root;
 }
@@ -254,6 +315,7 @@ export async function refetchNodeDecisions(
   try {
     const data = await getDecisionInstances({
       processInstanceKey: node.instance.key,
+      page,
       size,
     });
     node.decisions = (data.partitions ?? []).flatMap(

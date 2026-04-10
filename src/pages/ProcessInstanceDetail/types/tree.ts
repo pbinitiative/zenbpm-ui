@@ -38,6 +38,21 @@ export interface ProcessInstanceNode {
   /** Depth in the tree: 0 = root, 1 = direct children, … */
   depth: number;
 
+  /**
+   * The element ID in the **parent** process that called/spawned this instance
+   * (e.g. the call-activity or sub-process element ID).
+   * Undefined for the root node.
+   */
+  callElementId?: string;
+
+  /**
+   * Full breadcrumb path from root to this node.
+   * Each entry is the `callElementId` of that level.
+   * Empty for the root node.
+   * e.g. ['CallActivity_1', 'SubProcess_2'] for a grandchild.
+   */
+  callPath: string[];
+
   // --- Jobs (server-paginated) ---
   jobs: Job[];
   jobsTotalCount: number;

@@ -19,7 +19,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import EditIcon from '@mui/icons-material/Edit';
 import { DataTable, type Column, type SortOrder, type DataTableSection } from '@components/DataTable';
-import type { Job, ProcessInstance } from '../types';
+import type { Job } from '../types';
 import { JOB_STATE_COLORS } from '../types';
 import { useCompleteJobDialog } from '../modals/useCompleteJobDialog';
 import { useAssignJobDialog } from '../modals/useAssignJobDialog';
@@ -28,6 +28,9 @@ import { useOutputDialog } from '@pages/DecisionInstanceDetail/components/useOut
 import { assignJob, completeJob, customInstance } from '@base/openapi';
 import { MonoText } from "@components/MonoText";
 import { formatDate } from "@components/DiagramDetailLayout/utils";
+import type { ProcessInstanceNode } from '../types/tree';
+import type { DatasetPagination, PageChangeFn } from '../hooks/useInstanceData';
+import { JOBS_PAGE_SIZE } from '../hooks/fetchInstanceTree';
 
 // updateJobRetries is not in generated API, use direct axios call
 const updateJobRetries = async (jobKey: string, retries: number): Promise<void> => {
@@ -43,92 +46,45 @@ const PROCESS_TYPE_ORDER: Record<string, number> = {
 };
 
 interface JobsTabProps {
-  jobs: Job[];
-  childProcessJobs?: Record<string, Job[]>;
-  /** Child process instances — used to label sections with processType and key. */
-  childProcesses?: ProcessInstance[];
-  /** Grandchild process instances keyed by direct-child instance key. */
-  grandchildProcesses?: Record<string, ProcessInstance[]>;
+  instanceTree: ProcessInstanceNode | null;
+  jobsPagination: DatasetPagination;
+  onJobsPageChange: PageChangeFn;
   onRefetch: () => Promise<void>;
   onShowNotification: (message: string, severity: 'success' | 'error') => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
   onElementIdClick?: (elementId: string) => void;
 }
 
+/** Walk the tree BFS and collect all nodes (root first) */
+function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
+  const result: ProcessInstanceNode[] = [];
+  const queue: ProcessInstanceNode[] = [root];
+  while (queue.length > 0) {
+    const node = queue.shift()!;
+    result.push(node);
+    queue.push(...node.children);
+  }
+  return result;
+}
+
 export const JobsTab = ({
-  jobs,
-  childProcessJobs = {},
-  childProcesses = [],
-  grandchildProcesses = {},
+  instanceTree,
+  jobsPagination,
+  onJobsPageChange,
   onRefetch,
   onShowNotification,
   onElementIdClick,
 }: JobsTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance, ns.processes]);
 
-  // Build a flat lookup: instanceKey → ProcessInstance, covering both direct
-  // children and subprocess-grandchildren (the only grandchildren whose jobs
-  // are fetched).
-  const instanceByKey = useMemo<Record<string, ProcessInstance>>(() => {
-    const map: Record<string, ProcessInstance> = {};
-    for (const cp of childProcesses) {
-      map[cp.key] = cp;
-    }
-    for (const grandchildren of Object.values(grandchildProcesses)) {
-      for (const gc of grandchildren) {
-        map[gc.key] = gc;
-      }
-    }
-    return map;
-  }, [childProcesses, grandchildProcesses]);
-
-  // Build sections: first section is the main instance (no header), then one
-  // section per child/grandchild process key that has jobs.
-  const sections = useMemo<DataTableSection<Job>[]>(() => {
-    const result: DataTableSection<Job>[] = [];
-
-    // Section 0 — main instance jobs (rendered without a header label)
-    if (jobs.length > 0) {
-      result.push({ label: '', data: jobs });
-    }
-
-    // Remaining sections — one per child process key, sorted by processType then key
-    const childEntries = Object.entries(childProcessJobs).filter(([, jobList]) => jobList.length > 0);
-
-    childEntries.sort(([keyA], [keyB]) => {
-      const typeA = instanceByKey[keyA]?.processType ?? '';
-      const typeB = instanceByKey[keyB]?.processType ?? '';
-      const orderA = PROCESS_TYPE_ORDER[typeA] ?? 99;
-      const orderB = PROCESS_TYPE_ORDER[typeB] ?? 99;
-      if (orderA !== orderB) return orderA - orderB;
-      return keyA.localeCompare(keyB);
-    });
-
-    for (const [instanceKey, jobList] of childEntries) {
-      const instance = instanceByKey[instanceKey];
-      const typeLabel = instance?.processType
-        ? t(`processes:types.${instance.processType}`)
-        : t('processInstance:fields.childProcess');
-      const label = `${typeLabel}: ${instanceKey}`;
-      result.push({ label, data: jobList });
-    }
-
-    return result;
-  }, [jobs, childProcessJobs, instanceByKey, t]);
-
-  // Table state
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
-  // Dialog state
   const { openCompleteJobDialog } = useCompleteJobDialog();
   const { openAssignJobDialog } = useAssignJobDialog();
   const { openUpdateRetriesDialog } = useUpdateRetriesDialog();
   const { openOutputDialog } = useOutputDialog({ title: t('common:fields.variables') });
 
-  // Menu state
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuJob, setMenuJob] = useState<Job | null>(null);
 
@@ -180,9 +136,7 @@ export const JobsTab = ({
         label: t('processInstance:fields.key'),
         sortable: true,
         width: 180,
-        render: (row) => (
-          <MonoText>{row.key}</MonoText>
-        ),
+        render: (row) => <MonoText>{row.key}</MonoText>,
       },
       {
         id: 'variables',
@@ -252,12 +206,7 @@ export const JobsTab = ({
         sortable: true,
         width: 150,
         render: (row) => (
-          <Chip
-            label={row.type}
-            size="small"
-            variant="outlined"
-            sx={{ fontSize: '0.7rem', height: 22 }}
-          />
+          <Chip label={row.type} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />
         ),
       },
       {
@@ -270,9 +219,7 @@ export const JobsTab = ({
               <Typography variant="body2">{row.assignee}</Typography>
             </Tooltip>
           ) : (
-            <Typography variant="body2" color="text.secondary">
-              -
-            </Typography>
+            <Typography variant="body2" color="text.secondary">-</Typography>
           ),
       },
       {
@@ -299,10 +246,7 @@ export const JobsTab = ({
         label: t('processInstance:fields.retries'),
         width: 80,
         render: (row) => (
-          <Typography
-            variant="body2"
-            color={row.retries === 0 ? 'error.main' : 'text.primary'}
-          >
+          <Typography variant="body2" color={row.retries === 0 ? 'error.main' : 'text.primary'}>
             {row.retries ?? '-'}
           </Typography>
         ),
@@ -321,7 +265,6 @@ export const JobsTab = ({
         render: (row) => {
           const isActive = row.state === 'activatable' || row.state === 'activated' || row.state === 'active';
           const isUserTask = row.type === 'user-task-type';
-
           return (
             <Box sx={{ display: 'flex', gap: 0.5 }}>
               {isActive && (
@@ -339,10 +282,7 @@ export const JobsTab = ({
                 </Button>
               )}
               {(isActive || isUserTask) && (
-                <IconButton
-                  size="small"
-                  onClick={(e) => handleMenuOpen(e, row)}
-                >
+                <IconButton size="small" onClick={(e) => handleMenuOpen(e, row)}>
                   <MoreVertIcon fontSize="small" />
                 </IconButton>
               )}
@@ -351,62 +291,74 @@ export const JobsTab = ({
         },
       },
     ],
-    [
-      t,
-      handleMenuOpen,
-      openCompleteJobDialog,
-      handleCompleteJob,
-      openOutputDialog,
-      onElementIdClick,
-    ]);
-
-  // Derive the flat list for totalCount (sections may omit empty ones)
-  const totalCount = useMemo(
-    () => sections.reduce((acc, s) => acc + s.data.length, 0),
-    [sections]
+    [t, handleMenuOpen, openCompleteJobDialog, handleCompleteJob, openOutputDialog, onElementIdClick],
   );
 
-  // Only pass sections with a label; the main instance section (label='') is
-  // rendered without a header — we pass it as plain `data` and the labelled
-  // child sections via `sections`.
-  const mainJobs = useMemo(
-    () => sections.find((s) => s.label === '')?.data ?? [],
-    [sections]
-  );
-  const childSections = useMemo(
-    () => sections.filter((s) => s.label !== ''),
-    [sections]
-  );
+  // Build sections from the server-fetched data — no client-side slicing.
+  // Pagination is handled server-side: page changes trigger API refetch for all nodes.
+  const { sections, flatData, totalCount } = useMemo(() => {
+    if (!instanceTree) return { sections: undefined, flatData: [], totalCount: 0 };
 
-  // Build the final sections array passed to DataTable:
-  // If there are child sections, we use the sections prop so headers appear.
-  // Main jobs are prepended as an unlabelled section only when mixing with
-  // labelled ones (otherwise a single flat table is cleaner).
-  const tableSections = useMemo<DataTableSection<Job>[] | undefined>(() => {
-    if (childSections.length === 0) return undefined;
+    const nodes = collectNodes(instanceTree);
+    const rootNode = nodes[0];
+    const childNodes = nodes.slice(1).sort((a, b) => {
+      const orderA = PROCESS_TYPE_ORDER[a.instance.processType ?? ''] ?? 99;
+      const orderB = PROCESS_TYPE_ORDER[b.instance.processType ?? ''] ?? 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.instance.key.localeCompare(b.instance.key);
+    });
+    const orderedNodes = [rootNode, ...childNodes];
+
+    const hasChildWithJobs = childNodes.some((n) => n.jobs.length > 0 || n.jobsTotalCount > 0);
+
+    // totalCount = max across all nodes so the paginator covers the largest section
+    const maxTotal = Math.max(...orderedNodes.map((n) => n.jobsTotalCount), 0);
+
+    // Sort helper (client-side sort within the current page)
+    const sortRows = (rows: Job[]): Job[] => {
+      if (!sortBy) return rows;
+      return [...rows].sort((a, b) => {
+        const aVal = String(a[sortBy as keyof Job] ?? '');
+        const bVal = String(b[sortBy as keyof Job] ?? '');
+        const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        return sortOrder === 'asc' ? cmp : -cmp;
+      });
+    };
+
+    if (!hasChildWithJobs) {
+      return { sections: undefined, flatData: sortRows(rootNode.jobs), totalCount: maxTotal };
+    }
+
+    // Sections path
     const result: DataTableSection<Job>[] = [];
-    if (mainJobs.length > 0) result.push({ label: '', data: mainJobs });
-    result.push(...childSections);
-    return result;
-  }, [childSections, mainJobs]);
+    for (const node of orderedNodes) {
+      if (node.jobs.length === 0 && node.jobsTotalCount === 0) continue;
+      const isRoot = node === rootNode;
+      const label = isRoot
+        ? ''
+        : `${node.instance.processType ? t(`processes:types.${node.instance.processType}`) : t('processInstance:fields.childProcess')}: ${node.instance.key}`;
+      result.push({
+        label,
+        callPath: isRoot ? undefined : node.callPath,
+        data: sortRows(node.jobs),
+      });
+    }
 
-  const tableData = useMemo(
-    () => (tableSections ? [] : mainJobs),
-    [tableSections, mainJobs]
-  );
+    return { sections: result.length > 0 ? result : undefined, flatData: [], totalCount: maxTotal };
+  }, [instanceTree, sortBy, sortOrder, t]);
 
   return (
     <Box data-testid="jobs-tab">
       <DataTable
         columns={columns}
-        data={tableData}
-        sections={tableSections}
+        data={flatData}
+        sections={sections}
         rowKey="key"
         data-testid="jobs-table"
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
+        page={jobsPagination.page}
+        pageSize={jobsPagination.pageSize}
+        onPageChange={(newPage) => void onJobsPageChange(newPage, jobsPagination.pageSize)}
+        onPageSizeChange={(newSize) => void onJobsPageChange(0, newSize)}
         sortBy={sortBy}
         sortOrder={sortOrder}
         onSortChange={(newSortBy, newSortOrder) => {
@@ -414,42 +366,21 @@ export const JobsTab = ({
           setSortOrder(newSortOrder);
         }}
         totalCount={totalCount}
+        onElementIdClick={onElementIdClick}
       />
 
-      {/* Actions Menu */}
-      <Menu
-        anchorEl={menuAnchorEl}
-        open={Boolean(menuAnchorEl)}
-        onClose={handleMenuClose}
-      >
+      <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
         {menuJob?.type === 'user-task-type' && (
-          <MenuItem
-            onClick={() => {
-              openAssignJobDialog({ job: menuJob, onAssign: handleAssignJob });
-              handleMenuClose();
-            }}
-          >
-            <ListItemIcon>
-              <PersonAddIcon fontSize="small" />
-            </ListItemIcon>
+          <MenuItem onClick={() => { openAssignJobDialog({ job: menuJob, onAssign: handleAssignJob }); handleMenuClose(); }}>
+            <ListItemIcon><PersonAddIcon fontSize="small" /></ListItemIcon>
             <ListItemText>{t('processInstance:actions.assign')}</ListItemText>
           </MenuItem>
         )}
-        <MenuItem
-          onClick={() => {
-            if (menuJob) {
-              openUpdateRetriesDialog({ job: menuJob, onUpdate: handleUpdateRetries });
-            }
-            handleMenuClose();
-          }}
-        >
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
+        <MenuItem onClick={() => { if (menuJob) openUpdateRetriesDialog({ job: menuJob, onUpdate: handleUpdateRetries }); handleMenuClose(); }}>
+          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>{t('processInstance:actions.updateRetries')}</ListItemText>
         </MenuItem>
       </Menu>
     </Box>
   );
 };
-

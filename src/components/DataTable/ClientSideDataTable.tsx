@@ -24,6 +24,8 @@ export interface ClientSideDataTableProps<T> {
   'data-testid'?: string;
   /** Optional toolbar content displayed above the table */
   toolbar?: React.ReactNode;
+  /** Called when a breadcrumb element-ID link in a section header is clicked. */
+  onElementIdClick?: (elementId: string) => void;
 }
 
 /**
@@ -49,6 +51,7 @@ export const ClientSideDataTable = <T extends object>({
   rowKey,
   'data-testid': testId,
   toolbar,
+  onElementIdClick,
 }: ClientSideDataTableProps<T>) => {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -117,6 +120,7 @@ export const ClientSideDataTable = <T extends object>({
     return sortedSections
       .map((section, originalIndex) => ({
         label: section.label,
+        callPath: section.callPath,
         key: String(originalIndex),
         data: section.data.slice(start, end),
       }))
@@ -153,6 +157,7 @@ export const ClientSideDataTable = <T extends object>({
       rowKey={rowKey}
       data-testid={testId}
       toolbar={toolbar}
+      onElementIdClick={onElementIdClick}
     />
   );
 };

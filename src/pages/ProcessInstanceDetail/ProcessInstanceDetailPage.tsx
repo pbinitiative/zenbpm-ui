@@ -83,6 +83,7 @@ export const ProcessInstanceDetailPage = () => {
     if (elementId) next.elementId = elementId;
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
+
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -97,6 +98,7 @@ export const ProcessInstanceDetailPage = () => {
   const {
     processInstance,
     processDefinition,
+    // Backward-compat flat accessors (still used for tab badges + diagram helpers)
     jobs,
     history,
     incidents,
@@ -111,16 +113,16 @@ export const ProcessInstanceDetailPage = () => {
     loading,
     error,
     refetchAll,
-    // Tree + pagination (available for future tab migrations)
-    instanceTree: _instanceTree,
-    jobsPagination: _jobsPagination,
-    incidentsPagination: _incidentsPagination,
-    decisionsPagination: _decisionsPagination,
-    childrenPagination: _childrenPagination,
-    refetchNodeJobs: _refetchNodeJobs,
-    refetchNodeIncidents: _refetchNodeIncidents,
-    refetchNodeDecisions: _refetchNodeDecisions,
-    refetchNodeChildren: _refetchNodeChildren,
+    // Tree + pagination — passed directly to tabs
+    instanceTree,
+    jobsPagination,
+    incidentsPagination,
+    decisionsPagination,
+    childrenPagination,
+    onJobsPageChange,
+    onIncidentsPageChange,
+    onDecisionsPageChange,
+    onChildrenPageChange,
   } = useInstanceData(processInstanceKey);
 
   // Count of process instances that are actually shown in the Child Processes tab
@@ -226,16 +228,23 @@ export const ProcessInstanceDetailPage = () => {
   }, [elementStatistics, elementStatisticsMultiInstance]);
 
   const childProcessJobsCount = useMemo(() => {
-    return Object.values(childProcessJobs).flat().length
-  }, [ childProcessJobs ])
+    if (!instanceTree) return 0;
+    // Sum jobsTotalCount across all non-root nodes in the tree
+    const queue = [...instanceTree.children];
+    let total = 0;
+    while (queue.length > 0) {
+      const node = queue.shift()!;
+      total += node.jobsTotalCount;
+      queue.push(...node.children);
+    }
+    return total;
+  }, [instanceTree])
 
   // Total decision instances count across root + all child/grandchild processes
   const totalDecisionInstancesCount = useMemo(() => {
     const childCount = Object.values(childProcessDecisionInstances).flat().length;
     return decisionInstances.length + childCount;
   }, [decisionInstances, childProcessDecisionInstances]);
-
-
 
   // Loading state
   if (loading) {
@@ -335,7 +344,7 @@ export const ProcessInstanceDetailPage = () => {
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {t('processInstance:tabs.jobs')}
-                <Chip label={jobs.length + childProcessJobsCount} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
+                <Chip label={(instanceTree?.jobsTotalCount ?? jobs.length) + childProcessJobsCount} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
               </Box>
             }
           />
@@ -385,10 +394,9 @@ export const ProcessInstanceDetailPage = () => {
           {/* Jobs Tab */}
           <TabPanel value={activeTab} index={0}>
             <JobsTab
-              jobs={jobs}
-              childProcessJobs={childProcessJobs}
-              childProcesses={childProcesses}
-              grandchildProcesses={grandchildProcesses}
+              instanceTree={instanceTree}
+              jobsPagination={jobsPagination}
+              onJobsPageChange={onJobsPageChange}
               onRefetch={refetchAll}
               onShowNotification={showNotification}
               onElementIdClick={handleElementIdClick}
@@ -398,10 +406,7 @@ export const ProcessInstanceDetailPage = () => {
           {/* History Tab */}
           <TabPanel value={activeTab} index={1}>
             <HistoryTab
-              history={history}
-              childProcessHistory={childProcessHistory}
-              childProcesses={childProcesses}
-              grandchildProcesses={grandchildProcesses}
+              instanceTree={instanceTree}
               onElementIdClick={handleElementIdClick}
             />
           </TabPanel>
@@ -409,10 +414,9 @@ export const ProcessInstanceDetailPage = () => {
           {/* Incidents Tab */}
           <TabPanel value={activeTab} index={2}>
             <IncidentsTab
-              incidents={incidents}
-              childProcessIncidents={childProcessIncidents}
-              childProcesses={childProcesses}
-              grandchildProcesses={grandchildProcesses}
+              instanceTree={instanceTree}
+              incidentsPagination={incidentsPagination}
+              onIncidentsPageChange={onIncidentsPageChange}
               onRefetch={refetchAll}
               onShowNotification={showNotification}
               onElementIdClick={handleElementIdClick}
@@ -422,10 +426,7 @@ export const ProcessInstanceDetailPage = () => {
           {/* Variables Tab */}
           <TabPanel value={activeTab} index={3}>
             <VariablesTab
-              processInstanceKey={processInstanceKey}
-              variables={processInstance.variables}
-              childProcesses={childProcesses}
-              grandchildProcesses={grandchildProcesses}
+              instanceTree={instanceTree}
               onRefetch={refetchAll}
               onShowNotification={showNotification}
             />
@@ -434,18 +435,18 @@ export const ProcessInstanceDetailPage = () => {
           {/* Child Processes Tab */}
           <TabPanel value={activeTab} index={4}>
             <ChildProcessesTab
-              childProcesses={childProcesses}
-              grandchildProcesses={grandchildProcesses}
+              instanceTree={instanceTree}
+              childrenPagination={childrenPagination}
+              onChildrenPageChange={onChildrenPageChange}
             />
           </TabPanel>
 
           {/* Decision Instances Tab */}
           <TabPanel value={activeTab} index={5}>
             <DecisionInstancesTab
-              decisionInstances={decisionInstances}
-              childProcessDecisionInstances={childProcessDecisionInstances}
-              childProcesses={childProcesses}
-              grandchildProcesses={grandchildProcesses}
+              instanceTree={instanceTree}
+              decisionsPagination={decisionsPagination}
+              onDecisionsPageChange={onDecisionsPageChange}
             />
           </TabPanel>
         </Box>

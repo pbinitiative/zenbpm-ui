@@ -8,13 +8,13 @@ import {
 import { transformStatisticsToElementStatistics } from '@components/BpmnDiagram';
 import type { ElementStatistics } from '@components/BpmnDiagram';
 import type { FlowElementHistory, Incident, Job, ProcessDefinition, ProcessInstance } from '../types';
-import type { ProcessInstanceNode, TreeDatasetPagination } from '../types/tree';
+import type { ProcessInstanceNode } from '../types/tree';
 import {
   fetchInstanceTree,
-  refetchNodeJobs as fetchNodeJobs,
-  refetchNodeIncidents as fetchNodeIncidents,
-  refetchNodeDecisions as fetchNodeDecisions,
-  refetchNodeChildren as fetchNodeChildren,
+  refetchNodeJobs as doRefetchNodeJobs,
+  refetchNodeIncidents as doRefetchNodeIncidents,
+  refetchNodeDecisions as doRefetchNodeDecisions,
+  refetchNodeChildren as doRefetchNodeChildren,
   JOBS_PAGE_SIZE,
   INCIDENTS_PAGE_SIZE,
   DECISIONS_PAGE_SIZE,
@@ -36,6 +36,23 @@ export const AUTO_REFRESH_INTERVAL = 5000;
 const MAX_TREE_DEPTH = 8;
 
 // ---------------------------------------------------------------------------
+// Pagination types — one page/pageSize shared across all nodes per dataset
+// ---------------------------------------------------------------------------
+
+export interface DatasetPagination {
+  page: number;
+  pageSize: number;
+}
+
+export interface PageChangeFn {
+  (page: number, pageSize: number): Promise<void>;
+}
+
+export interface ChildrenPageChangeFn {
+  (page: number): Promise<void>;
+}
+
+// ---------------------------------------------------------------------------
 // Result interface
 // ---------------------------------------------------------------------------
 
@@ -50,11 +67,17 @@ export interface UseInstanceDataResult {
   // ── Full tree ─────────────────────────────────────────────────────────────
   instanceTree: ProcessInstanceNode | null;
 
-  // ── Per-dataset pagination across all nodes (keyed by processInstanceKey) ─
-  jobsPagination: TreeDatasetPagination;
-  incidentsPagination: TreeDatasetPagination;
-  decisionsPagination: TreeDatasetPagination;
-  childrenPagination: TreeDatasetPagination;
+  // ── Shared pagination state per dataset ──────────────────────────────────
+  jobsPagination: DatasetPagination;
+  incidentsPagination: DatasetPagination;
+  decisionsPagination: DatasetPagination;
+  childrenPagination: DatasetPagination;
+
+  // ── Page-change callbacks (refetch all nodes at new page) ─────────────────
+  onJobsPageChange: PageChangeFn;
+  onIncidentsPageChange: PageChangeFn;
+  onDecisionsPageChange: PageChangeFn;
+  onChildrenPageChange: ChildrenPageChangeFn;
 
   // ── Backward-compatible flat accessors (root node's data) ─────────────────
   jobs: Job[];
@@ -71,12 +94,6 @@ export interface UseInstanceDataResult {
   childProcessHistory: FlowElementHistory[];
   childProcessDecisionInstances: Record<string, DecisionInstanceSummary[]>;
 
-  // ── Per-node dataset refetch ───────────────────────────────────────────────
-  refetchNodeJobs: (instanceKey: string, page: number, size: number) => Promise<void>;
-  refetchNodeIncidents: (instanceKey: string, page: number, size: number) => Promise<void>;
-  refetchNodeDecisions: (instanceKey: string, page: number, size: number) => Promise<void>;
-  refetchNodeChildren: (instanceKey: string, page: number) => Promise<void>;
-
   // ── Legacy top-level refetch helpers (used by tabs / action handlers) ──────
   refetchJobs: () => Promise<void>;
   refetchIncidents: () => Promise<void>;
@@ -85,6 +102,22 @@ export interface UseInstanceDataResult {
   refetchChildProcesses: () => Promise<void>;
   refetchDecisionInstances: () => Promise<void>;
   refetchAll: () => Promise<void>;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** BFS-collect all nodes from a tree */
+function collectAllNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
+  const result: ProcessInstanceNode[] = [];
+  const queue: ProcessInstanceNode[] = [root];
+  while (queue.length > 0) {
+    const node = queue.shift()!;
+    result.push(node);
+    queue.push(...node.children);
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -102,40 +135,38 @@ export const useInstanceData = (
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // ── Shared per-dataset page state (0-indexed) ─────────────────────────────
+  const [jobsPage, setJobsPage] = useState(0);
+  const [jobsPageSize, setJobsPageSize] = useState(JOBS_PAGE_SIZE);
+  const [incidentsPage, setIncidentsPage] = useState(0);
+  const [incidentsPageSize, setIncidentsPageSize] = useState(INCIDENTS_PAGE_SIZE);
+  const [decisionsPage, setDecisionsPage] = useState(0);
+  const [decisionsPageSize, setDecisionsPageSize] = useState(DECISIONS_PAGE_SIZE);
+  const [childrenPage, setChildrenPage] = useState(0);
+
+  // Refs so fetchAll (auto-refresh) always uses the current pagination values
+  const jobsPageRef = useRef(0);
+  const jobsPageSizeRef = useRef(JOBS_PAGE_SIZE);
+  const incidentsPageRef = useRef(0);
+  const incidentsPageSizeRef = useRef(INCIDENTS_PAGE_SIZE);
+  const decisionsPageRef = useRef(0);
+  const decisionsPageSizeRef = useRef(DECISIONS_PAGE_SIZE);
+  jobsPageRef.current = jobsPage;
+  jobsPageSizeRef.current = jobsPageSize;
+  incidentsPageRef.current = incidentsPage;
+  incidentsPageSizeRef.current = incidentsPageSize;
+  decisionsPageRef.current = decisionsPage;
+  decisionsPageSizeRef.current = decisionsPageSize;
+
   // ── Derived flat maps from the tree ───────────────────────────────────────
   const flattened = useMemo(() => flattenTree(instanceTree), [instanceTree]);
 
-  // ── Find a node in the tree by key ────────────────────────────────────────
-  const findNode = useCallback(
-    (key: string): ProcessInstanceNode | undefined => {
-      if (!instanceTree) return undefined;
-      const queue: ProcessInstanceNode[] = [instanceTree];
-      while (queue.length > 0) {
-        const node = queue.shift()!;
-        if (node.instance.key === key) return node;
-        queue.push(...node.children);
-      }
-      return undefined;
-    },
-    [instanceTree],
-  );
-
   // ── Subprocess element statistics ─────────────────────────────────────────
-  /**
-   * Walk the tree, collect all subprocess-typed nodes, fetch their element
-   * statistics in parallel, and merge the results.
-   */
   const fetchSubprocessStats = useCallback(
     async (root: ProcessInstanceNode) => {
-      const subprocessNodes: ProcessInstanceNode[] = [];
-      const queue: ProcessInstanceNode[] = [root];
-      while (queue.length > 0) {
-        const node = queue.shift()!;
-        if (node.instance.processType === 'subprocess') {
-          subprocessNodes.push(node);
-        }
-        queue.push(...node.children);
-      }
+      const subprocessNodes = collectAllNodes(root).filter(
+        (n) => n.instance.processType === 'subprocess',
+      );
 
       if (subprocessNodes.length === 0) {
         setSubprocessElementStatistics(undefined);
@@ -152,9 +183,7 @@ export const useInstanceData = (
         const stats = transformStatisticsToElementStatistics(result.value);
         if (!stats) continue;
         for (const [elementId, counts] of Object.entries(stats)) {
-          if (!merged[elementId]) {
-            merged[elementId] = { activeCount: 0, incidentCount: 0 };
-          }
+          if (!merged[elementId]) merged[elementId] = { activeCount: 0, incidentCount: 0 };
           merged[elementId].activeCount += counts.activeCount;
           merged[elementId].incidentCount += counts.incidentCount;
         }
@@ -167,20 +196,27 @@ export const useInstanceData = (
   // ── Core fetch: build / rebuild the whole tree ────────────────────────────
   const fetchAll = useCallback(async () => {
     if (!processInstanceKey) return;
-
     try {
-      const root = await fetchInstanceTree(processInstanceKey, { maxDepth: MAX_TREE_DEPTH });
+      const root = await fetchInstanceTree(processInstanceKey, {
+        maxDepth: MAX_TREE_DEPTH,
+        // Always use the current pagination state so auto-refresh respects
+        // whatever page/pageSize the user has navigated to.
+        jobsPage: jobsPageRef.current + 1,       // API is 1-indexed
+        jobsPageSize: jobsPageSizeRef.current,
+        incidentsPage: incidentsPageRef.current + 1,
+        incidentsPageSize: incidentsPageSizeRef.current,
+        decisionsPage: decisionsPageRef.current + 1,
+        decisionsPageSize: decisionsPageSizeRef.current,
+      });
       setInstanceTree(root);
 
-      // Fetch process definition (non-critical — use definition key from root)
       try {
         const defData = await getProcessDefinition(root.instance.processDefinitionKey);
         setProcessDefinition(defData as unknown as ProcessDefinition);
       } catch {
-        // Definition fetch failure is non-critical
+        // Non-critical
       }
 
-      // Subprocess element statistics (fire-and-forget within the refresh cycle)
       void fetchSubprocessStats(root);
     } catch (err) {
       console.error('Failed to fetch instance tree:', err);
@@ -194,6 +230,14 @@ export const useInstanceData = (
     const fetchData = async () => {
       setLoading(true);
       setError(null);
+      // Reset pagination when the instance key changes
+      setJobsPage(0);
+      setJobsPageSize(JOBS_PAGE_SIZE);
+      setIncidentsPage(0);
+      setIncidentsPageSize(INCIDENTS_PAGE_SIZE);
+      setDecisionsPage(0);
+      setDecisionsPageSize(DECISIONS_PAGE_SIZE);
+      setChildrenPage(0);
       try {
         await fetchAll();
       } catch (err) {
@@ -215,11 +259,9 @@ export const useInstanceData = (
 
   useEffect(() => {
     if (!processInstanceKey || loading || !isActiveInstance) return;
-
     const intervalId = setInterval(() => {
       void fetchAllRef.current();
     }, AUTO_REFRESH_INTERVAL);
-
     return () => clearInterval(intervalId);
   }, [processInstanceKey, loading, isActiveInstance]);
 
@@ -240,9 +282,7 @@ export const useInstanceData = (
     if (!base) return subprocessElementStatistics;
     const merged: ElementStatistics = { ...base };
     for (const [elementId, counts] of Object.entries(subprocessElementStatistics)) {
-      if (!merged[elementId]) {
-        merged[elementId] = { activeCount: 0, incidentCount: 0 };
-      }
+      if (!merged[elementId]) merged[elementId] = { activeCount: 0, incidentCount: 0 };
       merged[elementId] = {
         activeCount: merged[elementId].activeCount + counts.activeCount,
         incidentCount: merged[elementId].incidentCount + counts.incidentCount,
@@ -251,98 +291,71 @@ export const useInstanceData = (
     return merged;
   }, [rawElementStatistics, subprocessElementStatistics]);
 
-  // ── Per-node dataset refetch helpers ─────────────────────────────────────
-  /**
-   * Immutably rebuild the tree after mutating a single node so React picks up
-   * the change.  We do a shallow-clone walk from root to the mutated node.
-   */
-  const cloneTreeWithUpdatedNode = useCallback(
-    (root: ProcessInstanceNode, updatedKey: string): ProcessInstanceNode => {
-      const cloneNode = (node: ProcessInstanceNode): ProcessInstanceNode => {
-        if (node.instance.key === updatedKey) {
-          // Return a new object reference so useMemo dependencies fire
-          return { ...node };
-        }
-        const newChildren = node.children.map(cloneNode);
-        if (newChildren === node.children) return node; // nothing changed in this subtree
-        return { ...node, children: newChildren };
-      };
-      return cloneNode(root);
+  // ── Page-change callbacks — refetch all nodes at the new page ────────────
+  // We use a ref to always access the latest tree without stale closures.
+  const instanceTreeRef = useRef(instanceTree);
+  instanceTreeRef.current = instanceTree;
+
+  const onJobsPageChange: PageChangeFn = useCallback(
+    async (page, pageSize) => {
+      const tree = instanceTreeRef.current;
+      if (!tree) return;
+      const nodes = collectAllNodes(tree);
+      // API is 1-indexed
+      await Promise.all(nodes.map((node) => doRefetchNodeJobs(node, page + 1, pageSize)));
+      setJobsPage(page);
+      setJobsPageSize(pageSize);
+      setInstanceTree((prev) => (prev ? { ...prev } : prev));
     },
     [],
   );
 
-  const handleRefetchNodeJobs = useCallback(
-    async (instanceKey: string, page: number, size: number) => {
-      if (!instanceTree) return;
-      const node = findNode(instanceKey);
-      if (!node) return;
-      await fetchNodeJobs(node, page, size);
-      setInstanceTree(cloneTreeWithUpdatedNode(instanceTree, instanceKey));
+  const onIncidentsPageChange: PageChangeFn = useCallback(
+    async (page, pageSize) => {
+      const tree = instanceTreeRef.current;
+      if (!tree) return;
+      const nodes = collectAllNodes(tree);
+      await Promise.all(nodes.map((node) => doRefetchNodeIncidents(node, page + 1, pageSize)));
+      setIncidentsPage(page);
+      setIncidentsPageSize(pageSize);
+      setInstanceTree((prev) => (prev ? { ...prev } : prev));
     },
-    [instanceTree, findNode, cloneTreeWithUpdatedNode],
+    [],
   );
 
-  const handleRefetchNodeIncidents = useCallback(
-    async (instanceKey: string, page: number, size: number) => {
-      if (!instanceTree) return;
-      const node = findNode(instanceKey);
-      if (!node) return;
-      await fetchNodeIncidents(node, page, size);
-      setInstanceTree(cloneTreeWithUpdatedNode(instanceTree, instanceKey));
+  const onDecisionsPageChange: PageChangeFn = useCallback(
+    async (page, pageSize) => {
+      const tree = instanceTreeRef.current;
+      if (!tree) return;
+      const nodes = collectAllNodes(tree);
+      await Promise.all(nodes.map((node) => doRefetchNodeDecisions(node, page + 1, pageSize)));
+      setDecisionsPage(page);
+      setDecisionsPageSize(pageSize);
+      setInstanceTree((prev) => (prev ? { ...prev } : prev));
     },
-    [instanceTree, findNode, cloneTreeWithUpdatedNode],
+    [],
   );
 
-  const handleRefetchNodeDecisions = useCallback(
-    async (instanceKey: string, page: number, size: number) => {
-      if (!instanceTree) return;
-      const node = findNode(instanceKey);
-      if (!node) return;
-      await fetchNodeDecisions(node, page, size);
-      setInstanceTree(cloneTreeWithUpdatedNode(instanceTree, instanceKey));
+  const onChildrenPageChange: ChildrenPageChangeFn = useCallback(
+    async (page) => {
+      const tree = instanceTreeRef.current;
+      if (!tree) return;
+      const nodes = collectAllNodes(tree);
+      await Promise.all(nodes.map((node) => doRefetchNodeChildren(node, page + 1, CHILDREN_PAGE_SIZE)));
+      setChildrenPage(page);
+      setInstanceTree((prev) => (prev ? { ...prev } : prev));
     },
-    [instanceTree, findNode, cloneTreeWithUpdatedNode],
+    [],
   );
 
-  const handleRefetchNodeChildren = useCallback(
-    async (instanceKey: string, page: number) => {
-      if (!instanceTree) return;
-      const node = findNode(instanceKey);
-      if (!node) return;
-      await fetchNodeChildren(node, page, CHILDREN_PAGE_SIZE);
-      setInstanceTree(cloneTreeWithUpdatedNode(instanceTree, instanceKey));
-    },
-    [instanceTree, findNode, cloneTreeWithUpdatedNode],
-  );
-
-  // ── Legacy top-level refetch helpers ─────────────────────────────────────
-  // These all trigger a full tree rebuild for simplicity (matching old behaviour).
-
-  const refetchJobs = useCallback(async () => {
-    await fetchAll();
-  }, [fetchAll]);
-
-  const refetchIncidents = useCallback(async () => {
-    await fetchAll();
-  }, [fetchAll]);
-
-  // Variables live on instance.variables — refreshed by re-fetching the tree
-  const refetchVariables = useCallback(async () => {
-    await fetchAll();
-  }, [fetchAll]);
-
-  const refetchHistory = useCallback(async () => {
-    await fetchAll();
-  }, [fetchAll]);
-
-  const refetchChildProcesses = useCallback(async () => {
-    await fetchAll();
-  }, [fetchAll]);
-
-  const refetchDecisionInstances = useCallback(async () => {
-    await fetchAll();
-  }, [fetchAll]);
+  // ── Legacy refetch helpers (full tree rebuild) ────────────────────────────
+  const refetchAll = fetchAll;
+  const refetchJobs = useCallback(async () => { await fetchAll(); }, [fetchAll]);
+  const refetchIncidents = useCallback(async () => { await fetchAll(); }, [fetchAll]);
+  const refetchVariables = useCallback(async () => { await fetchAll(); }, [fetchAll]);
+  const refetchHistory = useCallback(async () => { await fetchAll(); }, [fetchAll]);
+  const refetchChildProcesses = useCallback(async () => { await fetchAll(); }, [fetchAll]);
+  const refetchDecisionInstances = useCallback(async () => { await fetchAll(); }, [fetchAll]);
 
   // ── Return ────────────────────────────────────────────────────────────────
 
@@ -359,11 +372,17 @@ export const useInstanceData = (
     // Full tree
     instanceTree,
 
-    // Pagination
-    jobsPagination: flattened.jobsPagination,
-    incidentsPagination: flattened.incidentsPagination,
-    decisionsPagination: flattened.decisionsPagination,
-    childrenPagination: flattened.childrenPagination,
+    // Shared pagination state
+    jobsPagination: { page: jobsPage, pageSize: jobsPageSize },
+    incidentsPagination: { page: incidentsPage, pageSize: incidentsPageSize },
+    decisionsPagination: { page: decisionsPage, pageSize: decisionsPageSize },
+    childrenPagination: { page: childrenPage, pageSize: CHILDREN_PAGE_SIZE },
+
+    // Page-change callbacks
+    onJobsPageChange,
+    onIncidentsPageChange,
+    onDecisionsPageChange,
+    onChildrenPageChange,
 
     // Root-level flat data
     jobs: rootNode?.jobs ?? [],
@@ -380,12 +399,6 @@ export const useInstanceData = (
     childProcessHistory: flattened.childProcessHistory,
     childProcessDecisionInstances: flattened.childProcessDecisionInstances,
 
-    // Per-node refetch
-    refetchNodeJobs: handleRefetchNodeJobs,
-    refetchNodeIncidents: handleRefetchNodeIncidents,
-    refetchNodeDecisions: handleRefetchNodeDecisions,
-    refetchNodeChildren: handleRefetchNodeChildren,
-
     // Legacy refetch
     refetchJobs,
     refetchIncidents,
@@ -393,6 +406,6 @@ export const useInstanceData = (
     refetchHistory,
     refetchChildProcesses,
     refetchDecisionInstances,
-    refetchAll: fetchAll,
+    refetchAll,
   };
 };

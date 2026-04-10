@@ -1,6 +1,6 @@
 import type { DecisionInstanceSummary } from '@base/openapi';
 import type { FlowElementHistory, Incident, Job, ProcessInstance } from '../types';
-import type { ProcessInstanceNode, TreeDatasetPagination } from '../types/tree';
+import type { ProcessInstanceNode } from '../types/tree';
 
 // ---------------------------------------------------------------------------
 // Return type
@@ -34,13 +34,6 @@ export interface FlattenedTree {
 
   /** Decision instances for every non-root node, keyed by processInstanceKey */
   childProcessDecisionInstances: Record<string, DecisionInstanceSummary[]>;
-
-  // ── Pagination state derived from node counts ────────────────────────────
-
-  jobsPagination: TreeDatasetPagination;
-  incidentsPagination: TreeDatasetPagination;
-  decisionsPagination: TreeDatasetPagination;
-  childrenPagination: TreeDatasetPagination;
 }
 
 // ---------------------------------------------------------------------------
@@ -56,16 +49,14 @@ const EMPTY: FlattenedTree = {
   childProcessIncidents: {},
   childProcessHistory: [],
   childProcessDecisionInstances: {},
-  jobsPagination: {},
-  incidentsPagination: {},
-  decisionsPagination: {},
-  childrenPagination: {},
 };
 
 /**
  * Walk a `ProcessInstanceNode` tree and derive all the flat-map shapes that
- * the current tab components expect, plus pagination metadata for every node
- * and dataset.
+ * the current tab components expect.
+ *
+ * Pagination state is NOT derived here — it is maintained explicitly in
+ * `useInstanceData` and passed separately to consumers.
  *
  * The root node's own datasets (jobs, history, …) are intentionally excluded
  * from the child maps — the hook returns them as top-level fields.
@@ -80,12 +71,8 @@ export function flattenTree(root: ProcessInstanceNode | null): FlattenedTree {
   const childProcessIncidents: Record<string, Incident[]> = {};
   const childProcessHistory: FlowElementHistory[] = [];
   const childProcessDecisionInstances: Record<string, DecisionInstanceSummary[]> = {};
-  const jobsPagination: TreeDatasetPagination = {};
-  const incidentsPagination: TreeDatasetPagination = {};
-  const decisionsPagination: TreeDatasetPagination = {};
-  const childrenPagination: TreeDatasetPagination = {};
 
-  // BFS — collect all nodes, skipping root for child maps
+  // BFS
   const queue: ProcessInstanceNode[] = [root];
 
   while (queue.length > 0) {
@@ -94,43 +81,14 @@ export function flattenTree(root: ProcessInstanceNode | null): FlattenedTree {
 
     const key = node.instance.key;
 
-    // Pagination entries for every node (including root)
-    jobsPagination[key] = {
-      page: 1,
-      size: node.jobsTotalCount > 0 ? node.jobs.length : 100,
-      totalCount: node.jobsTotalCount,
-    };
-    incidentsPagination[key] = {
-      page: 1,
-      size: node.incidentsTotalCount > 0 ? node.incidents.length : 100,
-      totalCount: node.incidentsTotalCount,
-    };
-    decisionsPagination[key] = {
-      page: 1,
-      size: node.decisionsTotalCount > 0 ? node.decisions.length : 100,
-      totalCount: node.decisionsTotalCount,
-    };
-    childrenPagination[key] = {
-      page: 1,
-      size: node.childrenTotalCount > 0 ? node.children.length : 100,
-      totalCount: node.childrenTotalCount,
-    };
-
     if (node.depth === 0) {
-      // Root: only enqueue children, skip child maps
       queue.push(...node.children);
       continue;
     }
 
-    // Depth 1 → direct children of root
+    // Depth 1 — direct children of root
     if (node.depth === 1) {
       childProcesses.push(node.instance);
-    }
-
-    // Depth 2 → grandchildren — keyed by their parent's key
-    if (node.depth === 2) {
-      // Find direct parent key: the node at depth 1 whose children include this node.
-      // We do this by tracking parentKey in a side-map below (see BFS variant).
     }
 
     // Non-root datasets
@@ -142,11 +100,10 @@ export function flattenTree(root: ProcessInstanceNode | null): FlattenedTree {
     queue.push(...node.children);
   }
 
-  // ── Build grandchildProcesses: depth-2 nodes keyed by their depth-1 parent ──
+  // Depth-2 grandchildren keyed by their depth-1 parent
   for (const depth1Node of root.children) {
-    const parentKey = depth1Node.instance.key;
     if (depth1Node.children.length > 0) {
-      grandchildProcesses[parentKey] = depth1Node.children.map((gc) => gc.instance);
+      grandchildProcesses[depth1Node.instance.key] = depth1Node.children.map((gc) => gc.instance);
     }
   }
 
@@ -159,9 +116,5 @@ export function flattenTree(root: ProcessInstanceNode | null): FlattenedTree {
     childProcessIncidents,
     childProcessHistory,
     childProcessDecisionInstances,
-    jobsPagination,
-    incidentsPagination,
-    decisionsPagination,
-    childrenPagination,
   };
 }
