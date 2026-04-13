@@ -106,8 +106,6 @@ export const ProcessInstanceDetailPage = () => {
     childProcessIncidents,
     grandchildProcesses,
     childProcessHistory,
-    decisionInstances,
-    childProcessDecisionInstances,
     elementStatistics,
     loading,
     error,
@@ -179,11 +177,19 @@ export const ProcessInstanceDetailPage = () => {
     return total;
   }, [instanceTree])
 
-  // Total decision instances count across root + all child/grandchild processes
+  // Total decision instances count — sum decisionsTotalCount across all nodes in the tree.
+  // This is 0 until the Decisions tab is first opened (decisions are lazy-loaded).
   const totalDecisionInstancesCount = useMemo(() => {
-    const childCount = Object.values(childProcessDecisionInstances).flat().length;
-    return decisionInstances.length + childCount;
-  }, [decisionInstances, childProcessDecisionInstances]);
+    if (!instanceTree) return 0;
+    const queue: typeof instanceTree[] = [instanceTree];
+    let total = 0;
+    while (queue.length > 0) {
+      const node = queue.shift()!;
+      total += node.decisionsTotalCount;
+      queue.push(...node.children);
+    }
+    return total;
+  }, [instanceTree]);
 
   // Loading state
   if (loading) {

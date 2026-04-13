@@ -136,23 +136,23 @@ export const DecisionInstancesTab = ({
   return (
     <Box data-testid="decision-instances-tab">
       <DataTable
-        columns={columns}
-        data={flatData}
-        sections={sections}
-        rowKey="key"
-        data-testid="decision-instances-table"
-        page={decisionsPagination.page}
-        pageSize={decisionsPagination.pageSize}
-        onPageChange={(newPage) => void onDecisionsPageChange(newPage, decisionsPagination.pageSize)}
-        onPageSizeChange={(newSize) => void onDecisionsPageChange(0, newSize)}
-        sortBy={sortBy}
-        sortOrder={sortOrder}
-        onSortChange={(newSortBy, newSortOrder) => {
-          setSortBy(newSortBy);
-          setSortOrder(newSortOrder);
-        }}
-        totalCount={totalCount}
-        onRowClick={handleRowClick}
+          columns={columns}
+          data={flatData}
+          sections={sections}
+          rowKey="key"
+          data-testid="decision-instances-table"
+          page={decisionsPagination.page}
+          pageSize={decisionsPagination.pageSize}
+          onPageChange={(newPage) => void onDecisionsPageChange(newPage, decisionsPagination.pageSize)}
+          onPageSizeChange={(newSize) => void onDecisionsPageChange(0, newSize)}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSortChange={(newSortBy, newSortOrder) => {
+            setSortBy(newSortBy);
+            setSortOrder(newSortOrder);
+          }}
+          totalCount={totalCount}
+          onRowClick={handleRowClick}
       />
     </Box>
   );

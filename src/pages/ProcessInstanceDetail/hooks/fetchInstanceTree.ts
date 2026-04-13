@@ -25,6 +25,9 @@ export const JOBS_PAGE_SIZE = 10;
 export const INCIDENTS_PAGE_SIZE = 10;
 export const DECISIONS_PAGE_SIZE = 10;
 
+/** States where a process instance will never change — used to skip re-fetching */
+const TERMINAL_STATES = new Set(['completed', 'terminated']);
+
 // ---------------------------------------------------------------------------
 // Options
 // ---------------------------------------------------------------------------
@@ -38,6 +41,14 @@ export interface FetchInstanceTreeOptions {
   incidentsPageSize?: number;
   decisionsPage?: number;
   decisionsPageSize?: number;
+  /** Pre-fetched root ProcessInstance — avoids a duplicate getProcessInstance call */
+  preloadedRoot?: ProcessInstance;
+  /**
+   * Cache of already-fetched terminal nodes (keyed by instance key).
+   * When a node in the new tree is found here and is still terminal,
+   * its datasets are copied instead of re-fetched (auto-refresh optimisation).
+   */
+  terminalNodeCache?: Map<string, ProcessInstanceNode>;
 }
 
 // ---------------------------------------------------------------------------
@@ -105,9 +116,13 @@ function inferCallElementId(
 // ---------------------------------------------------------------------------
 
 /**
- * Fetch all datasets (jobs, incidents, decisions, history) for a single node.
- * All four requests run in parallel.  Individual failures are swallowed so one
- * bad endpoint cannot abort the whole tree load.
+ * Fetch jobs, incidents, decisions, and history for a single node.
+ * All requests run in parallel; individual failures are swallowed so one bad
+ * endpoint cannot abort the whole tree load.
+ *
+ * History is skipped for `callActivity` nodes: those instances belong to a
+ * different process definition, so their element IDs never appear in the
+ * parent diagram and the fetch is pure waste.
  */
 async function fetchNodeDatasets(
   node: ProcessInstanceNode,
@@ -117,34 +132,40 @@ async function fetchNodeDatasets(
   >>,
 ): Promise<void> {
   const key = node.instance.key;
+  const isCallActivity = node.instance.processType === 'callActivity';
 
-  const [jobsResult, incidentsResult, decisionsResult, historyResult] = await Promise.allSettled([
+  const requests: Promise<unknown>[] = [
     getProcessInstanceJobs(key, { page: opts.jobsPage, size: opts.jobsPageSize }),
     getIncidents(key, { page: opts.incidentsPage, size: opts.incidentsPageSize }),
     getDecisionInstances({ processInstanceKey: key, page: opts.decisionsPage, size: opts.decisionsPageSize }),
-    getHistory(key, { page: 1, size: -1 }),
-  ]);
+    // History is skipped for callActivity nodes (different BPMN scope)
+    isCallActivity ? Promise.resolve(null) : getHistory(key, { page: 1, size: -1 }),
+  ];
 
-  if (jobsResult.status === 'fulfilled') {
-    node.jobs = (jobsResult.value.items ?? []) as Job[];
-    node.jobsTotalCount = jobsResult.value.totalCount ?? 0;
+  const [jobsResult, incidentsResult, decisionsResult, historyResult] = await Promise.allSettled(requests);
+
+  if (jobsResult.status === 'fulfilled' && jobsResult.value) {
+    const v = jobsResult.value as Awaited<ReturnType<typeof getProcessInstanceJobs>>;
+    node.jobs = (v.items ?? []) as Job[];
+    node.jobsTotalCount = v.totalCount ?? 0;
   }
 
-  if (incidentsResult.status === 'fulfilled') {
-    node.incidents = (incidentsResult.value.items ?? []) as Incident[];
-    node.incidentsTotalCount = incidentsResult.value.totalCount ?? 0;
+  if (incidentsResult.status === 'fulfilled' && incidentsResult.value) {
+    const v = incidentsResult.value as Awaited<ReturnType<typeof getIncidents>>;
+    node.incidents = (v.items ?? []) as Incident[];
+    node.incidentsTotalCount = v.totalCount ?? 0;
   }
 
-  if (decisionsResult.status === 'fulfilled') {
-    const items = (decisionsResult.value.partitions ?? []).flatMap(
-      (p) => p.items ?? [],
-    ) as DecisionInstanceSummary[];
+  if (decisionsResult.status === 'fulfilled' && decisionsResult.value) {
+    const v = decisionsResult.value as Awaited<ReturnType<typeof getDecisionInstances>>;
+    const items = (v.partitions ?? []).flatMap((p) => p.items ?? []) as DecisionInstanceSummary[];
     node.decisions = items;
-    node.decisionsTotalCount = decisionsResult.value.totalCount ?? 0;
+    node.decisionsTotalCount = v.totalCount ?? 0;
   }
 
-  if (historyResult.status === 'fulfilled') {
-    node.history = (historyResult.value.items ?? []) as FlowElementHistory[];
+  if (!isCallActivity && historyResult.status === 'fulfilled' && historyResult.value) {
+    const v = historyResult.value as Awaited<ReturnType<typeof getHistory>>;
+    node.history = (v.items ?? []) as FlowElementHistory[];
   }
 }
 
@@ -161,9 +182,11 @@ async function fetchNodeDatasets(
  *
  * Phase 2 — Data: for every discovered node, fetch jobs, incidents,
  * decisions, and history in parallel (all nodes in a level run concurrently).
+ * Terminal nodes found in `opts.terminalNodeCache` have their datasets copied
+ * instead of re-fetched (used by the auto-refresh path to skip immutable data).
  *
  * @param rootKey   processInstanceKey of the root instance
- * @param opts      tuning options (depths, page sizes)
+ * @param opts      tuning options (depths, page sizes, caches)
  * @returns         the fully-populated root `ProcessInstanceNode`
  */
 export async function fetchInstanceTree(
@@ -180,11 +203,13 @@ export async function fetchInstanceTree(
     decisionsPage: opts.decisionsPage ?? 1,
     decisionsPageSize: opts.decisionsPageSize ?? DECISIONS_PAGE_SIZE,
   };
+  const terminalCache = opts.terminalNodeCache ?? new Map<string, ProcessInstanceNode>();
 
   // ── Phase 1: build tree shape ────────────────────────────────────────────
 
-  const rootInstance = await getProcessInstance(rootKey);
-  const root = makeNode(rootInstance as unknown as ProcessInstance, 0);
+  const rootInstance: ProcessInstance = opts.preloadedRoot
+    ?? (await getProcessInstance(rootKey)) as unknown as ProcessInstance;
+  const root = makeNode(rootInstance, 0);
 
   const visited = new Set<string>([rootKey]);
 
@@ -238,12 +263,29 @@ export async function fetchInstanceTree(
   const allNodes: ProcessInstanceNode[] = [];
   const bfsQueue: ProcessInstanceNode[] = [root];
   while (bfsQueue.length > 0) {
-    const node = bfsQueue.shift();
+    const node = bfsQueue.shift()!;
     allNodes.push(node);
     bfsQueue.push(...node.children);
   }
 
-  await Promise.all(allNodes.map((node) => fetchNodeDatasets(node, datasetOpts)));
+  await Promise.all(allNodes.map((node) => {
+    // For non-root terminal nodes: copy cached data instead of re-fetching.
+    // The root node is always re-fetched so the page reflects the latest state.
+    if (node !== root && TERMINAL_STATES.has(node.instance.state)) {
+      const cached = terminalCache.get(node.instance.key);
+      if (cached) {
+        node.jobs = cached.jobs;
+        node.jobsTotalCount = cached.jobsTotalCount;
+        node.incidents = cached.incidents;
+        node.incidentsTotalCount = cached.incidentsTotalCount;
+        node.history = cached.history;
+        node.decisions = cached.decisions;
+        node.decisionsTotalCount = cached.decisionsTotalCount;
+        return Promise.resolve();
+      }
+    }
+    return fetchNodeDatasets(node, datasetOpts);
+  }));
 
   // ── Phase 3: derive callElementId for each non-root node ─────────────────
   // Now that history is populated, infer which element in the parent called

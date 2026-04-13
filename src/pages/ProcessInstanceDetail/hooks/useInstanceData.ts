@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { DecisionInstanceSummary } from '@base/openapi';
 import {
   getProcessDefinition,
+  getProcessInstance,
   getProcessInstanceElementStatistics,
   useGetProcessInstanceElementStatistics,
 } from '@base/openapi';
@@ -193,24 +194,40 @@ export const useInstanceData = (
   const fetchAll = useCallback(async () => {
     if (!processInstanceKey) return;
     try {
-      const root = await fetchInstanceTree(processInstanceKey, {
-        maxDepth: MAX_TREE_DEPTH,
-        jobsPage: jobsPageRef.current + 1,       // API is 1-indexed
-        jobsPageSize: jobsPageSizeRef.current,
-        incidentsPage: incidentsPageRef.current + 1,
-        incidentsPageSize: incidentsPageSizeRef.current,
-        decisionsPage: decisionsPageRef.current + 1,
-        decisionsPageSize: decisionsPageSizeRef.current,
-      });
-      setInstanceTree(root);
+      // Fetch the root instance first so we can fire the process-definition
+      // request in parallel with the rest of the tree BFS + dataset fetches.
+      const rootInstance = (await getProcessInstance(processInstanceKey)) as unknown as ProcessInstance;
 
-      try {
-        const defData = await getProcessDefinition(root.instance.processDefinitionKey);
-        setProcessDefinition(defData as unknown as ProcessDefinition);
-      } catch {
-        // Non-critical
+      // Build a terminal-node cache from the current tree so that completed/
+      // terminated child nodes don't need their datasets re-fetched.
+      const terminalNodeCache = new Map<string, ProcessInstanceNode>();
+      if (instanceTreeRef.current) {
+        for (const node of collectAllNodes(instanceTreeRef.current)) {
+          if (['completed', 'terminated'].includes(node.instance.state)) {
+            terminalNodeCache.set(node.instance.key, node);
+          }
+        }
       }
 
+      const [root] = await Promise.all([
+        fetchInstanceTree(processInstanceKey, {
+          maxDepth: MAX_TREE_DEPTH,
+          preloadedRoot: rootInstance,
+          terminalNodeCache,
+          jobsPage: jobsPageRef.current + 1,
+          jobsPageSize: jobsPageSizeRef.current,
+          incidentsPage: incidentsPageRef.current + 1,
+          incidentsPageSize: incidentsPageSizeRef.current,
+          decisionsPage: decisionsPageRef.current + 1,
+          decisionsPageSize: decisionsPageSizeRef.current,
+        }),
+        // Process definition fetch runs concurrently with the tree BFS.
+        getProcessDefinition(rootInstance.processDefinitionKey)
+          .then((def) => setProcessDefinition(def as unknown as ProcessDefinition))
+          .catch(() => { /* non-critical */ }),
+      ]);
+
+      setInstanceTree(root);
       void fetchSubprocessStats(root);
     } catch (err) {
       console.error('Failed to fetch instance tree:', err);
@@ -352,6 +369,8 @@ export const useInstanceData = (
   const refetchHistory = useCallback(async () => { await fetchAll(); }, [fetchAll]);
   const refetchChildProcesses = useCallback(async () => { await fetchAll(); }, [fetchAll]);
   const refetchDecisionInstances = useCallback(async () => { await fetchAll(); }, [fetchAll]);
+
+
 
   // ── Return ────────────────────────────────────────────────────────────────
 
