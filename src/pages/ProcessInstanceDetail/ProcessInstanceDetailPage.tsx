@@ -172,41 +172,40 @@ export const ProcessInstanceDetailPage = () => {
     const totalPerElement: Record<string, number> = {};
     const completedPerElement: Record<string, number> = {};
 
-    // Only consider jobs belonging to multiInstance child processes
-    const multiInstanceChildKeys = new Set(
-      childProcesses
-        .filter((cp) => cp.processType === 'multiInstance')
-        .map((cp) => cp.key)
-    );
+    if (!instanceTree) return {};
 
+    // Collect all multi-instance nodes at any depth
+    const multiInstanceNodes: any[] = [];
+    const q: any[] = [instanceTree];
+    while (q.length > 0) {
+      const n = q.shift();
+      if (n.depth > 0 && n.instance?.processType === 'multiInstance') {
+        multiInstanceNodes.push(n);
+      }
+      if (n.children) q.push(...n.children);
+    }
+
+    const multiInstanceKeys = new Set(multiInstanceNodes.map((n) => n.instance.key));
+
+    // Count jobs belonging to any multi-instance node
     for (const [childKey, jobs] of Object.entries(childProcessJobs)) {
-      if (!multiInstanceChildKeys.has(childKey)) continue;
+      if (!multiInstanceKeys.has(childKey)) continue;
       for (const job of jobs) {
         totalPerElement[job.elementId] = (totalPerElement[job.elementId] ?? 0) + 1;
-        if (job.state === 'completed') {
+        if (job.state === 'completed' || job.state === 'terminated') {
           completedPerElement[job.elementId] = (completedPerElement[job.elementId] ?? 0) + 1;
         }
       }
     }
 
-    // --- Call-activity multi-instance: grandchild process instances ---
-    const multiInstanceGrandchildren = childProcesses
-      .filter((cp) => cp.processType === 'multiInstance')
-      .flatMap((cp) => grandchildProcesses[cp.key] ?? []);
-
-    if (multiInstanceGrandchildren.length > 0) {
-      const historyIdCounts: Record<string, number> = {};
-      for (const h of history) {
-        historyIdCounts[h.elementId] = (historyIdCounts[h.elementId] ?? 0) + 1;
-      }
-      const callActivityElementId = Object.entries(historyIdCounts)
-        .sort((a, b) => b[1] - a[1])[0]?.[0];
-      if (callActivityElementId) {
-        for (const grandchild of multiInstanceGrandchildren) {
-          totalPerElement[callActivityElementId] = (totalPerElement[callActivityElementId] ?? 0) + 1;
-          if (grandchild.state === 'completed') {
-            completedPerElement[callActivityElementId] = (completedPerElement[callActivityElementId] ?? 0) + 1;
-          }
+    // Call-activity multi-instance: count direct children of each multi-instance node
+    for (const miNode of multiInstanceNodes) {
+      for (const childNode of miNode.children || []) {
+        const callElem = childNode.callElementId;
+        if (!callElem) continue;
+        totalPerElement[callElem] = (totalPerElement[callElem] ?? 0) + 1;
+        if (childNode.instance?.state === 'completed' || childNode.instance?.state === 'terminated') {
+          completedPerElement[callElem] = (completedPerElement[callElem] ?? 0) + 1;
         }
       }
     }
@@ -217,7 +216,7 @@ export const ProcessInstanceDetailPage = () => {
       stats[elementId] = { activeCount: total - completed, incidentCount: 0, completedCount: completed };
     }
     return stats;
-  }, [childProcessJobs, grandchildProcesses, childProcesses, history]);
+  }, [instanceTree, childProcessJobs]);
 
   // Prefer multi-instance statistics per element when available, fall back to API statistics.
   const resolvedElementStatistics = useMemo((): ElementStatistics | undefined => {
