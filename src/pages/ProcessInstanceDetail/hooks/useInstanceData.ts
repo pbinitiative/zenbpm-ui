@@ -19,6 +19,7 @@ import {
   INCIDENTS_PAGE_SIZE,
   DECISIONS_PAGE_SIZE,
   CHILDREN_PAGE_SIZE,
+  MAX_TREE_DEPTH,
 } from './fetchInstanceTree';
 import { flattenTree } from './flattenTree';
 
@@ -32,9 +33,6 @@ export const TERMINAL_STATES = ['completed', 'terminated'];
 /** Refresh interval in milliseconds */
 export const AUTO_REFRESH_INTERVAL = 5000;
 
-/** Hard BFS depth limit */
-const MAX_TREE_DEPTH = 8;
-
 // ---------------------------------------------------------------------------
 // Pagination types — one page/pageSize shared across all nodes per dataset
 // ---------------------------------------------------------------------------
@@ -44,13 +42,9 @@ export interface DatasetPagination {
   pageSize: number;
 }
 
-export interface PageChangeFn {
-  (page: number, pageSize: number): Promise<void>;
-}
+export type PageChangeFn = (page: number, pageSize: number) => Promise<void>;
 
-export interface ChildrenPageChangeFn {
-  (page: number): Promise<void>;
-}
+export type ChildrenPageChangeFn = (page: number) => Promise<void>;
 
 // ---------------------------------------------------------------------------
 // Result interface
@@ -73,7 +67,7 @@ export interface UseInstanceDataResult {
   decisionsPagination: DatasetPagination;
   childrenPagination: DatasetPagination;
 
-  // ── Page-change callbacks (refetch all nodes at new page) ─────────────────
+  // ── Page-change callbacks (refetch all nodes at a new page) ─────────────────
   onJobsPageChange: PageChangeFn;
   onIncidentsPageChange: PageChangeFn;
   onDecisionsPageChange: PageChangeFn;
@@ -113,7 +107,7 @@ function collectAllNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
   const result: ProcessInstanceNode[] = [];
   const queue: ProcessInstanceNode[] = [root];
   while (queue.length > 0) {
-    const node = queue.shift()!;
+    const node = queue.shift();
     result.push(node);
     queue.push(...node.children);
   }
@@ -183,9 +177,11 @@ export const useInstanceData = (
         const stats = transformStatisticsToElementStatistics(result.value);
         if (!stats) continue;
         for (const [elementId, counts] of Object.entries(stats)) {
-          if (!merged[elementId]) merged[elementId] = { activeCount: 0, incidentCount: 0 };
+          if (!merged[elementId]) merged[elementId] = { activeCount: 0, incidentCount: 0, completedCount: 0, terminatedCount: 0 };
           merged[elementId].activeCount += counts.activeCount;
           merged[elementId].incidentCount += counts.incidentCount;
+          merged[elementId].completedCount = (merged[elementId].completedCount ?? 0) + (counts.completedCount ?? 0);
+          merged[elementId].terminatedCount = (merged[elementId].terminatedCount ?? 0) + (counts.terminatedCount ?? 0);
         }
       }
       setSubprocessElementStatistics(Object.keys(merged).length > 0 ? merged : undefined);
@@ -199,8 +195,6 @@ export const useInstanceData = (
     try {
       const root = await fetchInstanceTree(processInstanceKey, {
         maxDepth: MAX_TREE_DEPTH,
-        // Always use the current pagination state so auto-refresh respects
-        // whatever page/pageSize the user has navigated to.
         jobsPage: jobsPageRef.current + 1,       // API is 1-indexed
         jobsPageSize: jobsPageSizeRef.current,
         incidentsPage: incidentsPageRef.current + 1,
@@ -282,10 +276,12 @@ export const useInstanceData = (
     if (!base) return subprocessElementStatistics;
     const merged: ElementStatistics = { ...base };
     for (const [elementId, counts] of Object.entries(subprocessElementStatistics)) {
-      if (!merged[elementId]) merged[elementId] = { activeCount: 0, incidentCount: 0 };
+      if (!merged[elementId]) merged[elementId] = { activeCount: 0, incidentCount: 0, completedCount: 0, terminatedCount: 0 };
       merged[elementId] = {
         activeCount: merged[elementId].activeCount + counts.activeCount,
         incidentCount: merged[elementId].incidentCount + counts.incidentCount,
+        completedCount: (merged[elementId].completedCount ?? 0) + (counts.completedCount ?? 0),
+        terminatedCount: (merged[elementId].terminatedCount ?? 0) + (counts.terminatedCount ?? 0),
       };
     }
     return merged;

@@ -100,7 +100,7 @@ export function useBpmnMarkers({
     const overlays = viewerRef.current.get('overlays') as BpmnOverlays;
     const elementRegistry = viewerRef.current.get('elementRegistry') as BpmnElementRegistry;
 
-    Object.entries(stats).forEach(([elementId, { activeCount, incidentCount, completedCount }]) => {
+    Object.entries(stats).forEach(([elementId, { activeCount, incidentCount, completedCount, terminatedCount }]) => {
       // Check if element exists in the diagram before adding overlay
       const element = elementRegistry.get(elementId);
       if (!element) {
@@ -112,14 +112,16 @@ export function useBpmnMarkers({
         // If both exist: incidents on left, instances on right
         // If only one: centered in top right area
         const hasIncidents = incidentCount > 0;
+        const doneCount = (completedCount ?? 0) + (terminatedCount ?? 0);
+        const total = activeCount + doneCount;
+        // Show progress (done/total) for multi-instance elements (more than one execution)
+        const hasProgress = total > 1;
         const hasActive = activeCount > 0;
-        const hasProgress = completedCount !== undefined;
 
         // Active/progress count badge (green) - top right, offset left if incidents also exist
         if (hasActive || hasProgress) {
-          // When completedCount is provided, show "completed/total" (e.g. "2/3")
-          const total = hasProgress ? completedCount! + activeCount : activeCount;
-          const label = hasProgress ? `${completedCount}/${total}` : `${activeCount}`;
+          // When multiple instances exist, show "done/total" (e.g. "2/3")
+          const label = hasProgress ? `${doneCount}/${total}` : `${activeCount}`;
           overlays.add(elementId, 'active-count', {
             position: { top: -8, right: hasIncidents ? 32 : 8 },
             html: `<div class="bpmn-overlay count-badge running-badge" style="width:auto;min-width:24px;padding:0 4px;">${label}</div>`,

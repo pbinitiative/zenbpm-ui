@@ -15,7 +15,7 @@ import type { ProcessInstanceNode } from '../types/tree';
 // ---------------------------------------------------------------------------
 
 /** Hard depth limit — guards against cycles and runaway fetches */
-export const MAX_TREE_DEPTH = 8;
+export const MAX_TREE_DEPTH = 100;
 
 /** Default page size for child process instances */
 export const CHILDREN_PAGE_SIZE = 100;
@@ -238,7 +238,7 @@ export async function fetchInstanceTree(
   const allNodes: ProcessInstanceNode[] = [];
   const bfsQueue: ProcessInstanceNode[] = [root];
   while (bfsQueue.length > 0) {
-    const node = bfsQueue.shift()!;
+    const node = bfsQueue.shift();
     allNodes.push(node);
     bfsQueue.push(...node.children);
   }

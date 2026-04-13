@@ -16,7 +16,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { BpmnDiagram, type ElementStatistics } from '@components/BpmnDiagram';
+import { BpmnDiagram } from '@components/BpmnDiagram';
 import { MetadataPanel } from '@components/DiagramDetailLayout';
 import type { DefinitionInfo } from '@components/DiagramDetailLayout';
 import { useInstanceData } from './hooks';
@@ -103,7 +103,6 @@ export const ProcessInstanceDetailPage = () => {
     history,
     incidents,
     childProcesses,
-    childProcessJobs,
     childProcessIncidents,
     grandchildProcesses,
     childProcessHistory,
@@ -167,72 +166,13 @@ export const ProcessInstanceDetailPage = () => {
     [processInstance]
   );
 
-  // Compute multi-instance progress overlays for the BPMN diagram.
-  const elementStatisticsMultiInstance = useMemo((): ElementStatistics => {
-    const totalPerElement: Record<string, number> = {};
-    const completedPerElement: Record<string, number> = {};
-
-    if (!instanceTree) return {};
-
-    // Collect all multi-instance nodes at any depth
-    const multiInstanceNodes: any[] = [];
-    const q: any[] = [instanceTree];
-    while (q.length > 0) {
-      const n = q.shift();
-      if (n.depth > 0 && n.instance?.processType === 'multiInstance') {
-        multiInstanceNodes.push(n);
-      }
-      if (n.children) q.push(...n.children);
-    }
-
-    const multiInstanceKeys = new Set(multiInstanceNodes.map((n) => n.instance.key));
-
-    // Count jobs belonging to any multi-instance node
-    for (const [childKey, jobs] of Object.entries(childProcessJobs)) {
-      if (!multiInstanceKeys.has(childKey)) continue;
-      for (const job of jobs) {
-        totalPerElement[job.elementId] = (totalPerElement[job.elementId] ?? 0) + 1;
-        if (job.state === 'completed' || job.state === 'terminated') {
-          completedPerElement[job.elementId] = (completedPerElement[job.elementId] ?? 0) + 1;
-        }
-      }
-    }
-
-    // Call-activity multi-instance: count direct children of each multi-instance node
-    for (const miNode of multiInstanceNodes) {
-      for (const childNode of miNode.children || []) {
-        const callElem = childNode.callElementId;
-        if (!callElem) continue;
-        totalPerElement[callElem] = (totalPerElement[callElem] ?? 0) + 1;
-        if (childNode.instance?.state === 'completed' || childNode.instance?.state === 'terminated') {
-          completedPerElement[callElem] = (completedPerElement[callElem] ?? 0) + 1;
-        }
-      }
-    }
-
-    const stats: ElementStatistics = {};
-    for (const [elementId, total] of Object.entries(totalPerElement)) {
-      const completed = completedPerElement[elementId] ?? 0;
-      stats[elementId] = { activeCount: total - completed, incidentCount: 0, completedCount: completed };
-    }
-    return stats;
-  }, [instanceTree, childProcessJobs]);
-
-  // Prefer multi-instance statistics per element when available, fall back to API statistics.
-  const resolvedElementStatistics = useMemo((): ElementStatistics | undefined => {
-    if (Object.keys(elementStatisticsMultiInstance).length === 0) {
-      return elementStatistics;
-    }
-    return { ...elementStatistics, ...elementStatisticsMultiInstance };
-  }, [elementStatistics, elementStatisticsMultiInstance]);
-
   const childProcessJobsCount = useMemo(() => {
     if (!instanceTree) return 0;
     // Sum jobsTotalCount across all non-root nodes in the tree
     const queue = [...instanceTree.children];
     let total = 0;
     while (queue.length > 0) {
-      const node = queue.shift()!;
+      const node = queue.shift();
       total += node.jobsTotalCount;
       queue.push(...node.children);
     }
@@ -277,7 +217,7 @@ export const ProcessInstanceDetailPage = () => {
                 diagramData={processDefinition.bpmnData}
                 history={historyElements}
                 activeElements={activeElements}
-                elementStatistics={resolvedElementStatistics}
+                elementStatistics={elementStatistics}
                 selectedElement={selectedElement}
                 onElementClick={handleElementIdClick}
               />

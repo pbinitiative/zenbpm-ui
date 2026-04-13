@@ -41,7 +41,7 @@ export interface BpmnEventBus {
 }
 
 // Element statistics from API - map of elementId to counts
-export type ElementStatistics = Record<string, { activeCount: number; incidentCount: number; completedCount?: number }>;
+export type ElementStatistics = Record<string, { activeCount: number; incidentCount: number; completedCount?: number; terminatedCount?: number }>;
 
 /**
  * Transforms the partitioned API response into a flat elementId → counts map,
@@ -58,10 +58,12 @@ export function transformStatisticsToElementStatistics(
   for (const partition of data.partitions) {
     for (const [key, value] of Object.entries(partition.items)) {
       if (!result[key]) {
-        result[key] = { activeCount: 0, incidentCount: 0 };
+        result[key] = { activeCount: 0, incidentCount: 0, completedCount: 0, terminatedCount: 0 };
       }
       result[key].activeCount += value.activeCount;
       result[key].incidentCount += value.incidentCount;
+      result[key].completedCount = (result[key].completedCount ?? 0) + (value.completedCount ?? 0);
+      result[key].terminatedCount = (result[key].terminatedCount ?? 0) + (value.terminatedCount ?? 0);
     }
   }
   return result;
