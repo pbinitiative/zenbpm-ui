@@ -119,20 +119,24 @@ export const ProcessInstanceDetailPage = () => {
     variablesPageSize,
     setVariablesPage,
     setVariablesPageSize,
-    childrenPage,
-    setChildrenPage,
   } = useInstanceData(processInstanceKey);
 
   // Count of process instances shown in the Child Processes tab
   // (depth-1 + depth-2, excluding engine-internal multiInstance and subprocess wrappers).
   const visibleChildProcessesCount = useMemo(() => {
     if (!instanceTree) return 0;
+    // BFS over the entire tree — mirrors exactly what ChildProcessesTab renders as rows.
+    // multiInstance and subprocess wrappers are hidden in the tab; everything else is a row.
     const HIDDEN = ['multiInstance', 'subprocess'];
-    const direct = instanceTree.children.filter((c) => !HIDDEN.includes(c.instance.processType ?? '')).length;
-    const grand = instanceTree.children
-      .flatMap((c) => c.children)
-      .filter((c) => !HIDDEN.includes(c.instance.processType ?? '')).length;
-    return direct + grand;
+    const queue = [...instanceTree.children];
+    let count = 0;
+    while (queue.length > 0) {
+      const node = queue.shift();
+      if (node === undefined) continue;
+      if (!HIDDEN.includes(node.instance.processType ?? '')) count++;
+      queue.push(...node.children);
+    }
+    return count;
   }, [instanceTree]);
 
   // Show notification helper
@@ -181,7 +185,7 @@ export const ProcessInstanceDetailPage = () => {
     let total = 0;
     while (queue.length > 0) {
       const node = queue.shift();
-      if (!node) continue;
+      if (node === undefined) continue;
       total += node.jobsTotalCount;
       queue.push(...node.children);
     }
@@ -196,7 +200,7 @@ export const ProcessInstanceDetailPage = () => {
     let total = 0;
     while (queue.length > 0) {
       const node = queue.shift();
-      if (!node) continue;
+      if (node === undefined) continue;
       total += node.decisionsTotalCount;
       queue.push(...node.children);
     }
@@ -401,8 +405,6 @@ export const ProcessInstanceDetailPage = () => {
           <TabPanel value={activeTab} index={4}>
             <ChildProcessesTab
               instanceTree={instanceTree}
-              childrenPage={childrenPage}
-              setChildrenPage={setChildrenPage}
             />
           </TabPanel>
 

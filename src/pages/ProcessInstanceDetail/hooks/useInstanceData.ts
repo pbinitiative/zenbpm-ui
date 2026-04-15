@@ -13,13 +13,11 @@ import {
   refetchNodeJobs as doRefetchNodeJobs,
   refetchNodeIncidents as doRefetchNodeIncidents,
   refetchNodeDecisions as doRefetchNodeDecisions,
-  refetchNodeChildren as doRefetchNodeChildren,
   refetchNodeVariables as doRefetchNodeVariables,
   JOBS_PAGE_SIZE,
   INCIDENTS_PAGE_SIZE,
   DECISIONS_PAGE_SIZE,
   VARIABLES_PAGE_SIZE,
-  CHILDREN_PAGE_SIZE,
   MAX_TREE_DEPTH,
 } from './fetchInstanceTree';
 
@@ -69,9 +67,6 @@ export interface UseInstanceDataResult {
   setVariablesPage: (page: number) => void;
   setVariablesPageSize: (size: number) => void;
 
-  childrenPage: number;
-  setChildrenPage: (page: number) => void;
-
   // ── Refetch ───────────────────────────────────────────────────────────────
   refetchAll: () => Promise<void>;
 }
@@ -86,7 +81,7 @@ function collectAllNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
   const queue: ProcessInstanceNode[] = [root];
   while (queue.length > 0) {
     const node = queue.shift();
-    if (!node) continue;
+    if (node === undefined) continue;
     result.push(node);
     queue.push(...node.children);
   }
@@ -117,7 +112,6 @@ export const useInstanceData = (
   const [decisionsPageSize, setDecisionsPageSize] = useState(DECISIONS_PAGE_SIZE);
   const [variablesPage, setVariablesPage] = useState(0);
   const [variablesPageSize, setVariablesPageSize] = useState(VARIABLES_PAGE_SIZE);
-  const [childrenPage, setChildrenPage] = useState(0);
 
   // Refs so fetchAll (auto-refresh) always reads the current pagination values
   // without stale closure captures.
@@ -250,7 +244,6 @@ export const useInstanceData = (
       setDecisionsPageSize(DECISIONS_PAGE_SIZE);
       setVariablesPage(0);
       setVariablesPageSize(VARIABLES_PAGE_SIZE);
-      setChildrenPage(0);
       fetchedDefinitionKeyRef.current = null;
       // Also reset pagination refs so fetchAll uses page 1 for the new instance.
       jobsPageRef.current = 0;
@@ -358,15 +351,6 @@ export const useInstanceData = (
     setInstanceTree((prev) => (prev ? { ...prev } : prev));
   }, [variablesPage, variablesPageSize]);
 
-  useEffect(() => {
-    if (!initialLoadDoneRef.current) return;
-    const tree = instanceTreeRef.current;
-    if (!tree) return;
-    const nodes = collectAllNodes(tree);
-    void Promise.all(nodes.map((node) => doRefetchNodeChildren(node, childrenPage + 1, CHILDREN_PAGE_SIZE)))
-      .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
-  }, [childrenPage]);
-
   // ── Return ────────────────────────────────────────────────────────────────
 
   return {
@@ -397,9 +381,6 @@ export const useInstanceData = (
     variablesPageSize,
     setVariablesPage,
     setVariablesPageSize,
-
-    childrenPage,
-    setChildrenPage,
 
     refetchAll: fetchAll,
   };

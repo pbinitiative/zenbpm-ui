@@ -61,7 +61,7 @@ function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
   const queue: ProcessInstanceNode[] = [root];
   while (queue.length > 0) {
     const node = queue.shift();
-    if (!node) continue;
+    if (node === undefined) continue;
     result.push(node);
     queue.push(...node.children);
   }

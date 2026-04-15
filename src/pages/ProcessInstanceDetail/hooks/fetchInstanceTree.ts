@@ -409,6 +409,7 @@ export async function refetchNodeChildren(
   page: number,
   size: number,
 ): Promise<ProcessInstanceNode> {
+  if (node.instance.processType === 'callActivity') return node;
   try {
     const data = await getChildProcessInstances(node.instance.key, { page, size });
     const instances = (data.partitions ?? []).flatMap(
