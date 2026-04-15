@@ -29,8 +29,6 @@ import { assignJob, completeJob, customInstance } from '@base/openapi';
 import { MonoText } from "@components/MonoText";
 import { formatDate } from "@components/DiagramDetailLayout/utils";
 import type { ProcessInstanceNode } from '../types/tree';
-import type { DatasetPagination, PageChangeFn } from '../hooks/useInstanceData';
-import { JOBS_PAGE_SIZE } from '../hooks/fetchInstanceTree';
 
 // updateJobRetries is not in generated API, use direct axios call
 const updateJobRetries = async (jobKey: string, retries: number): Promise<void> => {
@@ -47,8 +45,10 @@ const PROCESS_TYPE_ORDER: Record<string, number> = {
 
 interface JobsTabProps {
   instanceTree: ProcessInstanceNode | null;
-  jobsPagination: DatasetPagination;
-  onJobsPageChange: PageChangeFn;
+  jobsPage: number;
+  jobsPageSize: number;
+  setJobsPage: (page: number) => void;
+  setJobsPageSize: (size: number) => void;
   onRefetch: () => Promise<void>;
   onShowNotification: (message: string, severity: 'success' | 'error') => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
@@ -60,7 +60,8 @@ function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
   const result: ProcessInstanceNode[] = [];
   const queue: ProcessInstanceNode[] = [root];
   while (queue.length > 0) {
-    const node = queue.shift()!;
+    const node = queue.shift();
+    if (!node) continue;
     result.push(node);
     queue.push(...node.children);
   }
@@ -69,8 +70,10 @@ function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
 
 export const JobsTab = ({
   instanceTree,
-  jobsPagination,
-  onJobsPageChange,
+  jobsPage,
+  jobsPageSize,
+  setJobsPage,
+  setJobsPageSize,
   onRefetch,
   onShowNotification,
   onElementIdClick,
@@ -318,8 +321,12 @@ export const JobsTab = ({
     const sortRows = (rows: Job[]): Job[] => {
       if (!sortBy) return rows;
       return [...rows].sort((a, b) => {
-        const aVal = String(a[sortBy as keyof Job] ?? '');
-        const bVal = String(b[sortBy as keyof Job] ?? '');
+        const aRaw = a[sortBy as keyof Job];
+        const bRaw = b[sortBy as keyof Job];
+
+        const aVal = typeof aRaw === 'object' || aRaw == null ? '' : String(aRaw);
+        const bVal = typeof bRaw === 'object' || bRaw == null ? '' : String(bRaw);
+
         const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
         return sortOrder === 'asc' ? cmp : -cmp;
       });
@@ -355,10 +362,10 @@ export const JobsTab = ({
         sections={sections}
         rowKey="key"
         data-testid="jobs-table"
-        page={jobsPagination.page}
-        pageSize={jobsPagination.pageSize}
-        onPageChange={(newPage) => void onJobsPageChange(newPage, jobsPagination.pageSize)}
-        onPageSizeChange={(newSize) => void onJobsPageChange(0, newSize)}
+        page={jobsPage}
+        pageSize={jobsPageSize}
+        onPageChange={setJobsPage}
+        onPageSizeChange={(newSize) => { setJobsPageSize(newSize); setJobsPage(0); }}
         sortBy={sortBy}
         sortOrder={sortOrder}
         onSortChange={(newSortBy, newSortOrder) => {

@@ -10,7 +10,6 @@ import { getIncidentColumns } from '@components/IncidentsTable/table/columns';
 import type { Incident } from '@components/IncidentsTable';
 import { resolveIncident } from '@base/openapi';
 import type { ProcessInstanceNode } from '../types/tree';
-import type { DatasetPagination, PageChangeFn } from '../hooks/useInstanceData';
 
 // processType display order — determines section ordering after the main instance
 const PROCESS_TYPE_ORDER: Record<string, number> = {
@@ -24,8 +23,10 @@ type StateFilter = 'all' | 'unresolved' | 'resolved';
 
 interface IncidentsTabProps {
   instanceTree: ProcessInstanceNode | null;
-  incidentsPagination: DatasetPagination;
-  onIncidentsPageChange: PageChangeFn;
+  incidentsPage: number;
+  incidentsPageSize: number;
+  setIncidentsPage: (page: number) => void;
+  setIncidentsPageSize: (size: number) => void;
   onRefetch?: () => Promise<void>;
   onShowNotification?: (message: string, severity: 'success' | 'error') => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
@@ -37,7 +38,8 @@ function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
   const result: ProcessInstanceNode[] = [];
   const queue: ProcessInstanceNode[] = [root];
   while (queue.length > 0) {
-    const node = queue.shift()!;
+    const node = queue.shift();
+    if (!node) continue;
     result.push(node);
     queue.push(...node.children);
   }
@@ -46,8 +48,10 @@ function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
 
 export const IncidentsTab = ({
   instanceTree,
-  incidentsPagination,
-  onIncidentsPageChange,
+  incidentsPage,
+  incidentsPageSize,
+  setIncidentsPage,
+  setIncidentsPageSize,
   onRefetch,
   onShowNotification,
   onElementIdClick,
@@ -220,10 +224,10 @@ export const IncidentsTab = ({
         sections={sections}
         rowKey="key"
         data-testid="incidents-table"
-        page={incidentsPagination.page}
-        pageSize={incidentsPagination.pageSize}
-        onPageChange={(newPage) => void onIncidentsPageChange(newPage, incidentsPagination.pageSize)}
-        onPageSizeChange={(newSize) => void onIncidentsPageChange(0, newSize)}
+        page={incidentsPage}
+        pageSize={incidentsPageSize}
+        onPageChange={setIncidentsPage}
+        onPageSizeChange={(newSize) => { setIncidentsPageSize(newSize); setIncidentsPage(0); }}
         sortBy={sortBy}
         sortOrder={sortOrder}
         onSortChange={(newSortBy, newSortOrder) => {

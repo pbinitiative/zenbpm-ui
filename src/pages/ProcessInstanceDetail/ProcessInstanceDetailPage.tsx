@@ -110,16 +110,22 @@ export const ProcessInstanceDetailPage = () => {
     loading,
     error,
     refetchAll,
-    // Tree + pagination — passed directly to tabs
+    // Tree + raw pagination state/setters — passed directly to tabs
     instanceTree,
-    jobsPagination,
-    incidentsPagination,
-    decisionsPagination,
-    childrenPagination,
-    onJobsPageChange,
-    onIncidentsPageChange,
-    onDecisionsPageChange,
-    onChildrenPageChange,
+    jobsPage,
+    jobsPageSize,
+    setJobsPage,
+    setJobsPageSize,
+    incidentsPage,
+    incidentsPageSize,
+    setIncidentsPage,
+    setIncidentsPageSize,
+    decisionsPage,
+    decisionsPageSize,
+    setDecisionsPage,
+    setDecisionsPageSize,
+    childrenPage,
+    setChildrenPage,
   } = useInstanceData(processInstanceKey);
 
   // Count of process instances that are actually shown in the Child Processes tab
@@ -171,6 +177,7 @@ export const ProcessInstanceDetailPage = () => {
     let total = 0;
     while (queue.length > 0) {
       const node = queue.shift();
+      if (!node) continue;
       total += node.jobsTotalCount;
       queue.push(...node.children);
     }
@@ -184,7 +191,8 @@ export const ProcessInstanceDetailPage = () => {
     const queue: typeof instanceTree[] = [instanceTree];
     let total = 0;
     while (queue.length > 0) {
-      const node = queue.shift()!;
+      const node = queue.shift();
+      if (!node) continue;
       total += node.decisionsTotalCount;
       queue.push(...node.children);
     }
@@ -340,8 +348,10 @@ export const ProcessInstanceDetailPage = () => {
           <TabPanel value={activeTab} index={0}>
             <JobsTab
               instanceTree={instanceTree}
-              jobsPagination={jobsPagination}
-              onJobsPageChange={onJobsPageChange}
+              jobsPage={jobsPage}
+              jobsPageSize={jobsPageSize}
+              setJobsPage={setJobsPage}
+              setJobsPageSize={setJobsPageSize}
               onRefetch={refetchAll}
               onShowNotification={showNotification}
               onElementIdClick={handleElementIdClick}
@@ -360,8 +370,10 @@ export const ProcessInstanceDetailPage = () => {
           <TabPanel value={activeTab} index={2}>
             <IncidentsTab
               instanceTree={instanceTree}
-              incidentsPagination={incidentsPagination}
-              onIncidentsPageChange={onIncidentsPageChange}
+              incidentsPage={incidentsPage}
+              incidentsPageSize={incidentsPageSize}
+              setIncidentsPage={setIncidentsPage}
+              setIncidentsPageSize={setIncidentsPageSize}
               onRefetch={refetchAll}
               onShowNotification={showNotification}
               onElementIdClick={handleElementIdClick}
@@ -381,8 +393,8 @@ export const ProcessInstanceDetailPage = () => {
           <TabPanel value={activeTab} index={4}>
             <ChildProcessesTab
               instanceTree={instanceTree}
-              childrenPagination={childrenPagination}
-              onChildrenPageChange={onChildrenPageChange}
+              childrenPage={childrenPage}
+              setChildrenPage={setChildrenPage}
             />
           </TabPanel>
 
@@ -390,8 +402,10 @@ export const ProcessInstanceDetailPage = () => {
           <TabPanel value={activeTab} index={5}>
             <DecisionInstancesTab
               instanceTree={instanceTree}
-              decisionsPagination={decisionsPagination}
-              onDecisionsPageChange={onDecisionsPageChange}
+              decisionsPage={decisionsPage}
+              decisionsPageSize={decisionsPageSize}
+              setDecisionsPage={setDecisionsPage}
+              setDecisionsPageSize={setDecisionsPageSize}
             />
           </TabPanel>
         </Box>

@@ -8,7 +8,6 @@ import { StateBadge } from '@components/StateBadge';
 import { MonoText } from '@components/MonoText';
 import type { ProcessInstance } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
-import type { DatasetPagination, ChildrenPageChangeFn } from '../hooks/useInstanceData';
 import { CHILDREN_PAGE_SIZE } from '../hooks/fetchInstanceTree';
 import { formatDate } from '@/components/DiagramDetailLayout/utils';
 
@@ -28,8 +27,8 @@ const HIDDEN_PROCESS_TYPES = ['multiInstance', 'subprocess'];
 
 interface ChildProcessesTabProps {
   instanceTree: ProcessInstanceNode | null;
-  childrenPagination: DatasetPagination;
-  onChildrenPageChange: ChildrenPageChangeFn;
+  childrenPage: number;
+  setChildrenPage: (page: number) => void;
 }
 
 /** BFS walk — returns all nodes, root first */
@@ -37,7 +36,8 @@ function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
   const result: ProcessInstanceNode[] = [];
   const queue: ProcessInstanceNode[] = [root];
   while (queue.length > 0) {
-    const node = queue.shift()!;
+    const node = queue.shift();
+    if (!node) continue;
     result.push(node);
     queue.push(...node.children);
   }
@@ -46,8 +46,8 @@ function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
 
 export const ChildProcessesTab = ({
   instanceTree,
-  childrenPagination,
-  onChildrenPageChange,
+  childrenPage,
+  setChildrenPage,
 }: ChildProcessesTabProps) => {
   const { t: rawT } = useTranslation([ns.common, ns.processInstance, ns.processes]);
   const t = rawT as unknown as T;
@@ -193,8 +193,6 @@ export const ChildProcessesTab = ({
     };
   }, [instanceTree, t]);
 
-  const { page, pageSize } = childrenPagination;
-
   return (
     <Box data-testid="child-processes-tab">
       <DataTable
@@ -203,9 +201,9 @@ export const ChildProcessesTab = ({
         data={flatData}
         sections={sections}
         rowKey="key"
-        page={page}
-        pageSize={pageSize ?? CHILDREN_PAGE_SIZE}
-        onPageChange={(newPage) => void onChildrenPageChange(newPage)}
+        page={childrenPage}
+        pageSize={CHILDREN_PAGE_SIZE}
+        onPageChange={setChildrenPage}
         onPageSizeChange={() => {
           // Children page size is fixed
         }}

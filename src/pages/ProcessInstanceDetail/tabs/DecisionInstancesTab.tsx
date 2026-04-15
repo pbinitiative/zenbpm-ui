@@ -8,7 +8,6 @@ import { MonoText } from '@components/MonoText';
 import { formatDate } from '@components/DiagramDetailLayout/utils';
 import type { DecisionInstanceSummary } from '@base/openapi';
 import type { ProcessInstanceNode } from '../types/tree';
-import type { DatasetPagination, PageChangeFn } from '../hooks/useInstanceData';
 
 // processType display order — same ordering used in JobsTab and IncidentsTab
 const PROCESS_TYPE_ORDER: Record<string, number> = {
@@ -20,8 +19,10 @@ const PROCESS_TYPE_ORDER: Record<string, number> = {
 
 interface DecisionInstancesTabProps {
   instanceTree: ProcessInstanceNode | null;
-  decisionsPagination: DatasetPagination;
-  onDecisionsPageChange: PageChangeFn;
+  decisionsPage: number;
+  decisionsPageSize: number;
+  setDecisionsPage: (page: number) => void;
+  setDecisionsPageSize: (size: number) => void;
 }
 
 /** BFS walk — returns all nodes, root first */
@@ -29,7 +30,8 @@ function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
   const result: ProcessInstanceNode[] = [];
   const queue: ProcessInstanceNode[] = [root];
   while (queue.length > 0) {
-    const node = queue.shift()!;
+    const node = queue.shift();
+    if (!node) continue;
     result.push(node);
     queue.push(...node.children);
   }
@@ -38,8 +40,10 @@ function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
 
 export const DecisionInstancesTab = ({
   instanceTree,
-  decisionsPagination,
-  onDecisionsPageChange,
+  decisionsPage,
+  decisionsPageSize,
+  setDecisionsPage,
+  setDecisionsPageSize,
 }: DecisionInstancesTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance, ns.decisions, ns.processes]);
   const navigate = useNavigate();
@@ -141,10 +145,10 @@ export const DecisionInstancesTab = ({
           sections={sections}
           rowKey="key"
           data-testid="decision-instances-table"
-          page={decisionsPagination.page}
-          pageSize={decisionsPagination.pageSize}
-          onPageChange={(newPage) => void onDecisionsPageChange(newPage, decisionsPagination.pageSize)}
-          onPageSizeChange={(newSize) => void onDecisionsPageChange(0, newSize)}
+          page={decisionsPage}
+          pageSize={decisionsPageSize}
+          onPageChange={setDecisionsPage}
+          onPageSizeChange={(newSize) => { setDecisionsPageSize(newSize); setDecisionsPage(0); }}
           sortBy={sortBy}
           sortOrder={sortOrder}
           onSortChange={(newSortBy, newSortOrder) => {

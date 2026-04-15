@@ -35,17 +35,13 @@ export const TERMINAL_STATES = ['completed', 'terminated'];
 export const AUTO_REFRESH_INTERVAL = 5000;
 
 // ---------------------------------------------------------------------------
-// Pagination types — one page/pageSize shared across all nodes per dataset
+// Pagination types
 // ---------------------------------------------------------------------------
 
 export interface DatasetPagination {
   page: number;
   pageSize: number;
 }
-
-export type PageChangeFn = (page: number, pageSize: number) => Promise<void>;
-
-export type ChildrenPageChangeFn = (page: number) => Promise<void>;
 
 // ---------------------------------------------------------------------------
 // Result interface
@@ -62,17 +58,24 @@ export interface UseInstanceDataResult {
   // ── Full tree ─────────────────────────────────────────────────────────────
   instanceTree: ProcessInstanceNode | null;
 
-  // ── Shared pagination state per dataset ──────────────────────────────────
-  jobsPagination: DatasetPagination;
-  incidentsPagination: DatasetPagination;
-  decisionsPagination: DatasetPagination;
-  childrenPagination: DatasetPagination;
+  // ── Raw pagination state + setters per dataset ───────────────────────────
+  jobsPage: number;
+  jobsPageSize: number;
+  setJobsPage: (page: number) => void;
+  setJobsPageSize: (size: number) => void;
 
-  // ── Page-change callbacks (refetch all nodes at a new page) ─────────────────
-  onJobsPageChange: PageChangeFn;
-  onIncidentsPageChange: PageChangeFn;
-  onDecisionsPageChange: PageChangeFn;
-  onChildrenPageChange: ChildrenPageChangeFn;
+  incidentsPage: number;
+  incidentsPageSize: number;
+  setIncidentsPage: (page: number) => void;
+  setIncidentsPageSize: (size: number) => void;
+
+  decisionsPage: number;
+  decisionsPageSize: number;
+  setDecisionsPage: (page: number) => void;
+  setDecisionsPageSize: (size: number) => void;
+
+  childrenPage: number;
+  setChildrenPage: (page: number) => void;
 
   // ── Backward-compatible flat accessors (root node's data) ─────────────────
   jobs: Job[];
@@ -109,6 +112,7 @@ function collectAllNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
   const queue: ProcessInstanceNode[] = [root];
   while (queue.length > 0) {
     const node = queue.shift();
+    if (!node) continue;
     result.push(node);
     queue.push(...node.children);
   }
@@ -130,7 +134,7 @@ export const useInstanceData = (
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ── Shared per-dataset page state (0-indexed) ─────────────────────────────
+  // ── Raw per-dataset pagination state (0-indexed pages) ───────────────────
   const [jobsPage, setJobsPage] = useState(0);
   const [jobsPageSize, setJobsPageSize] = useState(JOBS_PAGE_SIZE);
   const [incidentsPage, setIncidentsPage] = useState(0);
@@ -152,6 +156,14 @@ export const useInstanceData = (
   incidentsPageSizeRef.current = incidentsPageSize;
   decisionsPageRef.current = decisionsPage;
   decisionsPageSizeRef.current = decisionsPageSize;
+
+  // ── We use a ref to always access the latest tree without stale closures ──
+  const instanceTreeRef = useRef(instanceTree);
+  instanceTreeRef.current = instanceTree;
+
+  // Track whether the initial load has completed so pagination effects don't
+  // fire on mount (datasets are already fetched by fetchAll at that point).
+  const initialLoadDoneRef = useRef(false);
 
   // ── Derived flat maps from the tree ───────────────────────────────────────
   const flattened = useMemo(() => flattenTree(instanceTree), [instanceTree]);
@@ -194,12 +206,8 @@ export const useInstanceData = (
   const fetchAll = useCallback(async () => {
     if (!processInstanceKey) return;
     try {
-      // Fetch the root instance first so we can fire the process-definition
-      // request in parallel with the rest of the tree BFS + dataset fetches.
       const rootInstance = (await getProcessInstance(processInstanceKey)) as unknown as ProcessInstance;
 
-      // Build a terminal-node cache from the current tree so that completed/
-      // terminated child nodes don't need their datasets re-fetched.
       const terminalNodeCache = new Map<string, ProcessInstanceNode>();
       if (instanceTreeRef.current) {
         for (const node of collectAllNodes(instanceTreeRef.current)) {
@@ -221,7 +229,6 @@ export const useInstanceData = (
           decisionsPage: decisionsPageRef.current + 1,
           decisionsPageSize: decisionsPageSizeRef.current,
         }),
-        // Process definition fetch runs concurrently with the tree BFS.
         getProcessDefinition(rootInstance.processDefinitionKey)
           .then((def) => setProcessDefinition(def as unknown as ProcessDefinition))
           .catch(() => { /* non-critical */ }),
@@ -239,6 +246,7 @@ export const useInstanceData = (
     if (!processInstanceKey) return;
 
     const fetchData = async () => {
+      initialLoadDoneRef.current = false;
       setLoading(true);
       setError(null);
       // Reset pagination when the instance key changes
@@ -255,6 +263,7 @@ export const useInstanceData = (
         setError(err instanceof Error ? err.message : 'Failed to load process instance');
       } finally {
         setLoading(false);
+        initialLoadDoneRef.current = true;
       }
     };
 
@@ -304,62 +313,44 @@ export const useInstanceData = (
     return merged;
   }, [rawElementStatistics, subprocessElementStatistics]);
 
-  // ── Page-change callbacks — refetch all nodes at the new page ────────────
-  // We use a ref to always access the latest tree without stale closures.
-  const instanceTreeRef = useRef(instanceTree);
-  instanceTreeRef.current = instanceTree;
+  // ── Pagination effects — refetch all nodes when page/size state changes ───
+  // These only fire after the initial load completes (guard via ref).
 
-  const onJobsPageChange: PageChangeFn = useCallback(
-    async (page, pageSize) => {
-      const tree = instanceTreeRef.current;
-      if (!tree) return;
-      const nodes = collectAllNodes(tree);
-      // API is 1-indexed
-      await Promise.all(nodes.map((node) => doRefetchNodeJobs(node, page + 1, pageSize)));
-      setJobsPage(page);
-      setJobsPageSize(pageSize);
-      setInstanceTree((prev) => (prev ? { ...prev } : prev));
-    },
-    [],
-  );
+  useEffect(() => {
+    if (!initialLoadDoneRef.current) return;
+    const tree = instanceTreeRef.current;
+    if (!tree) return;
+    const nodes = collectAllNodes(tree);
+    void Promise.all(nodes.map((node) => doRefetchNodeJobs(node, jobsPage + 1, jobsPageSize)))
+      .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
+  }, [jobsPage, jobsPageSize]);
 
-  const onIncidentsPageChange: PageChangeFn = useCallback(
-    async (page, pageSize) => {
-      const tree = instanceTreeRef.current;
-      if (!tree) return;
-      const nodes = collectAllNodes(tree);
-      await Promise.all(nodes.map((node) => doRefetchNodeIncidents(node, page + 1, pageSize)));
-      setIncidentsPage(page);
-      setIncidentsPageSize(pageSize);
-      setInstanceTree((prev) => (prev ? { ...prev } : prev));
-    },
-    [],
-  );
+  useEffect(() => {
+    if (!initialLoadDoneRef.current) return;
+    const tree = instanceTreeRef.current;
+    if (!tree) return;
+    const nodes = collectAllNodes(tree);
+    void Promise.all(nodes.map((node) => doRefetchNodeIncidents(node, incidentsPage + 1, incidentsPageSize)))
+      .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
+  }, [incidentsPage, incidentsPageSize]);
 
-  const onDecisionsPageChange: PageChangeFn = useCallback(
-    async (page, pageSize) => {
-      const tree = instanceTreeRef.current;
-      if (!tree) return;
-      const nodes = collectAllNodes(tree);
-      await Promise.all(nodes.map((node) => doRefetchNodeDecisions(node, page + 1, pageSize)));
-      setDecisionsPage(page);
-      setDecisionsPageSize(pageSize);
-      setInstanceTree((prev) => (prev ? { ...prev } : prev));
-    },
-    [],
-  );
+  useEffect(() => {
+    if (!initialLoadDoneRef.current) return;
+    const tree = instanceTreeRef.current;
+    if (!tree) return;
+    const nodes = collectAllNodes(tree);
+    void Promise.all(nodes.map((node) => doRefetchNodeDecisions(node, decisionsPage + 1, decisionsPageSize)))
+      .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
+  }, [decisionsPage, decisionsPageSize]);
 
-  const onChildrenPageChange: ChildrenPageChangeFn = useCallback(
-    async (page) => {
-      const tree = instanceTreeRef.current;
-      if (!tree) return;
-      const nodes = collectAllNodes(tree);
-      await Promise.all(nodes.map((node) => doRefetchNodeChildren(node, page + 1, CHILDREN_PAGE_SIZE)));
-      setChildrenPage(page);
-      setInstanceTree((prev) => (prev ? { ...prev } : prev));
-    },
-    [],
-  );
+  useEffect(() => {
+    if (!initialLoadDoneRef.current) return;
+    const tree = instanceTreeRef.current;
+    if (!tree) return;
+    const nodes = collectAllNodes(tree);
+    void Promise.all(nodes.map((node) => doRefetchNodeChildren(node, childrenPage + 1, CHILDREN_PAGE_SIZE)))
+      .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
+  }, [childrenPage]);
 
   // ── Legacy refetch helpers (full tree rebuild) ────────────────────────────
   const refetchAll = fetchAll;
@@ -369,8 +360,6 @@ export const useInstanceData = (
   const refetchHistory = useCallback(async () => { await fetchAll(); }, [fetchAll]);
   const refetchChildProcesses = useCallback(async () => { await fetchAll(); }, [fetchAll]);
   const refetchDecisionInstances = useCallback(async () => { await fetchAll(); }, [fetchAll]);
-
-
 
   // ── Return ────────────────────────────────────────────────────────────────
 
@@ -387,17 +376,24 @@ export const useInstanceData = (
     // Full tree
     instanceTree,
 
-    // Shared pagination state
-    jobsPagination: { page: jobsPage, pageSize: jobsPageSize },
-    incidentsPagination: { page: incidentsPage, pageSize: incidentsPageSize },
-    decisionsPagination: { page: decisionsPage, pageSize: decisionsPageSize },
-    childrenPagination: { page: childrenPage, pageSize: CHILDREN_PAGE_SIZE },
+    // Raw pagination state + setters
+    jobsPage,
+    jobsPageSize,
+    setJobsPage,
+    setJobsPageSize,
 
-    // Page-change callbacks
-    onJobsPageChange,
-    onIncidentsPageChange,
-    onDecisionsPageChange,
-    onChildrenPageChange,
+    incidentsPage,
+    incidentsPageSize,
+    setIncidentsPage,
+    setIncidentsPageSize,
+
+    decisionsPage,
+    decisionsPageSize,
+    setDecisionsPage,
+    setDecisionsPageSize,
+
+    childrenPage,
+    setChildrenPage,
 
     // Root-level flat data
     jobs: rootNode?.jobs ?? [],
