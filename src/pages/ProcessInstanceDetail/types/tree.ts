@@ -60,6 +60,7 @@ export interface ProcessInstanceNode {
   // --- Incidents (server-paginated) ---
   incidents: Incident[];
   incidentsTotalCount: number;
+  unresolvedIncidentsTotalCount: number;
 
   // --- Decision instances (server-paginated) ---
   decisions: DecisionInstanceSummary[];

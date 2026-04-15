@@ -144,7 +144,8 @@ export const ProcessInstanceDetailPage = () => {
     setSnackbar({ open: true, message, severity });
   }, []);
 
-  // Count unresolved incidents across the entire instance tree.
+  // Count unresolved incidents across the entire instance tree using the
+  // server-reported total — accurate regardless of which page is loaded.
   const unresolvedIncidentsCount = useMemo(() => {
     if (!instanceTree) return 0;
     const queue: typeof instanceTree[] = [instanceTree];
@@ -152,7 +153,7 @@ export const ProcessInstanceDetailPage = () => {
     while (queue.length > 0) {
       const node = queue.shift();
       if (node === undefined) continue;
-      count += node.incidents.filter((i) => !i.resolvedAt).length;
+      count += node.unresolvedIncidentsTotalCount;
       queue.push(...node.children);
     }
     return count;

@@ -9,6 +9,7 @@ import {
 } from '@base/openapi';
 import type { FlowElementHistory, Incident, Job, ProcessInstance } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
+import type { GetIncidentsState } from '@base/openapi/generated-api/schemas/getIncidentsState';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -74,6 +75,7 @@ function makeNode(
     jobsTotalCount: 0,
     incidents: [],
     incidentsTotalCount: 0,
+    unresolvedIncidentsTotalCount: 0,
     decisions: [],
     decisionsTotalCount: 0,
     variableEntries: [],
@@ -148,11 +150,12 @@ async function fetchNodeDatasets(
   const requests: Promise<unknown>[] = [
     getProcessInstanceJobs(key, { page: opts.jobsPage, size: opts.jobsPageSize }),
     getIncidents(key, { page: opts.incidentsPage, size: opts.incidentsPageSize }),
+    getIncidents(key, { state: 'unresolved' as GetIncidentsState, page: 1, size: 1 }),
     getDecisionInstances({ processInstanceKey: key, page: opts.decisionsPage, size: opts.decisionsPageSize }),
     getHistory(key, { page: 1, size: -1 }),
   ];
 
-  const [jobsResult, incidentsResult, decisionsResult, historyResult] = await Promise.allSettled(requests);
+  const [jobsResult, incidentsResult, unresolvedResult, decisionsResult, historyResult] = await Promise.allSettled(requests);
 
   if (jobsResult.status === 'fulfilled' && jobsResult.value) {
     const v = jobsResult.value as Awaited<ReturnType<typeof getProcessInstanceJobs>>;
@@ -164,6 +167,11 @@ async function fetchNodeDatasets(
     const v = incidentsResult.value as Awaited<ReturnType<typeof getIncidents>>;
     node.incidents = (v.items ?? []) as Incident[];
     node.incidentsTotalCount = v.totalCount ?? 0;
+  }
+
+  if (unresolvedResult.status === 'fulfilled' && unresolvedResult.value) {
+    const v = unresolvedResult.value as Awaited<ReturnType<typeof getIncidents>>;
+    node.unresolvedIncidentsTotalCount = v.totalCount ?? 0;
   }
 
   if (decisionsResult.status === 'fulfilled' && decisionsResult.value) {
@@ -302,6 +310,7 @@ export async function fetchInstanceTree(
         node.jobsTotalCount = cached.jobsTotalCount;
         node.incidents = cached.incidents;
         node.incidentsTotalCount = cached.incidentsTotalCount;
+        node.unresolvedIncidentsTotalCount = cached.unresolvedIncidentsTotalCount;
         node.history = cached.history;
         node.decisions = cached.decisions;
         node.decisionsTotalCount = cached.decisionsTotalCount;
@@ -365,9 +374,17 @@ export async function refetchNodeIncidents(
 ): Promise<ProcessInstanceNode> {
   if (node.instance.processType === 'callActivity') return node;
   try {
-    const data = await getIncidents(node.instance.key, { page, size });
-    node.incidents = (data.items ?? []) as Incident[];
-    node.incidentsTotalCount = data.totalCount ?? 0;
+    const [pageResult, unresolvedResult] = await Promise.allSettled([
+      getIncidents(node.instance.key, { page, size }),
+      getIncidents(node.instance.key, { state: 'unresolved' as GetIncidentsState, page: 1, size: 1 }),
+    ]);
+    if (pageResult.status === 'fulfilled') {
+      node.incidents = (pageResult.value.items ?? []) as Incident[];
+      node.incidentsTotalCount = pageResult.value.totalCount ?? 0;
+    }
+    if (unresolvedResult.status === 'fulfilled') {
+      node.unresolvedIncidentsTotalCount = unresolvedResult.value.totalCount ?? 0;
+    }
   } catch (err) {
     console.error(`Failed to refetch incidents for ${node.instance.key}:`, err);
   }
