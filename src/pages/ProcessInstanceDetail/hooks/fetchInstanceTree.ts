@@ -357,7 +357,10 @@ export async function refetchNodeJobs(
   try {
     const data = await getProcessInstanceJobs(node.instance.key, { page, size });
     node.jobs = (data.items ?? []) as Job[];
-    node.jobsTotalCount = data.totalCount ?? 0;
+    // Preserve a previously-established non-zero total — some APIs return
+    // totalCount=0 for pages beyond the last item rather than the real total.
+    const newTotal = data.totalCount ?? 0;
+    if (newTotal > 0 || node.jobsTotalCount === 0) node.jobsTotalCount = newTotal;
   } catch (err) {
     console.error(`Failed to refetch jobs for ${node.instance.key}:`, err);
   }
@@ -380,7 +383,9 @@ export async function refetchNodeIncidents(
     ]);
     if (pageResult.status === 'fulfilled') {
       node.incidents = (pageResult.value.items ?? []) as Incident[];
-      node.incidentsTotalCount = pageResult.value.totalCount ?? 0;
+      // Preserve a previously-established non-zero total.
+      const newTotal = pageResult.value.totalCount ?? 0;
+      if (newTotal > 0 || node.incidentsTotalCount === 0) node.incidentsTotalCount = newTotal;
     }
     if (unresolvedResult.status === 'fulfilled') {
       node.unresolvedIncidentsTotalCount = unresolvedResult.value.totalCount ?? 0;
@@ -409,7 +414,10 @@ export async function refetchNodeDecisions(
     node.decisions = (data.partitions ?? []).flatMap(
       (p) => p.items ?? [],
     ) as DecisionInstanceSummary[];
-    node.decisionsTotalCount = data.totalCount ?? 0;
+    // Preserve a previously-established non-zero total — some APIs return
+    // totalCount=0 for pages beyond the last item rather than the real total.
+    const newTotal = data.totalCount ?? 0;
+    if (newTotal > 0 || node.decisionsTotalCount === 0) node.decisionsTotalCount = newTotal;
   } catch (err) {
     console.error(`Failed to refetch decisions for ${node.instance.key}:`, err);
   }

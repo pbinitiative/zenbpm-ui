@@ -193,8 +193,9 @@ export const ProcessInstanceDetailPage = () => {
     return total;
   }, [instanceTree])
 
-  // Total decision instances count — sum decisionsTotalCount across all nodes in the tree.
-  // This is 0 until the Decisions tab is first opened (decisions are lazy-loaded).
+  // Total decision instances count — sum decisionsTotalCount across all non-callActivity
+  // nodes in the tree. Each node's value is the server-reported total for that specific
+  // process instance, so summing gives the correct count across the whole tree.
   const totalDecisionInstancesCount = useMemo(() => {
     if (!instanceTree) return 0;
     const queue: typeof instanceTree[] = [instanceTree];

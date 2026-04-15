@@ -285,11 +285,15 @@ export const decisionInstanceHandlers = [
       const page = parseInt(url.searchParams.get('page') || '1', 10);
       const size = parseInt(url.searchParams.get('size') || '10', 10);
       const dmnResourceDefinitionKey = url.searchParams.get('dmnResourceDefinitionKey');
+      const processInstanceKey = url.searchParams.get('processInstanceKey');
 
-      // Filter by dmnResourceDefinitionKey if provided
+      // Filter by provided parameters
       let filtered = decisionInstances;
       if (dmnResourceDefinitionKey) {
-        filtered = decisionInstances.filter(di => di.dmnResourceDefinitionKey === dmnResourceDefinitionKey);
+        filtered = filtered.filter(di => di.dmnResourceDefinitionKey === dmnResourceDefinitionKey);
+      }
+      if (processInstanceKey) {
+        filtered = filtered.filter(di => di.processInstanceKey === processInstanceKey);
       }
 
       // Paginate
