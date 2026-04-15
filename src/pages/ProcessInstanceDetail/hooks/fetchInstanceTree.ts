@@ -139,15 +139,17 @@ async function fetchNodeDatasets(
     | 'variablesPage' | 'variablesPageSize'
   >>,
 ): Promise<void> {
+  if (node.instance.processType === 'callActivity') {
+    return;
+  }
+
   const key = node.instance.key;
-  const isCallActivity = node.instance.processType === 'callActivity';
 
   const requests: Promise<unknown>[] = [
     getProcessInstanceJobs(key, { page: opts.jobsPage, size: opts.jobsPageSize }),
     getIncidents(key, { page: opts.incidentsPage, size: opts.incidentsPageSize }),
     getDecisionInstances({ processInstanceKey: key, page: opts.decisionsPage, size: opts.decisionsPageSize }),
-    // History is skipped for callActivity nodes (different BPMN scope)
-    isCallActivity ? Promise.resolve(null) : getHistory(key, { page: 1, size: -1 }),
+    getHistory(key, { page: 1, size: -1 }),
   ];
 
   const [jobsResult, incidentsResult, decisionsResult, historyResult] = await Promise.allSettled(requests);
@@ -171,7 +173,7 @@ async function fetchNodeDatasets(
     node.decisionsTotalCount = v.totalCount ?? 0;
   }
 
-  if (!isCallActivity && historyResult.status === 'fulfilled' && historyResult.value) {
+  if (historyResult.status === 'fulfilled' && historyResult.value) {
     const v = historyResult.value as Awaited<ReturnType<typeof getHistory>>;
     node.history = (v.items ?? []) as FlowElementHistory[];
   }
@@ -240,9 +242,12 @@ export async function fetchInstanceTree(
   while (currentLevel.length > 0) {
     const nextLevel: ProcessInstanceNode[] = [];
 
-    // Fetch children for every node in the current level — in parallel
+    // Fetch children for every node in the current level — in parallel.
+    // callActivity nodes are the entry point of a called process (different BPMN
+    // definition). Their internals are only visible on that process's own detail
+    // page, so we do NOT recurse into them here.
     const childFetches = currentLevel
-      .filter((node) => node.depth < maxDepth)
+      .filter((node) => node.depth < maxDepth && node.instance.processType !== 'callActivity')
       .map(async (node) => {
         let childData;
         try {
@@ -339,6 +344,7 @@ export async function refetchNodeJobs(
   page: number,
   size: number,
 ): Promise<ProcessInstanceNode> {
+  if (node.instance.processType === 'callActivity') return node;
   try {
     const data = await getProcessInstanceJobs(node.instance.key, { page, size });
     node.jobs = (data.items ?? []) as Job[];
@@ -357,6 +363,7 @@ export async function refetchNodeIncidents(
   page: number,
   size: number,
 ): Promise<ProcessInstanceNode> {
+  if (node.instance.processType === 'callActivity') return node;
   try {
     const data = await getIncidents(node.instance.key, { page, size });
     node.incidents = (data.items ?? []) as Incident[];
@@ -375,6 +382,7 @@ export async function refetchNodeDecisions(
   page: number,
   size: number,
 ): Promise<ProcessInstanceNode> {
+  if (node.instance.processType === 'callActivity') return node;
   try {
     const data = await getDecisionInstances({
       processInstanceKey: node.instance.key,
@@ -425,6 +433,7 @@ export function refetchNodeVariables(
   page: number,
   size: number,
 ): ProcessInstanceNode {
+  if (node.instance.processType === 'callActivity') return node;
   const allVars = Object.entries((node.instance.variables as Record<string, unknown>) ?? {});
   node.variablesTotalCount = allVars.length;
   const start = (page - 1) * size;
