@@ -98,19 +98,10 @@ export const ProcessInstanceDetailPage = () => {
   const {
     processInstance,
     processDefinition,
-    // Backward-compat flat accessors (still used for tab badges + diagram helpers)
-    jobs,
-    history,
-    incidents,
-    childProcesses,
-    childProcessIncidents,
-    grandchildProcesses,
-    childProcessHistory,
     elementStatistics,
     loading,
     error,
     refetchAll,
-    // Tree + raw pagination state/setters — passed directly to tabs
     instanceTree,
     jobsPage,
     jobsPageSize,
@@ -124,45 +115,58 @@ export const ProcessInstanceDetailPage = () => {
     decisionsPageSize,
     setDecisionsPage,
     setDecisionsPageSize,
+    variablesPage,
+    variablesPageSize,
+    setVariablesPage,
+    setVariablesPageSize,
     childrenPage,
     setChildrenPage,
   } = useInstanceData(processInstanceKey);
 
-  // Count of process instances that are actually shown in the Child Processes tab
-  // (all levels, excluding engine-internal multiInstance and subprocess wrappers).
+  // Count of process instances shown in the Child Processes tab
+  // (depth-1 + depth-2, excluding engine-internal multiInstance and subprocess wrappers).
   const visibleChildProcessesCount = useMemo(() => {
-    const directCount = childProcesses.filter((cp) => !['multiInstance', 'subprocess'].includes(cp.processType ?? '')).length;
-    const grandchildCount = Object.values(grandchildProcesses)
-      .flat()
-      .filter((gc) => !['multiInstance', 'subprocess'].includes(gc.processType ?? '')).length;
-    return directCount + grandchildCount;
-  }, [childProcesses, grandchildProcesses]);
+    if (!instanceTree) return 0;
+    const HIDDEN = ['multiInstance', 'subprocess'];
+    const direct = instanceTree.children.filter((c) => !HIDDEN.includes(c.instance.processType ?? '')).length;
+    const grand = instanceTree.children
+      .flatMap((c) => c.children)
+      .filter((c) => !HIDDEN.includes(c.instance.processType ?? '')).length;
+    return direct + grand;
+  }, [instanceTree]);
 
   // Show notification helper
   const showNotification = useCallback((message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
   }, []);
 
-  // Count unresolved incidents (root + all child processes)
-  const unresolvedIncidentsCount = useMemo(
-    () => {
-      const rootUnresolved = incidents.filter((i) => !i.resolvedAt).length;
-      const childUnresolved = Object.values(childProcessIncidents)
-        .flat()
-        .filter((i) => !i.resolvedAt).length;
-      return rootUnresolved + childUnresolved;
-    },
-    [incidents, childProcessIncidents]
-  );
+  // Count unresolved incidents across the entire instance tree.
+  const unresolvedIncidentsCount = useMemo(() => {
+    if (!instanceTree) return 0;
+    const queue: typeof instanceTree[] = [instanceTree];
+    let count = 0;
+    while (queue.length > 0) {
+      const node = queue.shift();
+      if (node === undefined) continue;
+      count += node.incidents.filter((i) => !i.resolvedAt).length;
+      queue.push(...node.children);
+    }
+    return count;
+  }, [instanceTree]);
 
-  // Prepare history for diagram highlighting
-  const historyElements = useMemo(
-    () => [
-      ...history.map((h) => ({elementId: h.elementId})),
-      ...childProcessHistory.map((h) => ({elementId: h.elementId})),
-    ],
-    [history, childProcessHistory]
-  );
+  // Collect all history element IDs from the entire tree for diagram highlighting.
+  const historyElements = useMemo(() => {
+    if (!instanceTree) return [];
+    const queue: typeof instanceTree[] = [instanceTree];
+    const result: { elementId: string }[] = [];
+    while (queue.length > 0) {
+      const node = queue.shift();
+      if (node === undefined) continue;
+      node.history.forEach((h) => result.push({ elementId: h.elementId }));
+      queue.push(...node.children);
+    }
+    return result;
+  }, [instanceTree]);
 
   // Prepare active elements for diagram highlighting
   const activeElements = useMemo(
@@ -297,7 +301,7 @@ export const ProcessInstanceDetailPage = () => {
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {t('processInstance:tabs.jobs')}
-                <Chip label={(instanceTree?.jobsTotalCount ?? jobs.length) + childProcessJobsCount} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
+                <Chip label={(instanceTree?.jobsTotalCount ?? 0) + childProcessJobsCount} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
               </Box>
             }
           />
@@ -384,6 +388,10 @@ export const ProcessInstanceDetailPage = () => {
           <TabPanel value={activeTab} index={3}>
             <VariablesTab
               instanceTree={instanceTree}
+              variablesPage={variablesPage}
+              variablesPageSize={variablesPageSize}
+              setVariablesPage={setVariablesPage}
+              setVariablesPageSize={setVariablesPageSize}
               onRefetch={refetchAll}
               onShowNotification={showNotification}
             />

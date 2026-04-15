@@ -181,7 +181,7 @@ export const DataTable = <T extends object>({
 
     // Sectioned rendering
     if (sections) {
-      return sections.map((section, index) => {
+      return sections.filter((section) => section.data.length > 0).map((section, index) => {
         const sectionKey = (section as { key?: string }).key ?? section.label ?? `section-${index}`;
 
         // Deduplicate consecutive identical entries in callPath

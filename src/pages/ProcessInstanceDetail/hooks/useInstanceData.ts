@@ -1,14 +1,12 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import type { DecisionInstanceSummary } from '@base/openapi';
 import {
   getProcessDefinition,
   getProcessInstance,
-  getProcessInstanceElementStatistics,
   useGetProcessInstanceElementStatistics,
 } from '@base/openapi';
 import { transformStatisticsToElementStatistics } from '@components/BpmnDiagram';
 import type { ElementStatistics } from '@components/BpmnDiagram';
-import type { FlowElementHistory, Incident, Job, ProcessDefinition, ProcessInstance } from '../types';
+import type { ProcessDefinition, ProcessInstance } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
 import {
   fetchInstanceTree,
@@ -16,13 +14,14 @@ import {
   refetchNodeIncidents as doRefetchNodeIncidents,
   refetchNodeDecisions as doRefetchNodeDecisions,
   refetchNodeChildren as doRefetchNodeChildren,
+  refetchNodeVariables as doRefetchNodeVariables,
   JOBS_PAGE_SIZE,
   INCIDENTS_PAGE_SIZE,
   DECISIONS_PAGE_SIZE,
+  VARIABLES_PAGE_SIZE,
   CHILDREN_PAGE_SIZE,
   MAX_TREE_DEPTH,
 } from './fetchInstanceTree';
-import { flattenTree } from './flattenTree';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -33,15 +32,6 @@ export const TERMINAL_STATES = ['completed', 'terminated'];
 
 /** Refresh interval in milliseconds */
 export const AUTO_REFRESH_INTERVAL = 5000;
-
-// ---------------------------------------------------------------------------
-// Pagination types
-// ---------------------------------------------------------------------------
-
-export interface DatasetPagination {
-  page: number;
-  pageSize: number;
-}
 
 // ---------------------------------------------------------------------------
 // Result interface
@@ -58,7 +48,7 @@ export interface UseInstanceDataResult {
   // ── Full tree ─────────────────────────────────────────────────────────────
   instanceTree: ProcessInstanceNode | null;
 
-  // ── Raw pagination state + setters per dataset ───────────────────────────
+  // ── Pagination state + setters per dataset ────────────────────────────────
   jobsPage: number;
   jobsPageSize: number;
   setJobsPage: (page: number) => void;
@@ -74,31 +64,15 @@ export interface UseInstanceDataResult {
   setDecisionsPage: (page: number) => void;
   setDecisionsPageSize: (size: number) => void;
 
+  variablesPage: number;
+  variablesPageSize: number;
+  setVariablesPage: (page: number) => void;
+  setVariablesPageSize: (size: number) => void;
+
   childrenPage: number;
   setChildrenPage: (page: number) => void;
 
-  // ── Backward-compatible flat accessors (root node's data) ─────────────────
-  jobs: Job[];
-  history: FlowElementHistory[];
-  incidents: Incident[];
-  decisionInstances: DecisionInstanceSummary[];
-
-  // ── Backward-compatible flat maps (all non-root nodes) ────────────────────
-  childProcesses: ProcessInstance[];
-  childProcessesTotalCount: number | undefined;
-  grandchildProcesses: Record<string, ProcessInstance[]>;
-  childProcessJobs: Record<string, Job[]>;
-  childProcessIncidents: Record<string, Incident[]>;
-  childProcessHistory: FlowElementHistory[];
-  childProcessDecisionInstances: Record<string, DecisionInstanceSummary[]>;
-
-  // ── Legacy top-level refetch helpers (used by tabs / action handlers) ──────
-  refetchJobs: () => Promise<void>;
-  refetchIncidents: () => Promise<void>;
-  refetchVariables: () => Promise<void>;
-  refetchHistory: () => Promise<void>;
-  refetchChildProcesses: () => Promise<void>;
-  refetchDecisionInstances: () => Promise<void>;
+  // ── Refetch ───────────────────────────────────────────────────────────────
   refetchAll: () => Promise<void>;
 }
 
@@ -134,39 +108,46 @@ export const useInstanceData = (
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ── Raw per-dataset pagination state (0-indexed pages) ───────────────────
+  // ── Per-dataset pagination state (0-indexed pages) ────────────────────────
   const [jobsPage, setJobsPage] = useState(0);
   const [jobsPageSize, setJobsPageSize] = useState(JOBS_PAGE_SIZE);
   const [incidentsPage, setIncidentsPage] = useState(0);
   const [incidentsPageSize, setIncidentsPageSize] = useState(INCIDENTS_PAGE_SIZE);
   const [decisionsPage, setDecisionsPage] = useState(0);
   const [decisionsPageSize, setDecisionsPageSize] = useState(DECISIONS_PAGE_SIZE);
+  const [variablesPage, setVariablesPage] = useState(0);
+  const [variablesPageSize, setVariablesPageSize] = useState(VARIABLES_PAGE_SIZE);
   const [childrenPage, setChildrenPage] = useState(0);
 
-  // Refs so fetchAll (auto-refresh) always uses the current pagination values
+  // Refs so fetchAll (auto-refresh) always reads the current pagination values
+  // without stale closure captures.
   const jobsPageRef = useRef(0);
   const jobsPageSizeRef = useRef(JOBS_PAGE_SIZE);
   const incidentsPageRef = useRef(0);
   const incidentsPageSizeRef = useRef(INCIDENTS_PAGE_SIZE);
   const decisionsPageRef = useRef(0);
   const decisionsPageSizeRef = useRef(DECISIONS_PAGE_SIZE);
+  const variablesPageRef = useRef(0);
+  const variablesPageSizeRef = useRef(VARIABLES_PAGE_SIZE);
   jobsPageRef.current = jobsPage;
   jobsPageSizeRef.current = jobsPageSize;
   incidentsPageRef.current = incidentsPage;
   incidentsPageSizeRef.current = incidentsPageSize;
   decisionsPageRef.current = decisionsPage;
   decisionsPageSizeRef.current = decisionsPageSize;
+  variablesPageRef.current = variablesPage;
+  variablesPageSizeRef.current = variablesPageSize;
 
-  // ── We use a ref to always access the latest tree without stale closures ──
+  // Ref to always access the latest tree without stale closures.
   const instanceTreeRef = useRef(instanceTree);
   instanceTreeRef.current = instanceTree;
 
-  // Track whether the initial load has completed so pagination effects don't
-  // fire on mount (datasets are already fetched by fetchAll at that point).
-  const initialLoadDoneRef = useRef(false);
+  // Track the last successfully fetched process definition key so we never
+  // re-fetch the definition (it never changes for the same instance).
+  const fetchedDefinitionKeyRef = useRef<string | null>(null);
 
-  // ── Derived flat maps from the tree ───────────────────────────────────────
-  const flattened = useMemo(() => flattenTree(instanceTree), [instanceTree]);
+  // Guard: pagination effects must not fire before the initial load completes.
+  const initialLoadDoneRef = useRef(false);
 
   // ── Subprocess element statistics ─────────────────────────────────────────
   const fetchSubprocessStats = useCallback(
@@ -180,6 +161,7 @@ export const useInstanceData = (
         return;
       }
 
+      const { getProcessInstanceElementStatistics } = await import('@base/openapi');
       const results = await Promise.allSettled(
         subprocessNodes.map((node) => getProcessInstanceElementStatistics(node.instance.key)),
       );
@@ -208,31 +190,40 @@ export const useInstanceData = (
     try {
       const rootInstance = (await getProcessInstance(processInstanceKey)) as unknown as ProcessInstance;
 
+      // Process definition never changes — only fetch it once per definition key.
+      const pdKey = rootInstance.processDefinitionKey;
+      if (pdKey !== fetchedDefinitionKeyRef.current) {
+        void getProcessDefinition(pdKey)
+          .then((def) => {
+            setProcessDefinition(def as unknown as ProcessDefinition);
+            fetchedDefinitionKeyRef.current = pdKey;
+          })
+          .catch(() => { /* non-critical */ });
+      }
+
+      // Build terminal-node cache to skip re-fetching immutable data on refresh.
       const terminalNodeCache = new Map<string, ProcessInstanceNode>();
       if (instanceTreeRef.current) {
         for (const node of collectAllNodes(instanceTreeRef.current)) {
-          if (['completed', 'terminated'].includes(node.instance.state)) {
+          if (TERMINAL_STATES.includes(node.instance.state)) {
             terminalNodeCache.set(node.instance.key, node);
           }
         }
       }
 
-      const [root] = await Promise.all([
-        fetchInstanceTree(processInstanceKey, {
-          maxDepth: MAX_TREE_DEPTH,
-          preloadedRoot: rootInstance,
-          terminalNodeCache,
-          jobsPage: jobsPageRef.current + 1,
-          jobsPageSize: jobsPageSizeRef.current,
-          incidentsPage: incidentsPageRef.current + 1,
-          incidentsPageSize: incidentsPageSizeRef.current,
-          decisionsPage: decisionsPageRef.current + 1,
-          decisionsPageSize: decisionsPageSizeRef.current,
-        }),
-        getProcessDefinition(rootInstance.processDefinitionKey)
-          .then((def) => setProcessDefinition(def as unknown as ProcessDefinition))
-          .catch(() => { /* non-critical */ }),
-      ]);
+      const root = await fetchInstanceTree(processInstanceKey, {
+        maxDepth: MAX_TREE_DEPTH,
+        preloadedRoot: rootInstance,
+        terminalNodeCache,
+        jobsPage: jobsPageRef.current + 1,
+        jobsPageSize: jobsPageSizeRef.current,
+        incidentsPage: incidentsPageRef.current + 1,
+        incidentsPageSize: incidentsPageSizeRef.current,
+        decisionsPage: decisionsPageRef.current + 1,
+        decisionsPageSize: decisionsPageSizeRef.current,
+        variablesPage: variablesPageRef.current + 1,
+        variablesPageSize: variablesPageSizeRef.current,
+      });
 
       setInstanceTree(root);
       void fetchSubprocessStats(root);
@@ -249,14 +240,28 @@ export const useInstanceData = (
       initialLoadDoneRef.current = false;
       setLoading(true);
       setError(null);
-      // Reset pagination when the instance key changes
+
+      // Reset pagination and definition tracking when the instance key changes.
       setJobsPage(0);
       setJobsPageSize(JOBS_PAGE_SIZE);
       setIncidentsPage(0);
       setIncidentsPageSize(INCIDENTS_PAGE_SIZE);
       setDecisionsPage(0);
       setDecisionsPageSize(DECISIONS_PAGE_SIZE);
+      setVariablesPage(0);
+      setVariablesPageSize(VARIABLES_PAGE_SIZE);
       setChildrenPage(0);
+      fetchedDefinitionKeyRef.current = null;
+      // Also reset pagination refs so fetchAll uses page 1 for the new instance.
+      jobsPageRef.current = 0;
+      jobsPageSizeRef.current = JOBS_PAGE_SIZE;
+      incidentsPageRef.current = 0;
+      incidentsPageSizeRef.current = INCIDENTS_PAGE_SIZE;
+      decisionsPageRef.current = 0;
+      decisionsPageSizeRef.current = DECISIONS_PAGE_SIZE;
+      variablesPageRef.current = 0;
+      variablesPageSizeRef.current = VARIABLES_PAGE_SIZE;
+
       try {
         await fetchAll();
       } catch (err) {
@@ -286,11 +291,12 @@ export const useInstanceData = (
   }, [processInstanceKey, loading, isActiveInstance]);
 
   // ── Root element statistics via React Query (auto-poll) ───────────────────
+  // Enabled as soon as the key is known — no need to wait for the definition.
   const { data: rawElementStatistics } = useGetProcessInstanceElementStatistics(
     processInstanceKey ?? '',
     {
       query: {
-        enabled: !!processInstanceKey && !!processDefinition,
+        enabled: !!processInstanceKey,
         refetchInterval: AUTO_REFRESH_INTERVAL,
       },
     },
@@ -313,7 +319,7 @@ export const useInstanceData = (
     return merged;
   }, [rawElementStatistics, subprocessElementStatistics]);
 
-  // ── Pagination effects — refetch all nodes when page/size state changes ───
+  // ── Pagination effects — update the current page in the tree ─────────────
   // These only fire after the initial load completes (guard via ref).
 
   useEffect(() => {
@@ -348,35 +354,30 @@ export const useInstanceData = (
     const tree = instanceTreeRef.current;
     if (!tree) return;
     const nodes = collectAllNodes(tree);
+    nodes.forEach((node) => doRefetchNodeVariables(node, variablesPage + 1, variablesPageSize));
+    setInstanceTree((prev) => (prev ? { ...prev } : prev));
+  }, [variablesPage, variablesPageSize]);
+
+  useEffect(() => {
+    if (!initialLoadDoneRef.current) return;
+    const tree = instanceTreeRef.current;
+    if (!tree) return;
+    const nodes = collectAllNodes(tree);
     void Promise.all(nodes.map((node) => doRefetchNodeChildren(node, childrenPage + 1, CHILDREN_PAGE_SIZE)))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
   }, [childrenPage]);
 
-  // ── Legacy refetch helpers (full tree rebuild) ────────────────────────────
-  const refetchAll = fetchAll;
-  const refetchJobs = useCallback(async () => { await fetchAll(); }, [fetchAll]);
-  const refetchIncidents = useCallback(async () => { await fetchAll(); }, [fetchAll]);
-  const refetchVariables = useCallback(async () => { await fetchAll(); }, [fetchAll]);
-  const refetchHistory = useCallback(async () => { await fetchAll(); }, [fetchAll]);
-  const refetchChildProcesses = useCallback(async () => { await fetchAll(); }, [fetchAll]);
-  const refetchDecisionInstances = useCallback(async () => { await fetchAll(); }, [fetchAll]);
-
   // ── Return ────────────────────────────────────────────────────────────────
 
-  const rootNode = instanceTree;
-
   return {
-    // Root
-    processInstance: rootNode?.instance ?? null,
+    processInstance: instanceTree?.instance ?? null,
     processDefinition,
     elementStatistics,
     loading,
     error,
 
-    // Full tree
     instanceTree,
 
-    // Raw pagination state + setters
     jobsPage,
     jobsPageSize,
     setJobsPage,
@@ -392,31 +393,14 @@ export const useInstanceData = (
     setDecisionsPage,
     setDecisionsPageSize,
 
+    variablesPage,
+    variablesPageSize,
+    setVariablesPage,
+    setVariablesPageSize,
+
     childrenPage,
     setChildrenPage,
 
-    // Root-level flat data
-    jobs: rootNode?.jobs ?? [],
-    history: rootNode?.history ?? [],
-    incidents: rootNode?.incidents ?? [],
-    decisionInstances: rootNode?.decisions ?? [],
-
-    // Non-root flat maps (backward compat)
-    childProcesses: flattened.childProcesses,
-    childProcessesTotalCount: flattened.childProcessesTotalCount,
-    grandchildProcesses: flattened.grandchildProcesses,
-    childProcessJobs: flattened.childProcessJobs,
-    childProcessIncidents: flattened.childProcessIncidents,
-    childProcessHistory: flattened.childProcessHistory,
-    childProcessDecisionInstances: flattened.childProcessDecisionInstances,
-
-    // Legacy refetch
-    refetchJobs,
-    refetchIncidents,
-    refetchVariables,
-    refetchHistory,
-    refetchChildProcesses,
-    refetchDecisionInstances,
-    refetchAll,
+    refetchAll: fetchAll,
   };
 };

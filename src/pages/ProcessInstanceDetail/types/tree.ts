@@ -65,6 +65,10 @@ export interface ProcessInstanceNode {
   decisions: DecisionInstanceSummary[];
   decisionsTotalCount: number;
 
+  // --- Variables (sliced from instance.variables, no separate API endpoint) ---
+  variableEntries: Array<{ name: string; value: unknown }>;
+  variablesTotalCount: number;
+
   // --- History (client-paged only, fetched in full) ---
   history: FlowElementHistory[];
 

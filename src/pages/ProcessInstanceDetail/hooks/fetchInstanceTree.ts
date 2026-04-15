@@ -24,6 +24,7 @@ export const CHILDREN_PAGE_SIZE = 100;
 export const JOBS_PAGE_SIZE = 10;
 export const INCIDENTS_PAGE_SIZE = 10;
 export const DECISIONS_PAGE_SIZE = 10;
+export const VARIABLES_PAGE_SIZE = 10;
 
 /** States where a process instance will never change — used to skip re-fetching */
 const TERMINAL_STATES = new Set(['completed', 'terminated']);
@@ -41,6 +42,8 @@ export interface FetchInstanceTreeOptions {
   incidentsPageSize?: number;
   decisionsPage?: number;
   decisionsPageSize?: number;
+  variablesPage?: number;
+  variablesPageSize?: number;
   /** Pre-fetched root ProcessInstance — avoids a duplicate getProcessInstance call */
   preloadedRoot?: ProcessInstance;
   /**
@@ -73,6 +76,8 @@ function makeNode(
     incidentsTotalCount: 0,
     decisions: [],
     decisionsTotalCount: 0,
+    variableEntries: [],
+    variablesTotalCount: 0,
     history: [],
     children: [],
     childrenTotalCount: 0,
@@ -128,7 +133,10 @@ async function fetchNodeDatasets(
   node: ProcessInstanceNode,
   opts: Required<Pick<
     FetchInstanceTreeOptions,
-    'jobsPage' | 'jobsPageSize' | 'incidentsPage' | 'incidentsPageSize' | 'decisionsPage' | 'decisionsPageSize'
+    | 'jobsPage' | 'jobsPageSize'
+    | 'incidentsPage' | 'incidentsPageSize'
+    | 'decisionsPage' | 'decisionsPageSize'
+    | 'variablesPage' | 'variablesPageSize'
   >>,
 ): Promise<void> {
   const key = node.instance.key;
@@ -167,6 +175,14 @@ async function fetchNodeDatasets(
     const v = historyResult.value as Awaited<ReturnType<typeof getHistory>>;
     node.history = (v.items ?? []) as FlowElementHistory[];
   }
+
+  // Variables are embedded in instance.variables — slice the current page
+  const allVars = Object.entries((node.instance.variables as Record<string, unknown>) ?? {});
+  node.variablesTotalCount = allVars.length;
+  const varStart = (opts.variablesPage - 1) * opts.variablesPageSize;
+  node.variableEntries = allVars
+    .slice(varStart, varStart + opts.variablesPageSize)
+    .map(([name, value]) => ({ name, value }));
 }
 
 // ---------------------------------------------------------------------------
@@ -202,6 +218,8 @@ export async function fetchInstanceTree(
     incidentsPageSize: opts.incidentsPageSize ?? INCIDENTS_PAGE_SIZE,
     decisionsPage: opts.decisionsPage ?? 1,
     decisionsPageSize: opts.decisionsPageSize ?? DECISIONS_PAGE_SIZE,
+    variablesPage: opts.variablesPage ?? 1,
+    variablesPageSize: opts.variablesPageSize ?? VARIABLES_PAGE_SIZE,
   };
   const terminalCache = opts.terminalNodeCache ?? new Map<string, ProcessInstanceNode>();
 
@@ -263,7 +281,8 @@ export async function fetchInstanceTree(
   const allNodes: ProcessInstanceNode[] = [];
   const bfsQueue: ProcessInstanceNode[] = [root];
   while (bfsQueue.length > 0) {
-    const node = bfsQueue.shift()!;
+    const node = bfsQueue.shift();
+    if (node === undefined) continue;
     allNodes.push(node);
     bfsQueue.push(...node.children);
   }
@@ -281,6 +300,8 @@ export async function fetchInstanceTree(
         node.history = cached.history;
         node.decisions = cached.decisions;
         node.decisionsTotalCount = cached.decisionsTotalCount;
+        node.variableEntries = cached.variableEntries;
+        node.variablesTotalCount = cached.variablesTotalCount;
         return Promise.resolve();
       }
     }
@@ -391,5 +412,24 @@ export async function refetchNodeChildren(
   } catch (err) {
     console.error(`Failed to refetch children for ${node.instance.key}:`, err);
   }
+  return node;
+}
+
+/**
+ * Re-slice variables for a specific node from the already-loaded instance.variables.
+ * No API call needed — variables are embedded in the ProcessInstance response.
+ * Mutates the node in place and returns it.
+ */
+export function refetchNodeVariables(
+  node: ProcessInstanceNode,
+  page: number,
+  size: number,
+): ProcessInstanceNode {
+  const allVars = Object.entries((node.instance.variables as Record<string, unknown>) ?? {});
+  node.variablesTotalCount = allVars.length;
+  const start = (page - 1) * size;
+  node.variableEntries = allVars
+    .slice(start, start + size)
+    .map(([name, value]) => ({ name, value }));
   return node;
 }
