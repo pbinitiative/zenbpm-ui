@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
@@ -10,6 +10,8 @@ import {
   TableWithFilters,
   type FilterConfig,
   type FilterValues,
+  type SimpleFetchParams,
+  type SimpleFetchResult,
 } from '@components/TableWithFilters';
 import type { Column } from '@components/DataTable';
 import {
@@ -17,7 +19,7 @@ import {
   getProcessDefinitionStatistics,
   type ProcessDefinitionSimple,
   type InstanceCounts,
-  type GetProcessDefinitionsParams,
+  type GetProcessDefinitionsParams, type GetProcessDefinitionStatisticsParams,
 } from '@base/openapi';
 
 // Combined type for display: definition data + statistics
@@ -34,103 +36,93 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
   const navigate = useNavigate();
   const { showError } = useNotification();
 
-  // State
-  const [processDefinitions, setProcessDefinitions] = useState<ProcessDefinitionWithStats[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [internalRefreshKey, setInternalRefreshKey] = useState(0);
+
   const [filterValues, setFilterValues] = useState<FilterValues>({
     onlyLatest: 'true',
     search: '',
   });
-  const [sortBy, setSortBy] = useState<string | undefined>(undefined);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Fetch process definitions and statistics from API, then merge
-  const fetchProcessDefinitions = useCallback(async () => {
-    setLoading(true);
-
-    try {
+  // Fetch process definitions and statistics in a single call, then merge
+  const fetchData = useCallback(
+    async (params: SimpleFetchParams): Promise<SimpleFetchResult<ProcessDefinitionWithStats>> => {
       // Build params for process definitions endpoint
       const apiParams: GetProcessDefinitionsParams = {
-        page: 1,
-        size: 100,
+        page: params.page,
+        size: params.size,
       };
 
       // Add onlyLatest filter
-      if (filterValues.onlyLatest === 'true') {
+      if (params.filters?.onlyLatest === 'true') {
         apiParams.onlyLatest = true;
       }
 
       // Note: search filter not supported by backend API yet
 
-      // Add sorting - map column ids to API sort fields
-      if (sortBy) {
+      // Add sorting — map column ids to API sort fields
+      if (params.sortBy) {
         const sortMapping: Record<string, GetProcessDefinitionsParams['sortBy']> = {
           bpmnProcessId: 'bpmnProcessId',
           bpmnProcessName: 'name',
           name: 'name',
           version: 'version',
         };
-        const mappedSortBy = sortMapping[sortBy];
+        const mappedSortBy = sortMapping[params.sortBy];
         if (mappedSortBy) {
           apiParams.sortBy = mappedSortBy;
-          apiParams.sortOrder = sortOrder;
+          apiParams.sortOrder = params.sortOrder;
         }
       }
 
-      // 1. Fetch process definitions (with filtering, paging, sorting)
-      const definitionsData = await getProcessDefinitions(apiParams);
-      const definitions = definitionsData.items || [];
+      try {
+        // Fetch definitions and statistics in parallel
+        const [definitionsData, statisticsResult] = await Promise.allSettled([
+          getProcessDefinitions(apiParams),
+          getProcessDefinitionStatistics(apiParams as GetProcessDefinitionStatisticsParams),
+        ]);
 
-      // 2. Fetch statistics separately - if it fails, we still show definitions with zero stats
-      // Use string keys because json-bigint converts large numbers to strings to preserve precision
-      const statisticsMap = new Map<string, { instanceCounts: InstanceCounts }>();
-      if (definitions.length > 0) {
-        try {
-          const statisticsData = await getProcessDefinitionStatistics({ size: 100, onlyLatest: apiParams.onlyLatest });
-          for (const partition of statisticsData.partitions || []) {
+        if (definitionsData.status === 'rejected') {
+          throw definitionsData.reason as Error;
+        }
+
+        const definitions = definitionsData.value.items || [];
+
+        // Build statistics map — failure is non-fatal, fall back to zero counts
+        const statisticsMap = new Map<string, { instanceCounts: InstanceCounts }>();
+        if (statisticsResult.status === 'fulfilled') {
+          for (const partition of statisticsResult.value.partitions || []) {
             for (const stat of partition.items || []) {
-              statisticsMap.set(stat.key, {
-                instanceCounts: stat.instanceCounts,
-              });
+              statisticsMap.set(stat.key, { instanceCounts: stat.instanceCounts });
             }
           }
-        } catch (statsError) {
-          // Statistics failed - log but continue with definitions
-          console.warn('Failed to fetch process definition statistics:', statsError);
+        } else {
+          console.warn('Failed to fetch process definition statistics:', statisticsResult.reason);
         }
-      }
 
-      // 3. Merge definitions with statistics (defaults to zero if stats not available)
-      const merged: ProcessDefinitionWithStats[] = definitions.map((def) => {
-        const stats = statisticsMap.get(def.key) || {
-          instanceCounts: { total: 0, active: 0, completed: 0, terminated: 0, failed: 0 },
-        };
+        // Merge definitions with statistics
+        const items: ProcessDefinitionWithStats[] = definitions.map((def) => {
+          const stats = statisticsMap.get(def.key) ?? {
+            instanceCounts: { total: 0, active: 0, completed: 0, terminated: 0, failed: 0 },
+          };
+          return { ...def, instanceCounts: stats.instanceCounts };
+        });
+
         return {
-          ...def,
-          instanceCounts: stats.instanceCounts,
+          items,
+          totalCount: definitionsData.value.totalCount ?? items.length,
         };
-      });
+      } catch (error) {
+        console.error('Failed to fetch process definitions:', error);
+        showError(t('common:errors.loadFailed'));
+        return { items: [], totalCount: 0 };
+      }
+    },
+    // showError and t are stable refs — no other deps needed since all values come via params
+    [showError, t]
+  );
 
-      setProcessDefinitions(merged);
-    } catch (error) {
-      console.error('Failed to fetch process definitions:', error);
-      setProcessDefinitions([]);
-      showError(t('common:errors.loadFailed'));
-    } finally {
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterValues, sortBy, sortOrder]);
-
-  // Fetch when filters, sorting change or refresh is triggered
-  useEffect(() => {
-    void fetchProcessDefinitions();
-  }, [fetchProcessDefinitions, refreshKey]);
-
-  // Handle sort change from table
-  const handleSortChange = useCallback((newSortBy: string, newSortOrder: 'asc' | 'desc') => {
-    setSortBy(newSortBy);
-    setSortOrder(newSortOrder);
+  const handleRefresh = useCallback(() => {
+    setInternalRefreshKey((k) => k + 1);
   }, []);
 
   // Column definitions
@@ -235,7 +227,6 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
     [t]
   );
 
-  // Handlers
   const handleRowClick = useCallback(
     (row: ProcessDefinitionWithStats) => {
       void navigate(`/process-definitions/${row.key}`);
@@ -254,15 +245,15 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
         rowKey="key"
         tableConfig={{
           mode: 'simple',
-          data: processDefinitions,
-          loading,
+          fetchData,
+          onRefresh: handleRefresh,
         }}
         filters={filters}
         filterValues={filterValues}
         onFilterChange={handleFilterChange}
         onRowClick={handleRowClick}
         serverSideSorting
-        onSortChange={handleSortChange}
+        refreshKey={refreshKey + internalRefreshKey}
         syncWithUrl
         syncSortingWithUrl
         data-testid="process-definitions-table"

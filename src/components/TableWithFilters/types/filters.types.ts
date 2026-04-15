@@ -154,12 +154,34 @@ export interface ActiveFilter {
 
 export type TableMode = 'simple' | 'partitioned';
 
+/** Parameters passed to fetchData in simple mode */
+export interface SimpleFetchParams {
+  page: number;
+  size: number;
+  filters?: FilterValues;
+  sortBy?: string;
+  sortOrder?: SortOrder;
+}
+
+/** Response returned by fetchData in simple mode */
+export interface SimpleFetchResult<T> {
+  items: T[];
+  totalCount: number;
+}
+
 export interface SimpleTableConfig<T> {
   mode: 'simple';
-  data: T[];
+  /** Static data — used when fetchData is not provided */
+  data?: T[];
   loading?: boolean;
   totalCount?: number;
   onRefresh?: () => void;
+  /**
+   * When provided, pagination and sorting are server-side.
+   * TableWithFilters will call this on every page/size/filter/sort change
+   * and manage data/loading/totalCount internally.
+   */
+  fetchData?: (params: SimpleFetchParams) => Promise<SimpleFetchResult<T>>;
 }
 
 export interface PartitionedTableConfig<T> {
