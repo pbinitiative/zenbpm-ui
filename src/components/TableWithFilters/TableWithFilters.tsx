@@ -44,6 +44,9 @@ export interface TableWithFiltersProps<T extends object> {
   // URL sync
   syncWithUrl?: boolean;
   syncSortingWithUrl?: boolean;
+
+  // Default page size for partitioned mode
+  defaultPageSize?: number;
 }
 
 export const TableWithFilters = <T extends object>({
@@ -64,6 +67,7 @@ export const TableWithFilters = <T extends object>({
   refreshKey = 0,
   syncWithUrl = false,
   syncSortingWithUrl = false,
+  defaultPageSize,
 }: TableWithFiltersProps<T>) => {
   const [searchParams] = useSearchParams();
 
@@ -328,6 +332,7 @@ export const TableWithFilters = <T extends object>({
           serverSideSorting={serverSideSorting}
           refreshKey={refreshKey}
           onSortChange={handleSortChange}
+          defaultPageSize={defaultPageSize}
           toolbar={firstLineToolbar}
           filtersPanel={
             filters.some((f) => f.zone === 'exposed_second_line') ||

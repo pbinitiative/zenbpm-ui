@@ -22,6 +22,7 @@ interface UsePartitionedDataOptions<T extends object> {
   onSortChange?: (sortBy: string, sortOrder: SortOrder) => void;
   serverSideSorting?: boolean;
   refreshKey?: number;
+  defaultPageSize?: number;
 }
 
 interface UsePartitionedDataResult<T extends object> {
@@ -47,6 +48,7 @@ export function usePartitionedData<T extends object>({
   onSortChange,
   serverSideSorting = false,
   refreshKey = 0,
+  defaultPageSize = 5,
 }: UsePartitionedDataOptions<T>): UsePartitionedDataResult<T> {
   const { t } = useTranslation([ns.common]);
   const { showError } = useNotification();
@@ -56,7 +58,7 @@ export function usePartitionedData<T extends object>({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(defaultPageSize);
 
   // Local sorting state
   const [localSortBy, setLocalSortBy] = useState<string | undefined>(sortBy);

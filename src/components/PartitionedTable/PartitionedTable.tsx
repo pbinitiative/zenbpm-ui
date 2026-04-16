@@ -54,6 +54,7 @@ export const PartitionedTable = <T extends object>({
   filtersPanel,
   'data-testid': testId,
   refreshKey = 0,
+  defaultPageSize = 5,
 }: PartitionedTableProps<T>) => {
   const { t } = useTranslation([ns.common]);
 
@@ -78,6 +79,7 @@ export const PartitionedTable = <T extends object>({
     onSortChange,
     serverSideSorting,
     refreshKey,
+    defaultPageSize,
   });
 
   return (
