@@ -27,8 +27,43 @@ export const INCIDENTS_PAGE_SIZE = 10;
 export const DECISIONS_PAGE_SIZE = 10;
 export const VARIABLES_PAGE_SIZE = 10;
 
+/**
+ * Maximum number of simultaneous dataset-fetch requests in Phase 2.
+ * Matches the browser's ~6 connections-per-host limit so we never queue
+ * more requests than the browser can actually send in parallel.
+ * Without this, a tree of 50 nodes fires 250 requests simultaneously.
+ */
+const CONCURRENT_FETCH_LIMIT = 6;
+
 /** States where a process instance will never change — used to skip re-fetching */
 const TERMINAL_STATES = new Set(['completed', 'terminated']);
+
+// ---------------------------------------------------------------------------
+// Concurrency helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Run `fn` over every item with at most `limit` concurrent invocations.
+ * Works like Promise.all but throttles the number of in-flight promises,
+ * preventing the browser from queueing hundreds of requests simultaneously.
+ */
+async function runConcurrently<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<unknown>,
+): Promise<void> {
+  if (items.length === 0) return;
+  const iter = items[Symbol.iterator]();
+  const workers = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      for (let step = iter.next(); !step.done; step = iter.next()) {
+        await fn(step.value);
+      }
+    },
+  );
+  await Promise.all(workers);
+}
 
 // ---------------------------------------------------------------------------
 // Options
@@ -300,7 +335,7 @@ export async function fetchInstanceTree(
     bfsQueue.push(...node.children);
   }
 
-  await Promise.all(allNodes.map((node) => {
+  await runConcurrently(allNodes, CONCURRENT_FETCH_LIMIT, (node) => {
     // For non-root terminal nodes: copy cached data instead of re-fetching.
     // The root node is always re-fetched so the page reflects the latest state.
     if (node !== root && TERMINAL_STATES.has(node.instance.state)) {
@@ -319,8 +354,11 @@ export async function fetchInstanceTree(
         return Promise.resolve();
       }
     }
+    // Nodes beyond the depth limit are never shown in dataset tabs — users
+    // can navigate to those instances directly. Skipping saves
+    // (N_deep_nodes × 5) API calls on every refresh.
     return fetchNodeDatasets(node, datasetOpts);
-  }));
+  });
 
   // ── Phase 3: derive callElementId for each non-root node ─────────────────
   // Now that history is populated, infer which element in the parent called

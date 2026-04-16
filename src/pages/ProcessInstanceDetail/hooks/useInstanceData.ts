@@ -143,6 +143,11 @@ export const useInstanceData = (
   // Guard: pagination effects must not fire before the initial load completes.
   const initialLoadDoneRef = useRef(false);
 
+  // Guard: prevent overlapping fetchAll calls. Without this, if a tree rebuild
+  // takes longer than AUTO_REFRESH_INTERVAL the next tick starts a second rebuild
+  // before the first finishes, doubling the load and causing state flicker.
+  const isFetchingRef = useRef(false);
+
   // ── Subprocess element statistics ─────────────────────────────────────────
   const fetchSubprocessStats = useCallback(
     async (root: ProcessInstanceNode) => {
@@ -181,6 +186,8 @@ export const useInstanceData = (
   // ── Core fetch: build / rebuild the whole tree ────────────────────────────
   const fetchAll = useCallback(async () => {
     if (!processInstanceKey) return;
+    if (isFetchingRef.current) return;   // drop concurrent calls
+    isFetchingRef.current = true;
     try {
       const rootInstance = (await getProcessInstance(processInstanceKey)) as unknown as ProcessInstance;
 
@@ -223,6 +230,8 @@ export const useInstanceData = (
       void fetchSubprocessStats(root);
     } catch (err) {
       console.error('Failed to fetch instance tree:', err);
+    } finally {
+      isFetchingRef.current = false;
     }
   }, [processInstanceKey, fetchSubprocessStats]);
 
@@ -278,6 +287,9 @@ export const useInstanceData = (
   useEffect(() => {
     if (!processInstanceKey || loading || !isActiveInstance) return;
     const intervalId = setInterval(() => {
+      // Skip refresh when the browser tab is hidden — no point rebuilding
+      // the tree while the user isn't looking at it.
+      if (document.hidden) return;
       void fetchAllRef.current();
     }, AUTO_REFRESH_INTERVAL);
     return () => clearInterval(intervalId);
