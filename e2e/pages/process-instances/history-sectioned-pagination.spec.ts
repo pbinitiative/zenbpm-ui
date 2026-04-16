@@ -34,9 +34,6 @@ test.describe('HistoryTab — sectioned pagination', () => {
     // Pick "5" from the dropdown (exact: true avoids matching "50")
     await page.getByRole('option', { name: '5', exact: true }).click();
 
-    // Wait for table to re-render
-    await page.waitForTimeout(300);
-
     // On page 1 there should be exactly 2 section headers (one per child)
     const sectionHeaders = page.locator('[data-testid="section-header"]');
     await expect(sectionHeaders).toHaveCount(2);
@@ -53,11 +50,9 @@ test.describe('HistoryTab — sectioned pagination', () => {
     const pageSizeSelect = page.locator('div[role="combobox"]').first();
     await pageSizeSelect.click();
     await page.getByRole('option', { name: '5', exact: true }).click();
-    await page.waitForTimeout(300);
 
     // Navigate to page 2 via the Pagination component (MUI Pagination renders aria-label "page 2")
     await page.getByRole('button', { name: 'Go to page 2' }).click();
-    await page.waitForTimeout(300);
 
     // Both sections should still be present (each has 3 rows on page 2: entries 6-8)
     const sectionHeaders = page.locator('[data-testid="section-header"]');
@@ -73,15 +68,12 @@ test.describe('HistoryTab — sectioned pagination', () => {
     const pageSizeSelect = page.locator('div[role="combobox"]').first();
     await pageSizeSelect.click();
     await page.getByRole('option', { name: '5', exact: true }).click();
-    await page.waitForTimeout(300);
 
     // Go to page 2 …
     await page.getByRole('button', { name: 'Go to page 2' }).click();
-    await page.waitForTimeout(300);
 
     // … then back to page 1
     await page.getByRole('button', { name: 'Go to page 1' }).click();
-    await page.waitForTimeout(300);
 
     const sectionHeaders = page.locator('[data-testid="section-header"]');
     await expect(sectionHeaders).toHaveCount(2);
@@ -95,7 +87,6 @@ test.describe('HistoryTab — sectioned pagination', () => {
     const pageSizeSelect = page.locator('div[role="combobox"]').first();
     await pageSizeSelect.click();
     await page.getByRole('option', { name: '5', exact: true }).click();
-    await page.waitForTimeout(300);
 
     // Section headers contain the child instance key — verify each child is present
     // Use .first() to avoid strict-mode violation since the key appears as a prefix

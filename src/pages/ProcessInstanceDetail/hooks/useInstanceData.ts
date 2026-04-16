@@ -269,8 +269,10 @@ export const useInstanceData = (
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load process instance');
       } finally {
-        setLoading(false);
-        initialLoadDoneRef.current = true;
+        if (!isFetchingRef.current) {    // this avoids e error message instead loading
+          setLoading(false);
+          initialLoadDoneRef.current = true;
+        }
       }
     };
 

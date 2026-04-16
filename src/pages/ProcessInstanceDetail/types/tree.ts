@@ -39,6 +39,14 @@ export interface ProcessInstanceNode {
   depth: number;
 
   /**
+   * True only for the single root node of the tree — i.e. the instance the
+   * user navigated to directly.  Used to allow full dataset fetching even
+   * when the root instance itself is of type `callActivity`: the guard that
+   * skips callActivity internals must not apply to the root.
+   */
+  isRoot: boolean;
+
+  /**
    * The element ID in the **parent** process that called/spawned this instance
    * (e.g. the call-activity or sub-process element ID).
    * Undefined for the root node.

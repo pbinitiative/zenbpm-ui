@@ -38,6 +38,7 @@ export type SortOrder = 'asc' | 'desc';
  * pre-sliced to the current page by the caller.
  */
 export interface DataTableSection<T> {
+  key?: string;
   /** Label displayed in the section header row. */
   label: string;
   /**
@@ -182,7 +183,7 @@ export const DataTable = <T extends object>({
     // Sectioned rendering
     if (sections) {
       return sections.filter((section) => section.data.length > 0).map((section, index) => {
-        const sectionKey = (section as { key?: string }).key ?? section.label ?? `section-${index}`;
+        const sectionKey = section.key ?? section.label ?? `section-${index}`;
 
         // Deduplicate consecutive identical entries in callPath
         const dedupedPath = section.callPath
