@@ -15,6 +15,7 @@ interface UseBpmnMarkersOptions {
   history?: Array<{ elementId: string }>;
   activeElements?: Array<{ elementId: string }>;
   selectedElement?: string;
+  showProgress?: boolean;
 }
 
 /**
@@ -27,6 +28,7 @@ export function useBpmnMarkers({
   history = [],
   activeElements = [],
   selectedElement,
+  showProgress = true,
 }: UseBpmnMarkersOptions): void {
   // Store props in refs to use in callbacks without re-creating them
   const elementStatisticsRef = useRef(elementStatistics);
@@ -114,13 +116,13 @@ export function useBpmnMarkers({
         const hasIncidents = incidentCount > 0;
         const doneCount = (completedCount ?? 0) + (terminatedCount ?? 0);
         const total = activeCount + doneCount;
-        // Show progress (done/total) for multi-instance elements (more than one execution)
-        const hasProgress = total > 1;
+        // Show progress (done/total) only when enabled and there are multiple executions
+        const hasProgress = showProgress && total > 1;
         const hasActive = activeCount > 0;
 
         // Active/progress count badge (green) - top right, offset left if incidents also exist
         if (hasActive || hasProgress) {
-          // When multiple instances exist, show "done/total" (e.g. "2/3")
+          // When progress is enabled and multiple instances exist, show "done/total" (e.g. "2/3")
           const label = hasProgress ? `${doneCount}/${total}` : `${activeCount}`;
           overlays.add(elementId, 'active-count', {
             position: { top: -8, right: hasIncidents ? 32 : 8 },

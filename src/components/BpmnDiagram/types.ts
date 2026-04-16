@@ -88,4 +88,10 @@ export interface BpmnDiagramProps {
   minHeight?: number | string;
   /** Enable hover effects and pointer cursor for clickable elements (default: true if onElementClick is provided) */
   interactive?: boolean;
+  /**
+   * When true (default), multi-instance elements show a "done/total" progress
+   * badge (e.g. "2/3"). Set to false on pages where only active token counts
+   * should be displayed (e.g. Process Definition detail).
+   */
+  showProgress?: boolean;
 }

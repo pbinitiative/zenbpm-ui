@@ -83,7 +83,9 @@ export const ClientSideDataTable = <T extends object>({
       if (aVal === bVal) return 0;
       if (aVal === null || aVal === undefined) return 1;
       if (bVal === null || bVal === undefined) return -1;
-      const cmp = String(aVal) < String(bVal) ? -1 : 1;
+      const cmp  = (typeof aVal === 'number' && typeof bVal === 'number')
+        ? (aVal < bVal ? -1 : 1)
+        : String(aVal).localeCompare(String(bVal));
       return sortOrder === 'asc' ? cmp : -cmp;
     });
   };

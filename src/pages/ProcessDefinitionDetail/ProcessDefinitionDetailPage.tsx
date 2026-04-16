@@ -100,6 +100,7 @@ export const ProcessDefinitionDetailPage = () => {
       elementStatistics={elementStatistics}
       onElementClick={handleElementClick}
       selectedElement={selectedActivityId}
+      showProgress={false}
     />
   ) : (
     <Box
