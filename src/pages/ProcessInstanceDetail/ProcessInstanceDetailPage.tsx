@@ -400,6 +400,7 @@ export const ProcessInstanceDetailPage = () => {
               setVariablesPageSize={setVariablesPageSize}
               onRefetch={refetchAll}
               onShowNotification={showNotification}
+              onElementIdClick={handleElementIdClick}
             />
           </TabPanel>
 
@@ -418,6 +419,7 @@ export const ProcessInstanceDetailPage = () => {
               decisionsPageSize={decisionsPageSize}
               setDecisionsPage={setDecisionsPage}
               setDecisionsPageSize={setDecisionsPageSize}
+              onElementIdClick={handleElementIdClick}
             />
           </TabPanel>
         </Box>

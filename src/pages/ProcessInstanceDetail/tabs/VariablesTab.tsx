@@ -55,6 +55,8 @@ interface VariablesTabProps {
   setVariablesPageSize: (size: number) => void;
   onRefetch: () => Promise<void>;
   onShowNotification: (message: string, severity: 'success' | 'error') => void;
+  /** Called when a breadcrumb element ID is clicked in a section header. */
+  onElementIdClick?: (elementId: string) => void;
 }
 
 // Translation function type - avoids strict i18n namespace key inference in inline renders
@@ -81,6 +83,7 @@ export const VariablesTab = ({
   setVariablesPageSize,
   onRefetch,
   onShowNotification,
+  onElementIdClick,
 }: VariablesTabProps) => {
   const { t: rawT } = useTranslation([ns.common, ns.processInstance, ns.processes]);
   const t = rawT as unknown as T;
@@ -307,6 +310,7 @@ export const VariablesTab = ({
         onPageChange={setVariablesPage}
         onPageSizeChange={(newSize) => { setVariablesPageSize(newSize); setVariablesPage(0); }}
         totalCount={totalCount}
+        onElementIdClick={onElementIdClick}
       />
     </Box>
   );

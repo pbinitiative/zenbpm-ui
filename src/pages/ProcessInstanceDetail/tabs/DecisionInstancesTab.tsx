@@ -23,6 +23,8 @@ interface DecisionInstancesTabProps {
   decisionsPageSize: number;
   setDecisionsPage: (page: number) => void;
   setDecisionsPageSize: (size: number) => void;
+  /** Called when a breadcrumb element ID is clicked in a section header. */
+  onElementIdClick?: (elementId: string) => void;
 }
 
 /** BFS walk — returns all nodes, root first */
@@ -44,6 +46,7 @@ export const DecisionInstancesTab = ({
   decisionsPageSize,
   setDecisionsPage,
   setDecisionsPageSize,
+  onElementIdClick,
 }: DecisionInstancesTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance, ns.decisions, ns.processes]);
   const navigate = useNavigate();
@@ -157,6 +160,7 @@ export const DecisionInstancesTab = ({
           }}
           totalCount={totalCount}
           onRowClick={handleRowClick}
+          onElementIdClick={onElementIdClick}
       />
     </Box>
   );

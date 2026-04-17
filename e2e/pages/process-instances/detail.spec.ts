@@ -88,6 +88,22 @@ test.describe('Process Instance Detail Page', () => {
   });
 });
 
+test.describe('Process Instance Detail - Breadcrumb Highlighting', () => {
+  const callActivityInstanceKey = '3100000000000000066';
+
+  test('should highlight the selected diagram element when clicking a breadcrumb in the variables table', async ({ page }) => {
+    await page.goto(`/process-instances/${callActivityInstanceKey}?tab=variables`);
+    await expect(page.getByTestId('variables-table')).toBeVisible({ timeout: 10000 });
+
+    const breadcrumb = page.getByTestId('variables-table').getByRole('button', { name: 'callActivity' }).first();
+    await expect(breadcrumb).toBeVisible();
+    await breadcrumb.click();
+
+    await expect(page).toHaveURL(/elementId=callActivity/);
+    await expect(page.locator('.djs-element[data-element-id="callActivity"].element-selected')).toBeVisible({ timeout: 5000 });
+  });
+});
+
 test.describe('Process Instance Detail - Navigation', () => {
   test('should navigate from process definition detail', async ({ page }) => {
     const { SHOWCASE_PROCESS_DEFINITION_KEY } = instanceKeys;
