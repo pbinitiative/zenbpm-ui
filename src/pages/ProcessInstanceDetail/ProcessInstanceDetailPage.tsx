@@ -179,19 +179,18 @@ export const ProcessInstanceDetailPage = () => {
     [processInstance]
   );
 
-  const childProcessJobsCount = useMemo(() => {
+  const activeJobsTotalCount = useMemo(() => {
     if (!instanceTree) return 0;
-    // Sum jobsTotalCount across all non-root nodes in the tree
-    const queue = [...instanceTree.children];
+    const queue: typeof instanceTree[] = [instanceTree];
     let total = 0;
     while (queue.length > 0) {
       const node = queue.shift();
       if (node === undefined) continue;
-      total += node.jobsTotalCount;
+      total += node.activeJobsTotalCount;
       queue.push(...node.children);
     }
     return total;
-  }, [instanceTree])
+  }, [instanceTree]);
 
   // Total decision instances count — sum decisionsTotalCount across all non-callActivity
   // nodes in the tree. Each node's value is the server-reported total for that specific
@@ -307,7 +306,13 @@ export const ProcessInstanceDetailPage = () => {
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {t('processInstance:tabs.jobs')}
-                <Chip label={(instanceTree?.jobsTotalCount ?? 0) + childProcessJobsCount} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
+                {activeJobsTotalCount > 0 && (
+                  <Chip
+                    label={activeJobsTotalCount}
+                    size="small"
+                    sx={{ height: 20, fontSize: '0.7rem' }}
+                  />
+                )}
               </Box>
             }
           />

@@ -64,6 +64,7 @@ export interface ProcessInstanceNode {
   // --- Jobs (server-paginated) ---
   jobs: Job[];
   jobsTotalCount: number;
+  activeJobsTotalCount: number;
 
   // --- Incidents (server-paginated) ---
   incidents: Incident[];

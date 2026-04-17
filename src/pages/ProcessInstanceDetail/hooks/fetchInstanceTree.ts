@@ -2,6 +2,7 @@ import type { DecisionInstanceSummary } from '@base/openapi';
 import {
   getProcessInstance,
   getProcessInstanceJobs,
+  getJobs,
   getHistory,
   getIncidents,
   getChildProcessInstances,
@@ -10,6 +11,7 @@ import {
 import type { FlowElementHistory, Incident, Job, ProcessInstance } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
 import type { GetIncidentsState } from '@base/openapi/generated-api/schemas/getIncidentsState';
+import type { JobState } from '@base/openapi/generated-api/schemas/jobState';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -109,6 +111,7 @@ function makeNode(
     callPath: callElementId ? [...parentCallPath, callElementId] : [],
     jobs: [],
     jobsTotalCount: 0,
+    activeJobsTotalCount: 0,
     incidents: [],
     incidentsTotalCount: 0,
     unresolvedIncidentsTotalCount: 0,
@@ -185,18 +188,24 @@ async function fetchNodeDatasets(
 
   const requests: Promise<unknown>[] = [
     getProcessInstanceJobs(key, { page: opts.jobsPage, size: opts.jobsPageSize }),
+    getJobs({ processInstanceKey: key, state: 'active' as JobState, page: 1, size: 1 }),
     getIncidents(key, { page: opts.incidentsPage, size: opts.incidentsPageSize }),
     getIncidents(key, { state: 'unresolved' as GetIncidentsState, page: 1, size: 1 }),
     getDecisionInstances({ processInstanceKey: key, page: opts.decisionsPage, size: opts.decisionsPageSize }),
     getHistory(key, { page: 1, size: -1 }),
   ];
 
-  const [jobsResult, incidentsResult, unresolvedResult, decisionsResult, historyResult] = await Promise.allSettled(requests);
+  const [jobsResult, activeJobsResult, incidentsResult, unresolvedResult, decisionsResult, historyResult] = await Promise.allSettled(requests);
 
   if (jobsResult.status === 'fulfilled' && jobsResult.value) {
     const v = jobsResult.value as Awaited<ReturnType<typeof getProcessInstanceJobs>>;
     node.jobs = (v.items ?? []) as Job[];
     node.jobsTotalCount = v.totalCount ?? 0;
+  }
+
+  if (activeJobsResult.status === 'fulfilled' && activeJobsResult.value) {
+    const v = activeJobsResult.value as Awaited<ReturnType<typeof getJobs>>;
+    node.activeJobsTotalCount = v.totalCount ?? 0;
   }
 
   if (incidentsResult.status === 'fulfilled' && incidentsResult.value) {
@@ -345,6 +354,7 @@ export async function fetchInstanceTree(
       if (cached) {
         node.jobs = cached.jobs;
         node.jobsTotalCount = cached.jobsTotalCount;
+        node.activeJobsTotalCount = cached.activeJobsTotalCount;
         node.incidents = cached.incidents;
         node.incidentsTotalCount = cached.incidentsTotalCount;
         node.unresolvedIncidentsTotalCount = cached.unresolvedIncidentsTotalCount;
