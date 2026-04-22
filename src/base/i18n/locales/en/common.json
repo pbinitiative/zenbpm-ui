@@ -122,7 +122,8 @@
     "processInstanceNotFound": "Process instance not found",
     "processDefinitionNotFound": "Process definition not found",
     "decisionInstanceNotFound": "Decision instance not found",
-    "decisionDefinitionNotFound": "Decision definition not found"
+    "decisionDefinitionNotFound": "Decision definition not found",
+    "failedToFetchOptions": "Failed to fetch options"
   },
   "messages": {
     "dataLoaded": "Data loaded successfully",
@@ -138,6 +139,7 @@
   "key": "Key",
   "current": "current",
   "loading": "Loading",
+  "noOptions": "No options",
   "fields": {
     "key": "Key",
     "name": "Name",
