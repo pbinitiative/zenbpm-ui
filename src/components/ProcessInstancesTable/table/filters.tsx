@@ -1,5 +1,5 @@
 import { StateBadge } from '@components/StateBadge';
-import type { FilterConfig, FilterOption, SimpleFilterConfig } from '@components/TableWithFilters';
+import type { FilterConfig, SimpleFilterConfig } from '@components/TableWithFilters';
 
 // Translation function type - ESLint validates keys via i18n-namespace-match rule
 type TranslateFunction = (key: string) => string;
@@ -9,8 +9,10 @@ interface FilterOptions {
   showProcessFilter: boolean;
   /** Whether to show the include child processes filter */
   showIncludeChildProcesses?: boolean;
-  /** Process options for the dropdown */
-  processOptions: FilterOption[];
+  /** Render function for the process definition filter component */
+  renderProcessFilter: (value: string | undefined, onChange: (value: string) => void) => React.ReactNode;
+  /** Convert bpmnProcessId to a display label for the active-filter badge */
+  getProcessActiveLabel: (value: string) => string;
   /** Activity IDs available for filtering */
   activityIds: string[];
 }
@@ -19,7 +21,7 @@ export const getProcessInstanceFilters = (
   t: TranslateFunction,
   options: FilterOptions
 ): FilterConfig[] => {
-  const { showProcessFilter, showIncludeChildProcesses = true, processOptions, activityIds } = options;
+  const { showProcessFilter, showIncludeChildProcesses = true, renderProcessFilter, getProcessActiveLabel, activityIds } = options;
 
   const filters: FilterConfig[] = [
     {
@@ -51,30 +53,24 @@ export const getProcessInstanceFilters = (
         },
       ],
     },
-    {
-      id: 'search',
-      label: t('common:search.label'),
-      type: 'text',
-      zone: 'exposed_first_line',
-      align: 'right',
-      placeholder: t('processes:filters.searchPlaceholder'),
-      width: 250,
-    },
   ];
-
-  // Build hideable group items
-  const hideableItems: SimpleFilterConfig[] = [];
 
   // Add process filter only when not locked to specific definition
   if (showProcessFilter) {
-    hideableItems.push({
+    filters.push({
       id: 'bpmnProcessId',
       label: t('processes:fields.process'),
-      type: 'select',
-      options: processOptions,
-      searchable: true,
+      type: 'component',
+      render: renderProcessFilter,
+      getActiveLabel: getProcessActiveLabel,
+      zone: 'exposed_first_line',
+      align: 'right',
+      width: 250,
     });
   }
+
+  // Build hideable group items
+  const hideableItems: SimpleFilterConfig[] = [];
 
   // Add activity filter if activityIds are provided
   if (activityIds.length > 0) {
@@ -92,7 +88,7 @@ export const getProcessInstanceFilters = (
     id: 'createdAt',
     label: t('processes:fields.createdAt'),
     type: 'dateRange',
-    colSpan: 2,
+    colSpan: 1,
   });
 
   // Add businessKey filter

@@ -138,6 +138,7 @@
   "key": "Key",
   "current": "current",
   "loading": "Loading",
+  "noOptions": "No options",
   "fields": {
     "key": "Key",
     "name": "Name",

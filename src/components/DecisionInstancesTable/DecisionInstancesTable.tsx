@@ -5,8 +5,8 @@ import { ns } from '@base/i18n';
 import {
   TableWithFilters,
   type FilterValues,
-  type FilterOption,
 } from '@components/TableWithFilters';
+import { SearchableSelect } from '@components/SearchableSelect';
 import type { PartitionedResponse } from '@components/PartitionedTable';
 import { getDecisionInstanceColumns } from './table/columns';
 import { getDecisionInstanceFilters } from './table/filters';
@@ -47,6 +47,16 @@ export const DecisionInstancesTable = ({
   const navigate = useNavigate();
   const [internalRefreshKey, setInternalRefreshKey] = useState(0);
   const [decisionDefinitions, setDecisionDefinitions] = useState<DecisionDefinitionOption[]>([]);
+  // Tracks the full DmnResourceDefinitionSimple selected in the decision filter
+  const [selectedDefinition, setSelectedDefinition] = useState<DmnResourceDefinitionSimple | null>(null);
+
+  const fetchDecisionDefinitions = useCallback(
+    (search: string) =>
+      getDmnResourceDefinitions({ search: search || undefined, onlyLatest: true, size: 50 }).then(
+        (data) => data.items || [],
+      ),
+    [],
+  );
 
   const refreshKey = externalRefreshKey || internalRefreshKey;
 
@@ -58,7 +68,7 @@ export const DecisionInstancesTable = ({
     [externalOnFilterChange]
   );
 
-  // Load decision definitions for the filter dropdown (only when not fixed to a single definition)
+  // Load decision definitions for the columns lookup (only when not fixed to a single definition)
   useEffect(() => {
     if (dmnResourceDefinitionKey) return; // Skip if locked to specific definition
 
@@ -79,13 +89,32 @@ export const DecisionInstancesTable = ({
     void loadDecisionDefinitions();
   }, [dmnResourceDefinitionKey]);
 
-  // Convert decision definitions to filter options
-  const decisionOptions: FilterOption[] = useMemo(() => {
-    return decisionDefinitions.map((dd) => ({
-      value: dd.dmnResourceDefinitionId,
-      label: dd.dmnDefinitionName || dd.dmnResourceDefinitionId,
-    }));
-  }, [decisionDefinitions]);
+  const renderDecisionFilter = useCallback(
+    (_value: string | undefined, onChange: (value: string) => void) => (
+      <SearchableSelect<DmnResourceDefinitionSimple>
+        value={selectedDefinition}
+        onChange={(def) => {
+          setSelectedDefinition(def);
+          onChange(def?.dmnResourceDefinitionId ?? '');
+        }}
+        fetchOptions={fetchDecisionDefinitions}
+        getOptionLabel={(opt) => opt.dmnDefinitionName || opt.dmnResourceDefinitionId}
+        getOptionSubtitle={(opt) =>
+          opt.dmnDefinitionName && opt.dmnDefinitionName !== opt.dmnResourceDefinitionId
+            ? opt.dmnResourceDefinitionId
+            : undefined
+        }
+        getOptionKey={(opt) => opt.key}
+        label={t('decisions:fields.decisionDefinition')}
+      />
+    ),
+    [selectedDefinition]
+  );
+
+  const getDecisionActiveLabel = useCallback(
+    (value: string) => selectedDefinition?.dmnDefinitionName ?? value,
+    [selectedDefinition]
+  );
 
   // Fetch decision instances data using API service
   const fetchData = useCallback(
@@ -107,10 +136,7 @@ export const DecisionInstancesTable = ({
         apiParams.dmnResourceDefinitionKey = dmnResourceDefinitionKey;
       }
 
-      // Add filters
-      if (params.filters?.search && typeof params.filters.search === 'string') {
-        apiParams.search = params.filters.search;
-      }
+      // Add filter by selected decision definition
       if (params.filters?.dmnResourceDefinitionId && typeof params.filters.dmnResourceDefinitionId === 'string') {
         apiParams.dmnResourceDefinitionId = params.filters.dmnResourceDefinitionId;
       }
@@ -165,9 +191,10 @@ export const DecisionInstancesTable = ({
     () =>
       getDecisionInstanceFilters(t, {
         showDecisionFilter: !dmnResourceDefinitionKey,
-        decisionOptions,
+        renderDecisionFilter,
+        getDecisionActiveLabel,
       }),
-    [t, dmnResourceDefinitionKey, decisionOptions]
+    [t, dmnResourceDefinitionKey, renderDecisionFilter, getDecisionActiveLabel]
   );
 
   // Handlers

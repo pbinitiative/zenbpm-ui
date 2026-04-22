@@ -2,7 +2,7 @@ import { Box } from '@mui/material';
 import { StateBadge } from '@components/StateBadge';
 import { MonoText } from '@components/MonoText';
 import type { Column } from '@components/DataTable';
-import type { ProcessInstance, ProcessDefinitionOption } from '../ProcessInstancesTable';
+import type { ProcessInstance } from '@base/openapi';
 import { formatDate } from '@/components/DiagramDetailLayout/utils';
 
 // Translation function type - ESLint validates keys via i18n-namespace-match rule
@@ -11,15 +11,15 @@ type TranslateFunction = (key: string) => string;
 interface ColumnOptions {
   /** Whether to show the process column */
   showProcessColumn: boolean;
-  /** Process definitions for looking up names */
-  processDefinitions: ProcessDefinitionOption[];
+  /** Optional mapping from bpmnProcessId to display name */
+  processNameMap?: Record<string, string>;
 }
 
 export const getProcessInstanceColumns = (
   t: TranslateFunction,
   options: ColumnOptions
 ): Column<ProcessInstance>[] => {
-  const { showProcessColumn, processDefinitions } = options;
+  const { showProcessColumn } = options;
 
   const columns: Column<ProcessInstance>[] = [
     {
@@ -37,10 +37,8 @@ export const getProcessInstanceColumns = (
       label: t('processes:fields.process'),
       sortable: true,
       render: (row: ProcessInstance) => {
-        const processDef = processDefinitions.find(
-          (pd) => pd.bpmnProcessId === row.bpmnProcessId
-        );
-        return processDef?.bpmnProcessName || row.bpmnProcessId || '-';
+        const name = options.processNameMap?.[row.bpmnProcessId ?? ''];
+        return name || row.bpmnProcessId || '-';
       },
     });
   }

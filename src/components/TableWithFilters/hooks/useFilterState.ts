@@ -67,6 +67,8 @@ export const useFilterState = ({
           if (f.type === 'select' && f.options) {
             const option = f.options.find((o) => o.value === value);
             displayValue = option?.label || value;
+          } else if (f.type === 'component') {
+            displayValue = f.getActiveLabel ? f.getActiveLabel(value) : value;
           } else {
             displayValue = value;
           }

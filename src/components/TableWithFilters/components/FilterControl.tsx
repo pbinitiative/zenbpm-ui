@@ -179,6 +179,13 @@ export const FilterControl = ({ filter, value, onChange }: FilterControlProps) =
       );
     }
 
+    case 'component':
+      return (
+        <Box sx={{ minWidth: width, maxWidth: width }}>
+          {filter.render(value as string | undefined, (newValue) => handleChange(newValue))}
+        </Box>
+      );
+
     default:
       return null;
   }

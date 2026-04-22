@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
@@ -27,72 +27,62 @@ export const DecisionDefinitionsTab = ({ refreshKey = 0 }: DecisionDefinitionsTa
   const navigate = useNavigate();
   const { showError } = useNotification();
 
-  // State
-  const [definitions, setDefinitions] = useState<DmnResourceDefinitionSimple[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filterValues, setFilterValues] = useState<FilterValues>({
     onlyLatest: 'true',
     search: '',
   });
-  const [sortBy, setSortBy] = useState<string | undefined>(undefined);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Fetch decision definitions from API
-  const fetchDefinitions = useCallback(async () => {
-    setLoading(true);
-
+  // Fetch function used by TableWithFilters (simple mode)
+  const fetchData = useCallback(async (params: {
+    page: number;
+    size: number;
+    filters?: FilterValues;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }) => {
     try {
       const apiParams: GetDmnResourceDefinitionsParams = {
-        page: 1,
-        size: 100,
+        page: params.page,
+        size: params.size,
       };
 
-      // Add onlyLatest filter
-      if (filterValues.onlyLatest === 'true') {
+      // onlyLatest
+      if (params.filters?.onlyLatest === 'true') {
         apiParams.onlyLatest = true;
       }
 
-      // Add name filter (search)
-      if (filterValues.search && typeof filterValues.search === 'string') {
-        apiParams.dmnDefinitionName = filterValues.search;
+      // name search
+      if (params.filters?.search && typeof params.filters.search === 'string') {
+        apiParams.search = params.filters.search;
       }
 
-      // Add sorting - map column ids to API sort fields
-      if (sortBy) {
+      // sorting mapping
+      if (params.sortBy) {
         const sortMapping: Record<string, GetDmnResourceDefinitionsParams['sortBy']> = {
           key: 'key',
           dmnDefinitionName: 'dmnDefinitionName',
           dmnResourceDefinitionId: 'dmnResourceDefinitionId',
           version: 'version',
         };
-        const mappedSortBy = sortMapping[sortBy];
+        const mappedSortBy = sortMapping[params.sortBy];
         if (mappedSortBy) {
           apiParams.sortBy = mappedSortBy;
-          apiParams.sortOrder = sortOrder;
+          apiParams.sortOrder = params.sortOrder;
         }
       }
 
       const data = await getDmnResourceDefinitions(apiParams);
-      setDefinitions(data.items || []);
+      return { items: data.items || [], totalCount: data.totalCount ?? (data.items || []).length };
     } catch (error) {
       console.error('Failed to fetch decision definitions:', error);
-      setDefinitions([]);
       showError(t('common:errors.loadFailed'));
-    } finally {
-      setLoading(false);
+      return { items: [], totalCount: 0 };
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterValues, sortBy, sortOrder]);
+  }, [showError, t]);
 
-  // Fetch when filters, sorting change or refresh is triggered
-  useEffect(() => {
-    void fetchDefinitions();
-  }, [fetchDefinitions, refreshKey]);
-
-  // Handle sort change from table
+  // Handle sort change from table (exposed to TableWithFilters via onSortChange)
   const handleSortChange = useCallback((newSortBy: string, newSortOrder: 'asc' | 'desc') => {
-    setSortBy(newSortBy);
-    setSortOrder(newSortOrder);
+    // no-op: TableWithFilters passes sorting to fetchData; we only need to forward the change if parent wants to react
   }, []);
 
   // Column definitions
@@ -166,8 +156,7 @@ export const DecisionDefinitionsTab = ({ refreshKey = 0 }: DecisionDefinitionsTa
         rowKey="key"
         tableConfig={{
           mode: 'simple',
-          data: definitions,
-          loading,
+          fetchData,
         }}
         filters={filters}
         filterValues={filterValues}
