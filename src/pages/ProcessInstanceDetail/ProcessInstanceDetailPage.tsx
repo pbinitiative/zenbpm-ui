@@ -119,6 +119,9 @@ export const ProcessInstanceDetailPage = () => {
     variablesPageSize,
     setVariablesPage,
     setVariablesPageSize,
+    historySortBy,
+    historySortOrder,
+    setHistorySort,
   } = useInstanceData(processInstanceKey);
 
   // Count of process instances shown in the Child Processes tab
@@ -377,6 +380,9 @@ export const ProcessInstanceDetailPage = () => {
           <TabPanel value={activeTab} index={1}>
             <HistoryTab
               instanceTree={instanceTree}
+              historySortBy={historySortBy}
+              historySortOrder={historySortOrder}
+              onSortChange={setHistorySort}
               onElementIdClick={handleElementIdClick}
             />
           </TabPanel>

@@ -2,10 +2,12 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { Link, Typography } from '@mui/material';
-import { ClientSideDataTable, type Column, type DataTableSection } from '@components/DataTable';
+import { DataTable, type Column, type SortOrder, type DataTableSection } from '@components/DataTable';
 import type { FlowElementHistory } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
 import { formatDate } from '@/components/DiagramDetailLayout/utils';
+import type { GetHistorySortBy } from '@base/openapi/generated-api/schemas/getHistorySortBy';
+import type { GetHistorySortOrder } from '@base/openapi/generated-api/schemas/getHistorySortOrder';
 
 // processType display order — determines section ordering after the main instance
 const PROCESS_TYPE_ORDER: Record<string, number> = {
@@ -17,6 +19,9 @@ const PROCESS_TYPE_ORDER: Record<string, number> = {
 
 interface HistoryTabProps {
   instanceTree: ProcessInstanceNode | null;
+  historySortBy: GetHistorySortBy;
+  historySortOrder: GetHistorySortOrder;
+  onSortChange: (sortBy: GetHistorySortBy, sortOrder: GetHistorySortOrder) => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
   onElementIdClick?: (elementId: string) => void;
 }
@@ -36,6 +41,9 @@ function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
 
 export const HistoryTab = ({
   instanceTree,
+  historySortBy,
+  historySortOrder,
+  onSortChange,
   onElementIdClick,
 }: HistoryTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance, ns.processes]);
@@ -150,14 +158,22 @@ export const HistoryTab = ({
     [t, onElementIdClick]
   );
 
+  const handleSortChange = (sortBy: string, sortOrder: SortOrder) => {
+    // Only 'createdAt' is a valid sortBy for history
+    if (sortBy === 'createdAt') {
+      onSortChange('createdAt', sortOrder as GetHistorySortOrder);
+    }
+  };
+
   return (
-    <ClientSideDataTable
+    <DataTable
       columns={columns}
       data={flatData}
       sections={sections}
       rowKey="key"
-      defaultSortBy="createdAt"
-      defaultSortOrder="asc"
+      sortBy={historySortBy}
+      sortOrder={historySortOrder}
+      onSortChange={handleSortChange}
       data-testid="history-table"
       onElementIdClick={onElementIdClick}
     />

@@ -63,8 +63,8 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
       if (params.sortBy) {
         const sortMapping: Record<string, GetProcessDefinitionsParams['sortBy']> = {
           bpmnProcessId: 'bpmnProcessId',
-          bpmnProcessName: 'name',
-          name: 'name',
+          bpmnProcessName: 'bpmnProcessName',
+          name: 'bpmnProcessName',
           version: 'version',
         };
         const mappedSortBy = sortMapping[params.sortBy];

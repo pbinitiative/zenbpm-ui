@@ -12,6 +12,8 @@ import type { FlowElementHistory, Incident, Job, ProcessInstance } from '../type
 import type { ProcessInstanceNode } from '../types/tree';
 import type { GetIncidentsState } from '@base/openapi/generated-api/schemas/getIncidentsState';
 import type { JobState } from '@base/openapi/generated-api/schemas/jobState';
+import type { GetHistorySortBy } from '@base/openapi/generated-api/schemas/getHistorySortBy';
+import type { GetHistorySortOrder } from '@base/openapi/generated-api/schemas/getHistorySortOrder';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -82,6 +84,8 @@ export interface FetchInstanceTreeOptions {
   decisionsPageSize?: number;
   variablesPage?: number;
   variablesPageSize?: number;
+  historySortBy?: GetHistorySortBy;
+  historySortOrder?: GetHistorySortOrder;
   /** Pre-fetched root ProcessInstance — avoids a duplicate getProcessInstance call */
   preloadedRoot?: ProcessInstance;
   /**
@@ -178,6 +182,7 @@ async function fetchNodeDatasets(
     | 'incidentsPage' | 'incidentsPageSize'
     | 'decisionsPage' | 'decisionsPageSize'
     | 'variablesPage' | 'variablesPageSize'
+    | 'historySortBy' | 'historySortOrder'
   >>,
 ): Promise<void> {
   if (!node.isRoot && node.instance.processType === 'callActivity') {
@@ -192,7 +197,7 @@ async function fetchNodeDatasets(
     getIncidents(key, { page: opts.incidentsPage, size: opts.incidentsPageSize }),
     getIncidents(key, { state: 'unresolved' as GetIncidentsState, page: 1, size: 1 }),
     getDecisionInstances({ processInstanceKey: key, page: opts.decisionsPage, size: opts.decisionsPageSize }),
-    getHistory(key, { page: 1, size: -1 }),
+    getHistory(key, { page: 1, size: 100, sortBy: opts.historySortBy, sortOrder: opts.historySortOrder }),
   ];
 
   const [jobsResult, activeJobsResult, incidentsResult, unresolvedResult, decisionsResult, historyResult] = await Promise.allSettled(requests);
@@ -275,6 +280,8 @@ export async function fetchInstanceTree(
     decisionsPageSize: opts.decisionsPageSize ?? DECISIONS_PAGE_SIZE,
     variablesPage: opts.variablesPage ?? 1,
     variablesPageSize: opts.variablesPageSize ?? VARIABLES_PAGE_SIZE,
+    historySortBy: opts.historySortBy ?? 'createdAt' as GetHistorySortBy,
+    historySortOrder: opts.historySortOrder ?? 'asc' as GetHistorySortOrder,
   };
   const terminalCache = opts.terminalNodeCache ?? new Map<string, ProcessInstanceNode>();
 
@@ -516,5 +523,24 @@ export function refetchNodeVariables(
   node.variableEntries = allVars
     .slice(start, start + size)
     .map(([name, value]) => ({ name, value }));
+  return node;
+}
+
+/**
+ * Re-fetch history for a specific node with new sort parameters (mutates the node).
+ * Returns the updated node for convenience.
+ */
+export async function refetchNodeHistory(
+  node: ProcessInstanceNode,
+  sortBy: GetHistorySortBy,
+  sortOrder: GetHistorySortOrder,
+): Promise<ProcessInstanceNode> {
+  if (!node.isRoot && node.instance.processType === 'callActivity') return node;
+  try {
+    const data = await getHistory(node.instance.key, { page: 1, size: 100, sortBy, sortOrder });
+    node.history = (data.items ?? []) as FlowElementHistory[];
+  } catch (err) {
+    console.error(`Failed to refetch history for ${node.instance.key}:`, err);
+  }
   return node;
 }

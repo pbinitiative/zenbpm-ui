@@ -14,12 +14,15 @@ import {
   refetchNodeIncidents as doRefetchNodeIncidents,
   refetchNodeDecisions as doRefetchNodeDecisions,
   refetchNodeVariables as doRefetchNodeVariables,
+  refetchNodeHistory as doRefetchNodeHistory,
   JOBS_PAGE_SIZE,
   INCIDENTS_PAGE_SIZE,
   DECISIONS_PAGE_SIZE,
   VARIABLES_PAGE_SIZE,
   MAX_TREE_DEPTH,
 } from './fetchInstanceTree';
+import type { GetHistorySortBy } from '@base/openapi/generated-api/schemas/getHistorySortBy';
+import type { GetHistorySortOrder } from '@base/openapi/generated-api/schemas/getHistorySortOrder';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -67,6 +70,10 @@ export interface UseInstanceDataResult {
   setVariablesPage: (page: number) => void;
   setVariablesPageSize: (size: number) => void;
 
+  historySortBy: GetHistorySortBy;
+  historySortOrder: GetHistorySortOrder;
+  setHistorySort: (sortBy: GetHistorySortBy, sortOrder: GetHistorySortOrder) => void;
+
   // ── Refetch ───────────────────────────────────────────────────────────────
   refetchAll: () => Promise<void>;
 }
@@ -112,6 +119,14 @@ export const useInstanceData = (
   const [decisionsPageSize, setDecisionsPageSize] = useState(DECISIONS_PAGE_SIZE);
   const [variablesPage, setVariablesPage] = useState(0);
   const [variablesPageSize, setVariablesPageSize] = useState(VARIABLES_PAGE_SIZE);
+
+  // History sort state
+  const [historySortBy, setHistorySortBy] = useState<GetHistorySortBy>('createdAt');
+  const [historySortOrder, setHistorySortOrder] = useState<GetHistorySortOrder>('asc');
+  const historySortByRef = useRef<GetHistorySortBy>('createdAt');
+  const historySortOrderRef = useRef<GetHistorySortOrder>('asc');
+  historySortByRef.current = historySortBy;
+  historySortOrderRef.current = historySortOrder;
 
   // Refs so fetchAll (auto-refresh) always reads the current pagination values
   // without stale closure captures.
@@ -224,6 +239,8 @@ export const useInstanceData = (
         decisionsPageSize: decisionsPageSizeRef.current,
         variablesPage: variablesPageRef.current + 1,
         variablesPageSize: variablesPageSizeRef.current,
+        historySortBy: historySortByRef.current,
+        historySortOrder: historySortOrderRef.current,
       });
 
       setInstanceTree(root);
@@ -365,6 +382,20 @@ export const useInstanceData = (
     setInstanceTree((prev) => (prev ? { ...prev } : prev));
   }, [variablesPage, variablesPageSize]);
 
+  const setHistorySort = useCallback((sortBy: GetHistorySortBy, sortOrder: GetHistorySortOrder) => {
+    setHistorySortBy(sortBy);
+    setHistorySortOrder(sortOrder);
+  }, []);
+
+  useEffect(() => {
+    if (!initialLoadDoneRef.current) return;
+    const tree = instanceTreeRef.current;
+    if (!tree) return;
+    const nodes = collectAllNodes(tree);
+    void Promise.all(nodes.map((node) => doRefetchNodeHistory(node, historySortBy, historySortOrder)))
+      .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
+  }, [historySortBy, historySortOrder]);
+
   // ── Return ────────────────────────────────────────────────────────────────
 
   return {
@@ -395,6 +426,10 @@ export const useInstanceData = (
     variablesPageSize,
     setVariablesPage,
     setVariablesPageSize,
+
+    historySortBy,
+    historySortOrder,
+    setHistorySort,
 
     refetchAll: fetchAll,
   };
