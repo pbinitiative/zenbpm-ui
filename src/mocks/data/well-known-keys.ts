@@ -19,3 +19,10 @@ export const SHOWCASE_COMPLETED_INSTANCE_KEY = '2097302399374458883';
 
 // Process instance keys — user-tasks-with-assignments
 export const USER_TASKS_TERMINATED_INSTANCE_KEY = '2097302399374461029';
+
+// Process instance keys — multi-instance sectioned pagination test
+// Parent has 2 multiInstance children, each with 8 history entries (> default pageSize of 5).
+export const MULTI_INSTANCE_PARENT_KEY = '5100000000000000001';
+export const MULTI_INSTANCE_CHILD_A_KEY = '5100000000000000002';
+export const MULTI_INSTANCE_CHILD_B_KEY = '5100000000000000003';
+export const MULTI_INSTANCE_PROCESS_DEFINITION_KEY = '5000000000000000001';

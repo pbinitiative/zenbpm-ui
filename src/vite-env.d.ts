@@ -49,6 +49,12 @@ interface ImportMetaEnv {
 
   /** OIDC Scopes (default: 'openid profile email') */
   readonly VITE_OIDC_SCOPE?: string;
+
+  /**
+   * When 'true', variables belonging to sub-process / call-activity / multi-instance are displayed as read-only
+   * Default: 'false' (sub-process variables are editable).
+   */
+  readonly VITE_DISPLAY_SUBPROCESS_VARIABLES_AS_READONLY?: string;
 }
 
 interface ImportMeta {

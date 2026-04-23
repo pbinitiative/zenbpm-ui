@@ -7,9 +7,9 @@ import { DataTable, type Column, type SortOrder, type DataTableSection } from '@
 import { MonoText } from '@components/MonoText';
 import { formatDate } from '@components/DiagramDetailLayout/utils';
 import type { DecisionInstanceSummary } from '@base/openapi';
-import type { ProcessInstance } from '../types';
+import type { ProcessInstanceNode } from '../types/tree';
 
-// processType display order — same ordering used in JobsTab and HistoryTab
+// processType display order — same ordering used in JobsTab and IncidentsTab
 const PROCESS_TYPE_ORDER: Record<string, number> = {
   default: 0,
   callActivity: 1,
@@ -18,75 +18,40 @@ const PROCESS_TYPE_ORDER: Record<string, number> = {
 };
 
 interface DecisionInstancesTabProps {
-  decisionInstances: DecisionInstanceSummary[];
-  childProcessDecisionInstances: Record<string, DecisionInstanceSummary[]>;
-  /** Child process instances — used to label sections with processType and key. */
-  childProcesses?: ProcessInstance[];
-  /** Grandchild process instances keyed by direct-child instance key. */
-  grandchildProcesses?: Record<string, ProcessInstance[]>;
+  instanceTree: ProcessInstanceNode | null;
+  decisionsPage: number;
+  decisionsPageSize: number;
+  setDecisionsPage: (page: number) => void;
+  setDecisionsPageSize: (size: number) => void;
+  /** Called when a breadcrumb element ID is clicked in a section header. */
+  onElementIdClick?: (elementId: string) => void;
+}
+
+/** BFS walk — returns all nodes, root first */
+function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
+  const result: ProcessInstanceNode[] = [];
+  const queue: ProcessInstanceNode[] = [root];
+  while (queue.length > 0) {
+    const node = queue.shift();
+    if (node === undefined) continue;
+    result.push(node);
+    queue.push(...node.children);
+  }
+  return result;
 }
 
 export const DecisionInstancesTab = ({
-  decisionInstances,
-  childProcessDecisionInstances,
-  childProcesses = [],
-  grandchildProcesses = {},
+  instanceTree,
+  decisionsPage,
+  decisionsPageSize,
+  setDecisionsPage,
+  setDecisionsPageSize,
+  onElementIdClick,
 }: DecisionInstancesTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance, ns.decisions, ns.processes]);
   const navigate = useNavigate();
 
-  // Build a flat lookup: instanceKey → ProcessInstance for all children/grandchildren
-  const instanceByKey = useMemo<Record<string, ProcessInstance>>(() => {
-    const map: Record<string, ProcessInstance> = {};
-    for (const cp of childProcesses) {
-      map[cp.key] = cp;
-    }
-    for (const grandchildren of Object.values(grandchildProcesses)) {
-      for (const gc of grandchildren) {
-        map[gc.key] = gc;
-      }
-    }
-    return map;
-  }, [childProcesses, grandchildProcesses]);
-
-  // Build sections: first section is the main instance (no header), then one per child/grandchild
-  const sections = useMemo<DataTableSection<DecisionInstanceSummary>[]>(() => {
-    const result: DataTableSection<DecisionInstanceSummary>[] = [];
-
-    // Section 0 — root instance decisions (rendered without a header label)
-    if (decisionInstances.length > 0) {
-      result.push({ label: '', data: decisionInstances });
-    }
-
-    // Remaining sections — one per child process key that has decisions, sorted by processType then key
-    const childEntries = Object.entries(childProcessDecisionInstances).filter(
-      ([, list]) => list.length > 0
-    );
-
-    childEntries.sort(([keyA], [keyB]) => {
-      const typeA = instanceByKey[keyA]?.processType ?? '';
-      const typeB = instanceByKey[keyB]?.processType ?? '';
-      const orderA = PROCESS_TYPE_ORDER[typeA] ?? 99;
-      const orderB = PROCESS_TYPE_ORDER[typeB] ?? 99;
-      if (orderA !== orderB) return orderA - orderB;
-      return keyA.localeCompare(keyB);
-    });
-
-    for (const [instanceKey, list] of childEntries) {
-      const instance = instanceByKey[instanceKey];
-      const typeLabel = instance?.processType
-        ? t(`processes:types.${instance.processType}`)
-        : t('processInstance:fields.childProcess');
-      const label = `${typeLabel}: ${instanceKey}`;
-      result.push({ label, data: list });
-    }
-
-    return result;
-  }, [decisionInstances, childProcessDecisionInstances, instanceByKey, t]);
-
-  // Table state
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  // Sort state (applied client-side within each section's already-loaded page)
   const [sortBy, setSortBy] = useState<string>('evaluatedAt');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
@@ -114,34 +79,62 @@ export const DecisionInstancesTab = ({
     [t]
   );
 
-  // Total count across all sections
-  const totalCount = useMemo(
-    () => sections.reduce((acc, s) => acc + s.data.length, 0),
-    [sections]
-  );
+  // Build sections from the server-fetched data — no client-side slicing.
+  // Pagination is handled server-side: page changes trigger API refetch for all nodes.
+  const { sections, flatData, totalCount } = useMemo(() => {
+    if (!instanceTree) return { sections: undefined, flatData: [], totalCount: 0 };
 
-  // Split into unlabelled root section (passed as `data`) and labelled child sections
-  const mainDecisions = useMemo(
-    () => sections.find((s) => s.label === '')?.data ?? [],
-    [sections]
-  );
-  const childSections = useMemo(
-    () => sections.filter((s) => s.label !== ''),
-    [sections]
-  );
+    const nodes = collectNodes(instanceTree);
+    const rootNode = nodes[0];
+    const childNodes = nodes.slice(1).sort((a, b) => {
+      const typeA = a.instance.processType ?? '';
+      const typeB = b.instance.processType ?? '';
+      const orderA = PROCESS_TYPE_ORDER[typeA] ?? 99;
+      const orderB = PROCESS_TYPE_ORDER[typeB] ?? 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.instance.key.localeCompare(b.instance.key);
+    });
+    const orderedNodes = [rootNode, ...childNodes];
 
-  const tableSections = useMemo<DataTableSection<DecisionInstanceSummary>[] | undefined>(() => {
-    if (childSections.length === 0) return undefined;
+    const hasChildWithDecisions = childNodes.some(
+      (n) => n.decisions.length > 0 || n.decisionsTotalCount > 0
+    );
+
+    // totalCount = max across all nodes so the paginator covers the largest section
+    const maxTotal = Math.max(...orderedNodes.map((n) => n.decisionsTotalCount), 0);
+
+    // Sort helper (client-side sort within the current page)
+    const sortRows = (rows: DecisionInstanceSummary[]): DecisionInstanceSummary[] => {
+      if (!sortBy) return rows;
+      return [...rows].sort((a, b) => {
+        const aVal = String(a[sortBy as keyof DecisionInstanceSummary] ?? '');
+        const bVal = String(b[sortBy as keyof DecisionInstanceSummary] ?? '');
+        const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        return sortOrder === 'asc' ? cmp : -cmp;
+      });
+    };
+
+    if (!hasChildWithDecisions) {
+      return { sections: undefined, flatData: sortRows(rootNode.decisions), totalCount: maxTotal };
+    }
+
+    // Sections path
     const result: DataTableSection<DecisionInstanceSummary>[] = [];
-    if (mainDecisions.length > 0) result.push({ label: '', data: mainDecisions });
-    result.push(...childSections);
-    return result;
-  }, [childSections, mainDecisions]);
+    for (const node of orderedNodes) {
+      if (node.decisions.length === 0 && node.decisionsTotalCount === 0) continue;
+      const isRoot = node === rootNode;
+      const label = isRoot
+        ? ''
+        : `${node.instance.processType ? t(`processes:types.${node.instance.processType}`) : t('processInstance:fields.childProcess')}: ${node.instance.key}`;
+      result.push({
+        label,
+        callPath: isRoot ? undefined : node.callPath,
+        data: sortRows(node.decisions),
+      });
+    }
 
-  const tableData = useMemo(
-    () => (tableSections ? [] : mainDecisions),
-    [tableSections, mainDecisions]
-  );
+    return { sections: result.length > 0 ? result : undefined, flatData: [], totalCount: maxTotal };
+  }, [instanceTree, sortBy, sortOrder, t]);
 
   const handleRowClick = (row: DecisionInstanceSummary) => {
     void navigate(`/decision-instances/${row.key}`);
@@ -150,23 +143,24 @@ export const DecisionInstancesTab = ({
   return (
     <Box data-testid="decision-instances-tab">
       <DataTable
-        columns={columns}
-        data={tableData}
-        sections={tableSections}
-        rowKey="key"
-        data-testid="decision-instances-table"
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        sortBy={sortBy}
-        sortOrder={sortOrder}
-        onSortChange={(newSortBy, newSortOrder) => {
-          setSortBy(newSortBy);
-          setSortOrder(newSortOrder);
-        }}
-        totalCount={totalCount}
-        onRowClick={handleRowClick}
+          columns={columns}
+          data={flatData}
+          sections={sections}
+          rowKey="key"
+          data-testid="decision-instances-table"
+          page={decisionsPage}
+          pageSize={decisionsPageSize}
+          onPageChange={setDecisionsPage}
+          onPageSizeChange={(newSize) => { setDecisionsPageSize(newSize); setDecisionsPage(0); }}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSortChange={(newSortBy, newSortOrder) => {
+            setSortBy(newSortBy);
+            setSortOrder(newSortOrder);
+          }}
+          totalCount={totalCount}
+          onRowClick={handleRowClick}
+          onElementIdClick={onElementIdClick}
       />
     </Box>
   );

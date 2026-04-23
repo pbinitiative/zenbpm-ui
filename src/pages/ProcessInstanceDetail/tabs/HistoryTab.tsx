@@ -1,10 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { Link, Typography } from '@mui/material';
-import { DataTable, type Column, type DataTableSection } from '@components/DataTable';
-import type { FlowElementHistory, ProcessInstance } from '../types';
+import { DataTable, type Column, type SortOrder, type DataTableSection } from '@components/DataTable';
+import type { FlowElementHistory } from '../types';
+import type { ProcessInstanceNode } from '../types/tree';
 import { formatDate } from '@/components/DiagramDetailLayout/utils';
+import type { GetHistorySortBy } from '@base/openapi/generated-api/schemas/getHistorySortBy';
+import type { GetHistorySortOrder } from '@base/openapi/generated-api/schemas/getHistorySortOrder';
 
 // processType display order — determines section ordering after the main instance
 const PROCESS_TYPE_ORDER: Record<string, number> = {
@@ -15,86 +18,78 @@ const PROCESS_TYPE_ORDER: Record<string, number> = {
 };
 
 interface HistoryTabProps {
-  /** History entries for the root process instance. */
-  history: FlowElementHistory[];
-  /** History entries for all child process instances (flat). */
-  childProcessHistory?: FlowElementHistory[];
-  /** Child process instances — used to label sections. */
-  childProcesses?: ProcessInstance[];
-  /** Grandchild process instances keyed by direct-child instance key. */
-  grandchildProcesses?: Record<string, ProcessInstance[]>;
+  instanceTree: ProcessInstanceNode | null;
+  historySortBy: GetHistorySortBy;
+  historySortOrder: GetHistorySortOrder;
+  onSortChange: (sortBy: GetHistorySortBy, sortOrder: GetHistorySortOrder) => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
   onElementIdClick?: (elementId: string) => void;
 }
 
+/** BFS walk — returns all nodes, root first */
+function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
+  const result: ProcessInstanceNode[] = [];
+  const queue: ProcessInstanceNode[] = [root];
+  while (queue.length > 0) {
+    const node = queue.shift();
+    if (node === undefined) continue;
+    result.push(node);
+    queue.push(...node.children);
+  }
+  return result;
+}
+
 export const HistoryTab = ({
-  history,
-  childProcessHistory = [],
-  childProcesses = [],
-  grandchildProcesses = {},
+  instanceTree,
+  historySortBy,
+  historySortOrder,
+  onSortChange,
   onElementIdClick,
 }: HistoryTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance, ns.processes]);
 
-  // Table state
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  // Build sections from the tree: root section unlabelled, child sections labelled.
+  const { sections, flatData } = useMemo(() => {
+    if (!instanceTree) return { sections: undefined, flatData: [] };
 
-  // Flat lookup: instanceKey → ProcessInstance
-  const instanceByKey = useMemo<Record<string, ProcessInstance>>(() => {
-    const map: Record<string, ProcessInstance> = {};
-    for (const cp of childProcesses) {
-      map[cp.key] = cp;
-    }
-    for (const grandchildren of Object.values(grandchildProcesses)) {
-      for (const gc of grandchildren) {
-        map[gc.key] = gc;
-      }
-    }
-    return map;
-  }, [childProcesses, grandchildProcesses]);
-
-  // Group child history entries by their processInstanceKey, then build
-  // labelled sections sorted by processType order.
-  const sections = useMemo<DataTableSection<FlowElementHistory>[] | undefined>(() => {
-    if (childProcessHistory.length === 0) return undefined;
-
-    // Group child entries by owning instance key
-    const grouped = new Map<string, FlowElementHistory[]>();
-    for (const entry of childProcessHistory) {
-      const key = entry.processInstanceKey;
-      if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key)?.push(entry);
-    }
-
-    // Sort child instance keys by processType then key
-    const sortedKeys = [...grouped.keys()].sort((a, b) => {
-      const typeA = instanceByKey[a]?.processType ?? '';
-      const typeB = instanceByKey[b]?.processType ?? '';
+    const nodes = collectNodes(instanceTree);
+    const rootNode = nodes[0];
+    const childNodes = nodes.slice(1).sort((a, b) => {
+      const typeA = a.instance.processType ?? '';
+      const typeB = b.instance.processType ?? '';
       const orderA = PROCESS_TYPE_ORDER[typeA] ?? 99;
       const orderB = PROCESS_TYPE_ORDER[typeB] ?? 99;
       if (orderA !== orderB) return orderA - orderB;
-      return a.localeCompare(b);
+      return a.instance.key.localeCompare(b.instance.key);
     });
 
+    const hasChildWithHistory = childNodes.some((n) => n.history.length > 0);
+
+    if (!hasChildWithHistory) {
+      // No child sections — render flat for a cleaner single-paginator experience
+      return { sections: undefined, flatData: rootNode.history };
+    }
+
+    const orderedNodes = [rootNode, ...childNodes];
     const result: DataTableSection<FlowElementHistory>[] = [];
 
-    // Root section — no header
-    if (history.length > 0) {
-      result.push({ label: '', data: history });
+    for (const node of orderedNodes) {
+      if (node.history.length === 0) continue;
+
+      const isRoot = node.instance.key === instanceTree.instance.key;
+      let label = '';
+      if (!isRoot) {
+        const typeLabel = node.instance.processType
+          ? t(`processes:types.${node.instance.processType}`)
+          : t('processInstance:fields.childProcess');
+        label = `${typeLabel}: ${node.instance.key}`;
+      }
+
+      result.push({ label, callPath: isRoot ? undefined : node.callPath, data: node.history });
     }
 
-    // Child sections — labelled
-    for (const instanceKey of sortedKeys) {
-      const instance = instanceByKey[instanceKey];
-      const typeLabel = instance?.processType
-        ? t(`processes:types.${instance.processType}`)
-        : t('processInstance:fields.childProcess');
-      result.push({ label: `${typeLabel}: ${instanceKey}`, data: grouped.get(instanceKey)! });
-    }
-
-    return result;
-  }, [history, childProcessHistory, instanceByKey, t]);
+    return { sections: result.length > 0 ? result : undefined, flatData: [] };
+  }, [instanceTree, t]);
 
   const columns: Column<FlowElementHistory>[] = useMemo(
     () => [
@@ -151,6 +146,7 @@ export const HistoryTab = ({
         label: t('processInstance:fields.createdAt'),
         width: 160,
         render: (row) => formatDate(row.createdAt),
+        sortable: true,
       },
       {
         id: 'completedAt',
@@ -162,21 +158,24 @@ export const HistoryTab = ({
     [t, onElementIdClick]
   );
 
-  const totalCount = history.length + childProcessHistory.length;
+  const handleSortChange = (sortBy: string, sortOrder: SortOrder) => {
+    // Only 'createdAt' is a valid sortBy for history
+    if (sortBy === 'createdAt') {
+      onSortChange('createdAt', sortOrder as GetHistorySortOrder);
+    }
+  };
 
   return (
     <DataTable
       columns={columns}
-      data={sections ? [] : history}
+      data={flatData}
       sections={sections}
       rowKey="key"
-      page={page}
-      pageSize={pageSize}
-      onPageChange={setPage}
-      onPageSizeChange={setPageSize}
-      totalCount={totalCount}
+      sortBy={historySortBy}
+      sortOrder={historySortOrder}
+      onSortChange={handleSortChange}
       data-testid="history-table"
+      onElementIdClick={onElementIdClick}
     />
   );
 };
-

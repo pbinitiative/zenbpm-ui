@@ -16,7 +16,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { BpmnDiagram, type ElementStatistics } from '@components/BpmnDiagram';
+import { BpmnDiagram } from '@components/BpmnDiagram';
 import { MetadataPanel } from '@components/DiagramDetailLayout';
 import type { DefinitionInfo } from '@components/DiagramDetailLayout';
 import { useInstanceData } from './hooks';
@@ -83,6 +83,7 @@ export const ProcessInstanceDetailPage = () => {
     if (elementId) next.elementId = elementId;
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
+
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -97,57 +98,83 @@ export const ProcessInstanceDetailPage = () => {
   const {
     processInstance,
     processDefinition,
-    jobs,
-    history,
-    incidents,
-    childProcesses,
-    childProcessJobs,
-    childProcessIncidents,
-    grandchildProcesses,
-    childProcessHistory,
-    decisionInstances,
-    childProcessDecisionInstances,
     elementStatistics,
     loading,
     error,
     refetchAll,
+    instanceTree,
+    jobsPage,
+    jobsPageSize,
+    setJobsPage,
+    setJobsPageSize,
+    incidentsPage,
+    incidentsPageSize,
+    setIncidentsPage,
+    setIncidentsPageSize,
+    decisionsPage,
+    decisionsPageSize,
+    setDecisionsPage,
+    setDecisionsPageSize,
+    variablesPage,
+    variablesPageSize,
+    setVariablesPage,
+    setVariablesPageSize,
+    historySortBy,
+    historySortOrder,
+    setHistorySort,
   } = useInstanceData(processInstanceKey);
 
-  // Count of process instances that are actually shown in the Child Processes tab
-  // (all levels, excluding engine-internal multiInstance and subprocess wrappers).
+  // Count of process instances shown in the Child Processes tab
+  // (depth-1 + depth-2, excluding engine-internal multiInstance and subprocess wrappers).
   const visibleChildProcessesCount = useMemo(() => {
-    const directCount = childProcesses.filter((cp) => !['multiInstance', 'subprocess'].includes(cp.processType ?? '')).length;
-    const grandchildCount = Object.values(grandchildProcesses)
-      .flat()
-      .filter((gc) => !['multiInstance', 'subprocess'].includes(gc.processType ?? '')).length;
-    return directCount + grandchildCount;
-  }, [childProcesses, grandchildProcesses]);
+    if (!instanceTree) return 0;
+    // BFS over the entire tree — mirrors exactly what ChildProcessesTab renders as rows.
+    // multiInstance and subprocess wrappers are hidden in the tab; everything else is a row.
+    const HIDDEN = ['multiInstance', 'subprocess'];
+    const queue = [...instanceTree.children];
+    let count = 0;
+    while (queue.length > 0) {
+      const node = queue.shift();
+      if (node === undefined) continue;
+      if (!HIDDEN.includes(node.instance.processType ?? '')) count++;
+      queue.push(...node.children);
+    }
+    return count;
+  }, [instanceTree]);
 
   // Show notification helper
   const showNotification = useCallback((message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
   }, []);
 
-  // Count unresolved incidents (root + all child processes)
-  const unresolvedIncidentsCount = useMemo(
-    () => {
-      const rootUnresolved = incidents.filter((i) => !i.resolvedAt).length;
-      const childUnresolved = Object.values(childProcessIncidents)
-        .flat()
-        .filter((i) => !i.resolvedAt).length;
-      return rootUnresolved + childUnresolved;
-    },
-    [incidents, childProcessIncidents]
-  );
+  // Count unresolved incidents across the entire instance tree using the
+  // server-reported total — accurate regardless of which page is loaded.
+  const unresolvedIncidentsCount = useMemo(() => {
+    if (!instanceTree) return 0;
+    const queue: typeof instanceTree[] = [instanceTree];
+    let count = 0;
+    while (queue.length > 0) {
+      const node = queue.shift();
+      if (node === undefined) continue;
+      count += node.unresolvedIncidentsTotalCount;
+      queue.push(...node.children);
+    }
+    return count;
+  }, [instanceTree]);
 
-  // Prepare history for diagram highlighting
-  const historyElements = useMemo(
-    () => [
-      ...history.map((h) => ({elementId: h.elementId})),
-      ...childProcessHistory.map((h) => ({elementId: h.elementId})),
-    ],
-    [history, childProcessHistory]
-  );
+  // Collect all history element IDs from the entire tree for diagram highlighting.
+  const historyElements = useMemo(() => {
+    if (!instanceTree) return [];
+    const queue: typeof instanceTree[] = [instanceTree];
+    const result: { elementId: string }[] = [];
+    while (queue.length > 0) {
+      const node = queue.shift();
+      if (node === undefined) continue;
+      node.history.forEach((h) => result.push({ elementId: h.elementId }));
+      queue.push(...node.children);
+    }
+    return result;
+  }, [instanceTree]);
 
   // Prepare active elements for diagram highlighting
   const activeElements = useMemo(
@@ -155,77 +182,34 @@ export const ProcessInstanceDetailPage = () => {
     [processInstance]
   );
 
-  // Compute multi-instance progress overlays for the BPMN diagram.
-  const elementStatisticsMultiInstance = useMemo((): ElementStatistics => {
-    const totalPerElement: Record<string, number> = {};
-    const completedPerElement: Record<string, number> = {};
-
-    // Only consider jobs belonging to multiInstance child processes
-    const multiInstanceChildKeys = new Set(
-      childProcesses
-        .filter((cp) => cp.processType === 'multiInstance')
-        .map((cp) => cp.key)
-    );
-
-    for (const [childKey, jobs] of Object.entries(childProcessJobs)) {
-      if (!multiInstanceChildKeys.has(childKey)) continue;
-      for (const job of jobs) {
-        totalPerElement[job.elementId] = (totalPerElement[job.elementId] ?? 0) + 1;
-        if (job.state === 'completed') {
-          completedPerElement[job.elementId] = (completedPerElement[job.elementId] ?? 0) + 1;
-        }
-      }
+  const activeJobsTotalCount = useMemo(() => {
+    if (!instanceTree) return 0;
+    const queue: typeof instanceTree[] = [instanceTree];
+    let total = 0;
+    while (queue.length > 0) {
+      const node = queue.shift();
+      if (node === undefined) continue;
+      total += node.activeJobsTotalCount;
+      queue.push(...node.children);
     }
+    return total;
+  }, [instanceTree]);
 
-    // --- Call-activity multi-instance: grandchild process instances ---
-    const multiInstanceGrandchildren = childProcesses
-      .filter((cp) => cp.processType === 'multiInstance')
-      .flatMap((cp) => grandchildProcesses[cp.key] ?? []);
-
-    if (multiInstanceGrandchildren.length > 0) {
-      const historyIdCounts: Record<string, number> = {};
-      for (const h of history) {
-        historyIdCounts[h.elementId] = (historyIdCounts[h.elementId] ?? 0) + 1;
-      }
-      const callActivityElementId = Object.entries(historyIdCounts)
-        .sort((a, b) => b[1] - a[1])[0]?.[0];
-      if (callActivityElementId) {
-        for (const grandchild of multiInstanceGrandchildren) {
-          totalPerElement[callActivityElementId] = (totalPerElement[callActivityElementId] ?? 0) + 1;
-          if (grandchild.state === 'completed') {
-            completedPerElement[callActivityElementId] = (completedPerElement[callActivityElementId] ?? 0) + 1;
-          }
-        }
-      }
-    }
-
-    const stats: ElementStatistics = {};
-    for (const [elementId, total] of Object.entries(totalPerElement)) {
-      const completed = completedPerElement[elementId] ?? 0;
-      stats[elementId] = { activeCount: total - completed, incidentCount: 0, completedCount: completed };
-    }
-    return stats;
-  }, [childProcessJobs, grandchildProcesses, childProcesses, history]);
-
-  // Prefer multi-instance statistics per element when available, fall back to API statistics.
-  const resolvedElementStatistics = useMemo((): ElementStatistics | undefined => {
-    if (Object.keys(elementStatisticsMultiInstance).length === 0) {
-      return elementStatistics;
-    }
-    return { ...elementStatistics, ...elementStatisticsMultiInstance };
-  }, [elementStatistics, elementStatisticsMultiInstance]);
-
-  const childProcessJobsCount = useMemo(() => {
-    return Object.values(childProcessJobs).flat().length
-  }, [ childProcessJobs ])
-
-  // Total decision instances count across root + all child/grandchild processes
+  // Total decision instances count — sum decisionsTotalCount across all non-callActivity
+  // nodes in the tree. Each node's value is the server-reported total for that specific
+  // process instance, so summing gives the correct count across the whole tree.
   const totalDecisionInstancesCount = useMemo(() => {
-    const childCount = Object.values(childProcessDecisionInstances).flat().length;
-    return decisionInstances.length + childCount;
-  }, [decisionInstances, childProcessDecisionInstances]);
-
-
+    if (!instanceTree) return 0;
+    const queue: typeof instanceTree[] = [instanceTree];
+    let total = 0;
+    while (queue.length > 0) {
+      const node = queue.shift();
+      if (node === undefined) continue;
+      total += node.decisionsTotalCount;
+      queue.push(...node.children);
+    }
+    return total;
+  }, [instanceTree]);
 
   // Loading state
   if (loading) {
@@ -259,7 +243,7 @@ export const ProcessInstanceDetailPage = () => {
                 diagramData={processDefinition.bpmnData}
                 history={historyElements}
                 activeElements={activeElements}
-                elementStatistics={resolvedElementStatistics}
+                elementStatistics={elementStatistics}
                 selectedElement={selectedElement}
                 onElementClick={handleElementIdClick}
               />
@@ -325,7 +309,13 @@ export const ProcessInstanceDetailPage = () => {
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {t('processInstance:tabs.jobs')}
-                <Chip label={jobs.length + childProcessJobsCount} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
+                {activeJobsTotalCount > 0 && (
+                  <Chip
+                    label={activeJobsTotalCount}
+                    size="small"
+                    sx={{ height: 20, fontSize: '0.7rem' }}
+                  />
+                )}
               </Box>
             }
           />
@@ -375,10 +365,11 @@ export const ProcessInstanceDetailPage = () => {
           {/* Jobs Tab */}
           <TabPanel value={activeTab} index={0}>
             <JobsTab
-              jobs={jobs}
-              childProcessJobs={childProcessJobs}
-              childProcesses={childProcesses}
-              grandchildProcesses={grandchildProcesses}
+              instanceTree={instanceTree}
+              jobsPage={jobsPage}
+              jobsPageSize={jobsPageSize}
+              setJobsPage={setJobsPage}
+              setJobsPageSize={setJobsPageSize}
               onRefetch={refetchAll}
               onShowNotification={showNotification}
               onElementIdClick={handleElementIdClick}
@@ -388,10 +379,10 @@ export const ProcessInstanceDetailPage = () => {
           {/* History Tab */}
           <TabPanel value={activeTab} index={1}>
             <HistoryTab
-              history={history}
-              childProcessHistory={childProcessHistory}
-              childProcesses={childProcesses}
-              grandchildProcesses={grandchildProcesses}
+              instanceTree={instanceTree}
+              historySortBy={historySortBy}
+              historySortOrder={historySortOrder}
+              onSortChange={setHistorySort}
               onElementIdClick={handleElementIdClick}
             />
           </TabPanel>
@@ -399,10 +390,11 @@ export const ProcessInstanceDetailPage = () => {
           {/* Incidents Tab */}
           <TabPanel value={activeTab} index={2}>
             <IncidentsTab
-              incidents={incidents}
-              childProcessIncidents={childProcessIncidents}
-              childProcesses={childProcesses}
-              grandchildProcesses={grandchildProcesses}
+              instanceTree={instanceTree}
+              incidentsPage={incidentsPage}
+              incidentsPageSize={incidentsPageSize}
+              setIncidentsPage={setIncidentsPage}
+              setIncidentsPageSize={setIncidentsPageSize}
               onRefetch={refetchAll}
               onShowNotification={showNotification}
               onElementIdClick={handleElementIdClick}
@@ -412,30 +404,33 @@ export const ProcessInstanceDetailPage = () => {
           {/* Variables Tab */}
           <TabPanel value={activeTab} index={3}>
             <VariablesTab
-              processInstanceKey={processInstanceKey}
-              variables={processInstance.variables}
-              childProcesses={childProcesses}
-              grandchildProcesses={grandchildProcesses}
+              instanceTree={instanceTree}
+              variablesPage={variablesPage}
+              variablesPageSize={variablesPageSize}
+              setVariablesPage={setVariablesPage}
+              setVariablesPageSize={setVariablesPageSize}
               onRefetch={refetchAll}
               onShowNotification={showNotification}
+              onElementIdClick={handleElementIdClick}
             />
           </TabPanel>
 
           {/* Child Processes Tab */}
           <TabPanel value={activeTab} index={4}>
             <ChildProcessesTab
-              childProcesses={childProcesses}
-              grandchildProcesses={grandchildProcesses}
+              instanceTree={instanceTree}
             />
           </TabPanel>
 
           {/* Decision Instances Tab */}
           <TabPanel value={activeTab} index={5}>
             <DecisionInstancesTab
-              decisionInstances={decisionInstances}
-              childProcessDecisionInstances={childProcessDecisionInstances}
-              childProcesses={childProcesses}
-              grandchildProcesses={grandchildProcesses}
+              instanceTree={instanceTree}
+              decisionsPage={decisionsPage}
+              decisionsPageSize={decisionsPageSize}
+              setDecisionsPage={setDecisionsPage}
+              setDecisionsPageSize={setDecisionsPageSize}
+              onElementIdClick={handleElementIdClick}
             />
           </TabPanel>
         </Box>

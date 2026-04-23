@@ -1,12 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { Box } from '@mui/material';
-import { DataTable, type Column, type DataTableSection } from '@components/DataTable';
+import { ClientSideDataTable, type Column, type DataTableSection } from '@components/DataTable';
 import { StateBadge } from '@components/StateBadge';
 import { MonoText } from '@components/MonoText';
 import type { ProcessInstance } from '../types';
+import type { ProcessInstanceNode } from '../types/tree';
 import { formatDate } from '@/components/DiagramDetailLayout/utils';
 
 // Translation function type - avoids strict i18n namespace key inference in inline renders
@@ -24,105 +25,28 @@ const PROCESS_TYPE_ORDER: Record<string, number> = {
 const HIDDEN_PROCESS_TYPES = ['multiInstance', 'subprocess'];
 
 interface ChildProcessesTabProps {
-  /** Direct child process instances (already fetched by useInstanceData) */
-  childProcesses?: ProcessInstance[];
-  /** Grandchild process instances keyed by direct child's process instance key */
-  grandchildProcesses?: Record<string, ProcessInstance[]>;
+  instanceTree: ProcessInstanceNode | null;
+}
+
+/** BFS walk — returns all nodes, root first */
+function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
+  const result: ProcessInstanceNode[] = [];
+  const queue: ProcessInstanceNode[] = [root];
+  while (queue.length > 0) {
+    const node = queue.shift();
+    if (node === undefined) continue;
+    result.push(node);
+    queue.push(...node.children);
+  }
+  return result;
 }
 
 export const ChildProcessesTab = ({
-  childProcesses = [],
-  grandchildProcesses = {},
+  instanceTree,
 }: ChildProcessesTabProps) => {
   const { t: rawT } = useTranslation([ns.common, ns.processInstance, ns.processes]);
   const t = rawT as unknown as T;
   const navigate = useNavigate();
-
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-
-  // Flat lookup: instanceKey → ProcessInstance, covering direct children and grandchildren.
-  const instanceByKey = useMemo<Record<string, ProcessInstance>>(() => {
-    const map: Record<string, ProcessInstance> = {};
-    for (const cp of childProcesses) {
-      map[cp.key] = cp;
-    }
-    for (const grandchildren of Object.values(grandchildProcesses)) {
-      for (const gc of grandchildren) {
-        map[gc.key] = gc;
-      }
-    }
-    return map;
-  }, [childProcesses, grandchildProcesses]);
-
-  // Build sections:
-  // - Section 0 (no label): visible direct children
-  // - One labeled section per direct child key that has visible grandchildren,
-  //   sorted by processType order then lexicographically by key.
-  const sections = useMemo<DataTableSection<ProcessInstance>[]>(() => {
-    const result: DataTableSection<ProcessInstance>[] = [];
-
-    const directChildren = childProcesses.filter(
-      (cp) => !HIDDEN_PROCESS_TYPES.includes(cp.processType ?? ''),
-    );
-    if (directChildren.length > 0) {
-      result.push({ label: '', data: directChildren });
-    }
-
-    const grandchildEntries = Object.entries(grandchildProcesses)
-      .map(([parentKey, instances]) => ({
-        parentKey,
-        instances: instances.filter(
-          (gc) => !HIDDEN_PROCESS_TYPES.includes(gc.processType ?? ''),
-        ),
-      }))
-      .filter(({ instances }) => instances.length > 0);
-
-    grandchildEntries.sort(({ parentKey: keyA }, { parentKey: keyB }) => {
-      const typeA = instanceByKey[keyA]?.processType ?? '';
-      const typeB = instanceByKey[keyB]?.processType ?? '';
-      const orderA = PROCESS_TYPE_ORDER[typeA] ?? 99;
-      const orderB = PROCESS_TYPE_ORDER[typeB] ?? 99;
-      if (orderA !== orderB) return orderA - orderB;
-      return keyA.localeCompare(keyB);
-    });
-
-    for (const { parentKey, instances } of grandchildEntries) {
-      const parent = instanceByKey[parentKey];
-      const typeLabel = parent?.processType
-        ? t(`processes:types.${parent.processType}`)
-        : t('processInstance:fields.childProcess');
-      result.push({ label: `${typeLabel}: ${parentKey}`, data: instances });
-    }
-
-    return result;
-  }, [childProcesses, grandchildProcesses, instanceByKey, t]);
-
-  // If no labeled sections exist, render a plain flat table (no section headers).
-  // Otherwise pass the full sections array (including the unlabeled root section).
-  const childSections = useMemo(
-    () => sections.filter((s) => s.label !== ''),
-    [sections],
-  );
-
-  const tableSections = useMemo<DataTableSection<ProcessInstance>[] | undefined>(() => {
-    if (childSections.length === 0) return undefined;
-    const rootSection = sections.find((s) => s.label === '');
-    const result: DataTableSection<ProcessInstance>[] = [];
-    if (rootSection && rootSection.data.length > 0) result.push(rootSection);
-    result.push(...childSections);
-    return result;
-  }, [childSections, sections]);
-
-  const tableData = useMemo<ProcessInstance[]>(
-    () => (tableSections ? [] : (sections.find((s) => s.label === '')?.data ?? [])),
-    [tableSections, sections],
-  );
-
-  const totalCount = useMemo(
-    () => sections.reduce((acc, s) => acc + s.data.length, 0),
-    [sections],
-  );
 
   const columns: Column<ProcessInstance>[] = useMemo(
     () => [
@@ -185,19 +109,74 @@ export const ChildProcessesTab = ({
     [t],
   );
 
+  // Build sections: root node's visible children in an unlabelled section;
+  // then one labelled section per non-root node that has visible children.
+  // All data comes from Phase 1 of the tree fetch (up to CHILDREN_PAGE_SIZE per
+  // node). ClientSideDataTable handles display pagination entirely in memory.
+  const { sections, flatData } = useMemo(() => {
+    if (!instanceTree) {
+      return { sections: undefined, flatData: [] };
+    }
+
+    const nodes = collectNodes(instanceTree);
+    const rootNode = nodes[0];
+
+    // Non-root nodes sorted by processType then key
+    const nonRootNodes = nodes.slice(1).sort((a, b) => {
+      const typeA = a.instance.processType ?? '';
+      const typeB = b.instance.processType ?? '';
+      const orderA = PROCESS_TYPE_ORDER[typeA] ?? 99;
+      const orderB = PROCESS_TYPE_ORDER[typeB] ?? 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.instance.key.localeCompare(b.instance.key);
+    });
+
+    // Visible children of root (callActivity and default; exclude multiInstance/subprocess wrappers)
+    const rootVisibleChildren = rootNode.children.filter(
+      (c) => !HIDDEN_PROCESS_TYPES.includes(c.instance.processType ?? ''),
+    );
+
+    // Non-root nodes that have at least one visible child
+    const nonRootWithChildren = nonRootNodes.filter((n) =>
+      n.children.some((c) => !HIDDEN_PROCESS_TYPES.includes(c.instance.processType ?? ''))
+    );
+
+    if (nonRootWithChildren.length === 0) {
+      return { sections: undefined, flatData: rootVisibleChildren.map((c) => c.instance) };
+    }
+
+    const result: DataTableSection<ProcessInstance>[] = [];
+
+    if (rootVisibleChildren.length > 0) {
+      result.push({ label: '', data: rootVisibleChildren.map((c) => c.instance) });
+    }
+
+    for (const node of nonRootWithChildren) {
+      const visibleChildren = node.children.filter(
+        (c) => !HIDDEN_PROCESS_TYPES.includes(c.instance.processType ?? ''),
+      );
+      const typeLabel = node.instance.processType
+        ? t(`processes:types.${node.instance.processType}`)
+        : t('processInstance:fields.childProcess');
+      result.push({
+        label: `${typeLabel}: ${node.instance.key}`,
+        callPath: node.callPath,
+        data: visibleChildren.map((c) => c.instance),
+      });
+    }
+
+    return { sections: result.length > 0 ? result : undefined, flatData: [] };
+  }, [instanceTree, t]);
+
   return (
     <Box data-testid="child-processes-tab">
-      <DataTable
+      <ClientSideDataTable
         data-testid="child-processes-table"
         columns={columns}
-        data={tableData}
-        sections={tableSections}
+        data={flatData}
+        sections={sections}
         rowKey="key"
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        totalCount={totalCount}
+        defaultPageSize={10}
         onRowClick={(row) => void navigate(`/process-instances/${row.key}`)}
       />
     </Box>

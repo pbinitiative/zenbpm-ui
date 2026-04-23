@@ -8,7 +8,7 @@ import {
 } from '@components/PartitionedTable';
 
 import type { FilterConfig, FilterGroupConfig, FilterValues, TableConfig } from './types';
-import { useFilterState, useFiltersByZone, useTableState, flattenFilters } from './hooks';
+import { useFilterState, useFiltersByZone, useTableState, useSimpleFetchData, flattenFilters } from './hooks';
 import { computeInitialFilterValues } from './utils/urlHelpers';
 import { FirstLineToolbar } from './components/FirstLineToolbar';
 import { FilterZoneRenderer } from './components/FilterZoneRenderer';
@@ -44,6 +44,9 @@ export interface TableWithFiltersProps<T extends object> {
   // URL sync
   syncWithUrl?: boolean;
   syncSortingWithUrl?: boolean;
+
+  // Default page size for partitioned mode
+  defaultPageSize?: number;
 }
 
 export const TableWithFilters = <T extends object>({
@@ -64,6 +67,7 @@ export const TableWithFilters = <T extends object>({
   refreshKey = 0,
   syncWithUrl = false,
   syncSortingWithUrl = false,
+  defaultPageSize,
 }: TableWithFiltersProps<T>) => {
   const [searchParams] = useSearchParams();
 
@@ -242,6 +246,35 @@ export const TableWithFilters = <T extends object>({
     [activeFilters, handleRemoveFilterWithPageReset, handleClearFiltersWithPageReset]
   );
 
+  // Server-side fetching for simple mode (when fetchData is provided)
+  const simpleFetch = useSimpleFetchData(
+    tableConfig.mode === 'simple' && tableConfig.fetchData
+      ? {
+          fetchData: tableConfig.fetchData,
+          page,
+          pageSize,
+          filterValues,
+          sortBy,
+          sortOrder,
+          refreshKey,
+        }
+      : null
+  );
+
+  // Resolve data/loading/totalCount — prefer server-fetched values when fetchData is provided
+  const simpleData =
+    tableConfig.mode === 'simple'
+      ? (simpleFetch?.data ?? tableConfig.data ?? [])
+      : [];
+  const simpleLoading =
+    tableConfig.mode === 'simple'
+      ? (simpleFetch?.loading ?? tableConfig.loading)
+      : undefined;
+  const simpleTotalCount =
+    tableConfig.mode === 'simple'
+      ? (simpleFetch?.totalCount ?? tableConfig.totalCount)
+      : undefined;
+
   // Combined toolbar for DataTable (simple mode)
   const simpleToolbar = useMemo(() => {
     const hasFirstLine = hasHideableFilters || filters.some((f) => f.zone === 'exposed_first_line');
@@ -265,9 +298,9 @@ export const TableWithFilters = <T extends object>({
       {tableConfig.mode === 'simple' ? (
         <DataTable
           columns={columns}
-          data={tableConfig.data}
-          loading={tableConfig.loading}
-          totalCount={tableConfig.totalCount}
+          data={simpleData}
+          loading={simpleLoading}
+          totalCount={simpleTotalCount}
           rowKey={rowKey}
           page={page}
           pageSize={pageSize}
@@ -299,6 +332,7 @@ export const TableWithFilters = <T extends object>({
           serverSideSorting={serverSideSorting}
           refreshKey={refreshKey}
           onSortChange={handleSortChange}
+          defaultPageSize={defaultPageSize}
           toolbar={firstLineToolbar}
           filtersPanel={
             filters.some((f) => f.zone === 'exposed_second_line') ||

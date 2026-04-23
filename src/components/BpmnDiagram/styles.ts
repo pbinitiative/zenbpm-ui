@@ -57,11 +57,9 @@ export const getBpmnContainerStyles = (isInteractive: boolean): SxProps<Theme> =
   '& .element-selected .djs-visual rect, & .element-selected .djs-visual polygon, & .element-selected .djs-visual circle':
     {
       stroke: `${themeColors.bpmn.selectedStroke} !important`,
-      strokeWidth: '3px !important',
     },
   '& .element-selected .djs-visual path': {
     stroke: `${themeColors.bpmn.selectedStroke} !important`,
-    strokeWidth: '3px !important',
   },
   '& .element-selected .djs-visual': {
     filter: `drop-shadow(0 0 6px ${themeColors.bpmn.selectedGlow}) !important`,

@@ -24,6 +24,7 @@ export const BpmnDiagram = ({
   height,
   minHeight = 250,
   interactive,
+  showProgress = true,
 }: BpmnDiagramProps) => {
   // Default interactive to true if onElementClick is provided
   const isInteractive = interactive ?? !!onElementClick;
@@ -50,6 +51,7 @@ export const BpmnDiagram = ({
     history,
     activeElements,
     selectedElement,
+    showProgress,
   });
 
   // Re-zoom when container size changes (responsive resize)

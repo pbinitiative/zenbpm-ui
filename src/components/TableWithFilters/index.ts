@@ -17,6 +17,8 @@ export type {
   TableMode,
   SimpleTableConfig,
   PartitionedTableConfig,
+  SimpleFetchParams,
+  SimpleFetchResult,
   ActiveFilter,
   FiltersByZone,
 } from './types';

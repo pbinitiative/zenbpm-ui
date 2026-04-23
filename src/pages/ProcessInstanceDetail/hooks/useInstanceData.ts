@@ -1,430 +1,436 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import type {
-  ProcessInstance,
-  ProcessDefinition,
-  Job,
-  FlowElementHistory,
-  Incident,
-} from '../types';
-import type { DecisionInstanceSummary } from '@base/openapi';
 import {
-  getProcessInstance,
   getProcessDefinition,
-  getProcessInstanceJobs,
-  getHistory,
-  getIncidents,
-  getChildProcessInstances,
-  getProcessInstanceElementStatistics,
+  getProcessInstance,
   useGetProcessInstanceElementStatistics,
-  getDecisionInstances,
 } from '@base/openapi';
 import { transformStatisticsToElementStatistics } from '@components/BpmnDiagram';
 import type { ElementStatistics } from '@components/BpmnDiagram';
+import type { ProcessDefinition, ProcessInstance } from '../types';
+import type { ProcessInstanceNode } from '../types/tree';
+import {
+  fetchInstanceTree,
+  refetchNodeJobs as doRefetchNodeJobs,
+  refetchNodeIncidents as doRefetchNodeIncidents,
+  refetchNodeDecisions as doRefetchNodeDecisions,
+  refetchNodeVariables as doRefetchNodeVariables,
+  refetchNodeHistory as doRefetchNodeHistory,
+  JOBS_PAGE_SIZE,
+  INCIDENTS_PAGE_SIZE,
+  DECISIONS_PAGE_SIZE,
+  VARIABLES_PAGE_SIZE,
+  MAX_TREE_DEPTH,
+} from './fetchInstanceTree';
+import type { GetHistorySortBy } from '@base/openapi/generated-api/schemas/getHistorySortBy';
+import type { GetHistorySortOrder } from '@base/openapi/generated-api/schemas/getHistorySortOrder';
 
-// States that indicate the process instance is finished and doesn't need periodic refresh
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** States that indicate the process instance is finished and doesn't need periodic refresh */
 export const TERMINAL_STATES = ['completed', 'terminated'];
 
-// Refresh interval in milliseconds (5 seconds)
-const AUTO_REFRESH_INTERVAL = 5000;
+/** Refresh interval in milliseconds */
+export const AUTO_REFRESH_INTERVAL = 5000;
 
-interface UseInstanceDataResult {
+// ---------------------------------------------------------------------------
+// Result interface
+// ---------------------------------------------------------------------------
+
+export interface UseInstanceDataResult {
+  // ── Root ─────────────────────────────────────────────────────────────────
   processInstance: ProcessInstance | null;
   processDefinition: ProcessDefinition | null;
-  jobs: Job[];
-  history: FlowElementHistory[];
-  incidents: Incident[];
-  childProcesses: ProcessInstance[];
-  childProcessesTotalCount: number | undefined;
-  childProcessJobs: Record<string, Job[]>;
-  childProcessIncidents: Record<string, Incident[]>;
-  grandchildProcesses: Record<string, ProcessInstance[]>;
-  childProcessHistory: FlowElementHistory[];
-  decisionInstances: DecisionInstanceSummary[];
-  childProcessDecisionInstances: Record<string, DecisionInstanceSummary[]>;
   elementStatistics: ElementStatistics | undefined;
   loading: boolean;
   error: string | null;
-  refetchJobs: () => Promise<void>;
-  refetchIncidents: () => Promise<void>;
-  refetchVariables: () => Promise<void>;
-  refetchHistory: () => Promise<void>;
-  refetchChildProcesses: () => Promise<void>;
-  refetchDecisionInstances: () => Promise<void>;
+
+  // ── Full tree ─────────────────────────────────────────────────────────────
+  instanceTree: ProcessInstanceNode | null;
+
+  // ── Pagination state + setters per dataset ────────────────────────────────
+  jobsPage: number;
+  jobsPageSize: number;
+  setJobsPage: (page: number) => void;
+  setJobsPageSize: (size: number) => void;
+
+  incidentsPage: number;
+  incidentsPageSize: number;
+  setIncidentsPage: (page: number) => void;
+  setIncidentsPageSize: (size: number) => void;
+
+  decisionsPage: number;
+  decisionsPageSize: number;
+  setDecisionsPage: (page: number) => void;
+  setDecisionsPageSize: (size: number) => void;
+
+  variablesPage: number;
+  variablesPageSize: number;
+  setVariablesPage: (page: number) => void;
+  setVariablesPageSize: (size: number) => void;
+
+  historySortBy: GetHistorySortBy;
+  historySortOrder: GetHistorySortOrder;
+  setHistorySort: (sortBy: GetHistorySortBy, sortOrder: GetHistorySortOrder) => void;
+
+  // ── Refetch ───────────────────────────────────────────────────────────────
   refetchAll: () => Promise<void>;
 }
 
-export const useInstanceData = (processInstanceKey: string | undefined): UseInstanceDataResult => {
-  const [processInstance, setProcessInstance] = useState<ProcessInstance | null>(null);
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** BFS-collect all nodes from a tree */
+function collectAllNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
+  const result: ProcessInstanceNode[] = [];
+  const queue: ProcessInstanceNode[] = [root];
+  while (queue.length > 0) {
+    const node = queue.shift();
+    if (node === undefined) continue;
+    result.push(node);
+    queue.push(...node.children);
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
+
+export const useInstanceData = (
+  processInstanceKey: string | undefined,
+): UseInstanceDataResult => {
+  const [instanceTree, setInstanceTree] = useState<ProcessInstanceNode | null>(null);
   const [processDefinition, setProcessDefinition] = useState<ProcessDefinition | null>(null);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [history, setHistory] = useState<FlowElementHistory[]>([]);
-  const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [childProcesses, setChildProcesses] = useState<ProcessInstance[]>([]);
-  const [childProcessesTotalCount, setChildProcessesTotalCount] = useState<number>();
-  const [childProcessJobs, setChildProcessJobs] = useState<Record<string, Job[]>>({});
-  const [childProcessIncidents, setChildProcessIncidents] = useState<Record<string, Incident[]>>({});
-  const [grandchildProcesses, setGrandchildProcesses] = useState<Record<string, ProcessInstance[]>>({});
-  const [childProcessHistory, setChildProcessHistory] = useState<FlowElementHistory[]>([]);
-  const [subprocessElementStatistics, setSubprocessElementStatistics] = useState<ElementStatistics | undefined>(undefined);
-  const [decisionInstances, setDecisionInstances] = useState<DecisionInstanceSummary[]>([]);
-  const [childProcessDecisionInstances, setChildProcessDecisionInstances] = useState<Record<string, DecisionInstanceSummary[]>>({});
+  const [subprocessElementStatistics, setSubprocessElementStatistics] = useState<
+    ElementStatistics | undefined
+  >(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch jobs for the process instance
-  const fetchJobs = useCallback(async () => {
-    if (!processInstanceKey) return;
-    try {
-      const data = await getProcessInstanceJobs(processInstanceKey, { page: 1, size: 100 });
-      setJobs((data.items || []) as Job[]);
-    } catch (err) {
-      console.error('Failed to fetch jobs:', err);
-    }
-  }, [processInstanceKey]);
+  // ── Per-dataset pagination state (0-indexed pages) ────────────────────────
+  const [jobsPage, setJobsPage] = useState(0);
+  const [jobsPageSize, setJobsPageSize] = useState(JOBS_PAGE_SIZE);
+  const [incidentsPage, setIncidentsPage] = useState(0);
+  const [incidentsPageSize, setIncidentsPageSize] = useState(INCIDENTS_PAGE_SIZE);
+  const [decisionsPage, setDecisionsPage] = useState(0);
+  const [decisionsPageSize, setDecisionsPageSize] = useState(DECISIONS_PAGE_SIZE);
+  const [variablesPage, setVariablesPage] = useState(0);
+  const [variablesPageSize, setVariablesPageSize] = useState(VARIABLES_PAGE_SIZE);
 
-  // Fetch incidents for the process instance
-  const fetchIncidents = useCallback(async () => {
-    if (!processInstanceKey) return;
-    try {
-      const data = await getIncidents(processInstanceKey, { page: 1, size: 100 });
-      setIncidents((data.items || []) as Incident[]);
-    } catch (err) {
-      console.error('Failed to fetch incidents:', err);
-    }
-  }, [processInstanceKey]);
+  // History sort state
+  const [historySortBy, setHistorySortBy] = useState<GetHistorySortBy>('createdAt');
+  const [historySortOrder, setHistorySortOrder] = useState<GetHistorySortOrder>('asc');
+  const historySortByRef = useRef<GetHistorySortBy>('createdAt');
+  const historySortOrderRef = useRef<GetHistorySortOrder>('asc');
+  historySortByRef.current = historySortBy;
+  historySortOrderRef.current = historySortOrder;
 
-  // Fetch process instance (which includes variables and active elements)
-  const fetchProcessInstance = useCallback(async () => {
-    if (!processInstanceKey) return;
-    try {
-      const data = await getProcessInstance(processInstanceKey);
-      setProcessInstance(data as unknown as ProcessInstance);
-    } catch (err) {
-      console.error('Failed to fetch process instance:', err);
-    }
-  }, [processInstanceKey]);
+  // Refs so fetchAll (auto-refresh) always reads the current pagination values
+  // without stale closure captures.
+  const jobsPageRef = useRef(0);
+  const jobsPageSizeRef = useRef(JOBS_PAGE_SIZE);
+  const incidentsPageRef = useRef(0);
+  const incidentsPageSizeRef = useRef(INCIDENTS_PAGE_SIZE);
+  const decisionsPageRef = useRef(0);
+  const decisionsPageSizeRef = useRef(DECISIONS_PAGE_SIZE);
+  const variablesPageRef = useRef(0);
+  const variablesPageSizeRef = useRef(VARIABLES_PAGE_SIZE);
+  jobsPageRef.current = jobsPage;
+  jobsPageSizeRef.current = jobsPageSize;
+  incidentsPageRef.current = incidentsPage;
+  incidentsPageSizeRef.current = incidentsPageSize;
+  decisionsPageRef.current = decisionsPage;
+  decisionsPageSizeRef.current = decisionsPageSize;
+  variablesPageRef.current = variablesPage;
+  variablesPageSizeRef.current = variablesPageSize;
 
-  // Fetch history for the process instance
-  const fetchHistory = useCallback(async () => {
-    if (!processInstanceKey) return;
-    try {
-      const data = await getHistory(processInstanceKey, { page: 1, size: 100 });
-      setHistory((data.items || []) as FlowElementHistory[]);
-    } catch (err) {
-      console.error('Failed to fetch history:', err);
-    }
-  }, [processInstanceKey]);
+  // Ref to always access the latest tree without stale closures.
+  const instanceTreeRef = useRef(instanceTree);
+  instanceTreeRef.current = instanceTree;
 
-  // Fetch decision instances for the root process instance
-  const fetchDecisionInstances = useCallback(async () => {
-    if (!processInstanceKey) return;
-    try {
-      const data = await getDecisionInstances({ processInstanceKey, size: 100 });
-      const items = (data.partitions || []).flatMap((p) => p.items || []);
-      setDecisionInstances(items);
-    } catch (err) {
-      console.error('Failed to fetch decision instances:', err);
-    }
-  }, [processInstanceKey]);
+  // Track the last successfully fetched process definition key so we never
+  // re-fetch the definition (it never changes for the same instance).
+  const fetchedDefinitionKeyRef = useRef<string | null>(null);
 
-  // Fetch child processes, their jobs, and grandchild process instances
-  const fetchChildProcesses = useCallback(async () => {
-    if (!processInstanceKey) return;
-    try {
-      const data = await getChildProcessInstances(processInstanceKey, { page: 1, size: 100 });
-      // Flatten partitions into a single list of process instances
-      const instances = (data.partitions || []).flatMap(p => p.items || []);
-      setChildProcesses(instances as ProcessInstance[]);
-      setChildProcessesTotalCount((data as { totalCount?: number }).totalCount);
+  // Guard: pagination effects must not fire before the initial load completes.
+  const initialLoadDoneRef = useRef(false);
 
-      // Fetch jobs, grandchild processes, history, incidents, and decision instances for each child in parallel
-      const [jobResults, grandchildResults, historyResults, incidentResults, decisionResults] = await Promise.all([
-        Promise.all(
-          instances.map(async (child) => {
-            try {
-              const jobData = await getProcessInstanceJobs(child.key, { page: 1, size: 100 });
-              return [child.key, (jobData.items || []) as Job[]] as const;
-            } catch {
-              return [child.key, [] as Job[]] as const;
-            }
-          })
-        ),
-        Promise.all(
-          instances.map(async (child) => {
-            try {
-              const grandchildData = await getChildProcessInstances(child.key, { page: 1, size: 100 });
-              const grandchildren = (grandchildData.partitions || []).flatMap(p => p.items || []);
-              return [child.key, grandchildren as ProcessInstance[]] as const;
-            } catch {
-              return [child.key, [] as ProcessInstance[]] as const;
-            }
-          })
-        ),
-        Promise.all(
-          instances.map(async (child) => {
-            try {
-              const historyData = await getHistory(child.key, { page: 1, size: 100 });
-              return (historyData.items || []) as FlowElementHistory[];
-            } catch {
-              return [] as FlowElementHistory[];
-            }
-          })
-        ),
-        Promise.all(
-          instances.map(async (child) => {
-            try {
-              const incidentData = await getIncidents(child.key, { page: 1, size: 100 });
-              return [child.key, (incidentData.items || []) as Incident[]] as const;
-            } catch {
-              return [child.key, [] as Incident[]] as const;
-            }
-          })
-        ),
-        Promise.all(
-          instances.map(async (child) => {
-            try {
-              const decisionData = await getDecisionInstances({ processInstanceKey: child.key, size: 100 });
-              const items = (decisionData.partitions || []).flatMap((p) => p.items || []);
-              return [child.key, items] as const;
-            } catch {
-              return [child.key, [] as DecisionInstanceSummary[]] as const;
-            }
-          })
-        ),
-      ]);
+  // Guard: prevent overlapping fetchAll calls. Without this, if a tree rebuild
+  // takes longer than AUTO_REFRESH_INTERVAL the next tick starts a second rebuild
+  // before the first finishes, doubling the load and causing state flicker.
+  const isFetchingRef = useRef(false);
 
-      setGrandchildProcesses(Object.fromEntries(grandchildResults));
-      setChildProcessHistory(historyResults.flat());
-
-      const grandchildSubprocessJobResults = await Promise.all(
-        grandchildResults.flatMap(([, grandchildren]) =>
-          (grandchildren as ProcessInstance[])
-            .filter((gc) => gc.processType === 'subprocess')
-            .map(async (gc) => {
-              try {
-                const jobData = await getProcessInstanceJobs(gc.key, { page: 1, size: 100 });
-                return [gc.key, (jobData.items || []) as Job[]] as const;
-              } catch {
-                return [gc.key, [] as Job[]] as const;
-              }
-            })
-        )
+  // ── Subprocess element statistics ─────────────────────────────────────────
+  const fetchSubprocessStats = useCallback(
+    async (root: ProcessInstanceNode) => {
+      const subprocessNodes = collectAllNodes(root).filter(
+        (n) => n.instance.processType === 'subprocess',
       );
 
-      // Fetch incidents for subprocess-grandchildren as well
-      const grandchildSubprocessIncidentResults = await Promise.all(
-        grandchildResults.flatMap(([, grandchildren]) =>
-          (grandchildren as ProcessInstance[])
-            .filter((gc) => gc.processType === 'subprocess')
-            .map(async (gc) => {
-              try {
-                const incidentData = await getIncidents(gc.key, { page: 1, size: 100 });
-                return [gc.key, (incidentData.items || []) as Incident[]] as const;
-              } catch {
-                return [gc.key, [] as Incident[]] as const;
-              }
-            })
-        )
-      );
-
-      // Fetch decision instances for subprocess-grandchildren as well
-      const grandchildSubprocessDecisionResults = await Promise.all(
-        grandchildResults.flatMap(([, grandchildren]) =>
-          (grandchildren as ProcessInstance[])
-            .filter((gc) => gc.processType === 'subprocess')
-            .map(async (gc) => {
-              try {
-                const decisionData = await getDecisionInstances({ processInstanceKey: gc.key, size: 100 });
-                const items = (decisionData.partitions || []).flatMap((p) => p.items || []);
-                return [gc.key, items] as const;
-              } catch {
-                return [gc.key, [] as DecisionInstanceSummary[]] as const;
-              }
-            })
-        )
-      );
-
-      // Merge direct-child jobs and subprocess-grandchild jobs into a single map
-      setChildProcessJobs(Object.fromEntries([...jobResults, ...grandchildSubprocessJobResults]));
-
-      // Merge direct-child incidents and subprocess-grandchild incidents into a single map
-      setChildProcessIncidents(Object.fromEntries([...incidentResults, ...grandchildSubprocessIncidentResults]));
-
-      // Merge direct-child decisions and subprocess-grandchild decisions into a single map
-      setChildProcessDecisionInstances(Object.fromEntries([...decisionResults, ...grandchildSubprocessDecisionResults]));
-
-      // Fetch element statistics for subprocess-type children and grandchildren
-      // These are embedded subprocesses whose elements appear in the parent BPMN diagram
-      const subprocessInstances = [
-        ...instances.filter((child) => child.processType === 'subprocess'),
-        ...grandchildResults.flatMap(([, grandchildren]) =>
-          (grandchildren as ProcessInstance[]).filter((gc) => gc.processType === 'subprocess')
-        ),
-      ];
-
-      if (subprocessInstances.length > 0) {
-        const subprocessStatResults = await Promise.all(
-          subprocessInstances.map(async (sp) => {
-            try {
-              const statsData = await getProcessInstanceElementStatistics(sp.key);
-              return transformStatisticsToElementStatistics(statsData);
-            } catch {
-              return undefined;
-            }
-          })
-        );
-
-        // Merge all subprocess element statistics into a single map, summing counts per elementId
-        const merged: ElementStatistics = {};
-        for (const stats of subprocessStatResults) {
-          if (!stats) continue;
-          for (const [elementId, counts] of Object.entries(stats)) {
-            if (!merged[elementId]) {
-              merged[elementId] = { activeCount: 0, incidentCount: 0 };
-            }
-            merged[elementId].activeCount += counts.activeCount;
-            merged[elementId].incidentCount += counts.incidentCount;
-          }
-        }
-        setSubprocessElementStatistics(Object.keys(merged).length > 0 ? merged : undefined);
-      } else {
+      if (subprocessNodes.length === 0) {
         setSubprocessElementStatistics(undefined);
+        return;
       }
-    } catch (err) {
-      console.error('Failed to fetch child processes:', err);
-    }
-  }, [processInstanceKey]);
 
-  // Fetch all data (useful after actions that can affect multiple things)
+      const { getProcessInstanceElementStatistics } = await import('@base/openapi');
+      const results = await Promise.allSettled(
+        subprocessNodes.map((node) => getProcessInstanceElementStatistics(node.instance.key)),
+      );
+
+      const merged: ElementStatistics = {};
+      for (const result of results) {
+        if (result.status !== 'fulfilled') continue;
+        const stats = transformStatisticsToElementStatistics(result.value);
+        if (!stats) continue;
+        for (const [elementId, counts] of Object.entries(stats)) {
+          if (!merged[elementId]) merged[elementId] = { activeCount: 0, incidentCount: 0, completedCount: 0, terminatedCount: 0 };
+          merged[elementId].activeCount += counts.activeCount;
+          merged[elementId].incidentCount += counts.incidentCount;
+          merged[elementId].completedCount = (merged[elementId].completedCount ?? 0) + (counts.completedCount ?? 0);
+          merged[elementId].terminatedCount = (merged[elementId].terminatedCount ?? 0) + (counts.terminatedCount ?? 0);
+        }
+      }
+      setSubprocessElementStatistics(Object.keys(merged).length > 0 ? merged : undefined);
+    },
+    [],
+  );
+
+  // ── Core fetch: build / rebuild the whole tree ────────────────────────────
   const fetchAll = useCallback(async () => {
     if (!processInstanceKey) return;
-    await Promise.all([
-      fetchProcessInstance(),
-      fetchJobs(),
-      fetchHistory(),
-      fetchIncidents(),
-      fetchChildProcesses(),
-      fetchDecisionInstances(),
-    ]);
-  }, [processInstanceKey, fetchProcessInstance, fetchJobs, fetchHistory, fetchIncidents, fetchChildProcesses, fetchDecisionInstances]);
+    if (isFetchingRef.current) return;   // drop concurrent calls
+    isFetchingRef.current = true;
+    try {
+      const rootInstance = (await getProcessInstance(processInstanceKey)) as unknown as ProcessInstance;
 
-  // Initial data fetch
+      // Process definition never changes — only fetch it once per definition key.
+      const pdKey = rootInstance.processDefinitionKey;
+      if (pdKey !== fetchedDefinitionKeyRef.current) {
+        void getProcessDefinition(pdKey)
+          .then((def) => {
+            setProcessDefinition(def as unknown as ProcessDefinition);
+            fetchedDefinitionKeyRef.current = pdKey;
+          })
+          .catch(() => { /* non-critical */ });
+      }
+
+      // Build terminal-node cache to skip re-fetching immutable data on refresh.
+      const terminalNodeCache = new Map<string, ProcessInstanceNode>();
+      if (instanceTreeRef.current) {
+        for (const node of collectAllNodes(instanceTreeRef.current)) {
+          if (TERMINAL_STATES.includes(node.instance.state)) {
+            terminalNodeCache.set(node.instance.key, node);
+          }
+        }
+      }
+
+      const root = await fetchInstanceTree(processInstanceKey, {
+        maxDepth: MAX_TREE_DEPTH,
+        preloadedRoot: rootInstance,
+        terminalNodeCache,
+        jobsPage: jobsPageRef.current + 1,
+        jobsPageSize: jobsPageSizeRef.current,
+        incidentsPage: incidentsPageRef.current + 1,
+        incidentsPageSize: incidentsPageSizeRef.current,
+        decisionsPage: decisionsPageRef.current + 1,
+        decisionsPageSize: decisionsPageSizeRef.current,
+        variablesPage: variablesPageRef.current + 1,
+        variablesPageSize: variablesPageSizeRef.current,
+        historySortBy: historySortByRef.current,
+        historySortOrder: historySortOrderRef.current,
+      });
+
+      setInstanceTree(root);
+      void fetchSubprocessStats(root);
+    } catch (err) {
+      console.error('Failed to fetch instance tree:', err);
+    } finally {
+      isFetchingRef.current = false;
+    }
+  }, [processInstanceKey, fetchSubprocessStats]);
+
+  // ── Initial data fetch ────────────────────────────────────────────────────
   useEffect(() => {
     if (!processInstanceKey) return;
 
     const fetchData = async () => {
+      initialLoadDoneRef.current = false;
       setLoading(true);
       setError(null);
 
+      // Reset pagination and definition tracking when the instance key changes.
+      setJobsPage(0);
+      setJobsPageSize(JOBS_PAGE_SIZE);
+      setIncidentsPage(0);
+      setIncidentsPageSize(INCIDENTS_PAGE_SIZE);
+      setDecisionsPage(0);
+      setDecisionsPageSize(DECISIONS_PAGE_SIZE);
+      setVariablesPage(0);
+      setVariablesPageSize(VARIABLES_PAGE_SIZE);
+      fetchedDefinitionKeyRef.current = null;
+      // Also reset pagination refs so fetchAll uses page 1 for the new instance.
+      jobsPageRef.current = 0;
+      jobsPageSizeRef.current = JOBS_PAGE_SIZE;
+      incidentsPageRef.current = 0;
+      incidentsPageSizeRef.current = INCIDENTS_PAGE_SIZE;
+      decisionsPageRef.current = 0;
+      decisionsPageSizeRef.current = DECISIONS_PAGE_SIZE;
+      variablesPageRef.current = 0;
+      variablesPageSizeRef.current = VARIABLES_PAGE_SIZE;
+
       try {
-        // Fetch process instance
-        // Cast to unknown then number to preserve precision for large int64 keys
-        const instanceData = await getProcessInstance(processInstanceKey);
-        setProcessInstance(instanceData as unknown as ProcessInstance);
-
-        // Fetch process definition for BPMN diagram
-        try {
-          const definitionData = await getProcessDefinition(instanceData.processDefinitionKey);
-          setProcessDefinition(definitionData as unknown as ProcessDefinition);
-        } catch {
-          // Process definition fetch failure is not critical
-        }
-
-        // Fetch jobs, history, incidents, child processes (with their sub-data), and decision instances in parallel
-        await Promise.all([
-          getProcessInstanceJobs(processInstanceKey, { page: 1, size: 100 })
-            .then((d) => setJobs((d.items || []) as Job[]))
-            .catch(() => {}),
-          getHistory(processInstanceKey, { page: 1, size: 100 })
-            .then((d) => setHistory((d.items || []) as FlowElementHistory[]))
-            .catch(() => {}),
-          getIncidents(processInstanceKey, { page: 1, size: 100 })
-            .then((d) => setIncidents((d.items || []) as Incident[]))
-            .catch(() => {}),
-          fetchChildProcesses(),
-          fetchDecisionInstances(),
-        ]);
+        await fetchAll();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load process instance');
       } finally {
-        setLoading(false);
+        if (!isFetchingRef.current) {    // this avoids e error message instead loading
+          setLoading(false);
+          initialLoadDoneRef.current = true;
+        }
       }
     };
 
     void fetchData();
-  }, [processInstanceKey, fetchChildProcesses, fetchDecisionInstances]);
+  }, [processInstanceKey, fetchAll]);
 
-  // Track if auto-refresh should be active
-  const isActiveInstance = processInstance && !TERMINAL_STATES.includes(processInstance.state);
+  // ── Periodic auto-refresh for active instances ────────────────────────────
+  const isActiveInstance =
+    instanceTree?.instance && !TERMINAL_STATES.includes(instanceTree.instance.state);
+
   const fetchAllRef = useRef(fetchAll);
   fetchAllRef.current = fetchAll;
 
-  // Periodic auto-refresh for active instances
   useEffect(() => {
     if (!processInstanceKey || loading || !isActiveInstance) return;
-
     const intervalId = setInterval(() => {
+      // Skip refresh when the browser tab is hidden — no point rebuilding
+      // the tree while the user isn't looking at it.
+      if (document.hidden) return;
       void fetchAllRef.current();
     }, AUTO_REFRESH_INTERVAL);
-
     return () => clearInterval(intervalId);
   }, [processInstanceKey, loading, isActiveInstance]);
 
-  // Fetch element statistics for the BPMN diagram overlays
+  // ── Root element statistics via React Query (auto-poll) ───────────────────
+  // Enabled as soon as the key is known — no need to wait for the definition.
   const { data: rawElementStatistics } = useGetProcessInstanceElementStatistics(
     processInstanceKey ?? '',
     {
       query: {
-        enabled: !!processInstanceKey && !!processDefinition,
+        enabled: !!processInstanceKey,
         refetchInterval: AUTO_REFRESH_INTERVAL,
       },
-    }
+    },
   );
 
-  const elementStatistics = useMemo(
-    () => {
-      const base = transformStatisticsToElementStatistics(rawElementStatistics);
-      if (!subprocessElementStatistics) return base;
-      if (!base) return subprocessElementStatistics;
-      // Merge subprocess statistics into the base stats, summing counts per elementId
-      const merged: ElementStatistics = { ...base };
-      for (const [elementId, counts] of Object.entries(subprocessElementStatistics)) {
-        if (!merged[elementId]) {
-          merged[elementId] = { activeCount: 0, incidentCount: 0 };
-        }
-        merged[elementId] = {
-          activeCount: merged[elementId].activeCount + counts.activeCount,
-          incidentCount: merged[elementId].incidentCount + counts.incidentCount,
-        };
-      }
-      return merged;
-    },
-    [rawElementStatistics, subprocessElementStatistics]
-  );
+  const elementStatistics = useMemo(() => {
+    const base = transformStatisticsToElementStatistics(rawElementStatistics);
+    if (!subprocessElementStatistics) return base;
+    if (!base) return subprocessElementStatistics;
+    const merged: ElementStatistics = { ...base };
+    for (const [elementId, counts] of Object.entries(subprocessElementStatistics)) {
+      if (!merged[elementId]) merged[elementId] = { activeCount: 0, incidentCount: 0, completedCount: 0, terminatedCount: 0 };
+      merged[elementId] = {
+        activeCount: merged[elementId].activeCount + counts.activeCount,
+        incidentCount: merged[elementId].incidentCount + counts.incidentCount,
+        completedCount: (merged[elementId].completedCount ?? 0) + (counts.completedCount ?? 0),
+        terminatedCount: (merged[elementId].terminatedCount ?? 0) + (counts.terminatedCount ?? 0),
+      };
+    }
+    return merged;
+  }, [rawElementStatistics, subprocessElementStatistics]);
+
+  // ── Pagination effects — update the current page in the tree ─────────────
+  // These only fire after the initial load completes (guard via ref).
+
+  useEffect(() => {
+    if (!initialLoadDoneRef.current) return;
+    const tree = instanceTreeRef.current;
+    if (!tree) return;
+    const nodes = collectAllNodes(tree);
+    void Promise.all(nodes.map((node) => doRefetchNodeJobs(node, jobsPage + 1, jobsPageSize)))
+      .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
+  }, [jobsPage, jobsPageSize]);
+
+  useEffect(() => {
+    if (!initialLoadDoneRef.current) return;
+    const tree = instanceTreeRef.current;
+    if (!tree) return;
+    const nodes = collectAllNodes(tree);
+    void Promise.all(nodes.map((node) => doRefetchNodeIncidents(node, incidentsPage + 1, incidentsPageSize)))
+      .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
+  }, [incidentsPage, incidentsPageSize]);
+
+  useEffect(() => {
+    if (!initialLoadDoneRef.current) return;
+    const tree = instanceTreeRef.current;
+    if (!tree) return;
+    const nodes = collectAllNodes(tree);
+    void Promise.all(nodes.map((node) => doRefetchNodeDecisions(node, decisionsPage + 1, decisionsPageSize)))
+      .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
+  }, [decisionsPage, decisionsPageSize]);
+
+  useEffect(() => {
+    if (!initialLoadDoneRef.current) return;
+    const tree = instanceTreeRef.current;
+    if (!tree) return;
+    const nodes = collectAllNodes(tree);
+    nodes.forEach((node) => doRefetchNodeVariables(node, variablesPage + 1, variablesPageSize));
+    setInstanceTree((prev) => (prev ? { ...prev } : prev));
+  }, [variablesPage, variablesPageSize]);
+
+  const setHistorySort = useCallback((sortBy: GetHistorySortBy, sortOrder: GetHistorySortOrder) => {
+    setHistorySortBy(sortBy);
+    setHistorySortOrder(sortOrder);
+  }, []);
+
+  useEffect(() => {
+    if (!initialLoadDoneRef.current) return;
+    const tree = instanceTreeRef.current;
+    if (!tree) return;
+    const nodes = collectAllNodes(tree);
+    void Promise.all(nodes.map((node) => doRefetchNodeHistory(node, historySortBy, historySortOrder)))
+      .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
+  }, [historySortBy, historySortOrder]);
+
+  // ── Return ────────────────────────────────────────────────────────────────
 
   return {
-    processInstance,
+    processInstance: instanceTree?.instance ?? null,
     processDefinition,
-    jobs,
-    history,
-    incidents,
-    childProcesses,
-    childProcessesTotalCount,
-    childProcessJobs,
-    childProcessIncidents,
-    grandchildProcesses,
-    childProcessHistory,
-    decisionInstances,
-    childProcessDecisionInstances,
     elementStatistics,
     loading,
     error,
-    refetchJobs: fetchJobs,
-    refetchIncidents: fetchIncidents,
-    refetchVariables: fetchProcessInstance,
-    refetchHistory: fetchHistory,
-    refetchChildProcesses: fetchChildProcesses,
-    refetchDecisionInstances: fetchDecisionInstances,
+
+    instanceTree,
+
+    jobsPage,
+    jobsPageSize,
+    setJobsPage,
+    setJobsPageSize,
+
+    incidentsPage,
+    incidentsPageSize,
+    setIncidentsPage,
+    setIncidentsPageSize,
+
+    decisionsPage,
+    decisionsPageSize,
+    setDecisionsPage,
+    setDecisionsPageSize,
+
+    variablesPage,
+    variablesPageSize,
+    setVariablesPage,
+    setVariablesPageSize,
+
+    historySortBy,
+    historySortOrder,
+    setHistorySort,
+
     refetchAll: fetchAll,
   };
 };

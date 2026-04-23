@@ -56,6 +56,9 @@ export interface PartitionedTableProps<T extends object> {
 
   // Refresh trigger
   refreshKey?: number;
+
+  // Default page size
+  defaultPageSize?: number;
 }
 
 // Re-export types from DataTable

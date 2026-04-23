@@ -8,7 +8,7 @@ interface ProcessInstancesTabProps {
 export const ProcessInstancesTab = ({ refreshKey = 0 }: ProcessInstancesTabProps) => {
   return (
     <Box>
-      <ProcessInstancesTable refreshKey={refreshKey} syncWithUrl />
+      <ProcessInstancesTable refreshKey={refreshKey} syncWithUrl defaultPageSize={10} />
     </Box>
   );
 };

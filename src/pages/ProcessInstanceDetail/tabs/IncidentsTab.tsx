@@ -9,7 +9,7 @@ import { useStackTraceModal } from '@components/IncidentsTable/components/useSta
 import { getIncidentColumns } from '@components/IncidentsTable/table/columns';
 import type { Incident } from '@components/IncidentsTable';
 import { resolveIncident } from '@base/openapi';
-import type { ProcessInstance } from '../types';
+import type { ProcessInstanceNode } from '../types/tree';
 
 // processType display order — determines section ordering after the main instance
 const PROCESS_TYPE_ORDER: Record<string, number> = {
@@ -22,21 +22,36 @@ const PROCESS_TYPE_ORDER: Record<string, number> = {
 type StateFilter = 'all' | 'unresolved' | 'resolved';
 
 interface IncidentsTabProps {
-  incidents: Incident[];
-  childProcessIncidents?: Record<string, Incident[]>;
-  childProcesses?: ProcessInstance[];
-  grandchildProcesses?: Record<string, ProcessInstance[]>;
+  instanceTree: ProcessInstanceNode | null;
+  incidentsPage: number;
+  incidentsPageSize: number;
+  setIncidentsPage: (page: number) => void;
+  setIncidentsPageSize: (size: number) => void;
   onRefetch?: () => Promise<void>;
   onShowNotification?: (message: string, severity: 'success' | 'error') => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
   onElementIdClick?: (elementId: string) => void;
 }
 
+/** BFS walk — returns all nodes, root first */
+function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
+  const result: ProcessInstanceNode[] = [];
+  const queue: ProcessInstanceNode[] = [root];
+  while (queue.length > 0) {
+    const node = queue.shift();
+    if (node === undefined) continue;
+    result.push(node);
+    queue.push(...node.children);
+  }
+  return result;
+}
+
 export const IncidentsTab = ({
-  incidents,
-  childProcessIncidents = {},
-  childProcesses = [],
-  grandchildProcesses = {},
+  instanceTree,
+  incidentsPage,
+  incidentsPageSize,
+  setIncidentsPage,
+  setIncidentsPageSize,
   onRefetch,
   onShowNotification,
   onElementIdClick,
@@ -46,26 +61,10 @@ export const IncidentsTab = ({
   const { openIncidentDetail } = useIncidentDetailModal();
   const { openStackTrace } = useStackTraceModal();
 
-  // Table state
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  // Sort state (applied client-side within each section's already-loaded page)
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [stateFilter, setStateFilter] = useState<StateFilter>('all');
-
-  // Build a flat lookup: instanceKey → ProcessInstance (children + subprocess-grandchildren)
-  const instanceByKey = useMemo<Record<string, ProcessInstance>>(() => {
-    const map: Record<string, ProcessInstance> = {};
-    for (const cp of childProcesses) {
-      map[cp.key] = cp;
-    }
-    for (const grandchildren of Object.values(grandchildProcesses)) {
-      for (const gc of grandchildren) {
-        map[gc.key] = gc;
-      }
-    }
-    return map;
-  }, [childProcesses, grandchildProcesses]);
 
   const handleResolveIncident = useCallback(async (incidentKey: string) => {
     try {
@@ -112,55 +111,66 @@ export const IncidentsTab = ({
     [stateFilter]
   );
 
-  // Build sections: first section is the main instance (no header), then one
-  // section per child/grandchild process key that has incidents (after filter).
-  const sections = useMemo<DataTableSection<Incident>[] | undefined>(() => {
-    const childEntries = Object.entries(childProcessIncidents).filter(
-      ([, incidentList]) => incidentList.length > 0
-    );
+  // Build sections from the server-fetched data — no client-side slicing.
+  // Pagination is handled server-side: page changes trigger API refetch for all nodes.
+  const { sections, flatData, totalCount } = useMemo(() => {
+    if (!instanceTree) return { sections: undefined, flatData: [], totalCount: 0 };
 
-    if (childEntries.length === 0) return undefined;
-
-    childEntries.sort(([keyA], [keyB]) => {
-      const typeA = instanceByKey[keyA]?.processType ?? '';
-      const typeB = instanceByKey[keyB]?.processType ?? '';
+    const nodes = collectNodes(instanceTree);
+    const rootNode = nodes[0];
+    const childNodes = nodes.slice(1).sort((a, b) => {
+      const typeA = a.instance.processType ?? '';
+      const typeB = b.instance.processType ?? '';
       const orderA = PROCESS_TYPE_ORDER[typeA] ?? 99;
       const orderB = PROCESS_TYPE_ORDER[typeB] ?? 99;
       if (orderA !== orderB) return orderA - orderB;
-      return keyA.localeCompare(keyB);
+      return a.instance.key.localeCompare(b.instance.key);
     });
+    const orderedNodes = [rootNode, ...childNodes];
 
+    const hasChildWithIncidents = childNodes.some(
+      (n) => n.incidents.length > 0 || n.incidentsTotalCount > 0
+    );
+
+    // totalCount = max across all nodes so the paginator covers the largest section
+    const maxTotal = Math.max(...orderedNodes.map((n) => n.incidentsTotalCount), 0);
+
+    // Sort helper (client-side sort within the current page)
+    const sortRows = (rows: Incident[]): Incident[] => {
+      if (!sortBy) return rows;
+      return [...rows].sort((a, b) => {
+        const aVal = String(a[sortBy as keyof Incident] ?? '');
+        const bVal = String(b[sortBy as keyof Incident] ?? '');
+        const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        return sortOrder === 'asc' ? cmp : -cmp;
+      });
+    };
+
+    if (!hasChildWithIncidents) {
+      return { sections: undefined, flatData: sortRows(applyFilter(rootNode.incidents)), totalCount: maxTotal };
+    }
+
+    // Sections path
     const result: DataTableSection<Incident>[] = [];
-
-    const rootFiltered = applyFilter(incidents);
-    if (rootFiltered.length > 0) {
-      result.push({ label: '', data: rootFiltered });
-    }
-
-    for (const [instanceKey, incidentList] of childEntries) {
-      const filtered = applyFilter(incidentList);
+    for (const node of orderedNodes) {
+      if (node.incidents.length === 0 && node.incidentsTotalCount === 0) continue;
+      const isRoot = node === rootNode;
+      const filtered = applyFilter(node.incidents);
       if (filtered.length === 0) continue;
-      const instance = instanceByKey[instanceKey];
-      const typeLabel = instance?.processType
-        ? t(`processes:types.${instance.processType}`)
-        : t('processInstance:fields.childProcess');
-      result.push({ label: `${typeLabel}: ${instanceKey}`, data: filtered });
+      const label = isRoot
+        ? ''
+        : `${node.instance.processType ? t(`processes:types.${node.instance.processType}`) : t('processInstance:fields.childProcess')}: ${node.instance.key}`;
+      result.push({
+        label,
+        callPath: isRoot ? undefined : node.callPath,
+        data: sortRows(filtered),
+      });
     }
 
-    return result.length > 0 ? result : undefined;
-  }, [incidents, childProcessIncidents, instanceByKey, applyFilter, t]);
+    return { sections: result.length > 0 ? result : undefined, flatData: [], totalCount: maxTotal };
+  }, [instanceTree, sortBy, sortOrder, applyFilter, t]);
 
-  const filteredRootIncidents = useMemo(
-    () => (sections ? [] : applyFilter(incidents)),
-    [sections, applyFilter, incidents]
-  );
-
-  const totalCount = useMemo(() => {
-    if (sections) return sections.reduce((acc, s) => acc + s.data.length, 0);
-    return filteredRootIncidents.length;
-  }, [sections, filteredRootIncidents]);
-
-  // State filter toolbar (matching the visual style of other filter toolbars)
+  // State filter toolbar
   const toolbar = useMemo(() => (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
       <FormControl size="small" sx={{ minWidth: 200 }}>
@@ -170,7 +180,6 @@ export const IncidentsTab = ({
           label={t('incidents:fields.state')}
           onChange={(e) => {
             setStateFilter(e.target.value as StateFilter);
-            setPage(0);
           }}
           onClose={() => {
             setTimeout(() => {
@@ -211,14 +220,14 @@ export const IncidentsTab = ({
     <Box data-testid="incidents-tab">
       <DataTable
         columns={columns}
-        data={filteredRootIncidents}
+        data={flatData}
         sections={sections}
         rowKey="key"
         data-testid="incidents-table"
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
+        page={incidentsPage}
+        pageSize={incidentsPageSize}
+        onPageChange={setIncidentsPage}
+        onPageSizeChange={(newSize) => { setIncidentsPageSize(newSize); setIncidentsPage(0); }}
         sortBy={sortBy}
         sortOrder={sortOrder}
         onSortChange={(newSortBy, newSortOrder) => {
@@ -227,6 +236,7 @@ export const IncidentsTab = ({
         }}
         totalCount={totalCount}
         toolbar={toolbar}
+        onElementIdClick={onElementIdClick}
       />
     </Box>
   );

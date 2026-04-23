@@ -16,16 +16,14 @@ import { useAddVariableDialog } from '../modals/useAddVariableDialog';
 import { useEditVariableDialog } from '../modals/useEditVariableDialog';
 import { updateProcessInstanceVariables, deleteProcessInstanceVariable } from '@base/openapi';
 import { useConfirmDialog } from '@components/ConfirmDialog';
-import type { ProcessInstance } from '../types';
+import type { ProcessInstanceNode } from '../types/tree';
 
-// Helper to safely stringify any value
+// Helper to safely stringify any value for display
 const stringify = (val: unknown): string => {
   if (val === null || val === undefined) return '';
   if (typeof val === 'object') return JSON.stringify(val, null, 2);
   if (typeof val === 'string') return val;
-  if (typeof val === 'number' || typeof val === 'boolean' || typeof val === 'bigint') {
-    return val.toString();
-  }
+  if (typeof val === 'number' || typeof val === 'boolean' || typeof val === 'bigint') return val.toString();
   if (typeof val === 'symbol') return val.toString();
   if (typeof val === 'function') return '[Function]';
   return '';
@@ -43,160 +41,157 @@ interface Variable {
   name: string;
   value: string;
   rawValue: unknown;
+  /** The process instance key that owns this variable */
+  instanceKey: string;
   /** True when this variable belongs to a child/grandchild process (read-only) */
   readonly: boolean;
 }
 
 interface VariablesTabProps {
-  processInstanceKey: string;
-  variables: Record<string, unknown>;
-  /** Direct child process instances — used to build per-child variable sections */
-  childProcesses?: ProcessInstance[];
-  /** Grandchild process instances keyed by direct child's process instance key */
-  grandchildProcesses?: Record<string, ProcessInstance[]>;
+  instanceTree: ProcessInstanceNode | null;
+  variablesPage: number;
+  variablesPageSize: number;
+  setVariablesPage: (page: number) => void;
+  setVariablesPageSize: (size: number) => void;
   onRefetch: () => Promise<void>;
   onShowNotification: (message: string, severity: 'success' | 'error') => void;
+  /** Called when a breadcrumb element ID is clicked in a section header. */
+  onElementIdClick?: (elementId: string) => void;
 }
 
 // Translation function type - avoids strict i18n namespace key inference in inline renders
 type T = (key: string, opts?: Record<string, unknown>) => string;
 
+/** BFS walk — returns all nodes, root first */
+function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
+  const result: ProcessInstanceNode[] = [];
+  const queue: ProcessInstanceNode[] = [root];
+  while (queue.length > 0) {
+    const node = queue.shift();
+    if (node === undefined) continue;
+    result.push(node);
+    queue.push(...node.children);
+  }
+  return result;
+}
+
 export const VariablesTab = ({
-  processInstanceKey,
-  variables,
-  childProcesses = [],
-  grandchildProcesses = {},
+  instanceTree,
+  variablesPage,
+  variablesPageSize,
+  setVariablesPage,
+  setVariablesPageSize,
   onRefetch,
   onShowNotification,
+  onElementIdClick,
 }: VariablesTabProps) => {
   const { t: rawT } = useTranslation([ns.common, ns.processInstance, ns.processes]);
   const t = rawT as unknown as T;
-  // confirm dialog hook via global Modals system
   const { openConfirm } = useConfirmDialog();
   const { openAddVariableDialog } = useAddVariableDialog();
   const { openEditVariableDialog } = useEditVariableDialog();
 
-  // Flat lookup: instanceKey → ProcessInstance, covering direct children and grandchildren.
-  const instanceByKey = useMemo<Record<string, ProcessInstance>>(() => {
-    const map: Record<string, ProcessInstance> = {};
-    for (const cp of childProcesses) {
-      map[cp.key] = cp;
-    }
-    for (const grandchildren of Object.values(grandchildProcesses)) {
-      for (const gc of grandchildren) {
-        map[gc.key] = gc;
-      }
-    }
-    return map;
-  }, [childProcesses, grandchildProcesses]);
+  const processInstanceKey = instanceTree?.instance.key ?? '';
+  const rootVariables = useMemo(
+    () => (instanceTree?.instance.variables ?? {}) as Record<string, unknown>,
+    [instanceTree?.instance.variables],
+  );
 
-  // Convert a variables object to a Variable array.
+  // Convert a node's variableEntries to display rows.
   const toRows = useCallback(
-    (vars: Record<string, unknown>, readonly: boolean): Variable[] =>
-      Object.entries(vars).map(([name, value]) => ({
+    (node: ProcessInstanceNode, isReadonly: boolean): Variable[] =>
+      node.variableEntries.map(({ name, value }) => ({
         name,
         value: stringify(value),
         rawValue: value,
-        readonly,
+        instanceKey: node.instance.key,
+        readonly: isReadonly,
       })),
     [],
   );
 
-  // Root section rows
-  const rootRows = useMemo(() => toRows(variables ?? {}, false), [variables, toRows]);
+  // Build sections from the pre-sliced data already prepared by useInstanceData.
+  const { tableSections, tableData, totalCount } = useMemo(() => {
+    if (!instanceTree) return { tableSections: undefined, tableData: [], totalCount: 0 };
 
-  // Build sections: root (no label) + one per child/grandchild that has variables,
-  // sorted by processType order then lexicographically by key.
-  const sections = useMemo<DataTableSection<Variable>[]>(() => {
-    const result: DataTableSection<Variable>[] = [];
-
-    if (rootRows.length > 0) {
-      result.push({ label: '', data: rootRows });
-    }
-
-    // Collect all child+grandchild instances that have at least one variable
-    const childEntries: Array<{ instanceKey: string; rows: Variable[] }> = [];
-
-    for (const cp of childProcesses) {
-      const vars = cp.variables as Record<string, unknown> | undefined;
-      if (vars && Object.keys(vars).length > 0) {
-        childEntries.push({ instanceKey: cp.key, rows: toRows(vars, true) });
-      }
-    }
-
-    for (const grandchildren of Object.values(grandchildProcesses)) {
-      for (const gc of grandchildren) {
-        const vars = gc.variables as Record<string, unknown> | undefined;
-        if (vars && Object.keys(vars).length > 0) {
-          childEntries.push({ instanceKey: gc.key, rows: toRows(vars, true) });
-        }
-      }
-    }
-
-    // Sort by processType order, then lexicographically by key
-    childEntries.sort(({ instanceKey: keyA }, { instanceKey: keyB }) => {
-      const typeA = instanceByKey[keyA]?.processType ?? '';
-      const typeB = instanceByKey[keyB]?.processType ?? '';
-      const orderA = PROCESS_TYPE_ORDER[typeA] ?? 99;
-      const orderB = PROCESS_TYPE_ORDER[typeB] ?? 99;
+    const nodes = collectNodes(instanceTree);
+    const rootNode = nodes[0];
+    const childNodes = nodes.slice(1).sort((a, b) => {
+      const orderA = PROCESS_TYPE_ORDER[a.instance.processType ?? ''] ?? 99;
+      const orderB = PROCESS_TYPE_ORDER[b.instance.processType ?? ''] ?? 99;
       if (orderA !== orderB) return orderA - orderB;
-      return keyA.localeCompare(keyB);
+      return a.instance.key.localeCompare(b.instance.key);
     });
 
-    for (const { instanceKey, rows } of childEntries) {
-      const instance = instanceByKey[instanceKey];
-      const typeLabel = instance?.processType
-        ? t(`processes:types.${instance.processType}`)
-        : t('processInstance:fields.childProcess');
-      result.push({ label: `${typeLabel}: ${instanceKey}`, data: rows });
+    const displaySubProcessVariablesAsReadOnly =
+      import.meta.env.VITE_DISPLAY_SUBPROCESS_VARIABLES_AS_READONLY === 'true';
+
+    const hasChildWithVariables = childNodes.some((n) => n.variablesTotalCount > 0);
+
+    // totalCount = max across all nodes so the paginator spans the largest section
+    const orderedNodes = [rootNode, ...childNodes];
+    const maxTotal = Math.max(...orderedNodes.map((n) => n.variablesTotalCount), 0);
+
+    if (!hasChildWithVariables) {
+      return {
+        tableSections: undefined,
+        tableData: toRows(rootNode, false),
+        totalCount: rootNode.variablesTotalCount,
+      };
     }
 
-    return result;
-  }, [rootRows, childProcesses, grandchildProcesses, instanceByKey, toRows, t]);
+    // Sectioned path — data is already page-sliced by useInstanceData
+    const sections: DataTableSection<Variable>[] = [];
+    for (const node of orderedNodes) {
+      if (node.variablesTotalCount === 0) continue;
+      const isRoot = node === rootNode;
+      const label = isRoot
+        ? ''
+        : `${node.instance.processType ? t(`processes:types.${node.instance.processType}`) : t('processInstance:fields.childProcess')}: ${node.instance.key}`;
+      sections.push({
+        label,
+        callPath: isRoot ? undefined : node.callPath,
+        data: toRows(node, !isRoot && displaySubProcessVariablesAsReadOnly),
+      });
+    }
 
-  // If no labeled sections, render flat; otherwise pass full sections array.
-  const childSections = useMemo(() => sections.filter((s) => s.label !== ''), [sections]);
+    return {
+      tableSections: sections.length > 0 ? sections : undefined,
+      tableData: [],
+      totalCount: maxTotal,
+    };
+  }, [instanceTree, toRows, t]);
 
-  const tableSections = useMemo<DataTableSection<Variable>[] | undefined>(() => {
-    if (childSections.length === 0) return undefined;
-    const rootSection = sections.find((s) => s.label === '');
-    const result: DataTableSection<Variable>[] = [];
-    if (rootSection && rootSection.data.length > 0) result.push(rootSection);
-    result.push(...childSections);
-    return result;
-  }, [childSections, sections]);
-
-  const tableData = useMemo<Variable[]>(
-    () => (tableSections ? [] : rootRows),
-    [tableSections, rootRows],
-  );
-
-  const totalCount = useMemo(
-    () => sections.reduce((acc, s) => acc + s.data.length, 0),
-    [sections],
-  );
+  // Full variables map per instance key — used by the edit handler (needs the complete set)
+  const instanceVarsByKey = useMemo<Record<string, Record<string, unknown>>>(() => {
+    if (!instanceTree) return {};
+    const map: Record<string, Record<string, unknown>> = {};
+    for (const node of collectNodes(instanceTree)) {
+      map[node.instance.key] = (node.instance.variables as Record<string, unknown>) ?? {};
+    }
+    return map;
+  }, [instanceTree]);
 
   const handleAddVariable = useCallback(async (name: string, value: unknown) => {
     try {
-      const updatedVariables = { ...variables, [name]: value };
-      await updateProcessInstanceVariables(processInstanceKey, { variables: updatedVariables });
+      await updateProcessInstanceVariables(processInstanceKey, { variables: { ...rootVariables, [name]: value } });
       onShowNotification(t('processInstance:messages.variableAdded'), 'success');
       await onRefetch();
     } catch {
       onShowNotification(t('processInstance:messages.variableAddFailed'), 'error');
     }
-  }, [processInstanceKey, variables, onRefetch, onShowNotification, t]);
+  }, [processInstanceKey, rootVariables, onRefetch, onShowNotification, t]);
 
-  const handleEditVariable = useCallback(async (name: string, value: unknown) => {
+  const handleEditVariable = useCallback(async (name: string, value: unknown, instanceKey: string) => {
     try {
-      const updatedVariables = { ...variables, [name]: value };
-      await updateProcessInstanceVariables(processInstanceKey, { variables: updatedVariables });
+      const currentVars = instanceVarsByKey[instanceKey] ?? {};
+      await updateProcessInstanceVariables(instanceKey, { variables: { ...currentVars, [name]: value } });
       onShowNotification(t('processInstance:messages.variableUpdated'), 'success');
       await onRefetch();
     } catch {
       onShowNotification(t('processInstance:messages.variableUpdateFailed'), 'error');
     }
-  }, [processInstanceKey, variables, onRefetch, onShowNotification, t]);
+  }, [instanceVarsByKey, onRefetch, onShowNotification, t]);
 
   const handleDeleteVariable = useCallback(async (name: string) => {
     try {
@@ -215,10 +210,7 @@ export const VariablesTab = ({
         label: t('processInstance:fields.variableName'),
         width: 200,
         render: (row) => (
-          <Typography
-            variant="body2"
-            sx={{ fontWeight: 500 }}
-          >
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
             {row.name}
           </Typography>
         ),
@@ -275,9 +267,7 @@ export const VariablesTab = ({
                     confirmColor: 'error',
                     maxWidth: 'xs',
                   });
-                  if (ok) {
-                    void handleDeleteVariable(row.name);
-                  }
+                  if (ok) void handleDeleteVariable(row.name);
                 }}
                 title={t('common:actions.delete')}
                 color="error"
@@ -289,7 +279,7 @@ export const VariablesTab = ({
         },
       },
     ],
-    [t, openConfirm, handleDeleteVariable, openEditVariableDialog, handleEditVariable]
+    [t, openConfirm, handleDeleteVariable, openEditVariableDialog, handleEditVariable],
   );
 
   return (
@@ -298,7 +288,10 @@ export const VariablesTab = ({
         <Button
           variant="outlined"
           startIcon={<AddIcon />}
-          onClick={() => openAddVariableDialog({ existingVariables: Object.keys(variables || {}), onAdd: handleAddVariable })}
+          onClick={() => openAddVariableDialog({
+            existingVariables: Object.keys(rootVariables),
+            onAdd: handleAddVariable,
+          })}
           size="small"
           data-testid="add-variable-button"
         >
@@ -311,8 +304,13 @@ export const VariablesTab = ({
         data={tableData}
         sections={tableSections}
         rowKey="name"
-        totalCount={totalCount}
         data-testid="variables-table"
+        page={variablesPage}
+        pageSize={variablesPageSize}
+        onPageChange={setVariablesPage}
+        onPageSizeChange={(newSize) => { setVariablesPageSize(newSize); setVariablesPage(0); }}
+        totalCount={totalCount}
+        onElementIdClick={onElementIdClick}
       />
     </Box>
   );

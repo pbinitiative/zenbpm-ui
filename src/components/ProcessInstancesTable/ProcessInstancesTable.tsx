@@ -37,10 +37,12 @@ export interface ProcessInstancesTableProps {
   onFilterChange?: (filters: FilterValues) => void;
   /** Key to trigger data refresh */
   refreshKey?: number;
-  /** Whether to sync filters with URL */
-  syncWithUrl?: boolean;
+  /** Default number of rows per page (default: 5) */
+  defaultPageSize?: number;
   /** Selected activity from diagram click - will be set as activityId filter */
   selectedActivityId?: string;
+  /** Whether to sync filters with URL */
+  syncWithUrl?: boolean;
   /** Callback when activity filter changes (for syncing with diagram highlight) */
   onActivityFilterChange?: (activityId: string | undefined) => void;
 }
@@ -53,6 +55,7 @@ export const ProcessInstancesTable = ({
   onFilterChange: externalOnFilterChange,
   refreshKey: externalRefreshKey = 0,
   syncWithUrl = true,
+  defaultPageSize,
   selectedActivityId: _selectedActivityId,
   onActivityFilterChange,
 }: ProcessInstancesTableProps) => {
@@ -232,6 +235,7 @@ export const ProcessInstancesTable = ({
       serverSideSorting
       syncWithUrl={syncWithUrl}
       syncSortingWithUrl={syncWithUrl}
+      defaultPageSize={defaultPageSize}
       data-testid="process-instances-table"
     />
   );

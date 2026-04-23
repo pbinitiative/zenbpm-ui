@@ -64,6 +64,9 @@ export interface Variable {
   scope?: 'process' | 'local';
 }
 
+// Tree types
+export type { ProcessInstanceNode, NodePagination, TreeDatasetPagination } from './tree';
+
 // Job state colors for UI display
 export const JOB_STATE_COLORS: Record<JobState, string> = {
   activatable: themeColors.stateBadge.created,
