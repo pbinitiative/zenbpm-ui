@@ -15,7 +15,7 @@ export type FilterZone =
 export type FilterAlignment = 'left' | 'right';
 
 /** Filter input types */
-export type FilterType = 'select' | 'text' | 'date' | 'dateRange' | 'switch' | 'group';
+export type FilterType = 'select' | 'text' | 'date' | 'dateRange' | 'switch' | 'group' | 'component';
 
 export interface FilterOption {
   value: string;
@@ -98,13 +98,27 @@ interface SwitchFilterConfig extends FilterConfigBase, SwitchOnlyProps, ForbidPr
   type: 'switch';
 }
 
+/** Component filter configuration - renders a fully custom control */
+interface ComponentFilterConfig extends FilterConfigBase {
+  type: 'component';
+  /**
+   * Render the custom filter control.
+   * value is the current string value from FilterValues (e.g. a bpmnProcessId string).
+   * onChange receives the new string value to store in FilterValues.
+   */
+  render: (value: string | undefined, onChange: (value: string) => void) => React.ReactNode;
+  /** Optional: convert the stored string value to a human-readable badge label */
+  getActiveLabel?: (value: string) => string;
+}
+
 /** Non-group filter types - filters that are not groups */
 export type SimpleFilterConfig =
   | SelectFilterConfig
   | TextFilterConfig
   | DateFilterConfig
   | DateRangeFilterConfig
-  | SwitchFilterConfig;
+  | SwitchFilterConfig
+  | ComponentFilterConfig;
 
 /** Group filter configuration - contains nested filters in a grid layout */
 export interface GroupFilterConfig {

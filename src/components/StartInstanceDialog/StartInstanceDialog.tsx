@@ -16,13 +16,14 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Autocomplete,
 } from '@mui/material';
 
 import CloseIcon from '@mui/icons-material/Close';
 import { JsonEditor } from '@components/JsonEditor';
+import { SearchableSelect } from '@components/SearchableSelect';
 import {
   createProcessInstance,
+  getProcessDefinition,
   getProcessDefinitions,
   type ProcessDefinitionSimple,
 } from '@base/openapi';
@@ -40,12 +41,6 @@ export interface StartInstanceDialogProps {
   onSuccess?: (instanceKey: string) => void;
 }
 
-// Unique process option (grouped by bpmnProcessId)
-interface ProcessOption {
-  bpmnProcessId: string;
-  name: string;
-}
-
 export const StartInstanceDialog = ({
   open,
   onClose,
@@ -58,84 +53,85 @@ export const StartInstanceDialog = ({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Process selector state
-  const [allDefinitions, setAllDefinitions] = useState<ProcessDefinitionSimple[]>([]);
-  const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null);
+  // Selected process definition (latest version, from search)
+  const [selectedDefinition, setSelectedDefinition] = useState<ProcessDefinitionSimple | null>(
+    null,
+  );
+
+  const fetchProcessDefinitions = useCallback(
+    (search: string) =>
+      getProcessDefinitions({ search: search || undefined, onlyLatest: true, size: 50 }).then(
+        (data) => data.items || [],
+      ),
+    [],
+  );
+
+  // All versions for the selected bpmnProcessId
+  const [allVersions, setAllVersions] = useState<ProcessDefinitionSimple[]>([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
+
+  // Selected version key
   const [selectedVersion, setSelectedVersion] = useState<string>('');
-  const [loadingProcesses, setLoadingProcesses] = useState(false);
-  const [initialized, setInitialized] = useState(false);
 
-  // Get unique process options (by bpmnProcessId)
-  const processOptions = useMemo((): ProcessOption[] => {
-    const uniqueProcesses = new Map<string, ProcessOption>();
-    for (const def of allDefinitions) {
-      if (!uniqueProcesses.has(def.bpmnProcessId)) {
-        uniqueProcesses.set(def.bpmnProcessId, {
-          bpmnProcessId: def.bpmnProcessId,
-          name: def.bpmnProcessName || def.bpmnProcessId,
-        });
-      }
-    }
-    return Array.from(uniqueProcesses.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [allDefinitions]);
+  // Sorted versions (descending)
+  const versionOptions = useMemo(
+    () => [...allVersions].sort((a, b) => b.version - a.version),
+    [allVersions],
+  );
 
-  // Get versions for selected process
-  const versionOptions = useMemo(() => {
-    if (!selectedProcessId) return [];
-    return allDefinitions
-      .filter((d) => d.bpmnProcessId === selectedProcessId)
-      .sort((a, b) => b.version - a.version);
-  }, [allDefinitions, selectedProcessId]);
-
-  // Determine actual process key to use
+  // Actual process definition key used for starting the instance
   const processDefinitionKey = selectedVersion;
 
-  // Load all process definitions when dialog opens
+  // Fetch all versions when a process definition is selected
   useEffect(() => {
-    if (open) {
-      const loadProcessDefinitions = async () => {
-        setLoadingProcesses(true);
-        try {
-          // Load all definitions to have all versions available
-          const data = await getProcessDefinitions({ size: 100 });
-          setAllDefinitions(data.items || []);
-        } catch (err) {
-          console.error('Failed to load process definitions:', err);
-          setError(t('processes:errors.loadDefinitionsFailed'));
-        } finally {
-          setLoadingProcesses(false);
-        }
-      };
-      void loadProcessDefinitions();
+    if (!selectedDefinition) {
+      setAllVersions([]);
+      setSelectedVersion('');
+      return;
     }
-  }, [open, t]);
 
-  // Initialize selection after definitions are loaded
-  useEffect(() => {
-    if (allDefinitions.length > 0 && !initialized) {
-      if (propProcessDefinitionKey) {
-        // Find the definition by key and pre-select it
-        const def = allDefinitions.find((d) => d.key === propProcessDefinitionKey);
-        if (def) {
-          setSelectedProcessId(def.bpmnProcessId);
-          setSelectedVersion(propProcessDefinitionKey);
-        }
-      } else if (processOptions.length > 0) {
-        // Auto-select first process
-        const firstProcess = processOptions[0];
-        setSelectedProcessId(firstProcess.bpmnProcessId);
+    const loadVersions = async () => {
+      setLoadingVersions(true);
+      try {
+        const data = await getProcessDefinitions({
+          bpmnProcessId: selectedDefinition.bpmnProcessId,
+          size: 100,
+        });
+        setAllVersions(data.items || []);
+      } catch (err) {
+        console.error('Failed to load process versions:', err);
+        setAllVersions([]);
+      } finally {
+        setLoadingVersions(false);
       }
-      setInitialized(true);
-    }
-  }, [allDefinitions, propProcessDefinitionKey, processOptions, initialized]);
+    };
 
-  // Auto-select latest version when process is selected (but not during initial load with propProcessDefinitionKey)
+    void loadVersions();
+  }, [selectedDefinition]);
+
+  // Auto-select the latest version when versions are loaded
   useEffect(() => {
-    if (selectedProcessId && versionOptions.length > 0 && !selectedVersion) {
-      // Select the latest version (first in sorted list)
+    if (versionOptions.length > 0 && !selectedVersion) {
       setSelectedVersion(versionOptions[0].key);
     }
-  }, [selectedProcessId, versionOptions, selectedVersion]);
+  }, [versionOptions, selectedVersion]);
+
+  // Pre-select when processDefinitionKey prop is provided
+  useEffect(() => {
+    if (!open || !propProcessDefinitionKey) return;
+
+    const preselect = async () => {
+      try {
+        const def = await getProcessDefinition(propProcessDefinitionKey);
+        setSelectedDefinition(def as ProcessDefinitionSimple);
+        setSelectedVersion(propProcessDefinitionKey);
+      } catch (err) {
+        console.error('Failed to pre-select process definition:', err);
+      }
+    };
+
+    void preselect();
+  }, [open, propProcessDefinitionKey]);
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -144,11 +140,13 @@ export const StartInstanceDialog = ({
       setBusinessKey(null);
       setError(null);
       setLoading(false);
-      setSelectedProcessId(null);
-      setSelectedVersion('');
-      setInitialized(false);
+      if (!propProcessDefinitionKey) {
+        setSelectedDefinition(null);
+        setAllVersions([]);
+        setSelectedVersion('');
+      }
     }
-  }, [open]);
+  }, [open, propProcessDefinitionKey]);
 
   // Validate JSON
   const validateJson = useCallback((json: string): boolean => {
@@ -160,13 +158,17 @@ export const StartInstanceDialog = ({
     }
   }, []);
 
-  // Check if current JSON is valid
   const isValidJson = validateJson(variables);
 
-  // Handle variables change
   const handleVariablesChange = useCallback((value: string) => {
     setVariables(value);
     setError(null);
+  }, []);
+
+  // Handle process selection — reset version so auto-select triggers
+  const handleDefinitionChange = useCallback((value: ProcessDefinitionSimple | null) => {
+    setSelectedDefinition(value);
+    setSelectedVersion('');
   }, []);
 
   // Create instance
@@ -193,12 +195,6 @@ export const StartInstanceDialog = ({
       setLoading(false);
     }
   }, [isValidJson, processDefinitionKey, variables, businessKey, onSuccess, onClose, t]);
-
-  // Handle process selection from autocomplete
-  const handleProcessChange = useCallback((_: unknown, value: ProcessOption | null) => {
-    setSelectedProcessId(value?.bpmnProcessId || null);
-    setSelectedVersion(''); // Reset version when process changes
-  }, []);
 
   return (
     <Dialog
@@ -238,49 +234,30 @@ export const StartInstanceDialog = ({
         {/* Process and version selectors */}
         <Box sx={{ mb: 3, mt: 1 }}>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-            {/* Process name selector (searchable) */}
-            <Autocomplete
-              options={processOptions}
-              getOptionLabel={(option) => option.name}
-              value={processOptions.find((p) => p.bpmnProcessId === selectedProcessId) || null}
-              onChange={handleProcessChange}
-              loading={loadingProcesses}
-              disabled={loadingProcesses}
-              sx={{ flex: 1 }}
-              size="small"
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label={t('processes:dialogs.startInstance.selectProcess')}
-                  slotProps={{
-                    input: {
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {loadingProcesses ? <CircularProgress size={20} /> : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    },
-                  }}
-                />
-              )}
-              renderOption={(props, option) => (
-                <li {...props} key={option.bpmnProcessId}>
-                  <Box>
-                    <Box>{option.name}</Box>
-                    {option.name !== option.bpmnProcessId && (
-                      <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                        {option.bpmnProcessId}
-                      </Box>
-                    )}
-                  </Box>
-                </li>
-              )}
-            />
+            {/* Process search selector */}
+            <Box sx={{ flex: 1 }}>
+              <SearchableSelect<ProcessDefinitionSimple>
+                value={selectedDefinition}
+                onChange={handleDefinitionChange}
+                disabled={!!propProcessDefinitionKey}
+                fetchOptions={fetchProcessDefinitions}
+                getOptionLabel={(opt) => opt.bpmnProcessName || opt.bpmnProcessId}
+                getOptionSubtitle={(opt) =>
+                  opt.bpmnProcessName && opt.bpmnProcessName !== opt.bpmnProcessId
+                    ? opt.bpmnProcessId
+                    : undefined
+                }
+                getOptionKey={(opt) => opt.key}
+                label={t('processes:dialogs.startInstance.selectProcess')}
+              />
+            </Box>
 
             {/* Version selector */}
-            <FormControl sx={{ minWidth: 120 }} size="small" disabled={!selectedProcessId}>
+            <FormControl
+              sx={{ minWidth: 120 }}
+              size="small"
+              disabled={!selectedDefinition || loadingVersions}
+            >
               <InputLabel id="version-select-label">
                 {t('processes:fields.version')}
               </InputLabel>
@@ -308,7 +285,6 @@ export const StartInstanceDialog = ({
             fullWidth
             sx={{ mt: 2 }}
           />
-
         </Box>
 
         {/* Variables editor */}

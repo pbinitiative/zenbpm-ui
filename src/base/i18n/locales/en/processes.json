@@ -29,7 +29,8 @@
     "variables": "Variables",
     "activities": "Activities",
     "activityFilter": "Activity",
-    "type": "Type"
+    "type": "Type",
+    "searchHint": "Type at least 3 characters to search"
   },
   "types": {
     "default": "Default",
