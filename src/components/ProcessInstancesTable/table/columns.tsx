@@ -76,7 +76,7 @@ export const getProcessInstanceColumns = (
       id: 'activeElementInstances',
       label: t('processes:fields.activities'),
       render: (row) => {
-        if (row.activeElementInstances.length === 0) {
+        if (!row.activeElementInstances?.length) {
           return (
             <Box component="span" sx={{ color: 'text.secondary' }}>
               -
