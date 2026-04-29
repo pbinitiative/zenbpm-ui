@@ -52,12 +52,18 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
         size: params.size,
       };
 
-      // Add onlyLatest filter
+      // Add onlyLatest filter (read from params.filters to reflect current table state)
       if (params.filters?.onlyLatest === 'true') {
         apiParams.onlyLatest = true;
       }
 
-      // Note: search filter not supported by backend API yet
+      // Compute search term from provided params.filters (preferred)
+      const searchTerm = params.filters?.search as string | undefined;
+
+      // Add search filter for the process definitions endpoint
+      if (searchTerm) {
+        apiParams.search = searchTerm;
+      }
 
       // Add sorting — map column ids to API sort fields
       if (params.sortBy) {
@@ -75,10 +81,19 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
       }
 
       try {
+        const statsParams: GetProcessDefinitionStatisticsParams = {
+          page: apiParams.page,
+          size: apiParams.size,
+          onlyLatest: apiParams.onlyLatest,
+        };
+        if (searchTerm) {
+          statsParams.search = searchTerm;
+        }
+
         // Fetch definitions and statistics in parallel
         const [definitionsData, statisticsResult] = await Promise.allSettled([
           getProcessDefinitions(apiParams),
-          getProcessDefinitionStatistics(apiParams as GetProcessDefinitionStatisticsParams),
+          getProcessDefinitionStatistics(statsParams),
         ]);
 
         if (definitionsData.status === 'rejected') {

@@ -5,24 +5,21 @@ import { ns } from '@base/i18n';
 import {
   TableWithFilters,
   type FilterValues,
-  type FilterOption,
 } from '@components/TableWithFilters';
 import type { PartitionedResponse } from '@components/PartitionedTable';
+import { SearchableSelect } from '@components/SearchableSelect';
 import { getProcessInstanceColumns } from './table/columns';
 import { getProcessInstanceFilters } from './table/filters';
 import {
   getProcessInstances,
-  getProcessDefinitions,
   getChildProcessInstances,
   type ProcessInstance,
   type ProcessDefinitionSimple,
+  getProcessDefinitions,
 } from '@base/openapi';
 
 // Re-export for consumers
 export type { ProcessInstance };
-
-// Process definition type for the filter dropdown (subset of ProcessDefinitionSimple)
-export type ProcessDefinitionOption = Pick<ProcessDefinitionSimple, 'key' | 'bpmnProcessId' | 'bpmnProcessName' | 'version'>;
 
 export interface ProcessInstancesTableProps {
   /** Fixed process definition key - when set, instances are filtered by this key and the process filter is hidden */
@@ -61,10 +58,24 @@ export const ProcessInstancesTable = ({
 }: ProcessInstancesTableProps) => {
   // Note: _selectedActivityId is not used directly - the table reads activityId from URL via syncWithUrl.
   // The prop exists for API consistency; the page uses it to sync diagram highlighting.
-  const { t } = useTranslation([ns.common]);
+  const { t } = useTranslation([ns.common, ns.processes]);
   const navigate = useNavigate();
   const [internalRefreshKey, setInternalRefreshKey] = useState(0);
-  const [processDefinitions, setProcessDefinitions] = useState<ProcessDefinitionOption[]>([]);
+
+  // Tracks the full ProcessDefinitionSimple selected in the process filter
+  // (the bpmnProcessId string is stored in FilterValues; this holds the object for the Autocomplete)
+  const [selectedDefinition, setSelectedDefinition] = useState<ProcessDefinitionSimple | null>(null);
+
+  // Map of bpmnProcessId -> bpmnProcessName (fetched separately because process instances don't include the name)
+  const [processNameMap, setProcessNameMap] = useState<Record<string, string>>({});
+
+  const fetchProcessDefinitions = useCallback(
+    (search: string) =>
+      getProcessDefinitions({ search: search || undefined, onlyLatest: true, size: 50 }).then(
+        (data) => data.items || [],
+      ),
+    [],
+  );
 
   const refreshKey = externalRefreshKey || internalRefreshKey;
 
@@ -79,37 +90,6 @@ export const ProcessInstancesTable = ({
     },
     [externalOnFilterChange, onActivityFilterChange]
   );
-
-
-  // Load process definitions for the filter dropdown (only when not fixed to a single definition)
-  useEffect(() => {
-    if (processDefinitionKey) return; // Skip if locked to specific definition
-
-    const loadProcessDefinitions = async () => {
-      try {
-        const data = await getProcessDefinitions({ onlyLatest: true, size: 100 });
-        setProcessDefinitions(
-          (data.items || []).map((pd) => ({
-            key: pd.key,
-            bpmnProcessId: pd.bpmnProcessId,
-            bpmnProcessName: pd.bpmnProcessName,
-            version: pd.version,
-          }))
-        );
-      } catch (error) {
-        console.error('Failed to load process definitions:', error);
-      }
-    };
-    void loadProcessDefinitions();
-  }, [processDefinitionKey]);
-
-  // Convert process definitions to filter options
-  const processOptions: FilterOption[] = useMemo(() => {
-    return processDefinitions.map((pd) => ({
-      value: pd.bpmnProcessId,
-      label: pd.bpmnProcessName || pd.bpmnProcessId,
-    }));
-  }, [processDefinitions]);
 
   // Fetch process instances data using API service
   const fetchData = useCallback(
@@ -167,7 +147,7 @@ export const ProcessInstancesTable = ({
         apiParams.sortOrder = params.sortOrder || 'asc';
       }
 
-      const data = parentProcessInstanceKey 
+      const data = parentProcessInstanceKey
         ? await getChildProcessInstances(parentProcessInstanceKey, apiParams)
         : await getProcessInstances(apiParams);
 
@@ -184,14 +164,39 @@ export const ProcessInstancesTable = ({
     [processDefinitionKey, parentProcessInstanceKey, refreshKey]
   );
 
+  // Fetch latest process definitions (up to 100) to build a map of id->name.
+  useEffect(() => {
+    let aborted = false;
+    const load = async () => {
+      try {
+        const defs = await getProcessDefinitions({ onlyLatest: true, size: 100 });
+        if (aborted) return;
+        const map: Record<string, string> = {};
+        for (const d of defs.items || []) {
+          if (d.bpmnProcessId) {
+            map[d.bpmnProcessId] = d.bpmnProcessName ?? d.bpmnProcessId;
+          }
+        }
+        setProcessNameMap(map);
+      } catch (err) {
+        console.error('Failed to load process definitions for name map:', err);
+        setProcessNameMap({});
+      }
+    };
+    void load();
+    return () => {
+      aborted = true;
+    };
+  }, [refreshKey]);
+
   // Get columns from extracted definition
   const columns = useMemo(
     () =>
       getProcessInstanceColumns(t, {
         showProcessColumn: !processDefinitionKey,
-        processDefinitions,
+        processNameMap,
       }),
-    [t, processDefinitionKey, processDefinitions]
+    [t, processDefinitionKey, processNameMap]
   );
 
   // Get filters from extracted definition
@@ -200,10 +205,29 @@ export const ProcessInstancesTable = ({
       getProcessInstanceFilters(t, {
         showProcessFilter: !processDefinitionKey,
         showIncludeChildProcesses: !parentProcessInstanceKey,
-        processOptions,
+        renderProcessFilter: (_value, onChange) => (
+          <SearchableSelect<ProcessDefinitionSimple>
+            value={selectedDefinition}
+            onChange={(def) => {
+              setSelectedDefinition(def);
+              onChange(def?.bpmnProcessId ?? '');
+            }}
+            fetchOptions={fetchProcessDefinitions}
+            getOptionLabel={(opt) => opt.bpmnProcessName || opt.bpmnProcessId}
+            getOptionSubtitle={(opt) =>
+              opt.bpmnProcessName && opt.bpmnProcessName !== opt.bpmnProcessId
+                ? opt.bpmnProcessId
+                : undefined
+            }
+            getOptionKey={(opt) => opt.key}
+            label={t('processes:dialogs.startInstance.selectProcess')}
+          />
+        ),
+        getProcessActiveLabel: (bpmnProcessId) =>
+          selectedDefinition?.bpmnProcessName || bpmnProcessId,
         activityIds,
       }),
-    [t, processDefinitionKey, parentProcessInstanceKey, processOptions, activityIds]
+    [t, processDefinitionKey, parentProcessInstanceKey, activityIds, selectedDefinition]
   );
 
   // Handlers
