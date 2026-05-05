@@ -3,7 +3,7 @@ openapi: 3.0.0
 info:
   title: ZenBPM OpenAPI
   description: REST API for ZenBPM
-  version: 1.1.0
+  version: 1.2.0
   contact:
     name: API Support
     email: info@pbinitiative.org
@@ -2692,7 +2692,7 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/ProcessInstance"
+            $ref: "#/components/schemas/ProcessInstancesSimple"
     DmnResourceDefinitionsPage:
       type: object
       allOf:
@@ -3000,6 +3000,17 @@ components:
                 $ref: "#/components/schemas/PartitionProcessInstances"
         - $ref: "#/components/schemas/PartitionedPageMetadata"
     ProcessInstance:
+      allOf:
+        - $ref: "#/components/schemas/ProcessInstancesSimple"
+        - type: object
+          required:
+            - activeElementInstances
+          properties:
+            activeElementInstances:
+              type: array
+              items:
+                $ref: "#/components/schemas/ElementInstance"
+    ProcessInstancesSimple:
       type: object
       required:
         - key
@@ -3007,7 +3018,6 @@ components:
         - createdAt
         - state
         - variables
-        - activeElementInstances
         - processType
       properties:
         key:
@@ -3024,28 +3034,28 @@ components:
           type: string
           format: date-time
         state:
-          type: string
-          enum:
-            - active
-            - completed
-            - terminated
-            - failed
+          $ref: "#/components/schemas/ProcessInstanceState"
         parentProcessInstanceKey:
           type: integer
           format: int64
         processType:
-          type: string
-          enum:
-            - default
-            - multiInstance
-            - subprocess
-            - callActivity
+          $ref: "#/components/schemas/ProcessInstanceProcessType"
         variables:
           type: object
-        activeElementInstances:
-          type: array
-          items:
-            $ref: "#/components/schemas/ElementInstance"
+    ProcessInstanceProcessType:
+      type: string
+      enum:
+        - default
+        - multiInstance
+        - subprocess
+        - callActivity
+    ProcessInstanceState:
+      type: string
+      enum:
+        - active
+        - completed
+        - terminated
+        - failed
     JobPage:
       type: object
       allOf:
