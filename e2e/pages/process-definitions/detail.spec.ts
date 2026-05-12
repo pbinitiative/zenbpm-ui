@@ -310,6 +310,11 @@ test.describe('Process Definition Detail - Filters', () => {
     await stateFormControl.click();
     await page.getByRole('option', { name: 'Active' }).click();
 
+    // Wait for the state filter badge to confirm filter is applied before opening the filters panel
+    // (prevents a URL sync race that can strip the state filter when the activity filter is set)
+    await expect(page.getByTestId('filter-badge-state')).toBeVisible();
+    await expect(page).toHaveURL(/state=active/);
+
     // Open filters panel for activity filter
     const filtersButton = page.getByRole('button', { name: /Filters/i });
     await filtersButton.click();

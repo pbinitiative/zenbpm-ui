@@ -20,7 +20,7 @@ import { BpmnDiagram } from '@components/BpmnDiagram';
 import { MetadataPanel } from '@components/DiagramDetailLayout';
 import type { DefinitionInfo } from '@components/DiagramDetailLayout';
 import { useInstanceData } from './hooks';
-import { JobsTab, VariablesTab, IncidentsTab, HistoryTab, ChildProcessesTab, DecisionInstancesTab } from './tabs';
+import { JobsTab, VariablesTab, IncidentsTab, HistoryTab, ChildProcessesTab, DecisionInstancesTab, EventSubscriptionsTab } from './tabs';
 
 // Tab panel component
 interface TabPanelProps {
@@ -48,6 +48,7 @@ const TAB_MAP: Record<string, number> = {
   variables: 3,
   'child-processes': 4,
   decisions: 5,
+  'event-subscriptions': 6,
 };
 
 export const ProcessInstanceDetailPage = () => {
@@ -122,6 +123,19 @@ export const ProcessInstanceDetailPage = () => {
     historySortBy,
     historySortOrder,
     setHistorySort,
+    messageSubscriptionsPage,
+    messageSubscriptionsPageSize,
+    setMessageSubscriptionsPage,
+    setMessageSubscriptionsPageSize,
+    timerSubscriptionsPage,
+    timerSubscriptionsPageSize,
+    setTimerSubscriptionsPage,
+    setTimerSubscriptionsPageSize,
+    errorSubscriptionsPage,
+    errorSubscriptionsPageSize,
+    setErrorSubscriptionsPage,
+    setErrorSubscriptionsPageSize,
+    totalEventSubscriptionsCount,
   } = useInstanceData(processInstanceKey);
 
   // Count of process instances shown in the Child Processes tab
@@ -234,8 +248,8 @@ export const ProcessInstanceDetailPage = () => {
       <Grid container spacing={{ xs: 2, md: 3 }} sx={{ alignItems: 'stretch' }}>
         {/* BPMN Diagram - First on mobile */}
         <Grid size={{ xs: 12, md: 9 }} order={{ xs: 1, md: 2 }}>
-          <Paper sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: '12px', height: '100%' }} data-testid="process-instance-diagram-panel">
-            <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 2 }}>
+          <Paper sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 3, height: '100%' }} data-testid="process-instance-diagram-panel">
+            <Typography variant="h6" sx={{ fontSize: 'subtitle1.fontSize', fontWeight: 600, mb: 2 }}>
               {t('processInstance:detail.diagram')}
             </Typography>
             {processDefinition?.bpmnData ? (
@@ -268,8 +282,8 @@ export const ProcessInstanceDetailPage = () => {
 
         {/* Metadata - Second on mobile */}
         <Grid size={{ xs: 12, md: 3 }} order={{ xs: 2, md: 1 }}>
-          <Paper sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: '12px', height: '100%', display: 'flex', flexDirection: 'column' }} data-testid="process-instance-metadata-panel">
-            <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
+          <Paper sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 3, height: '100%', display: 'flex', flexDirection: 'column' }} data-testid="process-instance-metadata-panel">
+            <Typography variant="h6" gutterBottom sx={{ fontSize: 'subtitle1.fontSize', fontWeight: 600 }}>
               {t('processInstance:detail.metadata')}
             </Typography>
             <MetadataPanel
@@ -290,7 +304,7 @@ export const ProcessInstanceDetailPage = () => {
       </Grid>
 
       {/* Tabs for Jobs, History, Incidents, Variables */}
-      <Paper sx={{ mt: { xs: 2, md: 3 }, borderRadius: '12px' }} data-testid="process-instance-tabs-panel">
+      <Paper sx={{ mt: { xs: 2, md: 3 }, borderRadius: 3 }} data-testid="process-instance-tabs-panel">
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
@@ -313,7 +327,7 @@ export const ProcessInstanceDetailPage = () => {
                   <Chip
                     label={activeJobsTotalCount}
                     size="small"
-                    sx={{ height: 20, fontSize: '0.7rem' }}
+                    sx={{ height: 20, fontSize: 'caption.fontSize' }}
                   />
                 )}
               </Box>
@@ -330,7 +344,7 @@ export const ProcessInstanceDetailPage = () => {
                     label={unresolvedIncidentsCount}
                     size="small"
                     color="error"
-                    sx={{ height: 20, fontSize: '0.7rem' }}
+                    sx={{ height: 20, fontSize: 'caption.fontSize' }}
                   />
                 )}
               </Box>
@@ -343,7 +357,7 @@ export const ProcessInstanceDetailPage = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {t('processInstance:tabs.calledProcesses')}
                 { visibleChildProcessesCount > 0 && (
-                  <Chip label={visibleChildProcessesCount} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
+                  <Chip label={visibleChildProcessesCount} size="small" sx={{ height: 20, fontSize: 'caption.fontSize' }} />
                 )}
               </Box>
             }
@@ -354,7 +368,18 @@ export const ProcessInstanceDetailPage = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {t('processInstance:tabs.decisions')}
                 {totalDecisionInstancesCount > 0 && (
-                  <Chip label={totalDecisionInstancesCount} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />
+                  <Chip label={totalDecisionInstancesCount} size="small" sx={{ height: 20, fontSize: 'caption.fontSize' }} />
+                )}
+              </Box>
+            }
+          />
+          <Tab
+            data-testid="process-instance-tab-event-subscriptions"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {t('processInstance:tabs.eventSubscriptions')}
+                {totalEventSubscriptionsCount > 0 && (
+                  <Chip label={totalEventSubscriptionsCount} size="small" sx={{ height: 20, fontSize: 'caption.fontSize' }} />
                 )}
               </Box>
             }
@@ -431,6 +456,27 @@ export const ProcessInstanceDetailPage = () => {
               setDecisionsPage={setDecisionsPage}
               setDecisionsPageSize={setDecisionsPageSize}
               onElementIdClick={handleElementIdClick}
+            />
+          </TabPanel>
+
+          {/* Event Subscriptions Tab */}
+          <TabPanel value={activeTab} index={6}>
+            <EventSubscriptionsTab
+              instanceTree={instanceTree}
+              messageSubscriptionsPage={messageSubscriptionsPage}
+              messageSubscriptionsPageSize={messageSubscriptionsPageSize}
+              setMessageSubscriptionsPage={setMessageSubscriptionsPage}
+              setMessageSubscriptionsPageSize={setMessageSubscriptionsPageSize}
+              timerSubscriptionsPage={timerSubscriptionsPage}
+              timerSubscriptionsPageSize={timerSubscriptionsPageSize}
+              setTimerSubscriptionsPage={setTimerSubscriptionsPage}
+              setTimerSubscriptionsPageSize={setTimerSubscriptionsPageSize}
+              errorSubscriptionsPage={errorSubscriptionsPage}
+              errorSubscriptionsPageSize={errorSubscriptionsPageSize}
+              setErrorSubscriptionsPage={setErrorSubscriptionsPage}
+              setErrorSubscriptionsPageSize={setErrorSubscriptionsPageSize}
+              onRefetch={refetchAll}
+              onShowNotification={showNotification}
             />
           </TabPanel>
         </Box>

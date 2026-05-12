@@ -7,6 +7,49 @@ import {
 import { getJobsByProcessInstanceKey } from '../data/jobs';
 import { getIncidentsByProcessInstanceKey } from '../data/incidents';
 import { withValidation } from '../validation';
+import { SHOWCASE_ACTIVE_INSTANCE_KEY, SHOWCASE_PROCESS_DEFINITION_KEY } from '../data/well-known-keys';
+
+// ---------------------------------------------------------------------------
+// Static mock data for event subscriptions (showcase active instance)
+// ---------------------------------------------------------------------------
+
+const MOCK_MESSAGE_SUBSCRIPTIONS = [
+  {
+    key: '4200000000000000001',
+    elementId: 'messageCatchEvent',
+    processDefinitionKey: SHOWCASE_PROCESS_DEFINITION_KEY,
+    processInstanceKey: SHOWCASE_ACTIVE_INSTANCE_KEY,
+    messageName: 'OrderConfirmed',
+    correlationKey: 'CUST-001',
+    state: 'active',
+    createdAt: '2024-01-15T10:30:00Z',
+  },
+];
+
+const MOCK_TIMER_SUBSCRIPTIONS = [
+  {
+    key: '4300000000000000001',
+    elementId: 'timerBoundaryEvent',
+    processDefinitionKey: SHOWCASE_PROCESS_DEFINITION_KEY,
+    processInstanceKey: SHOWCASE_ACTIVE_INSTANCE_KEY,
+    state: 'active',
+    createdAt: '2024-01-15T10:30:00Z',
+    dueDate: '2024-01-16T10:30:00Z',
+  },
+];
+
+const MOCK_ERROR_SUBSCRIPTIONS = [
+  {
+    key: '4400000000000000001',
+    elementInstanceKey: '4400000000000000002',
+    elementId: 'errorBoundaryEvent',
+    processDefinitionKey: SHOWCASE_PROCESS_DEFINITION_KEY,
+    processInstanceKey: SHOWCASE_ACTIVE_INSTANCE_KEY,
+    errorCode: 'ORDER_FAILED',
+    state: 'active',
+    createdAt: '2024-01-15T10:30:00Z',
+  },
+];
 
 // Helper to transform a process instance to response format (reused across handlers)
 function transformInstance(pi: (typeof processInstances)[0]) {
@@ -552,6 +595,57 @@ export const processInstanceHandlers = [
       return HttpResponse.json({
         partitions: [{ partition: instance.partition, items }],
       });
+    })
+  ),
+
+  // GET /process-instances/:processInstanceKey/event-subscriptions/messages
+  http.get(
+    `${BASE_URL}/process-instances/:processInstanceKey/event-subscriptions/messages`,
+    withValidation(({ params }) => {
+      const { processInstanceKey } = params;
+      const instance = findProcessInstanceByKey(processInstanceKey as string);
+      if (!instance) {
+        return HttpResponse.json(
+          { code: 'NOT_FOUND', message: `Process instance with key ${processInstanceKey} not found` },
+          { status: 404 }
+        );
+      }
+      const items = processInstanceKey === SHOWCASE_ACTIVE_INSTANCE_KEY ? MOCK_MESSAGE_SUBSCRIPTIONS : [];
+      return HttpResponse.json({ items, totalCount: items.length, count: items.length, page: 1, size: 10 });
+    })
+  ),
+
+  // GET /process-instances/:processInstanceKey/event-subscriptions/timers
+  http.get(
+    `${BASE_URL}/process-instances/:processInstanceKey/event-subscriptions/timers`,
+    withValidation(({ params }) => {
+      const { processInstanceKey } = params;
+      const instance = findProcessInstanceByKey(processInstanceKey as string);
+      if (!instance) {
+        return HttpResponse.json(
+          { code: 'NOT_FOUND', message: `Process instance with key ${processInstanceKey} not found` },
+          { status: 404 }
+        );
+      }
+      const items = processInstanceKey === SHOWCASE_ACTIVE_INSTANCE_KEY ? MOCK_TIMER_SUBSCRIPTIONS : [];
+      return HttpResponse.json({ items, totalCount: items.length, count: items.length, page: 1, size: 10 });
+    })
+  ),
+
+  // GET /process-instances/:processInstanceKey/event-subscriptions/errors
+  http.get(
+    `${BASE_URL}/process-instances/:processInstanceKey/event-subscriptions/errors`,
+    withValidation(({ params }) => {
+      const { processInstanceKey } = params;
+      const instance = findProcessInstanceByKey(processInstanceKey as string);
+      if (!instance) {
+        return HttpResponse.json(
+          { code: 'NOT_FOUND', message: `Process instance with key ${processInstanceKey} not found` },
+          { status: 404 }
+        );
+      }
+      const items = processInstanceKey === SHOWCASE_ACTIVE_INSTANCE_KEY ? MOCK_ERROR_SUBSCRIPTIONS : [];
+      return HttpResponse.json({ items, totalCount: items.length, count: items.length, page: 1, size: 10 });
     })
   ),
 ];

@@ -209,7 +209,7 @@ export const JobsTab = ({
         sortable: true,
         width: 150,
         render: (row) => (
-          <Chip label={row.type} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 22 }} />
+          <Chip label={row.type} size="small" variant="outlined" sx={{ fontSize: 'caption.fontSize', height: 22 }} />
         ),
       },
       {
@@ -238,7 +238,7 @@ export const JobsTab = ({
               bgcolor: JOB_STATE_COLORS[row.state] || 'grey.500',
               color: 'white',
               fontWeight: 600,
-              fontSize: '0.7rem',
+              fontSize: 'caption.fontSize',
               height: 22,
             }}
           />
@@ -279,8 +279,8 @@ export const JobsTab = ({
                     e.stopPropagation();
                     openCompleteJobDialog({ job: row, onComplete: handleCompleteJob });
                   }}
-                  sx={{ textTransform: 'none', fontSize: '0.75rem' }}
-                >
+                  sx={{ textTransform: 'none', fontSize: 'caption.fontSize' }}
+                  >
                   {t('processInstance:actions.complete')}
                 </Button>
               )}

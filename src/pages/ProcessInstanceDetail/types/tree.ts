@@ -1,4 +1,4 @@
-import type { DecisionInstanceSummary } from '@base/openapi';
+import type { DecisionInstanceSummary, MessageSubscription, TimerSubscription, ErrorSubscription } from '@base/openapi';
 import type { FlowElementHistory, Incident, Job, ProcessInstance } from './index';
 
 // ---------------------------------------------------------------------------
@@ -81,6 +81,18 @@ export interface ProcessInstanceNode {
 
   // --- History (client-paged only, fetched in full) ---
   history: FlowElementHistory[];
+
+  // --- Message subscriptions (server-paginated) ---
+  messageSubscriptions: MessageSubscription[];
+  messageSubscriptionsTotalCount: number;
+
+  // --- Timer subscriptions (server-paginated) ---
+  timerSubscriptions: TimerSubscription[];
+  timerSubscriptionsTotalCount: number;
+
+  // --- Error subscriptions (server-paginated) ---
+  errorSubscriptions: ErrorSubscription[];
+  errorSubscriptionsTotalCount: number;
 
   // --- Children ---
   children: ProcessInstanceNode[];

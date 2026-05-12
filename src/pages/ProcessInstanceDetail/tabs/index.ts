@@ -4,3 +4,4 @@ export { IncidentsTab } from './IncidentsTab';
 export { HistoryTab } from './HistoryTab';
 export { ChildProcessesTab } from './ChildProcessesTab';
 export { DecisionInstancesTab } from './DecisionInstancesTab';
+export { EventSubscriptionsTab } from './EventSubscriptionsTab';

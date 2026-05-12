@@ -1,4 +1,4 @@
-import type { DecisionInstanceSummary } from '@base/openapi';
+import type { DecisionInstanceSummary, MessageSubscription, TimerSubscription, ErrorSubscription } from '@base/openapi';
 import {
   getProcessInstance,
   getProcessInstanceJobs,
@@ -7,6 +7,9 @@ import {
   getIncidents,
   getChildProcessInstances,
   getDecisionInstances,
+  getProcessInstanceMessageSubscriptions,
+  getProcessInstanceTimerSubscriptions,
+  getProcessInstanceErrorSubscriptions,
 } from '@base/openapi';
 import type { FlowElementHistory, Incident, Job, ProcessInstance } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
@@ -30,6 +33,9 @@ export const JOBS_PAGE_SIZE = 10;
 export const INCIDENTS_PAGE_SIZE = 10;
 export const DECISIONS_PAGE_SIZE = 10;
 export const VARIABLES_PAGE_SIZE = 10;
+export const MESSAGE_SUBSCRIPTIONS_PAGE_SIZE = 10;
+export const TIMER_SUBSCRIPTIONS_PAGE_SIZE = 10;
+export const ERROR_SUBSCRIPTIONS_PAGE_SIZE = 10;
 
 /**
  * Maximum number of simultaneous dataset-fetch requests in Phase 2.
@@ -37,7 +43,7 @@ export const VARIABLES_PAGE_SIZE = 10;
  * more requests than the browser can actually send in parallel.
  * Without this, a tree of 50 nodes fires 250 requests simultaneously.
  */
-const CONCURRENT_FETCH_LIMIT = 6;
+export const CONCURRENT_FETCH_LIMIT = 6;
 
 /** States where a process instance will never change — used to skip re-fetching */
 const TERMINAL_STATES = new Set(['completed', 'terminated']);
@@ -51,7 +57,7 @@ const TERMINAL_STATES = new Set(['completed', 'terminated']);
  * Works like Promise.all but throttles the number of in-flight promises,
  * preventing the browser from queueing hundreds of requests simultaneously.
  */
-async function runConcurrently<T>(
+export async function runConcurrently<T>(
   items: T[],
   limit: number,
   fn: (item: T) => Promise<unknown>,
@@ -86,6 +92,12 @@ export interface FetchInstanceTreeOptions {
   variablesPageSize?: number;
   historySortBy?: GetHistorySortBy;
   historySortOrder?: GetHistorySortOrder;
+  messageSubscriptionsPage?: number;
+  messageSubscriptionsPageSize?: number;
+  timerSubscriptionsPage?: number;
+  timerSubscriptionsPageSize?: number;
+  errorSubscriptionsPage?: number;
+  errorSubscriptionsPageSize?: number;
   /** Pre-fetched root ProcessInstance — avoids a duplicate getProcessInstance call */
   preloadedRoot?: ProcessInstance;
   /**
@@ -124,6 +136,12 @@ function makeNode(
     variableEntries: [],
     variablesTotalCount: 0,
     history: [],
+    messageSubscriptions: [],
+    messageSubscriptionsTotalCount: 0,
+    timerSubscriptions: [],
+    timerSubscriptionsTotalCount: 0,
+    errorSubscriptions: [],
+    errorSubscriptionsTotalCount: 0,
     children: [],
     childrenTotalCount: 0,
   };
@@ -183,6 +201,9 @@ async function fetchNodeDatasets(
     | 'decisionsPage' | 'decisionsPageSize'
     | 'variablesPage' | 'variablesPageSize'
     | 'historySortBy' | 'historySortOrder'
+    | 'messageSubscriptionsPage' | 'messageSubscriptionsPageSize'
+    | 'timerSubscriptionsPage' | 'timerSubscriptionsPageSize'
+    | 'errorSubscriptionsPage' | 'errorSubscriptionsPageSize'
   >>,
 ): Promise<void> {
   if (!node.isRoot && node.instance.processType === 'callActivity') {
@@ -197,10 +218,13 @@ async function fetchNodeDatasets(
     getIncidents(key, { page: opts.incidentsPage, size: opts.incidentsPageSize }),
     getIncidents(key, { state: 'unresolved' as GetIncidentsState, page: 1, size: 1 }),
     getDecisionInstances({ processInstanceKey: key, page: opts.decisionsPage, size: opts.decisionsPageSize }),
-    getHistory(key, { page: 1, size: 100, sortBy: opts.historySortBy, sortOrder: opts.historySortOrder }),
+    getHistory(key, { page: 1, size: -1, sortBy: opts.historySortBy, sortOrder: opts.historySortOrder }),
+    getProcessInstanceMessageSubscriptions(key, { page: opts.messageSubscriptionsPage, size: opts.messageSubscriptionsPageSize }),
+    getProcessInstanceTimerSubscriptions(key, { page: opts.timerSubscriptionsPage, size: opts.timerSubscriptionsPageSize }),
+    getProcessInstanceErrorSubscriptions(key, { page: opts.errorSubscriptionsPage, size: opts.errorSubscriptionsPageSize }),
   ];
 
-  const [jobsResult, activeJobsResult, incidentsResult, unresolvedResult, decisionsResult, historyResult] = await Promise.allSettled(requests);
+  const [jobsResult, activeJobsResult, incidentsResult, unresolvedResult, decisionsResult, historyResult, messageSubsResult, timerSubsResult, errorSubsResult] = await Promise.allSettled(requests);
 
   if (jobsResult.status === 'fulfilled' && jobsResult.value) {
     const v = jobsResult.value as Awaited<ReturnType<typeof getProcessInstanceJobs>>;
@@ -226,14 +250,31 @@ async function fetchNodeDatasets(
 
   if (decisionsResult.status === 'fulfilled' && decisionsResult.value) {
     const v = decisionsResult.value as Awaited<ReturnType<typeof getDecisionInstances>>;
-    const items = (v.partitions ?? []).flatMap((p) => p.items ?? []) as DecisionInstanceSummary[];
-    node.decisions = items;
+    node.decisions = (v.partitions ?? []).flatMap((p) => p.items ?? []) as DecisionInstanceSummary[];
     node.decisionsTotalCount = v.totalCount ?? 0;
   }
 
   if (historyResult.status === 'fulfilled' && historyResult.value) {
     const v = historyResult.value as Awaited<ReturnType<typeof getHistory>>;
     node.history = (v.items ?? []) as FlowElementHistory[];
+  }
+
+  if (messageSubsResult.status === 'fulfilled' && messageSubsResult.value) {
+    const v = messageSubsResult.value as Awaited<ReturnType<typeof getProcessInstanceMessageSubscriptions>>;
+    node.messageSubscriptions = (v.items ?? []) as MessageSubscription[];
+    node.messageSubscriptionsTotalCount = v.totalCount ?? 0;
+  }
+
+  if (timerSubsResult.status === 'fulfilled' && timerSubsResult.value) {
+    const v = timerSubsResult.value as Awaited<ReturnType<typeof getProcessInstanceTimerSubscriptions>>;
+    node.timerSubscriptions = (v.items ?? []) as TimerSubscription[];
+    node.timerSubscriptionsTotalCount = v.totalCount ?? 0;
+  }
+
+  if (errorSubsResult.status === 'fulfilled' && errorSubsResult.value) {
+    const v = errorSubsResult.value as Awaited<ReturnType<typeof getProcessInstanceErrorSubscriptions>>;
+    node.errorSubscriptions = (v.items ?? []) as ErrorSubscription[];
+    node.errorSubscriptionsTotalCount = v.totalCount ?? 0;
   }
 
   // Variables are embedded in instance.variables — slice the current page
@@ -282,6 +323,12 @@ export async function fetchInstanceTree(
     variablesPageSize: opts.variablesPageSize ?? VARIABLES_PAGE_SIZE,
     historySortBy: opts.historySortBy ?? 'createdAt' as GetHistorySortBy,
     historySortOrder: opts.historySortOrder ?? 'asc' as GetHistorySortOrder,
+    messageSubscriptionsPage: opts.messageSubscriptionsPage ?? 1,
+    messageSubscriptionsPageSize: opts.messageSubscriptionsPageSize ?? MESSAGE_SUBSCRIPTIONS_PAGE_SIZE,
+    timerSubscriptionsPage: opts.timerSubscriptionsPage ?? 1,
+    timerSubscriptionsPageSize: opts.timerSubscriptionsPageSize ?? TIMER_SUBSCRIPTIONS_PAGE_SIZE,
+    errorSubscriptionsPage: opts.errorSubscriptionsPage ?? 1,
+    errorSubscriptionsPageSize: opts.errorSubscriptionsPageSize ?? ERROR_SUBSCRIPTIONS_PAGE_SIZE,
   };
   const terminalCache = opts.terminalNodeCache ?? new Map<string, ProcessInstanceNode>();
 
@@ -370,6 +417,12 @@ export async function fetchInstanceTree(
         node.decisionsTotalCount = cached.decisionsTotalCount;
         node.variableEntries = cached.variableEntries;
         node.variablesTotalCount = cached.variablesTotalCount;
+        node.messageSubscriptions = cached.messageSubscriptions;
+        node.messageSubscriptionsTotalCount = cached.messageSubscriptionsTotalCount;
+        node.timerSubscriptions = cached.timerSubscriptions;
+        node.timerSubscriptionsTotalCount = cached.timerSubscriptionsTotalCount;
+        node.errorSubscriptions = cached.errorSubscriptions;
+        node.errorSubscriptionsTotalCount = cached.errorSubscriptionsTotalCount;
         return Promise.resolve();
       }
     }
@@ -541,6 +594,67 @@ export async function refetchNodeHistory(
     node.history = (data.items ?? []) as FlowElementHistory[];
   } catch (err) {
     console.error(`Failed to refetch history for ${node.instance.key}:`, err);
+  }
+  return node;
+}
+
+/**
+ * Re-fetch message subscriptions for a specific node (mutates the node).
+ */
+export async function refetchNodeMessageSubscriptions(
+  node: ProcessInstanceNode,
+  page: number,
+  size: number,
+): Promise<ProcessInstanceNode> {
+  if (!node.isRoot && node.instance.processType === 'callActivity') return node;
+  try {
+    const data = await getProcessInstanceMessageSubscriptions(node.instance.key, { page, size });
+    // node.messageSubscriptions = (data.items ?? []) as MessageSubscription[];
+    node.messageSubscriptions = (data.items ?? []) as MessageSubscription[];
+    const newTotal = data.totalCount ?? 0;
+    if (newTotal > 0 || page === 1) node.messageSubscriptionsTotalCount = newTotal;
+  } catch (err) {
+    console.error(`Failed to refetch message subscriptions for ${node.instance.key}:`, err);
+  }
+  return node;
+}
+
+/**
+ * Re-fetch timer subscriptions for a specific node (mutates the node).
+ */
+export async function refetchNodeTimerSubscriptions(
+  node: ProcessInstanceNode,
+  page: number,
+  size: number,
+): Promise<ProcessInstanceNode> {
+  if (!node.isRoot && node.instance.processType === 'callActivity') return node;
+  try {
+    const data = await getProcessInstanceTimerSubscriptions(node.instance.key, { page, size });
+    node.timerSubscriptions = (data.items ?? []) as TimerSubscription[];
+    const newTotal = data.totalCount ?? 0;
+    if (newTotal > 0 || page === 1) node.timerSubscriptionsTotalCount = newTotal;
+  } catch (err) {
+    console.error(`Failed to refetch timer subscriptions for ${node.instance.key}:`, err);
+  }
+  return node;
+}
+
+/**
+ * Re-fetch error subscriptions for a specific node (mutates the node).
+ */
+export async function refetchNodeErrorSubscriptions(
+  node: ProcessInstanceNode,
+  page: number,
+  size: number,
+): Promise<ProcessInstanceNode> {
+  if (!node.isRoot && node.instance.processType === 'callActivity') return node;
+  try {
+    const data = await getProcessInstanceErrorSubscriptions(node.instance.key, { page, size });
+    node.errorSubscriptions = (data.items ?? []) as ErrorSubscription[];
+    const newTotal = data.totalCount ?? 0;
+    if (newTotal > 0 || page === 1) node.errorSubscriptionsTotalCount = newTotal;
+  } catch (err) {
+    console.error(`Failed to refetch error subscriptions for ${node.instance.key}:`, err);
   }
   return node;
 }

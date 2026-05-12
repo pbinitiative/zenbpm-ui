@@ -29,7 +29,11 @@
     "errorType": "Error Type",
     "errorMessage": "Error Message",
     "childProcess": "Child Process",
-    "childProcessKey": "Child Process Key"
+    "childProcessKey": "Child Process Key",
+    "messageName": "Message Name",
+    "correlationKey": "Correlation Key",
+    "dueDate": "Due Date",
+    "errorCode": "Error Code"
   },
   "tabs": {
     "jobs": "Jobs",
@@ -37,7 +41,8 @@
     "incidents": "Incidents",
     "variables": "Variables",
     "calledProcesses": "Called Processes",
-    "decisions": "Decisions"
+    "decisions": "Decisions",
+    "eventSubscriptions": "Event Subscriptions"
   },
   "jobStates": {
     "activatable": "Activatable",
@@ -60,7 +65,8 @@
     "retry": "Retry",
     "updateRetries": "Update Retries",
     "addVariable": "Add Variable",
-    "cancelProcess": "Cancel Process"
+    "cancelProcess": "Cancel Process",
+    "trigger": "Trigger"
   },
   "messages": {
     "jobCompleted": "Job completed successfully",
@@ -80,7 +86,9 @@
     "variableDeleted": "Variable deleted successfully",
     "variableDeleteFailed": "Failed to delete variable",
     "processCancelled": "Process cancelled successfully",
-    "processCancelFailed": "Failed to cancel process"
+    "processCancelFailed": "Failed to cancel process",
+    "messageSent": "Message sent successfully",
+    "messageSendFailed": "Failed to send message"
   },
   "dialogs": {
     "completeJob": {
@@ -144,6 +152,20 @@
     "cancelProcess": {
       "title": "Cancel Process",
       "message": "Are you sure you want to cancel process?"
+    },
+    "triggerMessage": {
+      "title": "Trigger Message",
+      "subtitle": "Send a message event to this process instance",
+      "messageName": "Message Name",
+      "correlationKey": "Correlation Key",
+      "variables": "Variables (JSON)",
+      "send": "Send Message",
+      "invalidJson": "Invalid JSON \u2014 please check your input"
     }
+  },
+  "eventSubscriptions": {
+    "messages": "Messages",
+    "timers": "Timers",
+    "errors": "Errors"
   }
 }
