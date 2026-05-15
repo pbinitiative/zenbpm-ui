@@ -24,7 +24,7 @@ import { JOB_STATE_COLORS } from '../types';
 import { useCompleteJobDialog } from '../modals/useCompleteJobDialog';
 import { useAssignJobDialog } from '../modals/useAssignJobDialog';
 import { useUpdateRetriesDialog } from '@pages/ProcessInstanceDetail/modals/useUpdateRetriesDialog.ts';
-import { useOutputDialog } from '@pages/DecisionInstanceDetail/components/useOutputDialog';
+import { useOutputDialog } from '@components/OutputDialog';
 import { assignJob, completeJob, customInstance } from '@base/openapi';
 import { MonoText } from "@components/MonoText";
 import { formatDate } from "@components/DiagramDetailLayout/utils";

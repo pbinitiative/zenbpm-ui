@@ -7,7 +7,7 @@ const OUTPUT_DIALOG_ID = 'output-dialog';
 export function useOutputDialog(defaultProps: Omit<OutputDialogProps, 'open' | 'onClose'>) {
   const { openModal, closeModal } = useModal<OutputDialogProps>(
     OUTPUT_DIALOG_ID,
-    OutputDialog
+    OutputDialog,
   );
 
   const openOutputDialog = useCallback(
@@ -17,7 +17,7 @@ export function useOutputDialog(defaultProps: Omit<OutputDialogProps, 'open' | '
         ...props,
       });
     },
-    [openModal, defaultProps]
+    [openModal, defaultProps],
   );
 
   return { openOutputDialog, closeOutputDialog: closeModal };

@@ -6,7 +6,7 @@ import type { DecisionInstanceDetail } from '@base/openapi';
 import type { DecisionOverlay } from '@components/DmnViewer';
 import type { MetadataField, DefinitionInfo } from '@components/DiagramDetailLayout';
 import { useInputOutputDialog } from '../components/useInputOutputDialog';
-import { useOutputDialog } from '../components/useOutputDialog';
+import { useOutputDialog } from '@components/OutputDialog';
 import type { DmnResourceDefinition, EvaluatedDecisionExtended } from '../types';
 import { Box } from '@mui/material';
 

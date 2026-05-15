@@ -9,7 +9,6 @@ export interface OutputDialogProps {
 }
 
 export const OutputDialog = ({ open, onClose, output, title }: OutputDialogProps) => {
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle
@@ -22,7 +21,7 @@ export const OutputDialog = ({ open, onClose, output, title }: OutputDialogProps
         }}
       >
         <Typography variant="h6" sx={{ fontSize: '1rem' }}>
-          {title ?? ""}
+          {title ?? ''}
         </Typography>
         <IconButton onClick={onClose} size="small">
           <CloseIcon />
@@ -37,11 +36,12 @@ export const OutputDialog = ({ open, onClose, output, title }: OutputDialogProps
             borderRadius: 1,
             overflow: 'auto',
             fontSize: '0.875rem',
-            fontFamily: 'monospace',
+            fontFamily: typeof output === 'string' ? 'inherit' : 'monospace',
+            whiteSpace: typeof output === 'string' ? 'pre-wrap' : 'pre',
             m: 0,
           }}
         >
-          {JSON.stringify(output, null, 2)}
+          {typeof output === 'string' ? output : JSON.stringify(output, null, 2)}
         </Box>
       </DialogContent>
     </Dialog>

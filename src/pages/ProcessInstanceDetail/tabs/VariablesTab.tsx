@@ -6,12 +6,13 @@ import {
   Typography,
   Button,
   IconButton,
-  Tooltip,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataTable, type Column, type DataTableSection } from '@components/DataTable';
+import { useOutputDialog } from '@components/OutputDialog';
+import { VariableValueCell } from '../components/VariableValueCell';
 import { useAddVariableDialog } from '../modals/useAddVariableDialog';
 import { useEditVariableDialog } from '../modals/useEditVariableDialog';
 import { updateProcessInstanceVariables, deleteProcessInstanceVariable } from '@base/openapi';
@@ -90,6 +91,8 @@ export const VariablesTab = ({
   const { openConfirm } = useConfirmDialog();
   const { openAddVariableDialog } = useAddVariableDialog();
   const { openEditVariableDialog } = useEditVariableDialog();
+  const outputDialogConfig = useMemo(() => ({ title: t('processInstance:fields.variableValue') }), [t]);
+  const { openOutputDialog } = useOutputDialog(outputDialogConfig);
 
   const processInstanceKey = instanceTree?.instance.key ?? '';
   const rootVariables = useMemo(
@@ -219,22 +222,10 @@ export const VariablesTab = ({
         id: 'value',
         label: t('processInstance:fields.variableValue'),
         render: (row) => (
-          <Tooltip title={row.value} placement="top-start">
-            <Typography
-              variant="body2"
-              sx={{
-                fontFamily: '"SF Mono", Monaco, monospace',
-                fontSize: '0.75rem',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-all',
-                maxHeight: 100,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {row.value}
-            </Typography>
-          </Tooltip>
+          <VariableValueCell
+            rawValue={row.rawValue}
+            onExpand={(val) => openOutputDialog({ output: val, title: row.name })}
+          />
         ),
       },
       {
@@ -279,7 +270,7 @@ export const VariablesTab = ({
         },
       },
     ],
-    [t, openConfirm, handleDeleteVariable, openEditVariableDialog, handleEditVariable],
+    [t, openConfirm, handleDeleteVariable, openEditVariableDialog, handleEditVariable, openOutputDialog],
   );
 
   return (
