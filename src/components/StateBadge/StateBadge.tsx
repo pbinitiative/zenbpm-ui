@@ -15,6 +15,7 @@ type StateType =
   | 'unresolved'
   | 'created'
   | 'canceled'
+  | 'withdrawn'
   | 'failed';
 
 interface StateConfig {
@@ -47,6 +48,11 @@ const getStateConfig = (state: StateType): StateConfig => {
         icon: <RemoveCircleIcon sx={{ fontSize: iconSize, color: 'warning.main' }} />,
       };
     case 'canceled':
+      return {
+        color: 'warning.main',
+        icon: <BlockIcon sx={{ fontSize: iconSize, color: 'warning.main' }} />,
+      };
+    case 'withdrawn':
       return {
         color: 'warning.main',
         icon: <BlockIcon sx={{ fontSize: iconSize, color: 'warning.main' }} />,

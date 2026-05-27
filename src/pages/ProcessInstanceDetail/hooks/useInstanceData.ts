@@ -31,6 +31,7 @@ import {
 } from './fetchInstanceTree';
 import type { GetHistorySortBy } from '@base/openapi/generated-api/schemas/getHistorySortBy';
 import type { GetHistorySortOrder } from '@base/openapi/generated-api/schemas/getHistorySortOrder';
+import type { EventSubscriptionState } from '@base/openapi/generated-api/schemas/eventSubscriptionState';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -84,18 +85,24 @@ export interface UseInstanceDataResult {
 
   messageSubscriptionsPage: number;
   messageSubscriptionsPageSize: number;
+  messageSubscriptionsState: EventSubscriptionState;
   setMessageSubscriptionsPage: (page: number) => void;
   setMessageSubscriptionsPageSize: (size: number) => void;
+  setMessageSubscriptionsState: (state: EventSubscriptionState) => void;
 
   timerSubscriptionsPage: number;
   timerSubscriptionsPageSize: number;
+  timerSubscriptionsState: EventSubscriptionState;
   setTimerSubscriptionsPage: (page: number) => void;
   setTimerSubscriptionsPageSize: (size: number) => void;
+  setTimerSubscriptionsState: (state: EventSubscriptionState) => void;
 
   errorSubscriptionsPage: number;
   errorSubscriptionsPageSize: number;
+  errorSubscriptionsState: EventSubscriptionState;
   setErrorSubscriptionsPage: (page: number) => void;
   setErrorSubscriptionsPageSize: (size: number) => void;
+  setErrorSubscriptionsState: (state: EventSubscriptionState) => void;
 
   totalEventSubscriptionsCount: number;
 
@@ -148,10 +155,13 @@ export const useInstanceData = (
   // Subscription pagination state
   const [messageSubscriptionsPage, setMessageSubscriptionsPage] = useState(0);
   const [messageSubscriptionsPageSize, setMessageSubscriptionsPageSize] = useState(MESSAGE_SUBSCRIPTIONS_PAGE_SIZE);
+  const [messageSubscriptionsState, setMessageSubscriptionsState] = useState<EventSubscriptionState>('active');
   const [timerSubscriptionsPage, setTimerSubscriptionsPage] = useState(0);
   const [timerSubscriptionsPageSize, setTimerSubscriptionsPageSize] = useState(TIMER_SUBSCRIPTIONS_PAGE_SIZE);
+  const [timerSubscriptionsState, setTimerSubscriptionsState] = useState<EventSubscriptionState>('active');
   const [errorSubscriptionsPage, setErrorSubscriptionsPage] = useState(0);
   const [errorSubscriptionsPageSize, setErrorSubscriptionsPageSize] = useState(ERROR_SUBSCRIPTIONS_PAGE_SIZE);
+  const [errorSubscriptionsState, setErrorSubscriptionsState] = useState<EventSubscriptionState>('active');
 
   // History sort state
   const [historySortBy, setHistorySortBy] = useState<GetHistorySortBy>('createdAt');
@@ -175,10 +185,13 @@ export const useInstanceData = (
   // Subscription pagination refs
   const messageSubscriptionsPageRef = useRef(0);
   const messageSubscriptionsPageSizeRef = useRef(MESSAGE_SUBSCRIPTIONS_PAGE_SIZE);
+  const messageSubscriptionsStateRef = useRef<EventSubscriptionState>('active');
   const timerSubscriptionsPageRef = useRef(0);
   const timerSubscriptionsPageSizeRef = useRef(TIMER_SUBSCRIPTIONS_PAGE_SIZE);
+  const timerSubscriptionsStateRef = useRef<EventSubscriptionState>('active');
   const errorSubscriptionsPageRef = useRef(0);
   const errorSubscriptionsPageSizeRef = useRef(ERROR_SUBSCRIPTIONS_PAGE_SIZE);
+  const errorSubscriptionsStateRef = useRef<EventSubscriptionState>('active');
   jobsPageRef.current = jobsPage;
   jobsPageSizeRef.current = jobsPageSize;
   incidentsPageRef.current = incidentsPage;
@@ -190,10 +203,13 @@ export const useInstanceData = (
 
   messageSubscriptionsPageRef.current = messageSubscriptionsPage;
   messageSubscriptionsPageSizeRef.current = messageSubscriptionsPageSize;
+  messageSubscriptionsStateRef.current = messageSubscriptionsState;
   timerSubscriptionsPageRef.current = timerSubscriptionsPage;
   timerSubscriptionsPageSizeRef.current = timerSubscriptionsPageSize;
+  timerSubscriptionsStateRef.current = timerSubscriptionsState;
   errorSubscriptionsPageRef.current = errorSubscriptionsPage;
   errorSubscriptionsPageSizeRef.current = errorSubscriptionsPageSize;
+  errorSubscriptionsStateRef.current = errorSubscriptionsState;
 
   // Ref to always access the latest tree without stale closures.
   const instanceTreeRef = useRef(instanceTree);
@@ -291,10 +307,13 @@ export const useInstanceData = (
         historySortOrder: historySortOrderRef.current,
         messageSubscriptionsPage: messageSubscriptionsPageRef.current + 1,
         messageSubscriptionsPageSize: messageSubscriptionsPageSizeRef.current,
+        messageSubscriptionsState: messageSubscriptionsStateRef.current,
         timerSubscriptionsPage: timerSubscriptionsPageRef.current + 1,
         timerSubscriptionsPageSize: timerSubscriptionsPageSizeRef.current,
+        timerSubscriptionsState: timerSubscriptionsStateRef.current,
         errorSubscriptionsPage: errorSubscriptionsPageRef.current + 1,
         errorSubscriptionsPageSize: errorSubscriptionsPageSizeRef.current,
+        errorSubscriptionsState: errorSubscriptionsStateRef.current,
       });
 
       setInstanceTree(root);
@@ -326,10 +345,13 @@ export const useInstanceData = (
       setVariablesPageSize(VARIABLES_PAGE_SIZE);
       setMessageSubscriptionsPage(0);
       setMessageSubscriptionsPageSize(MESSAGE_SUBSCRIPTIONS_PAGE_SIZE);
+      setMessageSubscriptionsState('active');
       setTimerSubscriptionsPage(0);
       setTimerSubscriptionsPageSize(TIMER_SUBSCRIPTIONS_PAGE_SIZE);
+      setTimerSubscriptionsState('active');
       setErrorSubscriptionsPage(0);
       setErrorSubscriptionsPageSize(ERROR_SUBSCRIPTIONS_PAGE_SIZE);
+      setErrorSubscriptionsState('active');
       fetchedDefinitionKeyRef.current = null;
       // Also reset pagination refs so fetchAll uses page 1 for the new instance.
       jobsPageRef.current = 0;
@@ -342,10 +364,13 @@ export const useInstanceData = (
       variablesPageSizeRef.current = VARIABLES_PAGE_SIZE;
       messageSubscriptionsPageRef.current = 0;
       messageSubscriptionsPageSizeRef.current = MESSAGE_SUBSCRIPTIONS_PAGE_SIZE;
+      messageSubscriptionsStateRef.current = 'active';
       timerSubscriptionsPageRef.current = 0;
       timerSubscriptionsPageSizeRef.current = TIMER_SUBSCRIPTIONS_PAGE_SIZE;
+      timerSubscriptionsStateRef.current = 'active';
       errorSubscriptionsPageRef.current = 0;
       errorSubscriptionsPageSizeRef.current = ERROR_SUBSCRIPTIONS_PAGE_SIZE;
+      errorSubscriptionsStateRef.current = 'active';
 
       try {
         await fetchAll();
@@ -467,30 +492,30 @@ export const useInstanceData = (
     const tree = instanceTreeRef.current;
     if (!tree) return;
     const nodes = collectAllNodes(tree);
-    void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeMessageSubscriptions(node, messageSubscriptionsPage + 1, messageSubscriptionsPageSize))
+    void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeMessageSubscriptions(node, messageSubscriptionsPage + 1, messageSubscriptionsPageSize, messageSubscriptionsState))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)))
       .catch((err: unknown) => console.error('Failed to paginate message subscriptions:', err));
-  }, [messageSubscriptionsPage, messageSubscriptionsPageSize]);
+  }, [messageSubscriptionsPage, messageSubscriptionsPageSize, messageSubscriptionsState]);
 
   useEffect(() => {
     if (!initialLoadDoneRef.current) return;
     const tree = instanceTreeRef.current;
     if (!tree) return;
     const nodes = collectAllNodes(tree);
-    void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeTimerSubscriptions(node, timerSubscriptionsPage + 1, timerSubscriptionsPageSize))
+    void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeTimerSubscriptions(node, timerSubscriptionsPage + 1, timerSubscriptionsPageSize, timerSubscriptionsState))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)))
       .catch((err: unknown) => console.error('Failed to paginate timer subscriptions:', err));
-  }, [timerSubscriptionsPage, timerSubscriptionsPageSize]);
+  }, [timerSubscriptionsPage, timerSubscriptionsPageSize, timerSubscriptionsState]);
 
   useEffect(() => {
     if (!initialLoadDoneRef.current) return;
     const tree = instanceTreeRef.current;
     if (!tree) return;
     const nodes = collectAllNodes(tree);
-    void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeErrorSubscriptions(node, errorSubscriptionsPage + 1, errorSubscriptionsPageSize))
+    void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeErrorSubscriptions(node, errorSubscriptionsPage + 1, errorSubscriptionsPageSize, errorSubscriptionsState))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)))
       .catch((err: unknown) => console.error('Failed to paginate error subscriptions:', err));
-  }, [errorSubscriptionsPage, errorSubscriptionsPageSize]);
+  }, [errorSubscriptionsPage, errorSubscriptionsPageSize, errorSubscriptionsState]);
 
   const totalEventSubscriptionsCount = useMemo(() => {
     if (!instanceTree) return 0;
@@ -542,18 +567,24 @@ export const useInstanceData = (
 
     messageSubscriptionsPage,
     messageSubscriptionsPageSize,
+    messageSubscriptionsState,
     setMessageSubscriptionsPage,
     setMessageSubscriptionsPageSize,
+    setMessageSubscriptionsState,
 
     timerSubscriptionsPage,
     timerSubscriptionsPageSize,
+    timerSubscriptionsState,
     setTimerSubscriptionsPage,
     setTimerSubscriptionsPageSize,
+    setTimerSubscriptionsState,
 
     errorSubscriptionsPage,
     errorSubscriptionsPageSize,
+    errorSubscriptionsState,
     setErrorSubscriptionsPage,
     setErrorSubscriptionsPageSize,
+    setErrorSubscriptionsState,
 
     totalEventSubscriptionsCount,
 

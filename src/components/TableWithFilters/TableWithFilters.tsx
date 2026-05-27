@@ -141,6 +141,18 @@ export const TableWithFilters = <T extends object>({
     onSortChange: externalOnSortChange,
   });
 
+  // Resolve external pagination (simple mode only) — overrides internal state when provided
+  const externalPage = tableConfig.mode === 'simple' ? tableConfig.page : undefined;
+  const externalPageSize = tableConfig.mode === 'simple' ? tableConfig.pageSize : undefined;
+  const externalOnPageChange = tableConfig.mode === 'simple' ? tableConfig.onPageChange : undefined;
+  const externalOnPageSizeChange = tableConfig.mode === 'simple' ? tableConfig.onPageSizeChange : undefined;
+  const simpleSections = tableConfig.mode === 'simple' ? tableConfig.sections : undefined;
+
+  const effectivePage = externalPage !== undefined ? externalPage : page;
+  const effectivePageSize = externalPageSize !== undefined ? externalPageSize : pageSize;
+  const effectiveOnPageChange = externalOnPageChange ?? setPage;
+  const effectiveOnPageSizeChange = externalOnPageSizeChange ?? setPageSize;
+
   // Filter organization by zone
   const filtersByZone = useFiltersByZone(filters);
 
@@ -153,22 +165,22 @@ export const TableWithFilters = <T extends object>({
   const handleFilterChangeWithPageReset = useCallback(
     (filterId: string, value: string | string[] | { from?: string; to?: string }) => {
       handleFilterChange(filterId, value);
-      setPage(0);
+      effectiveOnPageChange(0);
     },
-    [handleFilterChange, setPage]
+    [handleFilterChange, effectiveOnPageChange]
   );
 
   const handleClearFiltersWithPageReset = useCallback(() => {
     handleClearFilters();
-    setPage(0);
-  }, [handleClearFilters, setPage]);
+    effectiveOnPageChange(0);
+  }, [handleClearFilters, effectiveOnPageChange]);
 
   const handleRemoveFilterWithPageReset = useCallback(
     (filterId: string) => {
       handleRemoveFilter(filterId);
-      setPage(0);
+      effectiveOnPageChange(0);
     },
-    [handleRemoveFilter, setPage]
+    [handleRemoveFilter, effectiveOnPageChange]
   );
 
   // First line toolbar
@@ -251,8 +263,8 @@ export const TableWithFilters = <T extends object>({
     tableConfig.mode === 'simple' && tableConfig.fetchData
       ? {
           fetchData: tableConfig.fetchData,
-          page,
-          pageSize,
+          page: effectivePage,
+          pageSize: effectivePageSize,
           filterValues,
           sortBy,
           sortOrder,
@@ -299,13 +311,14 @@ export const TableWithFilters = <T extends object>({
         <DataTable
           columns={columns}
           data={simpleData}
+          sections={simpleSections}
           loading={simpleLoading}
           totalCount={simpleTotalCount}
           rowKey={rowKey}
-          page={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
+          page={effectivePage}
+          pageSize={effectivePageSize}
+          onPageChange={effectiveOnPageChange}
+          onPageSizeChange={effectiveOnPageSizeChange}
           sortBy={sortBy}
           sortOrder={sortOrder}
           onSortChange={handleSortChange}

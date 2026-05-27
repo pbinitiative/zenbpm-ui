@@ -17,6 +17,7 @@ import type { GetIncidentsState } from '@base/openapi/generated-api/schemas/getI
 import type { JobState } from '@base/openapi/generated-api/schemas/jobState';
 import type { GetHistorySortBy } from '@base/openapi/generated-api/schemas/getHistorySortBy';
 import type { GetHistorySortOrder } from '@base/openapi/generated-api/schemas/getHistorySortOrder';
+import type { EventSubscriptionState } from '@base/openapi/generated-api/schemas/eventSubscriptionState';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -94,10 +95,13 @@ export interface FetchInstanceTreeOptions {
   historySortOrder?: GetHistorySortOrder;
   messageSubscriptionsPage?: number;
   messageSubscriptionsPageSize?: number;
+  messageSubscriptionsState?: EventSubscriptionState;
   timerSubscriptionsPage?: number;
   timerSubscriptionsPageSize?: number;
+  timerSubscriptionsState?: EventSubscriptionState;
   errorSubscriptionsPage?: number;
   errorSubscriptionsPageSize?: number;
+  errorSubscriptionsState?: EventSubscriptionState;
   /** Pre-fetched root ProcessInstance — avoids a duplicate getProcessInstance call */
   preloadedRoot?: ProcessInstance;
   /**
@@ -201,9 +205,9 @@ async function fetchNodeDatasets(
     | 'decisionsPage' | 'decisionsPageSize'
     | 'variablesPage' | 'variablesPageSize'
     | 'historySortBy' | 'historySortOrder'
-    | 'messageSubscriptionsPage' | 'messageSubscriptionsPageSize'
-    | 'timerSubscriptionsPage' | 'timerSubscriptionsPageSize'
-    | 'errorSubscriptionsPage' | 'errorSubscriptionsPageSize'
+    | 'messageSubscriptionsPage' | 'messageSubscriptionsPageSize' | 'messageSubscriptionsState'
+    | 'timerSubscriptionsPage' | 'timerSubscriptionsPageSize' | 'timerSubscriptionsState'
+    | 'errorSubscriptionsPage' | 'errorSubscriptionsPageSize' | 'errorSubscriptionsState'
   >>,
 ): Promise<void> {
   if (!node.isRoot && node.instance.processType === 'callActivity') {
@@ -219,9 +223,9 @@ async function fetchNodeDatasets(
     getIncidents(key, { state: 'unresolved' as GetIncidentsState, page: 1, size: 1 }),
     getDecisionInstances({ processInstanceKey: key, page: opts.decisionsPage, size: opts.decisionsPageSize }),
     getHistory(key, { page: 1, size: -1, sortBy: opts.historySortBy, sortOrder: opts.historySortOrder }),
-    getProcessInstanceMessageSubscriptions(key, { page: opts.messageSubscriptionsPage, size: opts.messageSubscriptionsPageSize }),
-    getProcessInstanceTimerSubscriptions(key, { page: opts.timerSubscriptionsPage, size: opts.timerSubscriptionsPageSize }),
-    getProcessInstanceErrorSubscriptions(key, { page: opts.errorSubscriptionsPage, size: opts.errorSubscriptionsPageSize }),
+    getProcessInstanceMessageSubscriptions(key, { state: opts.messageSubscriptionsState ?? "active", page: opts.messageSubscriptionsPage, size: opts.messageSubscriptionsPageSize }),
+    getProcessInstanceTimerSubscriptions(key, { state: opts.timerSubscriptionsState ?? "active", page: opts.timerSubscriptionsPage, size: opts.timerSubscriptionsPageSize }),
+    getProcessInstanceErrorSubscriptions(key, { state: opts.errorSubscriptionsState ?? "active", page: opts.errorSubscriptionsPage, size: opts.errorSubscriptionsPageSize }),
   ];
 
   const [jobsResult, activeJobsResult, incidentsResult, unresolvedResult, decisionsResult, historyResult, messageSubsResult, timerSubsResult, errorSubsResult] = await Promise.allSettled(requests);
@@ -325,10 +329,13 @@ export async function fetchInstanceTree(
     historySortOrder: opts.historySortOrder ?? 'asc' as GetHistorySortOrder,
     messageSubscriptionsPage: opts.messageSubscriptionsPage ?? 1,
     messageSubscriptionsPageSize: opts.messageSubscriptionsPageSize ?? MESSAGE_SUBSCRIPTIONS_PAGE_SIZE,
+    messageSubscriptionsState: opts.messageSubscriptionsState ?? 'active',
     timerSubscriptionsPage: opts.timerSubscriptionsPage ?? 1,
     timerSubscriptionsPageSize: opts.timerSubscriptionsPageSize ?? TIMER_SUBSCRIPTIONS_PAGE_SIZE,
+    timerSubscriptionsState: opts.timerSubscriptionsState ?? 'active',
     errorSubscriptionsPage: opts.errorSubscriptionsPage ?? 1,
     errorSubscriptionsPageSize: opts.errorSubscriptionsPageSize ?? ERROR_SUBSCRIPTIONS_PAGE_SIZE,
+    errorSubscriptionsState: opts.errorSubscriptionsState ?? 'active',
   };
   const terminalCache = opts.terminalNodeCache ?? new Map<string, ProcessInstanceNode>();
 
@@ -605,11 +612,14 @@ export async function refetchNodeMessageSubscriptions(
   node: ProcessInstanceNode,
   page: number,
   size: number,
+  state: EventSubscriptionState = 'active',
 ): Promise<ProcessInstanceNode> {
   if (!node.isRoot && node.instance.processType === 'callActivity') return node;
   try {
-    const data = await getProcessInstanceMessageSubscriptions(node.instance.key, { page, size });
-    // node.messageSubscriptions = (data.items ?? []) as MessageSubscription[];
+    const data = await getProcessInstanceMessageSubscriptions(
+      node.instance.key,
+      { state, page, size }
+    );
     node.messageSubscriptions = (data.items ?? []) as MessageSubscription[];
     const newTotal = data.totalCount ?? 0;
     if (newTotal > 0 || page === 1) node.messageSubscriptionsTotalCount = newTotal;
@@ -626,10 +636,11 @@ export async function refetchNodeTimerSubscriptions(
   node: ProcessInstanceNode,
   page: number,
   size: number,
+  state: EventSubscriptionState = 'active',
 ): Promise<ProcessInstanceNode> {
   if (!node.isRoot && node.instance.processType === 'callActivity') return node;
   try {
-    const data = await getProcessInstanceTimerSubscriptions(node.instance.key, { page, size });
+    const data = await getProcessInstanceTimerSubscriptions(node.instance.key, { state, page, size });
     node.timerSubscriptions = (data.items ?? []) as TimerSubscription[];
     const newTotal = data.totalCount ?? 0;
     if (newTotal > 0 || page === 1) node.timerSubscriptionsTotalCount = newTotal;
@@ -646,10 +657,11 @@ export async function refetchNodeErrorSubscriptions(
   node: ProcessInstanceNode,
   page: number,
   size: number,
+  state: EventSubscriptionState = 'active',
 ): Promise<ProcessInstanceNode> {
   if (!node.isRoot && node.instance.processType === 'callActivity') return node;
   try {
-    const data = await getProcessInstanceErrorSubscriptions(node.instance.key, { page, size });
+    const data = await getProcessInstanceErrorSubscriptions(node.instance.key, { state, page, size });
     node.errorSubscriptions = (data.items ?? []) as ErrorSubscription[];
     const newTotal = data.totalCount ?? 0;
     if (newTotal > 0 || page === 1) node.errorSubscriptionsTotalCount = newTotal;

@@ -167,5 +167,21 @@
     "messages": "Messages",
     "timers": "Timers",
     "errors": "Errors"
+  },
+  "eventSubscriptionStates": {
+    "message": {
+      "active": "Active",
+      "completed": "Completed",
+      "withdrawn": "Withdrawn"
+    },
+    "timer": {
+      "active": "Created",
+      "completed": "Triggered",
+      "withdrawn": "Cancelled"
+    },
+    "error": {
+      "active": "Created",
+      "withdrawn": "Cancelled"
+    }
   }
 }

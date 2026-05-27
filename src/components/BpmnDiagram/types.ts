@@ -9,6 +9,10 @@ export interface BpmnElement {
   businessObject?: {
     outgoing?: Array<{ id: string }>;
     targetRef?: { id: string };
+    /** Present on multi-instance and loop activities */
+    loopCharacteristics?: { $type: string; isSequential?: boolean };
+    /** Present on catch/boundary events and receive tasks */
+    eventDefinitions?: Array<{ $type: string }>;
   };
 }
 

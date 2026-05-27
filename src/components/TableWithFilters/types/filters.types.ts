@@ -1,4 +1,4 @@
-import type { SortOrder } from '@components/DataTable';
+import type { SortOrder, DataTableSection } from '@components/DataTable';
 import type { PartitionedResponse } from '@components/PartitionedTable';
 
 // ============================================================================
@@ -190,6 +190,16 @@ export interface SimpleTableConfig<T> {
   loading?: boolean;
   totalCount?: number;
   onRefresh?: () => void;
+  /** Sections for grouped rendering (mirrors DataTable sections) */
+  sections?: DataTableSection<T>[];
+  /** External page index (0-based). Enables server-side pagination when provided. */
+  page?: number;
+  /** External page size. Used together with page for server-side pagination. */
+  pageSize?: number;
+  /** Called when user changes page (server-side pagination). */
+  onPageChange?: (page: number) => void;
+  /** Called when user changes page size (server-side pagination). */
+  onPageSizeChange?: (size: number) => void;
   /**
    * When provided, pagination and sorting are server-side.
    * TableWithFilters will call this on every page/size/filter/sort change

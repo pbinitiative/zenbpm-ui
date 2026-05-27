@@ -18,6 +18,11 @@ interface UseBpmnMarkersOptions {
   showProgress?: boolean;
 }
 
+/** Returns true when the element is a multi-instance activity */
+function isMultiInstance(element: BpmnElement): boolean {
+  return element.businessObject?.loopCharacteristics?.$type === 'bpmn:MultiInstanceLoopCharacteristics';
+}
+
 /**
  * Hook that manages BPMN diagram markers and overlays
  */
@@ -110,22 +115,18 @@ export function useBpmnMarkers({
       }
 
       try {
-        // Both badges in top right corner
-        // If both exist: incidents on left, instances on right
-        // If only one: centered in top right area
         const hasIncidents = incidentCount > 0;
         const doneCount = (completedCount ?? 0) + (terminatedCount ?? 0);
         const total = activeCount + doneCount;
-        // Show progress (done/total) only when enabled and there are multiple executions
-        const hasProgress = showProgress && total > 1;
+        // Show progress (done/total) only when enabled AND the element is multi-instance
+        const hasProgress = showProgress && total > 1 && isMultiInstance(element);
         const hasActive = activeCount > 0;
 
-        // Active/progress count badge (green) - top right, offset left if incidents also exist
         if (hasActive || hasProgress) {
-          // When progress is enabled and multiple instances exist, show "done/total" (e.g. "2/3")
+          // When progress is enabled on a multi-instance element, show "done/total" (e.g. "2/3")
           const label = hasProgress ? `${doneCount}/${total}` : `${activeCount}`;
           overlays.add(elementId, 'active-count', {
-            position: { top: -8, right: hasIncidents ? 32 : 8 },
+            position: { bottom: 12, right: 8 },
             html: `<div class="bpmn-overlay count-badge running-badge" style="width:auto;min-width:24px;padding:0 4px;">${label}</div>`,
           });
         }
@@ -141,7 +142,7 @@ export function useBpmnMarkers({
         console.warn(`Failed to add statistics overlay for element ${elementId}:`, err);
       }
     });
-  }, [viewerRef]);
+  }, [viewerRef, showProgress]);
 
   // Apply selected element marker
   const applySelectedElement = useCallback(() => {

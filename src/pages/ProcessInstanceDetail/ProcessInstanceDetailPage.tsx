@@ -125,16 +125,22 @@ export const ProcessInstanceDetailPage = () => {
     setHistorySort,
     messageSubscriptionsPage,
     messageSubscriptionsPageSize,
+    messageSubscriptionsState,
     setMessageSubscriptionsPage,
     setMessageSubscriptionsPageSize,
+    setMessageSubscriptionsState,
     timerSubscriptionsPage,
     timerSubscriptionsPageSize,
+    timerSubscriptionsState,
     setTimerSubscriptionsPage,
     setTimerSubscriptionsPageSize,
+    setTimerSubscriptionsState,
     errorSubscriptionsPage,
     errorSubscriptionsPageSize,
+    errorSubscriptionsState,
     setErrorSubscriptionsPage,
     setErrorSubscriptionsPageSize,
+    setErrorSubscriptionsState,
     totalEventSubscriptionsCount,
   } = useInstanceData(processInstanceKey);
 
@@ -465,18 +471,25 @@ export const ProcessInstanceDetailPage = () => {
               instanceTree={instanceTree}
               messageSubscriptionsPage={messageSubscriptionsPage}
               messageSubscriptionsPageSize={messageSubscriptionsPageSize}
+              messageSubscriptionsState={messageSubscriptionsState}
               setMessageSubscriptionsPage={setMessageSubscriptionsPage}
               setMessageSubscriptionsPageSize={setMessageSubscriptionsPageSize}
+              setMessageSubscriptionsState={setMessageSubscriptionsState}
               timerSubscriptionsPage={timerSubscriptionsPage}
               timerSubscriptionsPageSize={timerSubscriptionsPageSize}
+              timerSubscriptionsState={timerSubscriptionsState}
               setTimerSubscriptionsPage={setTimerSubscriptionsPage}
               setTimerSubscriptionsPageSize={setTimerSubscriptionsPageSize}
+              setTimerSubscriptionsState={setTimerSubscriptionsState}
               errorSubscriptionsPage={errorSubscriptionsPage}
               errorSubscriptionsPageSize={errorSubscriptionsPageSize}
+              errorSubscriptionsState={errorSubscriptionsState}
               setErrorSubscriptionsPage={setErrorSubscriptionsPage}
               setErrorSubscriptionsPageSize={setErrorSubscriptionsPageSize}
+              setErrorSubscriptionsState={setErrorSubscriptionsState}
               onRefetch={refetchAll}
               onShowNotification={showNotification}
+              onElementIdClick={handleElementIdClick}
             />
           </TabPanel>
         </Box>
