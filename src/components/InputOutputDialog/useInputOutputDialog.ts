@@ -1,12 +1,12 @@
 import { useCallback } from 'react';
 import { useModal } from '@components/Modals';
-import { InputOutputDialog, type InputOutputDialogProps } from '@components/InputOutputDialog';
+import { InputOutputDialog, type InputOutputDialogProps } from './InputOutputDialog';
 
-const DECISION_INPUT_OUTPUT_DIALOG_ID = 'decision-input-output-dialog';
+const INPUT_OUTPUT_DIALOG_ID = 'input-output-dialog';
 
 export function useInputOutputDialog() {
   const { openModal, closeModal } = useModal<InputOutputDialogProps>(
-    DECISION_INPUT_OUTPUT_DIALOG_ID,
+    INPUT_OUTPUT_DIALOG_ID,
     InputOutputDialog
   );
 

@@ -80,7 +80,13 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
   // Handle overlay click to show modal
   const handleOverlayClick = useCallback(
     (decisionId: string, inputs: Array<{ name: string; value: unknown }>, outputs: Array<{ name: string; value: unknown }>) => {
-      openInputOutputDialog({ data: { decisionId, inputs, outputs }, getDecisionName });
+      openInputOutputDialog({
+        data: {
+          title: getDecisionName(decisionId),
+          inputs,
+          outputs,
+        },
+      });
     },
     [openInputOutputDialog, getDecisionName]
   );

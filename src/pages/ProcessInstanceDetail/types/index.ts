@@ -37,6 +37,10 @@ export interface Job extends Omit<ApiJob, 'state'> {
   completedAt?: string;
   /** Error message if job failed */
   errorMessage?: string;
+  /** Input variables provided to the job at creation/activation time */
+  inputVariables?: Record<string, unknown>;
+  /** Output variables set on job completion or failure */
+  outputVariables?: Record<string, unknown>;
 }
 
 // FlowElementHistory - extend API type with additional fields

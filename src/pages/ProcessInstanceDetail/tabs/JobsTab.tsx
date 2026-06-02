@@ -24,7 +24,7 @@ import { JOB_STATE_COLORS } from '../types';
 import { useCompleteJobDialog } from '../modals/useCompleteJobDialog';
 import { useAssignJobDialog } from '../modals/useAssignJobDialog';
 import { useUpdateRetriesDialog } from '@pages/ProcessInstanceDetail/modals/useUpdateRetriesDialog.ts';
-import { useOutputDialog } from '@components/OutputDialog';
+import { useInputOutputDialog } from '@components/InputOutputDialog';
 import { assignJob, completeJob, customInstance } from '@base/openapi';
 import { MonoText } from "@components/MonoText";
 import { formatDate } from "@components/DiagramDetailLayout/utils";
@@ -86,7 +86,7 @@ export const JobsTab = ({
   const { openCompleteJobDialog } = useCompleteJobDialog();
   const { openAssignJobDialog } = useAssignJobDialog();
   const { openUpdateRetriesDialog } = useUpdateRetriesDialog();
-  const { openOutputDialog } = useOutputDialog({ title: t('common:fields.variables') });
+  const { openInputOutputDialog } = useInputOutputDialog();
 
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuJob, setMenuJob] = useState<Job | null>(null);
@@ -147,13 +147,25 @@ export const JobsTab = ({
         sortable: true,
         width: 150,
         render: (row) => {
-          const { ZEN_FORM: _, ...displayVariables } = row.variables ?? {};
-          const value = JSON.stringify(displayVariables);
+          const { ZEN_FORM: _, ...displayVariablesIn } = row.inputVariables ?? {};
+          const displayVariablesOut = row.outputVariables ?? {};
+          const value = JSON.stringify(displayVariablesIn) + ", " + JSON.stringify(displayVariablesOut);
+          const hasInputOutput = row.inputVariables || row.outputVariables;
           return (
-            <Tooltip title="Click to view" placement="top-start">
+            <Tooltip title={hasInputOutput ? t('processInstance:actions.viewInputOutput') : 'Click to view'} placement="top-start">
               <Typography
                 variant="body2"
-                onClick={() => openOutputDialog({ output: displayVariables })}
+                onClick={() => {
+                  if (hasInputOutput) {
+                    openInputOutputDialog({
+                      data: {
+                        title: t('common:fields.variables'),
+                        inputVariables: displayVariablesIn,
+                        outputVariables: row.outputVariables,
+                      },
+                    });
+                  }
+                }}
                 sx={{
                   fontFamily: '"SF Mono", Monaco, monospace',
                   display: 'block',
@@ -280,7 +292,7 @@ export const JobsTab = ({
                     openCompleteJobDialog({ job: row, onComplete: handleCompleteJob });
                   }}
                   sx={{ textTransform: 'none', fontSize: 'caption.fontSize' }}
-                  >
+                >
                   {t('processInstance:actions.complete')}
                 </Button>
               )}
@@ -294,7 +306,7 @@ export const JobsTab = ({
         },
       },
     ],
-    [t, handleMenuOpen, openCompleteJobDialog, handleCompleteJob, openOutputDialog, onElementIdClick],
+    [t, handleMenuOpen, openCompleteJobDialog, handleCompleteJob, openInputOutputDialog, onElementIdClick],
   );
 
   // Build sections from the server-fetched data — no client-side slicing.

@@ -1,23 +1,34 @@
-  import { Dialog, DialogTitle, DialogContent, Typography, IconButton, Box, Grid } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, Typography, IconButton, Box, Grid } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import type { OverlayDialogData } from '../types';
+
+export interface InputOutputDialogInput {
+  name: string;
+  value: unknown;
+}
+
+export interface InputOutputDialogData {
+  title?: string;
+  inputs?: InputOutputDialogInput[];
+  outputs?: InputOutputDialogInput[];
+  inputVariables?: Record<string, unknown>;
+  outputVariables?: Record<string, unknown>;
+}
 
 export interface InputOutputDialogProps {
   open: boolean;
-  data: OverlayDialogData | null;
+  data: InputOutputDialogData | null;
   onClose: () => void;
-  getDecisionName: (decisionId: string) => string;
 }
 
-export const InputOutputDialog = ({ data, onClose, getDecisionName }: InputOutputDialogProps) => {
+export const InputOutputDialog = ({ data, onClose }: InputOutputDialogProps) => {
   const { t } = useTranslation([ns.decisions]);
 
   if (!data) return null;
 
-  const formatData = (items: Array<{ name: string; value: unknown }>) => {
-    return JSON.stringify(
+  const formatEntries = (items: Array<{ name: string; value: unknown }>) =>
+    JSON.stringify(
       items.reduce<Record<string, unknown>>((acc, item) => {
         acc[item.name] = item.value;
         return acc;
@@ -25,7 +36,24 @@ export const InputOutputDialog = ({ data, onClose, getDecisionName }: InputOutpu
       null,
       2
     );
-  };
+
+  const formatRecord = (record: Record<string, unknown> | undefined) =>
+    record ? JSON.stringify(record, null, 2) : '';
+
+  const hasInputs = (data.inputs && data.inputs.length > 0) || (data.inputVariables && Object.keys(data.inputVariables).length > 0);
+  const hasOutputs = (data.outputs && data.outputs.length > 0) || (data.outputVariables && Object.keys(data.outputVariables).length > 0);
+
+  const inputsContent = data.inputs
+    ? formatEntries(data.inputs)
+    : data.inputVariables
+      ? formatRecord(data.inputVariables)
+      : '';
+
+  const outputsContent = data.outputs
+    ? formatEntries(data.outputs)
+    : data.outputVariables
+      ? formatRecord(data.outputVariables)
+      : '';
 
   return (
     <Dialog open={data !== null} onClose={onClose} maxWidth="md" fullWidth>
@@ -39,7 +67,7 @@ export const InputOutputDialog = ({ data, onClose, getDecisionName }: InputOutpu
         }}
       >
         <Typography variant="h6" sx={{ fontSize: '1rem' }}>
-          {getDecisionName(data.decisionId)}
+          {data.title || ''}
         </Typography>
         <IconButton onClick={onClose} size="small">
           <CloseIcon />
@@ -71,7 +99,7 @@ export const InputOutputDialog = ({ data, onClose, getDecisionName }: InputOutpu
                 <Box sx={{ width: 12, height: 12, bgcolor: 'info.main', borderRadius: '2px' }} />
                 {t('decisions:instance.inputs')}
               </Typography>
-              {data.inputs.length > 0 ? (
+              {hasInputs ? (
                 <Box
                   component="pre"
                   sx={{
@@ -85,7 +113,7 @@ export const InputOutputDialog = ({ data, onClose, getDecisionName }: InputOutpu
                     maxHeight: 300,
                   }}
                 >
-                  {formatData(data.inputs)}
+                  {inputsContent}
                 </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary">
@@ -119,7 +147,7 @@ export const InputOutputDialog = ({ data, onClose, getDecisionName }: InputOutpu
                 <Box sx={{ width: 12, height: 12, bgcolor: 'success.main', borderRadius: '2px' }} />
                 {t('decisions:instance.outputs')}
               </Typography>
-              {data.outputs.length > 0 ? (
+              {hasOutputs ? (
                 <Box
                   component="pre"
                   sx={{
@@ -133,7 +161,7 @@ export const InputOutputDialog = ({ data, onClose, getDecisionName }: InputOutpu
                     maxHeight: 300,
                   }}
                 >
-                  {formatData(data.outputs)}
+                  {outputsContent}
                 </Box>
               ) : (
                 <Typography variant="body2" color="text.secondary">
