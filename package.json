@@ -46,8 +46,8 @@
     "i18next": "^26.3.0",
     "json-bigint": "^1.0.0",
     "oidc-client-ts": "^3.5.0",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "react-i18next": "^16.6.5",
     "react-router-dom": "^7.16.0"
   },
@@ -60,7 +60,7 @@
     "@storybook/react-vite": "^10.4.1",
     "@types/json-bigint": "^1.0.4",
     "@types/node": "^25.9.1",
-    "@types/react": "^19.2.15",
+    "@types/react": "^19.2.16",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "ajv": "^8.20.0",
@@ -72,11 +72,11 @@
     "globals": "^17.6.0",
     "msw": "^2.14.6",
     "openapi-typescript": "^7.13.0",
-    "openapi3-ts": "^4.5.0",
+    "openapi3-ts": "^4.6.0",
     "orval": "^7.13.2",
     "storybook": "^10.4.1",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.60.0",
+    "typescript-eslint": "^8.60.1",
     "vite": "^7.2.4"
   },
   "msw": {
