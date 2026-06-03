@@ -73,7 +73,7 @@
     "msw": "^2.14.6",
     "openapi-typescript": "^7.13.0",
     "openapi3-ts": "^4.6.0",
-    "orval": "^7.13.2",
+    "orval": "^8.15.0",
     "storybook": "^10.4.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.60.1",
