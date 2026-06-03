@@ -63,7 +63,8 @@ export function useDmnViewer({
 
         // Get the active view and zoom to fit
         const activeViewer = viewerRef.current.getActiveViewer() as DmnActiveViewer | null;
-        if (activeViewer) {
+                const activeView = viewerRef.current.getActiveView();
+                if (activeViewer && activeView?.type === 'drd') {
           const canvas = activeViewer.get<DmnCanvas>('canvas');
           canvas.zoom('fit-viewport');
 
