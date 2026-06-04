@@ -93,7 +93,7 @@ export const DmnViewer = ({
       (o) => o.evaluated && ((o.inputs && o.inputs.length > 0) || (o.outputs && o.outputs.length > 0))
     );
     if (hasOverlaysWithData) return;
-        if (currentView !== 'drd') return;
+    if (currentView !== 'drd') return;
 
     const activeViewer = viewerRef.current.getActiveViewer();
     if (!activeViewer) return;
