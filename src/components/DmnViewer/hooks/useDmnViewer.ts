@@ -62,8 +62,8 @@ export function useDmnViewer({
         await viewerRef.current.importXML(xml);
 
         // Get the active view and zoom to fit
-        const activeViewer = viewerRef.current.getActiveViewer() as DmnActiveViewer | null;
-        const activeView = viewerRef.current.getActiveView();
+        const activeViewer = viewerRef.current?.getActiveViewer() as DmnActiveViewer | null;
+        const activeView = viewerRef.current?.getActiveView();
         if (activeViewer && activeView?.type === 'drd') {
           const canvas = activeViewer.get<DmnCanvas>('canvas');
           canvas.zoom('fit-viewport');
@@ -78,20 +78,20 @@ export function useDmnViewer({
         }
 
         // Listen for view changes (switching between DRD and decision tables)
-        const views = viewerRef.current.getViews();
-        if (views.length > 0) {
+        const views = viewerRef.current?.getViews();
+        if (views && views.length > 0) {
           // Set initial view type
-          const activeView = viewerRef.current.getActiveView();
-          setCurrentView(activeView?.type || 'drd');
+          const initialView = viewerRef.current?.getActiveView();
+          setCurrentView(initialView?.type || 'drd');
         }
 
         // Poll for view changes (covers tab clicks and element clicks that switch views)
         const viewCheckInterval = setInterval(() => {
-          const activeView = viewerRef.current?.getActiveView();
-          if (activeView) {
+          const currentActiveView = viewerRef.current?.getActiveView();
+          if (currentActiveView) {
             setCurrentView((prev) => {
-              if (prev !== activeView.type) {
-                return activeView.type;
+              if (prev !== currentActiveView.type) {
+                return currentActiveView.type;
               }
               return prev;
             });
@@ -99,7 +99,7 @@ export function useDmnViewer({
         }, 200);
 
         // Store interval for cleanup
-        (viewerRef.current as unknown as { _viewCheckInterval?: ReturnType<typeof setInterval> })._viewCheckInterval = viewCheckInterval;
+        (viewerRef.current as unknown as { _viewCheckInterval?: ReturnType<typeof setInterval> })?._viewCheckInterval = viewCheckInterval;
 
         setLoading(false);
         setError(null);
