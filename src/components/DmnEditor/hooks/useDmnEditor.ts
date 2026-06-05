@@ -53,8 +53,12 @@ export function useDmnEditor({
       await modelerRef.current.importXML(xml);
       const activeViewer = modelerRef.current.getActiveViewer() as DmnViewer | null;
       if (activeViewer) {
-        const canvas = activeViewer.get<DmnCanvas>('canvas');
-        canvas.zoom('fit-viewport');
+        try {
+          const canvas = activeViewer.get<DmnCanvas>('canvas');
+          canvas.zoom('fit-viewport');
+        } catch {
+          // Decision table viewers have no canvas service — skip fit-viewport
+        }
       }
       setLoading(false);
     } catch (err) {
@@ -143,8 +147,12 @@ export function useDmnEditor({
 
         const activeViewer = modeler.getActiveViewer() as DmnViewer | null;
         if (activeViewer) {
-          const canvas = activeViewer.get<DmnCanvas>('canvas');
-          canvas.zoom('fit-viewport');
+          try {
+            const canvas = activeViewer.get<DmnCanvas>('canvas');
+            canvas.zoom('fit-viewport');
+          } catch {
+            // Decision table viewers have no canvas service — skip fit-viewport
+          }
         }
         setLoading(false);
       } catch (err) {
@@ -181,8 +189,12 @@ export function useDmnEditor({
         await modelerRef.current.importXML(xmlToLoad);
         const activeViewer = modelerRef.current.getActiveViewer() as DmnViewer | null;
         if (activeViewer) {
-          const canvas = activeViewer.get<DmnCanvas>('canvas');
-          canvas.zoom('fit-viewport');
+          try {
+            const canvas = activeViewer.get<DmnCanvas>('canvas');
+            canvas.zoom('fit-viewport');
+          } catch {
+            // Decision table viewers have no canvas service — skip fit-viewport
+          }
         }
         setLoading(false);
       } catch (err) {
