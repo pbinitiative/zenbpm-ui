@@ -4,7 +4,7 @@ import {
   DmnPropertiesPanelModule,
   DmnPropertiesProviderModule,
 } from 'dmn-js-properties-panel';
-import type { DmnCanvas, DmnEventBus, DmnViewer } from '../types';
+import type { DmnActiveView, DmnCanvas, DmnEventBus, DmnViewer } from '../types';
 import { emptyDiagram } from '../utils.ts';
 
 interface UseDmnEditorOptions {
@@ -52,13 +52,10 @@ export function useDmnEditor({
     try {
       await modelerRef.current.importXML(xml);
       const activeViewer = modelerRef.current.getActiveViewer() as DmnViewer | null;
-      if (activeViewer) {
-        try {
-          const canvas = activeViewer.get<DmnCanvas>('canvas');
-          canvas.zoom('fit-viewport');
-        } catch {
-          // Decision table viewers have no canvas service — skip fit-viewport
-        }
+      const activeView = modelerRef.current.getActiveView() as DmnActiveView | null;
+      if (activeViewer && activeView?.type === 'drd') {
+        const canvas = activeViewer.get<DmnCanvas>('canvas');
+        canvas.zoom('fit-viewport');
       }
       setLoading(false);
     } catch (err) {
@@ -146,13 +143,10 @@ export function useDmnEditor({
         setupChangeListener();
 
         const activeViewer = modeler.getActiveViewer() as DmnViewer | null;
-        if (activeViewer) {
-          try {
-            const canvas = activeViewer.get<DmnCanvas>('canvas');
-            canvas.zoom('fit-viewport');
-          } catch {
-            // Decision table viewers have no canvas service — skip fit-viewport
-          }
+        const activeView = modeler.getActiveView() as DmnActiveView | null;
+        if (activeViewer && activeView?.type === 'drd') {
+          const canvas = activeViewer.get<DmnCanvas>('canvas');
+          canvas.zoom('fit-viewport');
         }
         setLoading(false);
       } catch (err) {
@@ -188,13 +182,10 @@ export function useDmnEditor({
         const xmlToLoad = initialXml || emptyDiagram();
         await modelerRef.current.importXML(xmlToLoad);
         const activeViewer = modelerRef.current.getActiveViewer() as DmnViewer | null;
-        if (activeViewer) {
-          try {
-            const canvas = activeViewer.get<DmnCanvas>('canvas');
-            canvas.zoom('fit-viewport');
-          } catch {
-            // Decision table viewers have no canvas service — skip fit-viewport
-          }
+        const activeView = modelerRef.current.getActiveView() as DmnActiveView | null;
+        if (activeViewer && activeView?.type === 'drd') {
+          const canvas = activeViewer.get<DmnCanvas>('canvas');
+          canvas.zoom('fit-viewport');
         }
         setLoading(false);
       } catch (err) {

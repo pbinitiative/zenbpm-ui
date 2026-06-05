@@ -28,3 +28,7 @@ export interface DmnEventBus {
 export interface DmnViewer {
   get: <T = unknown>(name: string) => T;
 }
+
+export interface DmnActiveView {
+  type: string;
+}
