@@ -42,17 +42,17 @@ importers:
         specifier: ^1.17.0
         version: 1.17.0
       bpmn-js:
-        specifier: ^18.17.0
-        version: 18.17.0
+        specifier: ^18.17.1
+        version: 18.17.1
       bpmn-js-properties-panel:
         specifier: ^5.58.0
-        version: 5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.0)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.15.0)
+        version: 5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.1)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.16.0)
       camunda-bpmn-js:
         specifier: ^5.28.0
-        version: 5.28.0(bpmn-js-properties-panel@5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.0)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.15.0))(preact@10.29.2)
+        version: 5.28.0(bpmn-js-properties-panel@5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.1)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.16.0))(preact@10.29.2)
       camunda-bpmn-js-behaviors:
         specifier: ^1.16.1
-        version: 1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0)
+        version: 1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0)
       camunda-bpmn-moddle:
         specifier: ^7.0.1
         version: 7.0.1
@@ -61,7 +61,7 @@ importers:
         version: 17.8.1
       dmn-js-properties-panel:
         specifier: ^3.11.1
-        version: 3.11.1(@bpmn-io/properties-panel@3.44.1)(diagram-js@15.15.0)(dmn-js@17.8.1)
+        version: 3.11.1(@bpmn-io/properties-panel@3.44.1)(diagram-js@15.16.0)(dmn-js@17.8.1)
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -84,8 +84,8 @@ importers:
         specifier: ^17.0.8
         version: 17.0.8(i18next@26.3.1(typescript@5.9.3))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
       react-router-dom:
-        specifier: ^7.16.0
-        version: 7.16.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: ^7.17.0
+        version: 7.17.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
     devDependencies:
       '@eslint/js':
         specifier: ^9.39.4
@@ -2208,8 +2208,8 @@ packages:
       camunda-bpmn-js-behaviors: '>= 0.4'
       diagram-js: '>= 11.9'
 
-  bpmn-js@18.17.0:
-    resolution: {integrity: sha512-TG+D4OhWDUam/jLt0RurQJwrTPxe+WgXUU857QyMIkoB77NswZsOKJ5FLOlDW+wcMqB+1bbwGcfbvwQJAi0Vow==}
+  bpmn-js@18.17.1:
+    resolution: {integrity: sha512-fJY8eqmo9Pc6S4A+7n3RV5xmlajWAzHA/pDm30f8MI96ZEaR3UcmueF+WO67byU7pNnPJYKAKWd9M9bePmupAw==}
 
   bpmn-moddle@10.0.0:
     resolution: {integrity: sha512-vXePD5jkatcILmM3zwJG/m6IIHIghTGB7WvgcdEraEw8E8VdJHrTgrvBUhbzqaXJpnsGQz15QS936xeBY6l9aA==}
@@ -2464,8 +2464,8 @@ packages:
   diagram-js@15.14.0:
     resolution: {integrity: sha512-xXIKBgK9qC5YIfdUs0Qx+rSlz3DNGMtYxx+pRK+U8eVBD184eZnLCu6KVzaZXXyyC5YRirQayorCVI55Ulhzvg==}
 
-  diagram-js@15.15.0:
-    resolution: {integrity: sha512-9gooqRyC0c8haZC6mbtaC+HgObFKCy3TD2YZAe+dtI9Sx7HPwD+ovwW3hZzSMLo99woqH5im+bvnfbcoxON8kQ==}
+  diagram-js@15.16.0:
+    resolution: {integrity: sha512-GuIEDZlc/GtUx+PS4WU9b5XNZjDXuAdFaz9tWZMOikLYfODdehxQtq3YonS1Lw8mg/RCD3qbk4+qJiOTFhx8bQ==}
 
   didi@11.0.0:
     resolution: {integrity: sha512-PzCfRzQttvFpVcYMbSF7h8EsWjeJpVjWH4qDhB5LkMi1ILvHq4Ob0vhM2wLFziPkbUBi+PAo7ODbe2sacR7nJQ==}
@@ -3651,15 +3651,15 @@ packages:
     resolution: {integrity: sha512-QgT5//D3jfjJb6Gsjxv0Slpj23ip+HtOpnNgnb2S5zU3CB26G/IDPGoy4RJB42wzFE46DRsstbW6tKHoKbhAxw==}
     engines: {node: '>=0.10.0'}
 
-  react-router-dom@7.16.0:
-    resolution: {integrity: sha512-kMUAbimWB5FVbF4Bce4bJsiKJWLIUHq/mEG8+CFDnCSgltptBiG5nguducmsJeGKytlCvQud9Qhzpn49iduTlA==}
+  react-router-dom@7.17.0:
+    resolution: {integrity: sha512-fyU2yjGups/hE6Xz0I5ZYbVL8Gx29eCjgpHaRaTaVU+OOAdfRX05KsvyRm0GO8YQwOkhpU3MurW1jyMUJn+zSw==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       react: '>=18'
       react-dom: '>=18'
 
-  react-router@7.16.0:
-    resolution: {integrity: sha512-wArC8lVyJb3+jM9OpDyW6hLCizACWkvQR/sSGqSs+o5uEXEtGlqdZ4v8hENR3Jad6i+LRkK93q/+bQAcvl6V1A==}
+  react-router@7.17.0:
+    resolution: {integrity: sha512-FDELK7rTMlCHO5+reyXsPlmfr7N1F91lPHsWYfMEGQm/KQ+F4JFM8jGoeQDmDvdTs93Fw9aSilH+uKRb4/jXvQ==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       react: '>=18'
@@ -4459,14 +4459,14 @@ snapshots:
     dependencies:
       contra: 1.9.4
 
-  '@bpmn-io/element-template-chooser@2.1.0(bpmn-js@18.17.0)(diagram-js@15.14.0)':
+  '@bpmn-io/element-template-chooser@2.1.0(bpmn-js@18.17.1)(diagram-js@15.14.0)':
     dependencies:
-      bpmn-js: 18.17.0
+      bpmn-js: 18.17.1
       diagram-js: 15.14.0
 
-  '@bpmn-io/element-template-icon-renderer@1.0.0(bpmn-js@18.17.0)(diagram-js@15.14.0)':
+  '@bpmn-io/element-template-icon-renderer@1.0.0(bpmn-js@18.17.1)(diagram-js@15.14.0)':
     dependencies:
-      bpmn-js: 18.17.0
+      bpmn-js: 18.17.1
       diagram-js: 15.14.0
       inherits-browser: 0.1.0
       tiny-svg: 3.1.3
@@ -4607,24 +4607,24 @@ snapshots:
     dependencies:
       canvg: 4.0.3
 
-  '@bpmn-io/variable-resolver@3.0.1(bpmn-js@18.17.0)':
+  '@bpmn-io/variable-resolver@3.0.1(bpmn-js@18.17.1)':
     dependencies:
       '@bpmn-io/extract-process-variables': 2.2.1
       '@bpmn-io/feel-analyzer': 0.1.0
       '@bpmn-io/lezer-feel': 2.4.0
       '@camunda/feel-builtins': 1.2.0
       '@lezer/common': 1.5.2
-      bpmn-js: 18.17.0
+      bpmn-js: 18.17.1
       min-dash: 5.0.0
 
   '@camunda/element-templates-json-schema@0.21.0': {}
 
-  '@camunda/example-data-properties-provider@1.5.0(@bpmn-io/properties-panel@3.44.1)(@bpmn-io/variable-resolver@3.0.1(bpmn-js@18.17.0))(bpmn-js-properties-panel@5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.0)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.15.0))(bpmn-js@18.17.0)':
+  '@camunda/example-data-properties-provider@1.5.0(@bpmn-io/properties-panel@3.44.1)(@bpmn-io/variable-resolver@3.0.1(bpmn-js@18.17.1))(bpmn-js-properties-panel@5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.1)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.16.0))(bpmn-js@18.17.1)':
     dependencies:
       '@bpmn-io/properties-panel': 3.44.1
-      '@bpmn-io/variable-resolver': 3.0.1(bpmn-js@18.17.0)
-      bpmn-js: 18.17.0
-      bpmn-js-properties-panel: 5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.0)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.15.0)
+      '@bpmn-io/variable-resolver': 3.0.1(bpmn-js@18.17.1)
+      bpmn-js: 18.17.1
+      bpmn-js-properties-panel: 5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.1)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.16.0)
       htm: 3.1.1
       min-dash: 5.0.0
 
@@ -6378,28 +6378,28 @@ snapshots:
 
   bignumber.js@9.3.1: {}
 
-  bpmn-js-color-picker@0.7.2(bpmn-js@18.17.0):
+  bpmn-js-color-picker@0.7.2(bpmn-js@18.17.1):
     dependencies:
-      bpmn-js: 18.17.0
+      bpmn-js: 18.17.1
 
-  bpmn-js-copy-as-image@0.4.1(bpmn-js@18.17.0):
+  bpmn-js-copy-as-image@0.4.1(bpmn-js@18.17.1):
     dependencies:
       '@bpmn-io/svg-to-image': 1.0.1
-      bpmn-js: 18.17.0
+      bpmn-js: 18.17.1
 
   bpmn-js-create-append-anything@1.2.0(diagram-js@15.14.0):
     dependencies:
       diagram-js: 15.14.0
 
-  bpmn-js-element-templates@2.24.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js-properties-panel@5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.0)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.15.0))(bpmn-js@18.17.0)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.14.0)(preact@10.29.2):
+  bpmn-js-element-templates@2.24.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js-properties-panel@5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.1)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.16.0))(bpmn-js@18.17.1)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.14.0)(preact@10.29.2):
     dependencies:
       '@bpmn-io/element-templates-validator': 2.22.0
       '@bpmn-io/extract-process-variables': 2.2.1
       '@bpmn-io/properties-panel': 3.44.1
-      bpmn-js: 18.17.0
-      bpmn-js-properties-panel: 5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.0)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.15.0)
+      bpmn-js: 18.17.1
+      bpmn-js-properties-panel: 5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.1)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.16.0)
       bpmnlint: 11.12.1
-      camunda-bpmn-js-behaviors: 1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0)
+      camunda-bpmn-js-behaviors: 1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0)
       classnames: 2.5.1
       diagram-js: 15.14.0
       ids: 3.0.2
@@ -6412,32 +6412,32 @@ snapshots:
     transitivePeerDependencies:
       - preact
 
-  bpmn-js-executable-fix@0.2.1(bpmn-js@18.17.0):
+  bpmn-js-executable-fix@0.2.1(bpmn-js@18.17.1):
     dependencies:
-      bpmn-js: 18.17.0
+      bpmn-js: 18.17.1
 
-  bpmn-js-native-copy-paste@0.3.0(bpmn-js@18.17.0):
+  bpmn-js-native-copy-paste@0.3.0(bpmn-js@18.17.1):
     dependencies:
-      bpmn-js: 18.17.0
+      bpmn-js: 18.17.1
       min-dash: 5.0.0
 
-  bpmn-js-properties-panel@5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.0)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.15.0):
+  bpmn-js-properties-panel@5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.1)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.16.0):
     dependencies:
       '@bpmn-io/extract-process-variables': 2.2.1
       '@bpmn-io/properties-panel': 3.44.1
       array-move: 4.0.0
-      bpmn-js: 18.17.0
-      camunda-bpmn-js-behaviors: 1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0)
-      diagram-js: 15.15.0
+      bpmn-js: 18.17.1
+      camunda-bpmn-js-behaviors: 1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0)
+      diagram-js: 15.16.0
       ids: 3.0.2
       min-dash: 5.0.0
       min-dom: 5.3.0
 
-  bpmn-js@18.17.0:
+  bpmn-js@18.17.1:
     dependencies:
       bpmn-moddle: 10.0.0
-      diagram-js: 15.15.0
-      diagram-js-direct-editing: 3.4.0(diagram-js@15.15.0)
+      diagram-js: 15.16.0
+      diagram-js-direct-editing: 3.4.0(diagram-js@15.16.0)
       ids: 3.0.2
       inherits-browser: 0.1.0
       min-dash: 5.0.0
@@ -6497,31 +6497,31 @@ snapshots:
   camelize@1.0.1:
     optional: true
 
-  camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0):
+  camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0):
     dependencies:
-      bpmn-js: 18.17.0
+      bpmn-js: 18.17.1
       camunda-bpmn-moddle: 7.0.1
       ids: 3.0.2
       min-dash: 5.0.0
       zeebe-bpmn-moddle: 1.14.0
 
-  camunda-bpmn-js@5.28.0(bpmn-js-properties-panel@5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.0)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.15.0))(preact@10.29.2):
+  camunda-bpmn-js@5.28.0(bpmn-js-properties-panel@5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.1)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.16.0))(preact@10.29.2):
     dependencies:
       '@bpmn-io/align-to-origin': 0.7.0
-      '@bpmn-io/element-template-chooser': 2.1.0(bpmn-js@18.17.0)(diagram-js@15.14.0)
-      '@bpmn-io/element-template-icon-renderer': 1.0.0(bpmn-js@18.17.0)(diagram-js@15.14.0)
+      '@bpmn-io/element-template-chooser': 2.1.0(bpmn-js@18.17.1)(diagram-js@15.14.0)
+      '@bpmn-io/element-template-icon-renderer': 1.0.0(bpmn-js@18.17.1)(diagram-js@15.14.0)
       '@bpmn-io/properties-panel': 3.44.1
-      '@bpmn-io/variable-resolver': 3.0.1(bpmn-js@18.17.0)
-      '@camunda/example-data-properties-provider': 1.5.0(@bpmn-io/properties-panel@3.44.1)(@bpmn-io/variable-resolver@3.0.1(bpmn-js@18.17.0))(bpmn-js-properties-panel@5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.0)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.15.0))(bpmn-js@18.17.0)
-      bpmn-js: 18.17.0
-      bpmn-js-color-picker: 0.7.2(bpmn-js@18.17.0)
-      bpmn-js-copy-as-image: 0.4.1(bpmn-js@18.17.0)
+      '@bpmn-io/variable-resolver': 3.0.1(bpmn-js@18.17.1)
+      '@camunda/example-data-properties-provider': 1.5.0(@bpmn-io/properties-panel@3.44.1)(@bpmn-io/variable-resolver@3.0.1(bpmn-js@18.17.1))(bpmn-js-properties-panel@5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.1)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.16.0))(bpmn-js@18.17.1)
+      bpmn-js: 18.17.1
+      bpmn-js-color-picker: 0.7.2(bpmn-js@18.17.1)
+      bpmn-js-copy-as-image: 0.4.1(bpmn-js@18.17.1)
       bpmn-js-create-append-anything: 1.2.0(diagram-js@15.14.0)
-      bpmn-js-element-templates: 2.24.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js-properties-panel@5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.0)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.15.0))(bpmn-js@18.17.0)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.14.0)(preact@10.29.2)
-      bpmn-js-executable-fix: 0.2.1(bpmn-js@18.17.0)
-      bpmn-js-native-copy-paste: 0.3.0(bpmn-js@18.17.0)
-      bpmn-js-properties-panel: 5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.0)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.15.0)
-      camunda-bpmn-js-behaviors: 1.16.1(bpmn-js@18.17.0)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0)
+      bpmn-js-element-templates: 2.24.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js-properties-panel@5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.1)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.16.0))(bpmn-js@18.17.1)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.14.0)(preact@10.29.2)
+      bpmn-js-executable-fix: 0.2.1(bpmn-js@18.17.1)
+      bpmn-js-native-copy-paste: 0.3.0(bpmn-js@18.17.1)
+      bpmn-js-properties-panel: 5.58.0(@bpmn-io/properties-panel@3.44.1)(bpmn-js@18.17.1)(camunda-bpmn-js-behaviors@1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0))(diagram-js@15.16.0)
+      camunda-bpmn-js-behaviors: 1.16.1(bpmn-js@18.17.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.14.0)
       camunda-bpmn-moddle: 7.0.1
       diagram-js: 15.14.0
       diagram-js-grid: 2.0.1
@@ -6696,9 +6696,9 @@ snapshots:
 
   detect-libc@2.1.2: {}
 
-  diagram-js-direct-editing@3.4.0(diagram-js@15.15.0):
+  diagram-js-direct-editing@3.4.0(diagram-js@15.16.0):
     dependencies:
-      diagram-js: 15.15.0
+      diagram-js: 15.16.0
       min-dash: 5.0.0
       min-dom: 5.3.0
 
@@ -6731,7 +6731,7 @@ snapshots:
       path-intersection: 4.1.0
       tiny-svg: 4.1.4
 
-  diagram-js@15.15.0:
+  diagram-js@15.16.0:
     dependencies:
       '@bpmn-io/diagram-js-ui': 0.2.4
       clsx: 2.1.1
@@ -6748,30 +6748,30 @@ snapshots:
   dmn-js-boxed-expression@17.8.1:
     dependencies:
       '@bpmn-io/dmn-variable-resolver': 0.7.0
-      diagram-js: 15.15.0
+      diagram-js: 15.16.0
       dmn-js-shared: 17.8.1
       inferno: 5.6.3
       min-dash: 5.0.0
       min-dom: 5.3.0
-      table-js: 9.4.0(diagram-js@15.15.0)(inferno@5.6.3)
+      table-js: 9.4.0(diagram-js@15.16.0)(inferno@5.6.3)
 
   dmn-js-decision-table@17.8.1:
     dependencies:
       '@bpmn-io/dmn-variable-resolver': 0.7.0
       css.escape: 1.5.1
-      diagram-js: 15.15.0
+      diagram-js: 15.16.0
       dmn-js-shared: 17.8.1
       escape-html: 1.0.3
       inferno: 5.6.3
       min-dash: 5.0.0
       min-dom: 5.3.0
       selection-ranges: 4.1.1
-      table-js: 9.4.0(diagram-js@15.15.0)(inferno@5.6.3)
+      table-js: 9.4.0(diagram-js@15.16.0)(inferno@5.6.3)
 
   dmn-js-drd@17.8.1:
     dependencies:
-      diagram-js: 15.15.0
-      diagram-js-direct-editing: 3.4.0(diagram-js@15.15.0)
+      diagram-js: 15.16.0
+      diagram-js-direct-editing: 3.4.0(diagram-js@15.16.0)
       dmn-js-shared: 17.8.1
       ids: 3.0.2
       inherits-browser: 0.1.0
@@ -6783,18 +6783,18 @@ snapshots:
   dmn-js-literal-expression@17.8.1:
     dependencies:
       '@bpmn-io/dmn-variable-resolver': 0.7.0
-      diagram-js: 15.15.0
+      diagram-js: 15.16.0
       dmn-js-shared: 17.8.1
       escape-html: 1.0.3
       inferno: 5.6.3
       min-dash: 5.0.0
       min-dom: 5.3.0
-      table-js: 9.4.0(diagram-js@15.15.0)(inferno@5.6.3)
+      table-js: 9.4.0(diagram-js@15.16.0)(inferno@5.6.3)
 
-  dmn-js-properties-panel@3.11.1(@bpmn-io/properties-panel@3.44.1)(diagram-js@15.15.0)(dmn-js@17.8.1):
+  dmn-js-properties-panel@3.11.1(@bpmn-io/properties-panel@3.44.1)(diagram-js@15.16.0)(dmn-js@17.8.1):
     dependencies:
       '@bpmn-io/properties-panel': 3.44.1
-      diagram-js: 15.15.0
+      diagram-js: 15.16.0
       dmn-js: 17.8.1
       min-dash: 5.0.0
       min-dom: 5.3.0
@@ -6802,7 +6802,7 @@ snapshots:
   dmn-js-shared@17.8.1:
     dependencies:
       '@bpmn-io/feel-editor': 2.5.2
-      diagram-js: 15.15.0
+      diagram-js: 15.16.0
       didi: 11.0.0
       dmn-moddle: 12.0.1
       ids: 3.0.2
@@ -6811,7 +6811,7 @@ snapshots:
       min-dom: 5.3.0
       selection-ranges: 4.1.1
       selection-update: 1.1.1
-      table-js: 9.4.0(diagram-js@15.15.0)(inferno@5.6.3)
+      table-js: 9.4.0(diagram-js@15.16.0)(inferno@5.6.3)
 
   dmn-js@17.8.1:
     dependencies:
@@ -8037,13 +8037,13 @@ snapshots:
 
   react-refresh@0.18.0: {}
 
-  react-router-dom@7.16.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
+  react-router-dom@7.17.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
-      react-router: 7.16.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      react-router: 7.17.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
 
-  react-router@7.16.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
+  react-router@7.17.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
       cookie: 1.1.1
       react: 19.2.7
@@ -8381,9 +8381,9 @@ snapshots:
 
   tabbable@6.4.0: {}
 
-  table-js@9.4.0(diagram-js@15.15.0)(inferno@5.6.3):
+  table-js@9.4.0(diagram-js@15.16.0)(inferno@5.6.3):
     dependencies:
-      diagram-js: 15.15.0
+      diagram-js: 15.16.0
       didi: 11.0.0
       inferno: 5.6.3
       min-dash: 5.0.0
