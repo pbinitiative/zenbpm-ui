@@ -51,7 +51,7 @@
     "@pbinitiative/zenbpm-js-properties-panel": "^0.3.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.60.0",
     "@redocly/cli": "^2.31.6",
     "@storybook/addon-a11y": "^10.4.2",
