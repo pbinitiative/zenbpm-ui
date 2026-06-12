@@ -1589,18 +1589,21 @@ paths:
                     processInstanceKey: 4503599627370501
                     state: "active"
                     createdAt: "2025-08-22T14:30:26Z"
-                    variables:
+                    inputVariables:
                       formKey: "loan-application-form"
                       assignee: "john.doe"
+                    outputVariables: {}
                   - key: 4503599627370511
                     elementId: "Task_CreditCheck"
                     type: "service-task"
                     processInstanceKey: 4503599627370501
                     state: "completed"
                     createdAt: "2025-08-22T14:32:15Z"
-                    variables:
+                    inputVariables:
                       result: "approved"
                       score: 85
+                    outputVariables:
+                      approved: true
                 page: 1
                 size: 10
                 count: 2
@@ -2102,8 +2105,9 @@ paths:
                         createdAt: "2025-08-22T15:10:26Z"
                         assignee: "john.doe"
                         retries: 3
-                        variables:
+                        inputVariables:
                           formKey: "loan-review-form"
+                        outputVariables: {}
                   - partition: 2
                     items:
                       - key: 9007199254740995
@@ -2113,9 +2117,10 @@ paths:
                         state: "active"
                         createdAt: "2025-08-22T15:46:33Z"
                         retries: 3
-                        variables:
+                        inputVariables:
                           notificationType: "email"
                           recipient: "customer@example.com"
+                        outputVariables: {}
                 page: 1
                 size: 10
                 count: 2
@@ -2169,10 +2174,11 @@ paths:
                 createdAt: "2025-08-22T15:10:26Z"
                 assignee: "john.doe"
                 retries: 3
-                variables:
+                inputVariables:
                   formKey: "loan-review-form"
                   applicationId: "APP-12345"
                   customerName: "Alice Johnson"
+                outputVariables: {}
         404:
           description: Not found
           content:
@@ -3403,7 +3409,7 @@ components:
         - processInstanceKey
         - state
         - createdAt
-        - variables
+        - inputVariables
       properties:
         key:
           type: integer
@@ -3420,8 +3426,12 @@ components:
         createdAt:
           type: string
           format: date-time
-        variables:
+        inputVariables:
           type: object
+          description: Variables provided to the job at creation/activation time (from BPMN input mappings)
+        outputVariables:
+          type: object
+          description: Output variables set on job completion or failure
         assignee:
           type: string
           description: Assignee (user assigned to this job)
