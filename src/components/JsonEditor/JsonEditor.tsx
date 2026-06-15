@@ -28,6 +28,8 @@ export interface JsonEditorProps {
   showPrettify?: boolean;
   /** Label for the editor */
   label?: string;
+  /** Placeholder text shown when the editor is empty */
+  placeholder?: string;
 }
 
 export const JsonEditor = ({
@@ -41,6 +43,7 @@ export const JsonEditor = ({
   lineNumbers: showLineNumbers = true,
   showPrettify = true,
   label,
+  placeholder,
 }: JsonEditorProps) => {
   const { t } = useTranslation([ns.common]);
   const editorRef = useRef<MonacoEditor | null>(null);
@@ -152,7 +155,12 @@ export const JsonEditor = ({
           defaultValue={value}
           onMount={handleEditorMount}
           onChange={handleEditorChange}
+          // Monaco renders a placeholder overlay when the model is empty.
+          // It's visually subtle (grey italic) and doesn't take vertical space.
           options={{
+            // `placeholder` isn't in @monaco-editor/react's option type for
+            // older versions, but Monaco 0.55 supports it at runtime.
+            ...({ placeholder } as Record<string, unknown>),
             minimap: { enabled: false },
             lineNumbers: showLineNumbers ? 'on' : 'off',
             scrollBeyondLastLine: false,

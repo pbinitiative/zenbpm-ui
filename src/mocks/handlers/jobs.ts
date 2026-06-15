@@ -117,6 +117,29 @@ export const jobHandlers = [
     })
   ),
 
+  // POST /jobs/:jobKey/fail - Fail a job
+  http.post(
+    `${BASE_URL}/jobs/:jobKey/fail`,
+    withValidation(async ({ params, request }) => {
+      const { jobKey } = params;
+      await request.json(); // Consume body
+
+      const job = findJobByKey(jobKey as string);
+
+      if (!job) {
+        return HttpResponse.json(
+          {
+            code: 'NOT_FOUND',
+            message: `Job with key ${jobKey} not found`,
+          },
+          { status: 404 }
+        );
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    })
+  ),
+
   // POST /jobs/:jobKey/retries - Update job retries
   http.post(
     `${BASE_URL}/jobs/:jobKey/retries`,
