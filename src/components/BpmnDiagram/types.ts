@@ -37,6 +37,7 @@ export interface BpmnOverlays {
       html: string;
     }
   ) => void;
+  remove: (filter: { id?: string; type?: string; element?: string }) => void;
   clear: () => void;
 }
 

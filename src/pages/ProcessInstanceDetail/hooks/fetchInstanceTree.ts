@@ -87,6 +87,7 @@ export interface FetchInstanceTreeOptions {
   jobsPageSize?: number;
   incidentsPage?: number;
   incidentsPageSize?: number;
+  incidentsState?: GetIncidentsState;
   decisionsPage?: number;
   decisionsPageSize?: number;
   variablesPage?: number;
@@ -211,7 +212,7 @@ async function fetchNodeDatasets(
     | 'messageSubscriptionsPage' | 'messageSubscriptionsPageSize' | 'messageSubscriptionsState'
     | 'timerSubscriptionsPage' | 'timerSubscriptionsPageSize' | 'timerSubscriptionsState'
     | 'errorSubscriptionsPage' | 'errorSubscriptionsPageSize' | 'errorSubscriptionsState'
-  >>,
+  >> & { incidentsState?: GetIncidentsState },
 ): Promise<void> {
   if (!node.isRoot && node.instance.processType === 'callActivity') {
     return;
@@ -222,7 +223,7 @@ async function fetchNodeDatasets(
   const requests: Promise<unknown>[] = [
     getProcessInstanceJobs(key, { page: opts.jobsPage, size: opts.jobsPageSize }),
     getJobs({ processInstanceKey: key, state: 'active' as JobState, page: 1, size: 1 }),
-    getIncidents(key, { page: opts.incidentsPage, size: opts.incidentsPageSize }),
+    getIncidents(key, { page: opts.incidentsPage, size: opts.incidentsPageSize, state: opts.incidentsState }),
     getIncidents(key, { state: 'unresolved' as GetIncidentsState, page: 1, size: 1 }),
     getDecisionInstances({ processInstanceKey: key, page: opts.decisionsPage, size: opts.decisionsPageSize }),
     getHistory(key, { page: 1, size: -1, sortBy: opts.historySortBy, sortOrder: opts.historySortOrder }),
@@ -344,6 +345,7 @@ export async function fetchInstanceTree(
     jobsPageSize: opts.jobsPageSize ?? JOBS_PAGE_SIZE,
     incidentsPage: opts.incidentsPage ?? 1,
     incidentsPageSize: opts.incidentsPageSize ?? INCIDENTS_PAGE_SIZE,
+    incidentsState: opts.incidentsState,
     decisionsPage: opts.decisionsPage ?? 1,
     decisionsPageSize: opts.decisionsPageSize ?? DECISIONS_PAGE_SIZE,
     variablesPage: opts.variablesPage ?? 1,
@@ -517,18 +519,19 @@ export async function refetchNodeIncidents(
   node: ProcessInstanceNode,
   page: number,
   size: number,
+  state?: GetIncidentsState,
 ): Promise<ProcessInstanceNode> {
   if (!node.isRoot && node.instance.processType === 'callActivity') return node;
   try {
     const [pageResult, unresolvedResult] = await Promise.allSettled([
-      getIncidents(node.instance.key, { page, size }),
+      getIncidents(node.instance.key, { page, size, state }),
       getIncidents(node.instance.key, { state: 'unresolved' as GetIncidentsState, page: 1, size: 1 }),
     ]);
     if (pageResult.status === 'fulfilled') {
       node.incidents = (pageResult.value.items ?? []) as Incident[];
       // Preserve a previously-established non-zero total.
       const newTotal = pageResult.value.totalCount ?? 0;
-      if (newTotal > 0 || node.incidentsTotalCount === 0) node.incidentsTotalCount = newTotal;
+      if (newTotal > 0 || page === 1) node.incidentsTotalCount = newTotal;
     }
     if (unresolvedResult.status === 'fulfilled') {
       node.unresolvedIncidentsTotalCount = unresolvedResult.value.totalCount ?? 0;

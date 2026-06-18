@@ -32,6 +32,7 @@ import {
 import type { GetHistorySortBy } from '@base/openapi/generated-api/schemas/getHistorySortBy';
 import type { GetHistorySortOrder } from '@base/openapi/generated-api/schemas/getHistorySortOrder';
 import type { EventSubscriptionState } from '@base/openapi/generated-api/schemas/eventSubscriptionState';
+import type { GetIncidentsState } from '@base/openapi/generated-api/schemas/getIncidentsState';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -66,8 +67,10 @@ export interface UseInstanceDataResult {
 
   incidentsPage: number;
   incidentsPageSize: number;
+  incidentsState: GetIncidentsState | 'all';
   setIncidentsPage: (page: number) => void;
   setIncidentsPageSize: (size: number) => void;
+  setIncidentsState: (state: GetIncidentsState | 'all') => void;
 
   decisionsPage: number;
   decisionsPageSize: number;
@@ -147,6 +150,7 @@ export const useInstanceData = (
   const [jobsPageSize, setJobsPageSize] = useState(JOBS_PAGE_SIZE);
   const [incidentsPage, setIncidentsPage] = useState(0);
   const [incidentsPageSize, setIncidentsPageSize] = useState(INCIDENTS_PAGE_SIZE);
+  const [incidentsState, setIncidentsState] = useState<GetIncidentsState | 'all'>('all');
   const [decisionsPage, setDecisionsPage] = useState(0);
   const [decisionsPageSize, setDecisionsPageSize] = useState(DECISIONS_PAGE_SIZE);
   const [variablesPage, setVariablesPage] = useState(0);
@@ -177,6 +181,7 @@ export const useInstanceData = (
   const jobsPageSizeRef = useRef(JOBS_PAGE_SIZE);
   const incidentsPageRef = useRef(0);
   const incidentsPageSizeRef = useRef(INCIDENTS_PAGE_SIZE);
+  const incidentsStateRef = useRef<GetIncidentsState | 'all'>('all');
   const decisionsPageRef = useRef(0);
   const decisionsPageSizeRef = useRef(DECISIONS_PAGE_SIZE);
   const variablesPageRef = useRef(0);
@@ -196,6 +201,7 @@ export const useInstanceData = (
   jobsPageSizeRef.current = jobsPageSize;
   incidentsPageRef.current = incidentsPage;
   incidentsPageSizeRef.current = incidentsPageSize;
+  incidentsStateRef.current = incidentsState;
   decisionsPageRef.current = decisionsPage;
   decisionsPageSizeRef.current = decisionsPageSize;
   variablesPageRef.current = variablesPage;
@@ -299,6 +305,7 @@ export const useInstanceData = (
         jobsPageSize: jobsPageSizeRef.current,
         incidentsPage: incidentsPageRef.current + 1,
         incidentsPageSize: incidentsPageSizeRef.current,
+        incidentsState: incidentsStateRef.current === 'all' ? undefined : incidentsStateRef.current,
         decisionsPage: decisionsPageRef.current + 1,
         decisionsPageSize: decisionsPageSizeRef.current,
         variablesPage: variablesPageRef.current + 1,
@@ -339,6 +346,7 @@ export const useInstanceData = (
       setJobsPageSize(JOBS_PAGE_SIZE);
       setIncidentsPage(0);
       setIncidentsPageSize(INCIDENTS_PAGE_SIZE);
+      setIncidentsState('all');
       setDecisionsPage(0);
       setDecisionsPageSize(DECISIONS_PAGE_SIZE);
       setVariablesPage(0);
@@ -358,6 +366,7 @@ export const useInstanceData = (
       jobsPageSizeRef.current = JOBS_PAGE_SIZE;
       incidentsPageRef.current = 0;
       incidentsPageSizeRef.current = INCIDENTS_PAGE_SIZE;
+      incidentsStateRef.current = 'all';
       decisionsPageRef.current = 0;
       decisionsPageSizeRef.current = DECISIONS_PAGE_SIZE;
       variablesPageRef.current = 0;
@@ -451,9 +460,9 @@ export const useInstanceData = (
     const tree = instanceTreeRef.current;
     if (!tree) return;
     const nodes = collectAllNodes(tree);
-    void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeIncidents(node, incidentsPage + 1, incidentsPageSize))
+    void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeIncidents(node, incidentsPage + 1, incidentsPageSize, incidentsState === 'all' ? undefined : incidentsState))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
-  }, [incidentsPage, incidentsPageSize]);
+  }, [incidentsPage, incidentsPageSize, incidentsState]);
 
   useEffect(() => {
     if (!initialLoadDoneRef.current) return;
@@ -548,8 +557,10 @@ export const useInstanceData = (
 
     incidentsPage,
     incidentsPageSize,
+    incidentsState,
     setIncidentsPage,
     setIncidentsPageSize,
+    setIncidentsState,
 
     decisionsPage,
     decisionsPageSize,

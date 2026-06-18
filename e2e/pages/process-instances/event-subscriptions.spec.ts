@@ -42,11 +42,13 @@ test.describe('Process Instance Detail - Event Subscriptions Tab', () => {
 
   test('should display timer subscriptions table', async ({ page }) => {
     await page.getByRole('tab', { name: /event subscriptions/i }).click();
+    await page.getByTestId('event-subscriptions-tab').getByRole('button', { name: /^timers/i }).click();
     await expect(page.getByTestId('timer-subscriptions-table')).toBeVisible({ timeout: 5000 });
   });
 
   test('should display error subscriptions table', async ({ page }) => {
     await page.getByRole('tab', { name: /event subscriptions/i }).click();
+    await page.getByTestId('event-subscriptions-tab').getByRole('button', { name: /^errors/i }).click();
     await expect(page.getByTestId('error-subscriptions-table')).toBeVisible({ timeout: 5000 });
   });
 
@@ -59,6 +61,7 @@ test.describe('Process Instance Detail - Event Subscriptions Tab', () => {
 
   test('should show mock timer subscription data (timerBoundaryEvent)', async ({ page }) => {
     await page.getByRole('tab', { name: /event subscriptions/i }).click();
+    await page.getByTestId('event-subscriptions-tab').getByRole('button', { name: /^timers/i }).click();
     const table = page.getByTestId('timer-subscriptions-table');
     await expect(table).toBeVisible({ timeout: 5000 });
     await expect(table.getByText('timerBoundaryEvent')).toBeVisible();
@@ -66,6 +69,7 @@ test.describe('Process Instance Detail - Event Subscriptions Tab', () => {
 
   test('should show mock error subscription data (ORDER_FAILED)', async ({ page }) => {
     await page.getByRole('tab', { name: /event subscriptions/i }).click();
+    await page.getByTestId('event-subscriptions-tab').getByRole('button', { name: /^errors/i }).click();
     const table = page.getByTestId('error-subscriptions-table');
     await expect(table).toBeVisible({ timeout: 5000 });
     await expect(table.getByText('ORDER_FAILED')).toBeVisible();

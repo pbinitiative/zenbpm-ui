@@ -1,11 +1,13 @@
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
 import { ns } from '@base/i18n';
-import { Box, Button, Chip, Link, Typography } from '@mui/material';
+import { Box, Button, Link, Typography } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import { type Column, type DataTableSection } from '@components/DataTable';
 import { TableWithFilters } from '@components/TableWithFilters';
 import type { FilterConfig, FilterValues } from '@components/TableWithFilters';
+import { SubTabs, type SubTab } from '@components/SubTabs';
 import { StateBadge } from '@components/StateBadge';
 import { MonoText } from '@components/MonoText';
 import { formatDate } from '@components/DiagramDetailLayout/utils';
@@ -74,16 +76,7 @@ function getSortedNodes(nodes: ProcessInstanceNode[]): ProcessInstanceNode[] {
   return [root, ...sorted];
 }
 
-const SectionHeader = ({ label, count }: { label: string; count: number }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, mt: 1 }}>
-    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-      {label}
-    </Typography>
-    {count > 0 && (
-      <Chip label={count} size="small" sx={{ height: 20, fontSize: 'caption.fontSize' }} />
-    )}
-  </Box>
-);
+type SubscriptionType = 'messages' | 'timers' | 'errors';
 
 export const EventSubscriptionsTab = ({
   instanceTree,
@@ -110,6 +103,7 @@ export const EventSubscriptionsTab = ({
   onElementIdClick,
 }: EventSubscriptionsTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance, ns.processes]);
+  const [subscriptionType, setSubscriptionType] = useState<SubscriptionType>('messages');
   const { openTriggerMessageDialog } = useTriggerMessageDialog();
 
   const handleTriggerMessage = useCallback(
@@ -340,7 +334,7 @@ export const EventSubscriptionsTab = ({
         id: 'dueDate',
         label: t('processInstance:fields.dueDate'),
         width: 180,
-        render: (row) => <Typography variant="body2">{formatDate(row.dueDate)}</Typography>,
+        render: (row) => <Typography variant="body2">{row.dueDate ? formatDate(row.dueDate) : '-'}</Typography>,
       },
       {
         id: 'state',
@@ -459,77 +453,84 @@ export const EventSubscriptionsTab = ({
 
   return (
     <Box data-testid="event-subscriptions-tab">
-      {/* Group 1 — Messages */}
-      <SectionHeader
-        label={t('processInstance:eventSubscriptions.messages')}
-        count={messageTotalCount}
-      />
-      <TableWithFilters
-        columns={messageColumns}
-        rowKey="key"
-        data-testid="message-subscriptions-table"
-        filters={messageStateFilters}
-        filterValues={{ state: messageSubscriptionsState }}
-        onFilterChange={handleMessageFilterChange}
-        tableConfig={{
-          mode: 'simple',
-          data: messageFlatData,
-          sections: messageSections,
-          totalCount: messagePaginationTotal,
-          page: messageSubscriptionsPage,
-          pageSize: messageSubscriptionsPageSize,
-          onPageChange: setMessageSubscriptionsPage,
-          onPageSizeChange: (size) => { setMessageSubscriptionsPageSize(size); setMessageSubscriptionsPage(0); },
-        }}
+      <SubTabs
+        tabs={[
+          { value: 'messages', label: t('processInstance:eventSubscriptions.messages'), badge: messageTotalCount > 0 ? messageTotalCount : undefined } as SubTab,
+          { value: 'timers', label: t('processInstance:eventSubscriptions.timers'), badge: timerTotalCount > 0 ? timerTotalCount : undefined } as SubTab,
+          { value: 'errors', label: t('processInstance:eventSubscriptions.errors'), badge: errorTotalCount > 0 ? errorTotalCount : undefined } as SubTab,
+        ]}
+        value={subscriptionType}
+        onChange={(value) => setSubscriptionType(value as SubscriptionType)}
       />
 
-      {/* Group 2 — Timers */}
-      <SectionHeader
-        label={t('processInstance:eventSubscriptions.timers')}
-        count={timerTotalCount}
-      />
-      <TableWithFilters
-        columns={timerColumns}
-        rowKey="key"
-        data-testid="timer-subscriptions-table"
-        filters={timerStateFilters}
-        filterValues={{ state: timerSubscriptionsState }}
-        onFilterChange={handleTimerFilterChange}
-        tableConfig={{
-          mode: 'simple',
-          data: timerFlatData,
-          sections: timerSections,
-          totalCount: timerPaginationTotal,
-          page: timerSubscriptionsPage,
-          pageSize: timerSubscriptionsPageSize,
-          onPageChange: setTimerSubscriptionsPage,
-          onPageSizeChange: (size) => { setTimerSubscriptionsPageSize(size); setTimerSubscriptionsPage(0); },
-        }}
-      />
+      {subscriptionType === 'messages' && (
+        <Box data-testid="event-subscriptions-messages-panel" sx={{ mt: 2 }}>
+          <TableWithFilters
+            columns={messageColumns}
+            rowKey="key"
+            data-testid="message-subscriptions-table"
+            filters={messageStateFilters}
+            filterValues={{ state: messageSubscriptionsState }}
+            onFilterChange={handleMessageFilterChange}
+            tableConfig={{
+              mode: 'simple',
+              data: messageFlatData,
+              sections: messageSections,
+              totalCount: messagePaginationTotal,
+              page: messageSubscriptionsPage,
+              pageSize: messageSubscriptionsPageSize,
+              onPageChange: setMessageSubscriptionsPage,
+              onPageSizeChange: (size) => { setMessageSubscriptionsPageSize(size); setMessageSubscriptionsPage(0); },
+            }}
+          />
+        </Box>
+      )}
 
-      {/* Group 3 — Errors */}
-      <SectionHeader
-        label={t('processInstance:eventSubscriptions.errors')}
-        count={errorTotalCount}
-      />
-      <TableWithFilters
-        columns={errorColumns}
-        rowKey="key"
-        data-testid="error-subscriptions-table"
-        filters={errorStateFilters}
-        filterValues={{ state: errorSubscriptionsState }}
-        onFilterChange={handleErrorFilterChange}
-        tableConfig={{
-          mode: 'simple',
-          data: errorFlatData,
-          sections: errorSections,
-          totalCount: errorPaginationTotal,
-          page: errorSubscriptionsPage,
-          pageSize: errorSubscriptionsPageSize,
-          onPageChange: setErrorSubscriptionsPage,
-          onPageSizeChange: (size) => { setErrorSubscriptionsPageSize(size); setErrorSubscriptionsPage(0); },
-        }}
-      />
+      {subscriptionType === 'timers' && (
+        <Box data-testid="event-subscriptions-timers-panel" sx={{ mt: 2 }}>
+          <TableWithFilters
+            columns={timerColumns}
+            rowKey="key"
+            data-testid="timer-subscriptions-table"
+            filters={timerStateFilters}
+            filterValues={{ state: timerSubscriptionsState }}
+            onFilterChange={handleTimerFilterChange}
+            tableConfig={{
+              mode: 'simple',
+              data: timerFlatData,
+              sections: timerSections,
+              totalCount: timerPaginationTotal,
+              page: timerSubscriptionsPage,
+              pageSize: timerSubscriptionsPageSize,
+              onPageChange: setTimerSubscriptionsPage,
+              onPageSizeChange: (size) => { setTimerSubscriptionsPageSize(size); setTimerSubscriptionsPage(0); },
+            }}
+          />
+        </Box>
+      )}
+
+      {subscriptionType === 'errors' && (
+        <Box data-testid="event-subscriptions-errors-panel" sx={{ mt: 2 }}>
+          <TableWithFilters
+            columns={errorColumns}
+            rowKey="key"
+            data-testid="error-subscriptions-table"
+            filters={errorStateFilters}
+            filterValues={{ state: errorSubscriptionsState }}
+            onFilterChange={handleErrorFilterChange}
+            tableConfig={{
+              mode: 'simple',
+              data: errorFlatData,
+              sections: errorSections,
+              totalCount: errorPaginationTotal,
+              page: errorSubscriptionsPage,
+              pageSize: errorSubscriptionsPageSize,
+              onPageChange: setErrorSubscriptionsPage,
+              onPageSizeChange: (size) => { setErrorSubscriptionsPageSize(size); setErrorSubscriptionsPage(0); },
+            }}
+          />
+        </Box>
+      )}
     </Box>
   );
 };

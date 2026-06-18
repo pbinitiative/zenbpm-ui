@@ -219,9 +219,13 @@ export function useBpmnMarkers({
   useEffect(() => {
     if (!viewerRef.current || loading) return;
 
-    // Clear existing overlays and reapply
+    // Remove only the overlays managed by this hook (badges),
+    // keeping drilldown overlays from the built-in subprocess
+    // navigation intact.
     const overlays = viewerRef.current.get('overlays') as BpmnOverlays;
-    overlays.clear();
+    overlays.remove({ type: 'active-count' });
+    overlays.remove({ type: 'incident-count' });
+    overlays.remove({ type: 'subscription-count' });
     applyHistory();
     applyActiveElements();
     applyElementStatistics();

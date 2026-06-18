@@ -1,14 +1,15 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { Box, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
-import { DataTable, type Column, type SortOrder, type DataTableSection } from '@components/DataTable';
+import { DataTable, type Column, type DataTableSection } from '@components/DataTable';
 import { StateBadge } from '@components/StateBadge';
 import { useIncidentDetailModal } from '@components/IncidentsTable/components/useIncidentDetailModal';
 import { useStackTraceModal } from '@components/IncidentsTable/components/useStackTraceModal';
 import { getIncidentColumns } from '@components/IncidentsTable/table/columns';
 import type { Incident } from '@components/IncidentsTable';
 import { resolveIncident } from '@base/openapi';
+import type { GetIncidentsState } from '@base/openapi/generated-api/schemas/getIncidentsState';
 import type { ProcessInstanceNode } from '../types/tree';
 
 // processType display order — determines section ordering after the main instance
@@ -19,14 +20,16 @@ const PROCESS_TYPE_ORDER: Record<string, number> = {
   multiInstance: 3,
 };
 
-type StateFilter = 'all' | 'unresolved' | 'resolved';
+export type IncidentsTabState = GetIncidentsState | 'all';
 
 interface IncidentsTabProps {
   instanceTree: ProcessInstanceNode | null;
   incidentsPage: number;
   incidentsPageSize: number;
+  incidentsState: IncidentsTabState;
   setIncidentsPage: (page: number) => void;
   setIncidentsPageSize: (size: number) => void;
+  setIncidentsState: (state: IncidentsTabState) => void;
   onRefetch?: () => Promise<void>;
   onShowNotification?: (message: string, severity: 'success' | 'error') => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
@@ -50,8 +53,10 @@ export const IncidentsTab = ({
   instanceTree,
   incidentsPage,
   incidentsPageSize,
+  incidentsState,
   setIncidentsPage,
   setIncidentsPageSize,
+  setIncidentsState,
   onRefetch,
   onShowNotification,
   onElementIdClick,
@@ -60,11 +65,6 @@ export const IncidentsTab = ({
 
   const { openIncidentDetail } = useIncidentDetailModal();
   const { openStackTrace } = useStackTraceModal();
-
-  // Sort state (applied client-side within each section's already-loaded page)
-  const [sortBy, setSortBy] = useState<string>('createdAt');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
-  const [stateFilter, setStateFilter] = useState<StateFilter>('all');
 
   const handleResolveIncident = useCallback(async (incidentKey: string) => {
     try {
@@ -101,18 +101,8 @@ export const IncidentsTab = ({
     [t, handleViewDetails, handleResolveIncident, handleMessageClick, onElementIdClick]
   );
 
-  // Apply state filter to an incident list
-  const applyFilter = useCallback(
-    (list: Incident[]): Incident[] => {
-      if (stateFilter === 'unresolved') return list.filter((i) => !i.resolvedAt);
-      if (stateFilter === 'resolved') return list.filter((i) => !!i.resolvedAt);
-      return list;
-    },
-    [stateFilter]
-  );
-
-  // Build sections from the server-fetched data — no client-side slicing.
-  // Pagination is handled server-side: page changes trigger API refetch for all nodes.
+  // Build sections from the server-fetched data — no client-side slicing or filtering.
+  // Pagination and state filtering are handled server-side; page/state changes trigger API refetch for all nodes.
   const { sections, flatData, totalCount } = useMemo(() => {
     if (!instanceTree) return { sections: undefined, flatData: [], totalCount: 0 };
 
@@ -135,19 +125,8 @@ export const IncidentsTab = ({
     // totalCount = max across all nodes so the paginator covers the largest section
     const maxTotal = Math.max(...orderedNodes.map((n) => n.incidentsTotalCount), 0);
 
-    // Sort helper (client-side sort within the current page)
-    const sortRows = (rows: Incident[]): Incident[] => {
-      if (!sortBy) return rows;
-      return [...rows].sort((a, b) => {
-        const aVal = String(a[sortBy as keyof Incident] ?? '');
-        const bVal = String(b[sortBy as keyof Incident] ?? '');
-        const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-        return sortOrder === 'asc' ? cmp : -cmp;
-      });
-    };
-
     if (!hasChildWithIncidents) {
-      return { sections: undefined, flatData: sortRows(applyFilter(rootNode.incidents)), totalCount: maxTotal };
+      return { sections: undefined, flatData: rootNode.incidents, totalCount: maxTotal };
     }
 
     // Sections path
@@ -155,20 +134,18 @@ export const IncidentsTab = ({
     for (const node of orderedNodes) {
       if (node.incidents.length === 0 && node.incidentsTotalCount === 0) continue;
       const isRoot = node === rootNode;
-      const filtered = applyFilter(node.incidents);
-      if (filtered.length === 0) continue;
       const label = isRoot
         ? ''
         : `${node.instance.processType ? t(`processes:types.${node.instance.processType}`) : t('processInstance:fields.childProcess')}: ${node.instance.key}`;
       result.push({
         label,
         callPath: isRoot ? undefined : node.callPath,
-        data: sortRows(filtered),
+        data: node.incidents,
       });
     }
 
     return { sections: result.length > 0 ? result : undefined, flatData: [], totalCount: maxTotal };
-  }, [instanceTree, sortBy, sortOrder, applyFilter, t]);
+  }, [instanceTree, t]);
 
   // State filter toolbar
   const toolbar = useMemo(() => (
@@ -176,10 +153,11 @@ export const IncidentsTab = ({
       <FormControl size="small" sx={{ minWidth: 200 }}>
         <InputLabel>{t('incidents:fields.state')}</InputLabel>
         <Select
-          value={stateFilter}
+          value={incidentsState}
           label={t('incidents:fields.state')}
           onChange={(e) => {
-            setStateFilter(e.target.value as StateFilter);
+            setIncidentsState(e.target.value as IncidentsTabState);
+            setIncidentsPage(0);
           }}
           onClose={() => {
             setTimeout(() => {
@@ -214,7 +192,7 @@ export const IncidentsTab = ({
         </Select>
       </FormControl>
     </Box>
-  ), [t, stateFilter]);
+  ), [t, incidentsState, setIncidentsState, setIncidentsPage]);
 
   return (
     <Box data-testid="incidents-tab">
@@ -228,12 +206,6 @@ export const IncidentsTab = ({
         pageSize={incidentsPageSize}
         onPageChange={setIncidentsPage}
         onPageSizeChange={(newSize) => { setIncidentsPageSize(newSize); setIncidentsPage(0); }}
-        sortBy={sortBy}
-        sortOrder={sortOrder}
-        onSortChange={(newSortBy, newSortOrder) => {
-          setSortBy(newSortBy);
-          setSortOrder(newSortOrder);
-        }}
         totalCount={totalCount}
         toolbar={toolbar}
         onElementIdClick={onElementIdClick}

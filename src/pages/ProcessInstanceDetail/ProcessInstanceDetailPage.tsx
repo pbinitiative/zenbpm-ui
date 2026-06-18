@@ -110,8 +110,10 @@ export const ProcessInstanceDetailPage = () => {
     setJobsPageSize,
     incidentsPage,
     incidentsPageSize,
+    incidentsState,
     setIncidentsPage,
     setIncidentsPageSize,
+    setIncidentsState,
     decisionsPage,
     decisionsPageSize,
     setDecisionsPage,
@@ -441,8 +443,10 @@ export const ProcessInstanceDetailPage = () => {
               instanceTree={instanceTree}
               incidentsPage={incidentsPage}
               incidentsPageSize={incidentsPageSize}
+              incidentsState={incidentsState}
               setIncidentsPage={setIncidentsPage}
               setIncidentsPageSize={setIncidentsPageSize}
+              setIncidentsState={setIncidentsState}
               onRefetch={refetchAll}
               onShowNotification={showNotification}
               onElementIdClick={handleElementIdClick}

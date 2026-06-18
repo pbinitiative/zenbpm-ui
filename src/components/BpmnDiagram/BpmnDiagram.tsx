@@ -1,6 +1,11 @@
 import { useEffect } from 'react';
 import { Box, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
 
+// BPMN CSS for diagram rendering and drilldown buttons on collapsed subprocesses
+import 'bpmn-js/dist/assets/diagram-js.css';
+import 'bpmn-js/dist/assets/bpmn-js.css';
+import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
+
 // Hooks
 import { useBpmnViewer } from './hooks/useBpmnViewer';
 import { useBpmnMarkers } from './hooks/useBpmnMarkers';

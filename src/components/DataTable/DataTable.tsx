@@ -17,6 +17,10 @@ import {
 } from '@mui/material';
 import { TablePagination } from '@components/TablePagination';
 import { themeColors } from '@base/theme';
+import {
+  scrollableTableContainerSx,
+  scrollableTableHeaderCellSx,
+} from './tableStyles';
 
 export interface Column<T> {
   id: keyof T | string;
@@ -280,7 +284,7 @@ export const DataTable = <T extends object>({
         </Box>
       )}
 
-      <TableContainer sx={{ position: 'relative' }}>
+      <TableContainer sx={scrollableTableContainerSx}>
         {loading && displayedData.length > 0 && (
           <Box
             sx={{
@@ -296,7 +300,7 @@ export const DataTable = <T extends object>({
           <TableHead>
             <TableRow>
               {columns.map((column) => (
-                <TableCell key={String(column.id)} align={column.align || 'left'} sx={{ width: column.width }}>
+                <TableCell key={String(column.id)} align={column.align || 'left'} sx={scrollableTableHeaderCellSx(column)}>
                   {column.sortable && onSortChange ? (
                     <TableSortLabel
                       active={sortBy === column.id}

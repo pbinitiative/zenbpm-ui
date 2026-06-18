@@ -17,6 +17,10 @@ import {
 } from '@mui/material';
 import { themeColors } from '@base/theme';
 import { TablePagination } from '@components/TablePagination';
+import {
+  scrollableTableContainerSx,
+  scrollableTableHeaderCellSx,
+} from '@components/DataTable/tableStyles';
 
 // Types
 import type { PartitionedTableProps } from './types';
@@ -113,7 +117,7 @@ export const PartitionedTable = <T extends object>({
 
         {filtersPanel}
 
-        <TableContainer sx={{ position: 'relative' }}>
+        <TableContainer sx={scrollableTableContainerSx}>
           {loading && (
             <Box
               sx={{
@@ -138,7 +142,7 @@ export const PartitionedTable = <T extends object>({
             <TableHead>
               <TableRow>
                 {columns.map((column) => (
-                  <TableCell key={String(column.id)} align={column.align} sx={{ width: column.width }}>
+                  <TableCell key={String(column.id)} align={column.align} sx={scrollableTableHeaderCellSx(column)}>
                     {column.sortable ? (
                       <TableSortLabel
                         active={localSortBy === column.id}
