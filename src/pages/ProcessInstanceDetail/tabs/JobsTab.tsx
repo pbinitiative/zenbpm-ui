@@ -18,14 +18,15 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import EditIcon from '@mui/icons-material/Edit';
+import CloseIcon from '@mui/icons-material/Close';
 import { DataTable, type Column, type SortOrder, type DataTableSection } from '@components/DataTable';
-import type { Job } from '../types';
-import { JOB_STATE_COLORS } from '../types';
+import { JOB_STATE_COLORS, type Job, type JobState } from '../types';
 import { useCompleteJobDialog } from '../modals/useCompleteJobDialog';
 import { useAssignJobDialog } from '../modals/useAssignJobDialog';
 import { useUpdateRetriesDialog } from '@pages/ProcessInstanceDetail/modals/useUpdateRetriesDialog.ts';
+import { useFailJobDialog } from '../modals/useFailJobDialog';
 import { useInputOutputDialog } from '@components/InputOutputDialog';
-import { assignJob, completeJob, customInstance } from '@base/openapi';
+import { assignJob, completeJob, customInstance, failJob } from '@base/openapi';
 import { MonoText } from "@components/MonoText";
 import { formatDate } from "@components/DiagramDetailLayout/utils";
 import type { ProcessInstanceNode } from '../types/tree';
@@ -86,10 +87,14 @@ export const JobsTab = ({
   const { openCompleteJobDialog } = useCompleteJobDialog();
   const { openAssignJobDialog } = useAssignJobDialog();
   const { openUpdateRetriesDialog } = useUpdateRetriesDialog();
+  const { openFailJobDialog } = useFailJobDialog();
   const { openInputOutputDialog } = useInputOutputDialog();
 
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuJob, setMenuJob] = useState<Job | null>(null);
+
+  const isJobActive = (state: JobState): boolean =>
+    state === 'activatable' || state === 'activated' || state === 'active';
 
   const handleMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>, job: Job) => {
     event.stopPropagation();
@@ -129,6 +134,36 @@ export const JobsTab = ({
       await onRefetch();
     } catch {
       onShowNotification(t('processInstance:messages.retriesUpdateFailed'), 'error');
+    }
+  }, [onRefetch, onShowNotification, t]);
+
+  const handleFailJob = useCallback(async (
+    jobKey: string,
+    errorCode: string | undefined,
+    variables: Record<string, unknown> | undefined,
+    jobType: string
+  ) => {
+    try {
+      // Only include keys the API actually accepts. An empty `errorCode` or empty
+      // `variables` object should not be sent over the wire at all.
+      const body: { errorCode?: string; variables?: Record<string, unknown> } = {};
+      if (errorCode !== undefined && errorCode !== '') {
+        body.errorCode = errorCode;
+      }
+      if (variables !== undefined && Object.keys(variables).length > 0) {
+        body.variables = variables;
+      }
+      await failJob(jobKey, body);
+      onShowNotification(
+        t('processInstance:messages.jobFailed') + ` (${jobType})`,
+        'success'
+      );
+      await onRefetch();
+    } catch {
+      onShowNotification(
+        t('processInstance:messages.jobFailFailed') + ` (${jobType})`,
+        'error'
+      );
     }
   }, [onRefetch, onShowNotification, t]);
 
@@ -278,7 +313,7 @@ export const JobsTab = ({
         label: '',
         width: 140,
         render: (row) => {
-          const isActive = row.state === 'activatable' || row.state === 'activated' || row.state === 'active';
+          const isActive = isJobActive(row.state);
           const isUserTask = row.type === 'user-task-type';
           return (
             <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -399,6 +434,25 @@ export const JobsTab = ({
           <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>{t('processInstance:actions.updateRetries')}</ListItemText>
         </MenuItem>
+        {menuJob && isJobActive(menuJob.state) && (
+          <MenuItem onClick={() => {
+            if (menuJob) {
+              // Capture the job type here — `handleMenuClose()` will clear `menuJob`,
+              // and by the time the dialog confirms we still want to show the type
+              // in the success/error notification.
+              const jobType = menuJob.type;
+              openFailJobDialog({
+                job: menuJob,
+                onFail: (jobKey, errorCode, variables) =>
+                  handleFailJob(jobKey, errorCode, variables, jobType),
+              });
+            }
+            handleMenuClose();
+          }}>
+            <ListItemIcon><CloseIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{t('processInstance:actions.fail')}</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
     </Box>
   );

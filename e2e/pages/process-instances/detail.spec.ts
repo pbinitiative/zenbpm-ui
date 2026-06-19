@@ -86,6 +86,129 @@ test.describe('Process Instance Detail Page', () => {
     const completeButton = page.getByRole('button', { name: 'Complete' });
     await expect(completeButton.first()).toBeVisible();
   });
+
+  test('should show and trigger fail job action from three-dot menu', async ({ page }) => {
+    // Jobs tab should be active by default
+    await expect(page.getByTestId('jobs-table')).toBeVisible();
+
+    // Open the three-dot menu on the first job row
+    const menuButton = page.getByTestId('jobs-table').locator('button').filter({ has: page.locator('svg[data-testid="MoreVertIcon"]') });
+    await menuButton.first().click();
+
+    // The menu should show the Fail job action
+    const failMenuItem = page.getByRole('menuitem', { name: /fail job/i });
+    await expect(failMenuItem).toBeVisible();
+
+    // Click Fail job — opens a dialog with optional error code and variables
+    await failMenuItem.click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('heading', { name: 'Fail Job' })).toBeVisible();
+    // Both fields are visible: a text input for the error code, and the JSON editor (Monaco)
+    await expect(dialog.getByLabel('Error Code')).toBeVisible();
+    await expect(dialog.locator('.monaco-editor').first()).toBeVisible();
+
+    // Fill in the error code and leave the variables at the default "{}".
+    // The default is valid JSON, so the Fail job button should be enabled.
+    await dialog.getByLabel('Error Code').fill('JOB-TEST-ERROR-001');
+
+    const responsePromise = page.waitForResponse(
+      (res) => res.url().includes('/jobs/') && res.url().includes('/fail') && res.request().method() === 'POST'
+    );
+    await dialog.getByRole('button', { name: /fail job/i }).click();
+    const response = await responsePromise;
+    expect(response.ok()).toBeTruthy();
+
+    // The payload should include the error code. Variables default to "{}" which is
+    // treated as "no variables" by the dialog, so the key should be absent.
+    const requestBody = JSON.parse(response.request().postData() ?? '{}');
+    expect(requestBody.errorCode).toBe('JOB-TEST-ERROR-001');
+    expect(requestBody.variables).toBeUndefined();
+
+    // Dialog closes and the success notification appears
+    await expect(dialog).not.toBeVisible();
+    await expect(page.getByText('Job failed')).toBeVisible();
+  });
+
+  test('should fail job with empty body when dialog fields are left blank', async ({ page }) => {
+    await expect(page.getByTestId('jobs-table')).toBeVisible();
+
+    const menuButton = page.getByTestId('jobs-table').locator('button').filter({ has: page.locator('svg[data-testid="MoreVertIcon"]') });
+    await menuButton.first().click();
+
+    const failMenuItem = page.getByRole('menuitem', { name: /fail job/i });
+    await expect(failMenuItem).toBeVisible();
+    await failMenuItem.click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    // Leave the error code empty and variables at the default "{}" placeholder
+    // — the request body should not contain empty `errorCode` or `variables` keys.
+    const responsePromise = page.waitForResponse(
+      (res) => res.url().includes('/jobs/') && res.url().includes('/fail') && res.request().method() === 'POST'
+    );
+    await dialog.getByRole('button', { name: /fail job/i }).click();
+    const response = await responsePromise;
+    expect(response.ok()).toBeTruthy();
+
+    const requestBody = JSON.parse(response.request().postData() ?? '{}');
+    expect(requestBody.errorCode).toBeUndefined();
+    expect(requestBody.variables).toBeUndefined();
+
+    await expect(dialog).not.toBeVisible();
+  });
+
+  test('should disable Fail button when variables JSON is invalid', async ({ page }) => {
+    await expect(page.getByTestId('jobs-table')).toBeVisible();
+
+    const menuButton = page.getByTestId('jobs-table').locator('button').filter({ has: page.locator('svg[data-testid="MoreVertIcon"]') });
+    await menuButton.first().click();
+    const failMenuItem = page.getByRole('menuitem', { name: /fail job/i });
+    await failMenuItem.click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    // Type invalid JSON into the Monaco editor
+    const monacoEditor = dialog.locator('.monaco-editor').first();
+    await monacoEditor.click();
+    await page.keyboard.press('Control+a');
+    await page.keyboard.type('{ not valid json }');
+
+    // The validation error should appear and the Fail button should be disabled
+    await expect(dialog.getByText(/invalid json/i)).toBeVisible();
+    await expect(dialog.getByRole('button', { name: /fail job/i })).toBeDisabled();
+  });
+
+  test('should close fail job dialog on cancel without firing a request', async ({ page }) => {
+    await expect(page.getByTestId('jobs-table')).toBeVisible();
+
+    const menuButton = page.getByTestId('jobs-table').locator('button').filter({ has: page.locator('svg[data-testid="MoreVertIcon"]') });
+    await menuButton.first().click();
+
+    const failMenuItem = page.getByRole('menuitem', { name: /fail job/i });
+    await expect(failMenuItem).toBeVisible();
+    await failMenuItem.click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    // Track that no fail request is made after cancel
+    let failRequestFired = false;
+    page.on('request', (req) => {
+      if (req.url().includes('/jobs/') && req.url().includes('/fail') && req.method() === 'POST') {
+        failRequestFired = true;
+      }
+    });
+
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).not.toBeVisible();
+    // Give the network a beat to make sure nothing fired
+    await page.waitForTimeout(200);
+    expect(failRequestFired).toBe(false);
+  });
 });
 
 test.describe('Process Instance Detail - Breadcrumb Highlighting', () => {

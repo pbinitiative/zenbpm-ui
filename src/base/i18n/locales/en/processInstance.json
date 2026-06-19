@@ -64,6 +64,7 @@
     "assign": "Assign",
     "retry": "Retry",
     "updateRetries": "Update Retries",
+    "fail": "Fail job",
     "addVariable": "Add Variable",
     "cancelProcess": "Cancel Process",
     "trigger": "Trigger",
@@ -78,6 +79,8 @@
     "jobRetryFailed": "Failed to retry job",
     "retriesUpdated": "Retries updated successfully",
     "retriesUpdateFailed": "Failed to update retries",
+    "jobFailed": "Job failed",
+    "jobFailFailed": "Failed to fail job",
     "incidentResolved": "Incident resolved successfully",
     "incidentResolveFailed": "Failed to resolve incident",
     "variableAdded": "Variable added successfully",
@@ -122,6 +125,13 @@
       "title": "Update Retries",
       "description": "Change the remaining retry count for this job.",
       "newRetries": "New Retry Count"
+    },
+    "failJob": {
+      "title": "Fail Job",
+      "errorCode": "Error Code",
+      "variables": "Variables",
+      "errorCodePlaceholder": "e.g. ORDER_FAILED",
+      "variablesPlaceholder": "e.g. {\"reason\": \"timeout\"}"
     },
     "addVariable": {
       "title": "Add Variable",
