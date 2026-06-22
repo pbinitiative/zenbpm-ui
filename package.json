@@ -49,7 +49,7 @@
     "react-i18next": "^17.0.8",
     "react-router-dom": "^7.18.0",
     "@pbinitiative/zenbpm-bpmn-moddle": "^0.1.0",
-    "@pbinitiative/zenbpm-js-properties-panel": "^0.3.0"
+    "@pbinitiative/zenbpm-js-properties-panel": "^0.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
