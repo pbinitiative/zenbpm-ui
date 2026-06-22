@@ -1,13 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import Modeler from 'bpmn-js/lib/Modeler';
-import {
-  BpmnPropertiesPanelModule,
-  BpmnPropertiesProviderModule,
-} from 'bpmn-js-properties-panel';
+import CamundaCloudModeler from 'camunda-bpmn-js/lib/camunda-cloud/Modeler';
 import type { BpmnCanvas, BpmnEventBus } from '../types';
 import { emptyDiagram } from '../utils.ts';
-import { ZenBpmPropertiesProviderModule, normalizeZeebeXml } from '@pbinitiative/zenbpm-js-properties-panel';
-import zenbpmModdleDescriptor from '@pbinitiative/zenbpm-bpmn-moddle';
+import { JsonFormPropertiesProviderModule } from '../extensions';
 
 interface UseBpmnEditorOptions {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -31,7 +26,7 @@ export function useBpmnEditor({
   initialXml,
   onChange,
 }: UseBpmnEditorOptions): UseBpmnEditorResult {
-  const modelerRef = useRef<InstanceType<typeof Modeler> | null>(null);
+  const modelerRef = useRef<InstanceType<typeof CamundaCloudModeler> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const initialXmlLoadedRef = useRef(false);
@@ -53,7 +48,7 @@ export function useBpmnEditor({
     setLoading(true);
     setError(null);
     try {
-      await modelerRef.current.importXML(normalizeZeebeXml(xml));
+      await modelerRef.current.importXML(xml);
       const canvas = modelerRef.current.get('canvas') as BpmnCanvas;
       canvas.zoom('fit-viewport');
       setLoading(false);
@@ -70,7 +65,7 @@ export function useBpmnEditor({
     await importXml(emptyDiagram());
   }, [importXml]);
 
-  // Update the ZEN_FORM zenbpm:Input mapping on a user task element.
+  // Update the ZEN_FORM zeebe:Input mapping on a user task element.
   // Stores the form JSON as a FEEL string literal so it becomes a
   // process variable at runtime — no deploy-time transformation needed.
   const updateZenFormProperty = useCallback((elementId: string, value: string) => {
@@ -108,10 +103,10 @@ export function useBpmnEditor({
     }
 
     let ioMapping = (extensionElements.values || []).find(
-      (e: any) => e.$type === 'zenbpm:IoMapping',
+      (e: any) => e.$type === 'zeebe:IoMapping',
     );
     if (!ioMapping) {
-      ioMapping = bpmnFactory.create('zenbpm:IoMapping', {
+      ioMapping = bpmnFactory.create('zeebe:IoMapping', {
         inputParameters: [],
         outputParameters: [],
       });
@@ -135,7 +130,7 @@ export function useBpmnEditor({
         context: { element, moddleElement: existingInput, properties: { source: feelSource } },
       });
     } else {
-      const newInput = bpmnFactory.create('zenbpm:Input', {
+      const newInput = bpmnFactory.create('zeebe:Input', {
         source: feelSource,
         target: 'ZEN_FORM',
       });
@@ -159,7 +154,7 @@ export function useBpmnEditor({
   // Initialize modeler once on mount
   useEffect(() => {
     let mounted = true;
-    let modeler: InstanceType<typeof Modeler> | null = null;
+    let modeler: InstanceType<typeof CamundaCloudModeler> | null = null;
 
     const initModeler = async () => {
       if (!containerRef.current || !propertiesPanelRef.current) return;
@@ -177,8 +172,8 @@ export function useBpmnEditor({
         if (!mounted || !containerRef.current) return;
       }
 
-      // Create standard modeler with properties panel
-      modeler = new Modeler({
+      // Create Camunda Platform modeler with properties panel
+      modeler = new CamundaCloudModeler({
         container: containerRef.current,
         propertiesPanel: {
           parent: propertiesPanelRef.current,
@@ -186,14 +181,7 @@ export function useBpmnEditor({
         keyboard: {
           bindTo: document,
         },
-        additionalModules: [
-          BpmnPropertiesPanelModule,
-          BpmnPropertiesProviderModule,
-          ZenBpmPropertiesProviderModule,
-        ],
-        moddleExtensions: {
-          zenbpm: zenbpmModdleDescriptor
-        }
+        additionalModules: [JsonFormPropertiesProviderModule],
       });
 
       modelerRef.current = modeler;
@@ -219,7 +207,7 @@ export function useBpmnEditor({
       // Load initial diagram
       try {
         const xmlToLoad = initialXml || emptyDiagram();
-        await modeler.importXML(normalizeZeebeXml(xmlToLoad));
+        await modeler.importXML(xmlToLoad);
         initialXmlLoadedRef.current = true;
 
         if (!mounted) return;
@@ -258,7 +246,7 @@ export function useBpmnEditor({
       setLoading(true);
       try {
         const xmlToLoad = initialXml || emptyDiagram();
-        await modelerRef.current.importXML(normalizeZeebeXml(xmlToLoad));
+        await modelerRef.current.importXML(xmlToLoad);
         const canvas = modelerRef.current.get('canvas') as BpmnCanvas;
         canvas.zoom('fit-viewport');
         setLoading(false);

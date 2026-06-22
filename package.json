@@ -38,6 +38,9 @@
     "axios": "^1.17.0",
     "bpmn-js": "^18.17.0",
     "bpmn-js-properties-panel": "^5.58.0",
+    "camunda-bpmn-js": "^5.28.0",
+    "camunda-bpmn-js-behaviors": "^1.16.1",
+    "camunda-bpmn-moddle": "^7.0.1",
     "dmn-js": "^17.8.1",
     "dmn-js-properties-panel": "^3.11.1",
     "dotenv": "^17.4.2",
@@ -47,9 +50,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-i18next": "^17.0.8",
-    "react-router-dom": "^7.16.0",
-    "@pbinitiative/zenbpm-bpmn-moddle": "^0.1.0",
-    "@pbinitiative/zenbpm-js-properties-panel": "^0.3.0"
+    "react-router-dom": "^7.16.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

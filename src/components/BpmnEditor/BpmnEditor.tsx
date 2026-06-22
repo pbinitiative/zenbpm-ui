@@ -1,10 +1,8 @@
 import { useRef, useImperativeHandle, forwardRef } from 'react';
 import { Box, CircularProgress } from '@mui/material';
 
-import 'bpmn-js/dist/assets/diagram-js.css';
-import 'bpmn-js/dist/assets/bpmn-js.css';
-import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
-import '@bpmn-io/properties-panel/dist/assets/properties-panel.css';
+// Import Camunda Platform modeler CSS (includes all required styles)
+import 'camunda-bpmn-js/dist/assets/camunda-platform-modeler.css';
 
 import type { BpmnEditorProps, BpmnEditorRef } from './types';
 import { useBpmnEditor } from './hooks';

@@ -1,4 +1,4 @@
-// Default empty BPMN diagram for ZenBPM
+// Default empty BPMN diagram with Zeebe/Camunda 8 extensions
 
 export const emptyDiagram = () => {
     const processId = `Process_${randomId()}`;
@@ -7,11 +7,14 @@ export const emptyDiagram = () => {
   xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
-  xmlns:zenbpm="http://zenbpm.pbinitiative.org/1.0"
+  xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+  xmlns:modeler="http://camunda.org/schema/modeler/1.0"
   id="Definitions_${processId}"
   targetNamespace="http://bpmn.io/schema/bpmn"
   exporter="ZenBPM Modeler"
-  exporterVersion="1.0.0">
+  exporterVersion="1.0.0"
+  modeler:executionPlatform="Camunda Cloud"
+  modeler:executionPlatformVersion="8.0.0">
   <bpmn:process id="${processId}" isExecutable="true">
     <bpmn:startEvent id="StartEvent_1" />
   </bpmn:process>
