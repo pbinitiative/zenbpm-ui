@@ -13,7 +13,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Build the app (skip orval/prebuild - generated code is committed)
-RUN npx vite build
+RUN pnpm run prebuild && npx vite build
 
 # Runtime stage
 FROM nginx:alpine
