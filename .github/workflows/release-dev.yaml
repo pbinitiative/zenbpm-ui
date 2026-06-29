@@ -1,9 +1,10 @@
-name: publish docker image
+name: release-dev
 
 on:
+  workflow_dispatch:
   push:
-    tags:
-      - v*
+    branches:
+      - main
 
 permissions:
   actions: read
@@ -11,14 +12,19 @@ permissions:
   packages: write
   security-events: write
 
+# Concurrency cancellation
+concurrency:
+  group: release-dev-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  release:
+  dev:
     uses: ./.github/workflows/release-reusable.yaml
     with:
-      release-tag: ${{ github.ref_name }}
+      release-tag: dev
       checkout-ref: ${{ github.ref }}
-      artifact-prefix: trivy-release-reports
+      artifact-prefix: trivy-dev-reports
       publish: true
-      security-scan: true
+      security-scan: false
       notify: false
     secrets: inherit

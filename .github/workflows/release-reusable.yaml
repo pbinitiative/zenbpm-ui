@@ -1,0 +1,211 @@
+name: release reusable
+
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        description: Image and report tag used by the release.
+        required: true
+        type: string
+      checkout-ref:
+        description: Git ref checked out before building.
+        required: true
+        type: string
+      artifact-prefix:
+        description: Prefix for uploaded Trivy report artifacts.
+        required: true
+        type: string
+      publish:
+        description: Whether the workflow publishes release artifacts.
+        required: true
+        type: boolean
+      security-scan:
+        description: Whether to run Trivy security scanning and upload reports.
+        required: true
+        type: boolean
+      notify:
+        description: Whether to send the Discord release notification.
+        required: true
+        type: boolean
+
+permissions:
+  actions: read
+  contents: read
+  packages: write
+  security-events: write
+
+env:
+  IMAGE_NAME: ghcr.io/pbinitiative/zenbpm-ui
+  TRIVY_VERSION: 0.69.3
+  TRIVY_ARCHIVE_SHA256: 1816b632dfe529869c740c0913e36bd1629cb7688bd5634f4a858c1d57c88b75
+  RELEASE_TAG: ${{ inputs.release-tag }}
+
+jobs:
+  release:
+    if: github.event_name != 'push' || github.event.deleted == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          submodules: 'true'
+
+      - name: login to github
+        if: inputs.publish
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          driver: docker-container
+
+      - name: Verify builder
+        run: |
+          docker buildx ls
+          echo "BUILDX_BUILDER=$BUILDX_BUILDER"
+        env:
+          BUILDX_BUILDER: ${{ steps.buildx.outputs.name }}
+
+      - name: Build and publish Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ inputs.publish }}
+          tags: ${{ env.IMAGE_NAME }}:${{ inputs.release-tag }}
+
+  release_security:
+    runs-on: ubuntu-latest
+    needs: release
+    if: ${{ always() && inputs.security-scan }}
+    continue-on-error: true
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          submodules: 'true'
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          driver: docker-container
+
+      - name: install verified trivy
+        if: always()
+        continue-on-error: true
+        run: bash scripts/ci/release-security.sh install-trivy
+
+      - name: build release image locally for trivy
+        if: always()
+        continue-on-error: true
+        run: bash scripts/ci/release-security.sh build-scan-image
+        env:
+          DOCKER_BUILDKIT: 1
+          BUILDX_BUILDER: ${{ steps.buildx.outputs.name }}
+
+      - name: trivy scan release inputs
+        if: always()
+        continue-on-error: true
+        run: bash scripts/ci/release-security.sh scan
+
+      - name: summarize trivy reports
+        id: trivy_summary
+        if: always()
+        continue-on-error: true
+        run: bash scripts/ci/release-security.sh summarize
+
+      - name: upload trivy image sarif
+        if: ${{ always() && hashFiles('trivy-reports/image.sarif') != '' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-reports/image.sarif
+          category: trivy-image
+
+      - name: upload trivy filesystem sarif
+        if: ${{ always() && hashFiles('trivy-reports/fs.sarif') != '' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-reports/fs.sarif
+          category: trivy-fs
+
+      - name: upload trivy secret sarif
+        if: ${{ always() && hashFiles('trivy-reports/secrets.sarif') != '' }}
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-reports/secrets.sarif
+          category: trivy-secrets
+
+      - name: upload trivy reports
+        if: ${{ always() && hashFiles('trivy-reports/**') != '' }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-prefix }}-${{ inputs.release-tag }}
+          path: trivy-reports/
+
+  release_notify:
+    runs-on: ubuntu-latest
+    needs:
+      - release_security
+      - release
+    if: ${{ always() && inputs.notify }}
+    continue-on-error: true
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.checkout-ref }}
+          submodules: 'true'
+
+      - name: login to github
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          driver: docker-container
+
+      - name: download trivy reports
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact-prefix }}-${{ inputs.release-tag }}
+          path: trivy-reports/
+
+      - name: resolve published image digest
+        id: image_digest
+        if: always()
+        continue-on-error: true
+        run: bash scripts/ci/release-security.sh resolve-digest
+
+      - name: summarize trivy reports
+        id: trivy_summary
+        if: always()
+        continue-on-error: true
+        run: bash scripts/ci/release-security.sh summarize
+
+      - name: notify discord
+        if: always()
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK_URL }}
+        run: bash scripts/ci/release-security.sh notify-discord
