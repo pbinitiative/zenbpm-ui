@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import { Link, Typography } from '@mui/material';
+import { Link, Tooltip, Typography } from '@mui/material';
 import {
   type Column,
   type DataTableSection,
@@ -9,7 +9,8 @@ import {
 } from '@components/DataTable';
 import type { FlowElementHistory } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
-import { formatDate } from '@/components/DiagramDetailLayout/utils';
+import { formatDate, formatDuration } from '@/components/DiagramDetailLayout/utils';
+import { useInputOutputDialog } from '@components/InputOutputDialog';
 import type { GetHistorySortBy } from '@base/openapi/generated-api/schemas/getHistorySortBy';
 import type { GetHistorySortOrder } from '@base/openapi/generated-api/schemas/getHistorySortOrder';
 
@@ -48,6 +49,7 @@ export const HistoryTab = ({
   onElementIdClick,
 }: HistoryTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance, ns.processes]);
+  const { openInputOutputDialog } = useInputOutputDialog();
 
   // Build sections from the tree: root section unlabelled, child sections labelled.
   const { sections, flatData } = useMemo(() => {
@@ -111,6 +113,68 @@ export const HistoryTab = ({
         ),
       },
       {
+        id: 'variables',
+        label: t('common:fields.variables'),
+        sortable: true,
+        width: 150,
+        render: (row) => {
+          const displayVariablesIn = row.inputVariables ?? {};
+          const displayVariablesOut = row.outputVariables ?? {};
+          const hasInputVariables =
+            displayVariablesIn && Object.keys(displayVariablesIn).length > 0;
+          const hasOutputVariables =
+            displayVariablesOut && Object.keys(displayVariablesOut).length > 0;
+          const hasInputOutput = hasInputVariables || hasOutputVariables;
+
+          if (!hasInputOutput) {
+            // No variables to show — render a plain dash and skip the dialog
+            // entirely. This matches the convention used elsewhere in the
+            // history table (e.g. the Duration column for active elements).
+            return (
+              <Typography
+                variant="body2"
+                sx={{
+                  fontFamily: '"SF Mono", Monaco, monospace',
+                  color: 'text.secondary',
+                }}
+              >
+                -
+              </Typography>
+            );
+          }
+
+          const value = JSON.stringify(displayVariablesIn) + ', ' + JSON.stringify(displayVariablesOut);
+          return (
+            <Tooltip title={t('processInstance:actions.viewInputOutput')} placement="top-start">
+              <Typography
+                variant="body2"
+                onClick={() => {
+                  openInputOutputDialog({
+                    data: {
+                      title: t('common:fields.variables'),
+                      inputVariables: displayVariablesIn,
+                      outputVariables: displayVariablesOut,
+                    },
+                  });
+                }}
+                sx={{
+                  fontFamily: '"SF Mono", Monaco, monospace',
+                  display: 'block',
+                  maxWidth: 150,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  '&:hover': { opacity: 0.7 },
+                }}
+              >
+                {value}
+              </Typography>
+            </Tooltip>
+          );
+        },
+      },
+      {
         id: 'elementId',
         label: t('processInstance:fields.elementId'),
         render: (row) => (
@@ -150,13 +214,13 @@ export const HistoryTab = ({
         sortable: true,
       },
       {
-        id: 'completedAt',
-        label: t('processInstance:fields.completedAt'),
-        width: 160,
-        render: (row) => (row.completedAt ? formatDate(row.completedAt) : '-'),
+        id: 'duration',
+        label: t('processInstance:fields.duration'),
+        width: 140,
+        render: (row) => (row.completedAt ? formatDuration(row.createdAt, row.completedAt) : '-'),
       },
     ],
-    [t, onElementIdClick]
+    [t, onElementIdClick, openInputOutputDialog]
   );
 
   return (

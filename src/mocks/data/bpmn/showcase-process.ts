@@ -51,6 +51,7 @@ const createInstance = (
       state: 'completed' as const,
       startedAt: createdAt,
       completedAt: startCompletedAt,
+      inputVariables: variables,
     },
     // Task A (Base approval)
     {
@@ -60,6 +61,11 @@ const createInstance = (
       state: (stoppedAt === 'task-a' ? state : 'completed'),
       startedAt: startCompletedAt,
       completedAt: taskACompletedAt,
+      inputVariables: variables,
+      // task-a approves the loan on completion (only when it completes)
+      ...(stoppedAt !== 'task-a'
+        ? { outputVariables: { ...variables, baseApproved: true } }
+        : {}),
     },
     // Gateway (only if task-a completed)
     ...(stoppedAt !== 'task-a'
@@ -71,6 +77,8 @@ const createInstance = (
             state: 'completed' as const,
             startedAt: taskACompletedAt!,
             completedAt: gatewayCompletedAt,
+            inputVariables: { ...variables, baseApproved: true },
+            outputVariables: { ...variables, baseApproved: true, isHighValue },
           },
         ]
       : []),
@@ -84,6 +92,11 @@ const createInstance = (
             state: (stoppedAt === 'task-b' ? state : 'completed'),
             startedAt: gatewayCompletedAt!,
             completedAt: taskBCompletedAt,
+            inputVariables: { ...variables, baseApproved: true, isHighValue },
+            // task-b finalises the approval when it completes
+            ...(stoppedAt === 'completed'
+              ? { outputVariables: { ...variables, baseApproved: true, isHighValue, approved: true } }
+              : {}),
           },
         ]
       : []),
@@ -97,6 +110,9 @@ const createInstance = (
             state: 'completed' as const,
             startedAt: isHighValue ? taskBCompletedAt! : gatewayCompletedAt!,
             completedAt: joinGatewayCompletedAt,
+            inputVariables: isHighValue
+              ? { ...variables, baseApproved: true, isHighValue, approved: true }
+              : { ...variables, baseApproved: true, isHighValue: false },
           },
           {
             key: `${key}006`,
@@ -105,6 +121,13 @@ const createInstance = (
             state: 'completed' as const,
             startedAt: joinGatewayCompletedAt!,
             completedAt: endCompletedAt,
+            inputVariables: isHighValue
+              ? { ...variables, baseApproved: true, isHighValue, approved: true }
+              : { ...variables, baseApproved: true, isHighValue: false },
+            // End events in BPMN don't produce their own output variables — they
+            // simply terminate the process. The final state is reflected in
+            // the process-scope variables, not as a transformation at the end
+            // event itself.
           },
         ]
       : []),

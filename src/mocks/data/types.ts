@@ -18,6 +18,10 @@ export interface MockElementInstance {
   state: 'active' | 'completed' | 'terminated' | 'failed';
   startedAt: string;
   completedAt?: string;
+  /** Input variables provided to the element at creation time (from BPMN input mappings) */
+  inputVariables?: Record<string, unknown>;
+  /** Output variables produced by the element on completion (after BPMN output mapping) */
+  outputVariables?: Record<string, unknown>;
 }
 
 export interface MockProcessInstance {
