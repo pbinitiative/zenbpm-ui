@@ -20,6 +20,7 @@
     "generate:api": "pnpm generate:validation-schemas && orval",
     "generate:i18n-types": "node scripts/generate-i18n-types.mjs",
     "test:e2e": "playwright test",
+    "test:e2e:live": "playwright test --config=playwright.live.config.ts",
     "test:e2e:ui": "playwright test --ui",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
