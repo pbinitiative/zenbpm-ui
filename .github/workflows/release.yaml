@@ -11,9 +11,6 @@ on:
         description: Ref to build. Defaults to release/<version>.
         required: false
         type: string
-  push:
-    tags:
-      - v*
 
 permissions:
   actions: read
