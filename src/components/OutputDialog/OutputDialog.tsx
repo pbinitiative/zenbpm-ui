@@ -10,7 +10,7 @@ export interface OutputDialogProps {
 
 export const OutputDialog = ({ open, onClose, output, title }: OutputDialogProps) => {
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth data-testid="output-dialog">
       <DialogTitle
         sx={{
           display: 'flex',
@@ -30,6 +30,7 @@ export const OutputDialog = ({ open, onClose, output, title }: OutputDialogProps
       <DialogContent sx={{ pt: 2 }}>
         <Box
           component="pre"
+          data-testid="output-dialog-content"
           sx={{
             p: 2,
             bgcolor: 'grey.100',

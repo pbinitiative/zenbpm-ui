@@ -266,6 +266,78 @@ const autoLiquidateDmn = `<?xml version="1.0" encoding="UTF-8"?>
   </dmndi:DMNDI>
 </definitions>`;
 
+// Discounts Rule - Decision table with COLLECT hit policy so multiple rules
+// can match at evaluation time. Used by the multi-rule decision instance mock
+// to exercise the per-rule output display in the input/output dialog.
+const discountsDmn = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="example_discounts" name="DRD" namespace="http://camunda.org/schema/1.0/dmn" exporter="Camunda Modeler" exporterVersion="5.35.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.5.0">
+  <decision id="discounts" name="Applicable discounts">
+    <decisionTable id="DecisionTable_discounts" hitPolicy="COLLECT">
+      <input id="Input_1" label="customerType">
+        <inputExpression id="InputExpression_1" typeRef="string">
+          <text>customerType</text>
+        </inputExpression>
+      </input>
+      <input id="Input_2" label="orderTotal">
+        <inputExpression id="InputExpression_2" typeRef="number">
+          <text>orderTotal</text>
+        </inputExpression>
+      </input>
+      <output id="Output_1" label="discount" name="discount" typeRef="number" />
+      <output id="Output_2" label="reason" name="reason" typeRef="string" />
+      <rule id="DecisionRule_d1">
+        <inputEntry id="UnaryTests_d1a">
+          <text>"gold"</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_d1b">
+          <text></text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_d1a">
+          <text>0.10</text>
+        </outputEntry>
+        <outputEntry id="LiteralExpression_d1b">
+          <text>"Gold customer"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_d2">
+        <inputEntry id="UnaryTests_d2a">
+          <text></text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_d2b">
+          <text>&gt;= 200</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_d2a">
+          <text>0.05</text>
+        </outputEntry>
+        <outputEntry id="LiteralExpression_d2b">
+          <text>"Order over 200"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_d3">
+        <inputEntry id="UnaryTests_d3a">
+          <text></text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_d3b">
+          <text></text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_d3a">
+          <text>0.02</text>
+        </outputEntry>
+        <outputEntry id="LiteralExpression_d3b">
+          <text>"Loyalty bonus"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram>
+      <dmndi:DMNShape dmnElementRef="discounts">
+        <dc:Bounds height="80" width="180" x="160" y="100" />
+      </dmndi:DMNShape>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>`;
+
 // Mock decision definitions
 interface MockDecisionDefinition {
   key: string;
@@ -308,6 +380,14 @@ const decisionDefinitions: MockDecisionDefinition[] = [
     name: 'Auto Liquidation Rule',
     resourceName: 'can-autoliquidate-rule-modified.dmn',
     dmnData: autoLiquidateDmn,
+  },
+  {
+    key: '4000000000000000005',
+    version: 1,
+    decisionDefinitionId: 'example_discounts',
+    name: 'Applicable Discounts',
+    resourceName: 'discounts.dmn',
+    dmnData: discountsDmn,
   },
 ];
 
