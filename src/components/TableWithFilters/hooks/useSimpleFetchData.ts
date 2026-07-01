@@ -14,6 +14,8 @@ export interface UseSimpleFetchDataOptions<T> {
   sortOrder?: SortOrder;
   refreshKey?: number;
   onError?: (error: unknown) => void;
+  /** If set, table re-fetches data on this interval (ms). Set to 0/undefined to disable. */
+  autoRefreshInterval?: number;
 }
 
 interface UseSimpleFetchDataResult<T> {
@@ -32,6 +34,10 @@ export function useSimpleFetchData<T>(
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
+  // Bumped by the auto-refresh interval to trigger a re-fetch.
+  const [autoRefreshTick, setAutoRefreshTick] = useState(0);
+  const lastTickRef = useRef(autoRefreshTick);
+  const serializedFilters = JSON.stringify(options?.filterValues);
 
   const [, startTransition] = useTransition();
 
@@ -98,8 +104,23 @@ export function useSimpleFetchData<T>(
     options?.sortBy,
     options?.sortOrder,
     options?.refreshKey,
+    autoRefreshTick,
     // `options` itself is intentionally excluded — individual fields are listed above
   ]);
+
+  // Auto-refresh: re-fetch on a fixed interval (ms) so the table stays in sync
+  // with the rest of the page (e.g. live element counts on the BPMN diagram).
+  useEffect(() => {
+    const autoRefreshInterval = options?.autoRefreshInterval;
+    if (!autoRefreshInterval || autoRefreshInterval <= 0) return;
+    const intervalId = setInterval(() => {
+      // Skip refresh when the browser tab is hidden — no point fetching
+      // data the user isn't looking at. Mirrors useInstanceData behavior.
+      if (typeof document !== 'undefined' && document.hidden) return;
+      setAutoRefreshTick((tick) => tick + 1);
+    }, autoRefreshInterval);
+    return () => clearInterval(intervalId);
+  }, [options?.autoRefreshInterval]);
 
   if (!options) return null;
 

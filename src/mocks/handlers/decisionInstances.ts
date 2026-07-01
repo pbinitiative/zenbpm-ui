@@ -372,11 +372,15 @@ export const decisionInstanceHandlers = [
       }));
 
       // Return in partitioned format (single partition for mock)
+      // `count` is the total size of the partition (matches the OpenAPI schema
+      // "Total decision instances in this partition" and the process-instance
+      // mock). The bottom pagination is driven by `totalCount`; `count` is
+      // surfaced per-partition via `PartitionHeader`.
       return HttpResponse.json({
         partitions: [
           {
             partition: 1,
-            count: items.length,
+            count: filtered.length,
             items,
           },
         ],

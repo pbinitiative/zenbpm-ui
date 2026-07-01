@@ -168,6 +168,7 @@ export const DecisionDefinitionDetailPage = () => {
     <DecisionInstancesTable
       dmnResourceDefinitionKey={dmnResourceDefinitionKey}
       syncWithUrl={false}
+      autoRefreshInterval={10000}
     />
   );
 

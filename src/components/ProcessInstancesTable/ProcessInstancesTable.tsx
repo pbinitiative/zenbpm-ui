@@ -42,6 +42,8 @@ export interface ProcessInstancesTableProps {
   syncWithUrl?: boolean;
   /** Callback when activity filter changes (for syncing with diagram highlight) */
   onActivityFilterChange?: (activityId: string | undefined) => void;
+  /** If set, table re-fetches data on this interval (ms). Set to 0/undefined to disable. */
+  autoRefreshInterval?: number;
 }
 
 export const ProcessInstancesTable = ({
@@ -55,6 +57,7 @@ export const ProcessInstancesTable = ({
   defaultPageSize,
   selectedActivityId: _selectedActivityId,
   onActivityFilterChange,
+  autoRefreshInterval = 0,
 }: ProcessInstancesTableProps) => {
   // Note: _selectedActivityId is not used directly - the table reads activityId from URL via syncWithUrl.
   // The prop exists for API consistency; the page uses it to sync diagram highlighting.
@@ -260,6 +263,7 @@ export const ProcessInstancesTable = ({
       syncWithUrl={syncWithUrl}
       syncSortingWithUrl={syncWithUrl}
       defaultPageSize={defaultPageSize}
+      autoRefreshInterval={autoRefreshInterval}
       data-testid="process-instances-table"
     />
   );

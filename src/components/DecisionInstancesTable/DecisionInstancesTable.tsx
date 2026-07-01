@@ -34,6 +34,8 @@ export interface DecisionInstancesTableProps {
   refreshKey?: number;
   /** Whether to sync filters with URL */
   syncWithUrl?: boolean;
+  /** If set, table re-fetches data on this interval (ms). Set to 0/undefined to disable. */
+  autoRefreshInterval?: number;
 }
 
 export const DecisionInstancesTable = ({
@@ -42,6 +44,7 @@ export const DecisionInstancesTable = ({
   onFilterChange: externalOnFilterChange,
   refreshKey: externalRefreshKey = 0,
   syncWithUrl = true,
+  autoRefreshInterval = 0,
 }: DecisionInstancesTableProps) => {
   const { t } = useTranslation([ns.common, ns.decisions]);
   const navigate = useNavigate();
@@ -226,6 +229,7 @@ export const DecisionInstancesTable = ({
       serverSideSorting
       syncWithUrl={syncWithUrl}
       syncSortingWithUrl={syncWithUrl}
+      autoRefreshInterval={autoRefreshInterval}
       data-testid="decision-instances-table"
     />
   );

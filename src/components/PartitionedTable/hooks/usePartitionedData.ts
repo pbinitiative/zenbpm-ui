@@ -23,6 +23,8 @@ interface UsePartitionedDataOptions<T extends object> {
   serverSideSorting?: boolean;
   refreshKey?: number;
   defaultPageSize?: number;
+  /** If set, table re-fetches data on this interval (ms). Set to 0/undefined to disable. */
+  autoRefreshInterval?: number;
 }
 
 interface UsePartitionedDataResult<T extends object> {
@@ -49,6 +51,7 @@ export function usePartitionedData<T extends object>({
   serverSideSorting = false,
   refreshKey = 0,
   defaultPageSize = 5,
+  autoRefreshInterval = 0,
 }: UsePartitionedDataOptions<T>): UsePartitionedDataResult<T> {
   const { t } = useTranslation([ns.common]);
   const { showError } = useNotification();
@@ -73,6 +76,10 @@ export function usePartitionedData<T extends object>({
   const isFirstRenderRef = useRef(true);
   // Track previous filters to detect filter changes
   const prevFiltersRef = useRef<FilterValues | undefined>(filters);
+  // Bumped by the auto-refresh interval to trigger a re-fetch.
+  const [autoRefreshTick, setAutoRefreshTick] = useState(0);
+  const lastTickRef = useRef(autoRefreshTick);
+  const serializedFilters = JSON.stringify(filters);
 
   // Fetch data when page, filters, sorting, or refreshKey change
   useEffect(() => {
@@ -127,7 +134,20 @@ export function usePartitionedData<T extends object>({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchData, page, pageSize, filters, refreshKey, serverSideSorting, localSortBy, localSortOrder]);
+  }, [fetchData, page, pageSize, serializedFilters, refreshKey, serverSideSorting, localSortBy, localSortOrder, autoRefreshTick]);
+
+  // Auto-refresh: re-fetch on a fixed interval (ms) so the table stays in sync
+  // with the rest of the page (e.g. live element counts on the BPMN diagram).
+  useEffect(() => {
+    if (!autoRefreshInterval || autoRefreshInterval <= 0) return;
+    const intervalId = setInterval(() => {
+      // Skip refresh when the browser tab is hidden — no point fetching
+      // data the user isn't looking at. Mirrors useInstanceData behavior.
+      if (typeof document !== 'undefined' && document.hidden) return;
+      setAutoRefreshTick((tick) => tick + 1);
+    }, autoRefreshInterval);
+    return () => clearInterval(intervalId);
+  }, [autoRefreshInterval]);
 
   // Sort data locally (only when not using server-side sorting)
   const sortedPartitions = useMemo(() => {
@@ -182,16 +202,10 @@ export function usePartitionedData<T extends object>({
     [localSortBy, localSortOrder, onSortChange]
   );
 
-  // Calculate max count from any partition (for pagination - all partitions paginate together)
   const maxPartitionCount = useMemo(() => {
-    if (!data?.partitions) return 0;
-    // Use per-partition counts when available
-    const hasPartitionCounts = data.partitions.some((p) => p.count != null);
-    if (hasPartitionCounts) {
-      return Math.max(...data.partitions.map((p) => p.count ?? p.items.length));
-    }
-    // Fall back to response-level totalCount (e.g. single-partition endpoints like incidents)
-    return data.totalCount ?? 0;
+    // TODO REST endponts listing partitions are now inconsistent.
+    // We have add getting maxPartitionCount after it is fixed.
+    return data?.totalCount ?? 0;
   }, [data]);
 
   return {

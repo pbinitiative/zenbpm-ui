@@ -59,6 +59,9 @@ export interface PartitionedTableProps<T extends object> {
 
   // Default page size
   defaultPageSize?: number;
+
+  /** If set, table re-fetches data on this interval (ms). Set to 0/undefined to disable. */
+  autoRefreshInterval?: number;
 }
 
 // Re-export types from DataTable
