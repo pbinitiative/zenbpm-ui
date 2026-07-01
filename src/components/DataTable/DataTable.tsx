@@ -146,6 +146,7 @@ export const DataTable = <T extends object>({
   const renderDataRow = (row: T, sectionKey?: string) => (
     <TableRow
       key={sectionKey !== undefined ? `s${sectionKey}-${String(row[rowKey])}` : String(row[rowKey])}
+      data-testid="data-row"
       hover={!!onRowClick}
       onClick={() => onRowClick?.(row)}
       sx={{ cursor: onRowClick ? 'pointer' : 'default' }}

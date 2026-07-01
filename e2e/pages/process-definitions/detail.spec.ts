@@ -378,6 +378,9 @@ test.describe('Process Definition Detail - Pagination', () => {
     // Wait for instances table to load
     await expect(page.getByText('Process Instances')).toBeVisible();
 
+    // Wait for actual data to load so the partition header (with pagination text) is rendered
+    await expect(page.locator('tbody tr[data-testid="data-row"]').first()).toBeVisible({ timeout: 10000 });
+
     // Get initial pagination status on a partition
     const initialStatus = page.getByText(/1–\d+ of \d+/).first();
     await expect(initialStatus).toBeVisible();

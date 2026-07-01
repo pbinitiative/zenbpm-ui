@@ -122,10 +122,9 @@ test.describe('Decision Definition Detail Page', () => {
     await page.goto('/decisions/definitions');
     await expect(page.locator('table')).toBeVisible({ timeout: 10000 });
 
-    // Wait for rows to load
-    const firstRow = page.locator('tbody tr').first();
-    await expect(firstRow).toBeVisible();
-    await page.waitForTimeout(500);
+    // Wait for actual data rows to load (skip the loading/empty-state row)
+    const firstRow = page.locator('tbody tr[data-testid="data-row"]').first();
+    await expect(firstRow).toBeVisible({ timeout: 10000 });
 
     // Get the key from the first cell to construct expected URL
     const keyCell = firstRow.locator('td').first();
@@ -133,9 +132,6 @@ test.describe('Decision Definition Detail Page', () => {
 
     // Click on the row to navigate to detail page
     await firstRow.click({ force: true });
-
-    // Wait for navigation
-    await page.waitForTimeout(1000);
 
     // Should navigate to detail page
     await expect(page).toHaveURL(new RegExp(`/decision-definitions/${key}`));
