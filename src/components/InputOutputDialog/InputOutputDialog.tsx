@@ -11,7 +11,7 @@ export interface InputOutputDialogInput {
 export interface InputOutputDialogData {
   title?: string;
   inputs?: InputOutputDialogInput[];
-  outputs?: InputOutputDialogInput[];
+  outputs?: Array<Record<string, unknown>>;
   inputVariables?: Record<string, unknown>;
   outputVariables?: Record<string, unknown>;
 }
@@ -40,8 +40,16 @@ export const InputOutputDialog = ({ data, onClose }: InputOutputDialogProps) => 
   const formatRecord = (record: Record<string, unknown> | undefined) =>
     record ? JSON.stringify(record, null, 2) : '';
 
+  const formatOutputs = (outputs: Array<Record<string, unknown>> | undefined) => {
+    if (!outputs || outputs.length === 0) return '';
+    if (outputs.length === 1) return JSON.stringify(outputs[0], null, 2);
+    return JSON.stringify(outputs, null, 2);
+  };
+
   const hasInputs = (data.inputs && data.inputs.length > 0) || (data.inputVariables && Object.keys(data.inputVariables).length > 0);
-  const hasOutputs = (data.outputs && data.outputs.length > 0) || (data.outputVariables && Object.keys(data.outputVariables).length > 0);
+  const hasOutputs =
+    (data.outputs && data.outputs.length > 0) ||
+    (data.outputVariables && Object.keys(data.outputVariables).length > 0);
 
   const inputsContent = data.inputs
     ? formatEntries(data.inputs)
@@ -49,14 +57,20 @@ export const InputOutputDialog = ({ data, onClose }: InputOutputDialogProps) => 
       ? formatRecord(data.inputVariables)
       : '';
 
-  const outputsContent = data.outputs
-    ? formatEntries(data.outputs)
+  const outputsContent = data.outputs && data.outputs.length > 0
+    ? formatOutputs(data.outputs)
     : data.outputVariables
       ? formatRecord(data.outputVariables)
       : '';
 
   return (
-    <Dialog open={data !== null} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog
+      open={data !== null}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      data-testid="input-output-dialog"
+    >
       <DialogTitle
         sx={{
           display: 'flex',
@@ -150,6 +164,7 @@ export const InputOutputDialog = ({ data, onClose }: InputOutputDialogProps) => 
               {hasOutputs ? (
                 <Box
                   component="pre"
+                  data-testid="outputs-content"
                   sx={{
                     p: 1.5,
                     bgcolor: 'white',

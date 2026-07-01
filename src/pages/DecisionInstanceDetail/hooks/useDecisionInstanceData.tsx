@@ -26,6 +26,13 @@ interface UseDecisionInstanceDataResult {
   getDecisionName: (decisionId: string) => string;
 }
 
+// Convert a list of {name, value} entries into a plain object.
+const entriesToObject = (entries: Array<{ name: string; value: unknown }>) =>
+  entries.reduce<Record<string, unknown>>((acc, { name, value }) => {
+    acc[name] = value;
+    return acc;
+  }, {});
+
 export function useDecisionInstanceData(decisionInstanceKey: string | undefined): UseDecisionInstanceDataResult {
   const { t } = useTranslation([ns.common, ns.decisions]);
   const { openInputOutputDialog } = useInputOutputDialog();
@@ -77,18 +84,55 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
     [instance]
   );
 
+  // Build the outputs for the dialog from a decision. Each matched rule
+  // produces one object so values from different rules don't collide.
+  const buildDialogOutputs = useCallback(
+    (decisionId: string): Array<Record<string, unknown>> => {
+      const decision = instance?.evaluatedDecisions?.find((d) => d.decisionId === decisionId) as
+        | EvaluatedDecisionExtended
+        | undefined;
+      if (!decision) return [];
+
+      const matchedRules = decision.matchedRules || [];
+      if (matchedRules.length > 0) {
+        return matchedRules.map((rule) =>
+          entriesToObject(
+            (rule.evaluatedOutputs || []).map((o) => ({
+              name: o.outputName || o.outputId || 'output',
+              value: o.outputValue,
+            })),
+          ),
+        );
+      }
+
+      // Literal expression: use direct outputs as a single-element array.
+      if (decision.outputs && decision.outputs.length > 0) {
+        return [
+          entriesToObject(
+            decision.outputs.map((o) => ({
+              name: o.outputName || o.outputId || 'output',
+              value: o.outputValue,
+            })),
+          ),
+        ];
+      }
+      return [];
+    },
+    [instance]
+  );
+
   // Handle overlay click to show modal
   const handleOverlayClick = useCallback(
-    (decisionId: string, inputs: Array<{ name: string; value: unknown }>, outputs: Array<{ name: string; value: unknown }>) => {
+    (decisionId: string, inputs: Array<{ name: string; value: unknown }>, _outputs: Array<{ name: string; value: unknown }>) => {
       openInputOutputDialog({
         data: {
           title: getDecisionName(decisionId),
           inputs,
-          outputs,
+          outputs: buildDialogOutputs(decisionId),
         },
       });
     },
-    [openInputOutputDialog, getDecisionName]
+    [openInputOutputDialog, getDecisionName, buildDialogOutputs]
   );
 
   // Create overlays for the DMN diagram with input/output data

@@ -58,6 +58,8 @@ export function createOverlayElement(config: OverlayElementConfig): OverlayEleme
   // Create main panel container
   const container = document.createElement('div');
   container.className = 'dmn-data-overlay';
+  container.setAttribute('data-testid', 'decision-data-overlay');
+  container.setAttribute('data-decision-id', decisionId);
   container.style.cssText = `
     position: relative;
     display: flex;

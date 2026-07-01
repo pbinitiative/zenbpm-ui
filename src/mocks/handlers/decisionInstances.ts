@@ -23,7 +23,11 @@ interface MockDecisionInstance {
     evaluationOrder: number;
     inputs: Array<{ inputId: string; inputName: string; inputValue: unknown }>;
     outputs: Array<{ outputId: string; outputName: string; outputValue: unknown }>;
-    matchedRules: Array<{ ruleId: string; ruleIndex: number }>;
+    matchedRules: Array<{
+      ruleId: string;
+      ruleIndex: number;
+      evaluatedOutputs?: Array<{ outputId: string; outputName: string; outputValue: unknown }>;
+    }>;
   }>;
   decisionOutput: Record<string, unknown>;
 }
@@ -273,6 +277,61 @@ const decisionInstances: MockDecisionInstance[] = [
       },
     ],
     decisionOutput: { canAutoLiquidate: false },
+  },
+  // Multi-rule decision instance - demonstrates the case where a decision
+  // table matches more than one rule (e.g. COLLECT/ANY hit policy). The
+  // input/output dialog should render an array of rule outputs in this case.
+  {
+    key: '4100000000000000009',
+    dmnResourceDefinitionKey: '4000000000000000005',
+    dmnResourceDefinitionId: 'example_discounts',
+    processInstanceKey: '3100000000000000050',
+    evaluatedAt: '2024-01-20T09:00:00Z',
+    inputCount: 2,
+    outputCount: 3,
+    evaluatedDecisions: [
+      {
+        decisionId: 'discounts',
+        decisionName: 'Applicable discounts',
+        decisionType: 'DECISION_TABLE',
+        evaluationOrder: 1,
+        inputs: [
+          { inputId: 'Input_1', inputName: 'customerType', inputValue: 'gold' },
+          { inputId: 'Input_2', inputName: 'orderTotal', inputValue: 250 },
+        ],
+        outputs: [
+          { outputId: 'Output_1', outputName: 'discount', outputValue: 0.10 },
+          { outputId: 'Output_2', outputName: 'reason', outputValue: 'Gold customer' },
+        ],
+        matchedRules: [
+          {
+            ruleId: 'DecisionRule_d1',
+            ruleIndex: 1,
+            evaluatedOutputs: [
+              { outputId: 'Output_1', outputName: 'discount', outputValue: 0.10 },
+              { outputId: 'Output_2', outputName: 'reason', outputValue: 'Gold customer' },
+            ],
+          },
+          {
+            ruleId: 'DecisionRule_d2',
+            ruleIndex: 2,
+            evaluatedOutputs: [
+              { outputId: 'Output_1', outputName: 'discount', outputValue: 0.05 },
+              { outputId: 'Output_2', outputName: 'reason', outputValue: 'Order over 200' },
+            ],
+          },
+          {
+            ruleId: 'DecisionRule_d3',
+            ruleIndex: 3,
+            evaluatedOutputs: [
+              { outputId: 'Output_1', outputName: 'discount', outputValue: 0.02 },
+              { outputId: 'Output_2', outputName: 'reason', outputValue: 'Loyalty bonus' },
+            ],
+          },
+        ],
+      },
+    ],
+    decisionOutput: { totalDiscount: 0.17, appliedDiscounts: 3 },
   },
 ];
 

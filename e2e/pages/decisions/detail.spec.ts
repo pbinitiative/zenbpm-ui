@@ -233,4 +233,29 @@ test.describe('Decision Instance Detail Page', () => {
     const chips = page.locator('.MuiChip-root');
     await expect(chips.first()).toBeVisible();
   });
+
+  test('should render outputs as JSON array in dialog when multiple rules match', async ({ page }) => {
+    // 4100000000000000009 — discounts decision, 3 matched rules, COLLECT hit policy.
+    // The input/output dialog must show one entry per matched rule, not collapse
+    // them into a single object (the bug: last value wins, earlier rules disappear).
+    await page.goto('/decision-instances/4100000000000000009');
+    await expect(page.getByRole('heading', { name: 'Metadata' })).toBeVisible({ timeout: 10000 });
+
+    // Click the inline data overlay on the diagram to open the input/output dialog
+    const overlay = page.locator('[data-testid="decision-data-overlay"]').first();
+    await expect(overlay).toBeVisible({ timeout: 10000 });
+    await overlay.click();
+
+    // The dialog should open and render the outputs as a JSON array of objects
+    const dialog = page.locator('[data-testid="input-output-dialog"]');
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+
+    const outputsContent = page.locator('[data-testid="outputs-content"]');
+    await expect(outputsContent).toBeVisible();
+    const text = await outputsContent.textContent();
+    expect(text).toBeTruthy();
+    const parsed = JSON.parse(text!);
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed).toHaveLength(3);
+  });
 });
