@@ -66,9 +66,24 @@ export function useBpmnMarkers({
 
   // Apply history markers (completed elements and sequence flows)
   const applyHistory = useCallback(() => {
-    if (!viewerRef.current || !historyRef.current.length) return;
+    if (!viewerRef.current) return;
     const canvas = viewerRef.current.get('canvas') as BpmnCanvas;
     const elementRegistry = viewerRef.current.get('elementRegistry') as BpmnElementRegistry;
+
+    // Clear any previously applied history markers.
+    const previousHistory = (viewerRef.current as any)._previousHistory || [];
+    previousHistory.forEach(({ elementId }: { elementId: string }) => {
+      try {
+        canvas.removeMarker(elementId, 'element-completed');
+        canvas.removeMarker(elementId, 'connection-completed');
+      } catch {
+        // Ignore if element is not found
+      }
+    });
+
+    (viewerRef.current as any)._previousHistory = historyRef.current;
+
+    if (!historyRef.current.length) return;
 
     historyRef.current.forEach(({ elementId }) => {
       const element = elementRegistry.get(elementId);
@@ -90,9 +105,22 @@ export function useBpmnMarkers({
 
   // Apply active element markers
   const applyActiveElements = useCallback(() => {
-    if (!viewerRef.current || !activeElementsRef.current.length) return;
+    if (!viewerRef.current) return;
     const canvas = viewerRef.current.get('canvas') as BpmnCanvas;
     const elementRegistry = viewerRef.current.get('elementRegistry') as BpmnElementRegistry;
+
+    // Clear any previously applied active markers from every element.
+    elementRegistry.getAll().forEach((el: BpmnElement) => {
+      try {
+        canvas.removeMarker(el.id, 'element-active');
+      } catch {
+        // Marker wasn't set — nothing to do.
+      }
+    });
+
+    (viewerRef.current as any)._previousActive = activeElementsRef.current;
+
+    if (!activeElementsRef.current.length) return;
 
     activeElementsRef.current.forEach(({ elementId }) => {
       const element = elementRegistry.get(elementId);
