@@ -47,6 +47,9 @@ export interface TableWithFiltersProps<T extends object> {
 
   // Default page size for partitioned mode
   defaultPageSize?: number;
+
+  /** If set, table re-fetches data on this interval (ms). Set to 0/undefined to disable. */
+  autoRefreshInterval?: number;
 }
 
 export const TableWithFilters = <T extends object>({
@@ -68,6 +71,7 @@ export const TableWithFilters = <T extends object>({
   syncWithUrl = false,
   syncSortingWithUrl = false,
   defaultPageSize,
+  autoRefreshInterval = 0,
 }: TableWithFiltersProps<T>) => {
   const [searchParams] = useSearchParams();
 
@@ -269,6 +273,7 @@ export const TableWithFilters = <T extends object>({
           sortBy,
           sortOrder,
           refreshKey,
+          autoRefreshInterval,
         }
       : null
   );
@@ -346,6 +351,7 @@ export const TableWithFilters = <T extends object>({
           refreshKey={refreshKey}
           onSortChange={handleSortChange}
           defaultPageSize={defaultPageSize}
+          autoRefreshInterval={autoRefreshInterval}
           toolbar={firstLineToolbar}
           filtersPanel={
             filters.some((f) => f.zone === 'exposed_second_line') ||

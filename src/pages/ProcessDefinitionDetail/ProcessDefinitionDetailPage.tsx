@@ -125,6 +125,7 @@ export const ProcessDefinitionDetailPage = () => {
       syncWithUrl
       selectedActivityId={selectedActivityId}
       onActivityFilterChange={handleActivityFilterChange}
+      autoRefreshInterval={10000}
     />
   );
 
