@@ -107,6 +107,36 @@ test.describe('Process Instance History - Completed Instance', () => {
   });
 });
 
+test.describe('Process Instance Diagram - Active Marker', () => {
+  // Regression test for #82: only the active element(s) from the latest
+  // process-instance response should carry the .element-active marker.
+  //
+  // The fix in useBpmnMarkers sweeps every element in the registry and
+  // removes .element-active before re-applying the current active set, so
+  // a stale marker cannot linger on an element that is no longer active.
+  // The invariant we assert here is the post-condition of that fix:
+  // exactly one element carries .element-active, and it is task-a (the
+  // active element of the showcase active instance in the mock data).
+  test('should mark only the active element with .element-active (regression #82)', async ({ page }) => {
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}`);
+    await expect(page.getByText('Instance Details')).toBeVisible({ timeout: 10000 });
+
+    // Wait for the diagram to render.
+    await expect(page.locator('.bjs-container')).toBeVisible({ timeout: 10000 });
+
+    // The active element (task-a) must have the .element-active marker.
+    const activeElement = page.locator(
+      '.djs-element[data-element-id="task-a"].element-active',
+    );
+    await expect(activeElement).toBeVisible({ timeout: 10000 });
+
+    // No other element should carry the marker. This is the regression
+    // assertion for the stale-highlight bug: pre-fix, removing the active
+    // element from the active set left its .element-active class behind.
+    await expect(page.locator('.element-active')).toHaveCount(1);
+  });
+});
+
 test.describe('Process Definition Detail - BPMN Diagram', () => {
   const processDefinitionKey = instanceKeys.SHOWCASE_PROCESS_DEFINITION_KEY;
 
