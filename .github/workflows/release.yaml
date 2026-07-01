@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Release version without v prefix, for example 2.0.0.
+        description: Release version with v prefix, for example v2.0.0.
         required: true
         type: string
       checkout_ref:
@@ -25,7 +25,7 @@ jobs:
   release:
     uses: ./.github/workflows/release-reusable.yaml
     with:
-      release-tag: ${{ inputs.version && format('v{0}', inputs.version) || github.ref_name }}
+      release-tag: ${{ inputs.version || github.ref_name }}
       checkout-ref: ${{ inputs.checkout_ref || github.ref }}
       artifact-prefix: trivy-release-reports
       publish: true
@@ -40,5 +40,5 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ inputs.version && format('v{0}', inputs.version) || github.ref_name }}
+          RELEASE_TAG: ${{ inputs.version || github.ref_name }}
         run: gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --generate-notes --verify-tag
