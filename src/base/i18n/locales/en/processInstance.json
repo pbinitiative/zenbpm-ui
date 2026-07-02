@@ -12,6 +12,7 @@
     "state": "State",
     "createdAt": "Created At",
     "completedAt": "Completed At",
+    "duration": "Duration",
     "processDefinition": "Process Definition",
     "version": "Version",
     "bpmnProcessId": "BPMN Process ID",

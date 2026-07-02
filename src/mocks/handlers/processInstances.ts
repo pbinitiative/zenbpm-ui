@@ -458,8 +458,12 @@ export const processInstanceHandlers = [
               elementId: h.elementId,
               elementType: h.elementType,
               state: h.state,
+              inputVariables: (h as { inputVariables?: Record<string, unknown> }).inputVariables ?? {},
             };
             if (h.completedAt) item.completedAt = h.completedAt;
+            if ((h as { outputVariables?: Record<string, unknown> }).outputVariables) {
+              item.outputVariables = (h as { outputVariables?: Record<string, unknown> }).outputVariables;
+            }
             return item;
           })
         : [
@@ -472,6 +476,7 @@ export const processInstanceHandlers = [
               elementType: 'startEvent',
               state: 'completed',
               completedAt: instance.createdAt,
+              inputVariables: {},
             },
             ...instance.activeElementInstances.map((ei, index) => ({
               key: `${processInstanceKey}${String(index + 2).padStart(3, '0')}`,
@@ -480,6 +485,7 @@ export const processInstanceHandlers = [
               elementId: ei.elementId,
               elementType: ei.elementType,
               state: 'active',
+              inputVariables: {},
               // Don't include completedAt for active elements
             })),
           ];
