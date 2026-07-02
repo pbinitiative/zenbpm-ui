@@ -3,7 +3,7 @@ openapi: 3.0.0
 info:
   title: ZenBPM OpenAPI
   description: REST API for ZenBPM
-  version: 1.2.0
+  version: 1.4.0-release-test-7
   contact:
     name: API Support
     email: info@pbinitiative.org
@@ -1592,7 +1592,6 @@ paths:
                     inputVariables:
                       formKey: "loan-application-form"
                       assignee: "john.doe"
-                    outputVariables: {}
                   - key: 4503599627370511
                     elementId: "Task_CreditCheck"
                     type: "service-task"
@@ -1600,10 +1599,11 @@ paths:
                     state: "completed"
                     createdAt: "2025-08-22T14:32:15Z"
                     inputVariables:
+                      applicantId: "APP-12345"
+                      creditScoreThreshold: 80
+                    outputVariables:
                       result: "approved"
                       score: 85
-                    outputVariables:
-                      approved: true
                 page: 1
                 size: 10
                 count: 2
@@ -2107,7 +2107,6 @@ paths:
                         retries: 3
                         inputVariables:
                           formKey: "loan-review-form"
-                        outputVariables: {}
                   - partition: 2
                     items:
                       - key: 9007199254740995
@@ -2120,7 +2119,6 @@ paths:
                         inputVariables:
                           notificationType: "email"
                           recipient: "customer@example.com"
-                        outputVariables: {}
                 page: 1
                 size: 10
                 count: 2
@@ -2168,7 +2166,7 @@ paths:
               example:
                 key: 4503599627370540
                 elementId: "Task_ReviewApplication"
-                type: "io.camunda.zeebe:userTask"
+                type: "zenbpm:userTask"
                 processInstanceKey: 4503599627370501
                 state: "active"
                 createdAt: "2025-08-22T15:10:26Z"
@@ -2178,7 +2176,6 @@ paths:
                   formKey: "loan-review-form"
                   applicationId: "APP-12345"
                   customerName: "Alice Johnson"
-                outputVariables: {}
         404:
           description: Not found
           content:
