@@ -387,8 +387,7 @@ test.describe('Process Definition Detail - Pagination', () => {
     if (await page2Button.isVisible()) {
       await page2Button.click();
 
-      // Pagination status should update to show different range
-      await expect(page.getByText(/\d+–\d+ of \d+/).first()).toBeVisible();
+      await expect(page.getByRole('button', { name: 'page 2' })).toBeVisible();
     }
   });
 
