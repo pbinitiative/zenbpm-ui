@@ -45,6 +45,9 @@
     "decisions": "Decisions",
     "eventSubscriptions": "Event Subscriptions"
   },
+  "filters": {
+    "includeSequenceFlows": "Include flows"
+  },
   "jobStates": {
     "activatable": "Activatable",
     "activated": "Activated",

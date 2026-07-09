@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import { Link, Tooltip, Typography } from '@mui/material';
+import { Box, FormControlLabel, Link, Tooltip, Typography } from '@mui/material';
+import { IOSSwitch } from '@components/IOSSwitch';
 import {
   type Column,
   type DataTableSection,
@@ -50,6 +51,16 @@ export const HistoryTab = ({
 }: HistoryTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance, ns.processes]);
   const { openInputOutputDialog } = useInputOutputDialog();
+  const [showSequenceFlows, setShowSequenceFlows] = useState(false);
+
+  // Filter history — hide SEQUENCE_FLOW elements by default.
+  const filterHistory = useCallback(
+    (history: FlowElementHistory[]) =>
+      showSequenceFlows
+        ? history
+        : history.filter((h) => h.elementType !== 'SEQUENCE_FLOW'),
+    [showSequenceFlows],
+  );
 
   // Build sections from the tree: root section unlabelled, child sections labelled.
   const { sections, flatData } = useMemo(() => {
@@ -70,14 +81,15 @@ export const HistoryTab = ({
 
     if (!hasChildWithHistory) {
       // No child sections — render flat for a cleaner single-paginator experience
-      return { sections: undefined, flatData: rootNode.history };
+      return { sections: undefined, flatData: filterHistory(rootNode.history) };
     }
 
     const orderedNodes = [rootNode, ...childNodes];
     const result: DataTableSection<FlowElementHistory>[] = [];
 
     for (const node of orderedNodes) {
-      if (node.history.length === 0) continue;
+      const filteredHistory = filterHistory(node.history);
+      if (filteredHistory.length === 0) continue;
 
       const isRoot = node.instance.key === instanceTree.instance.key;
       let label = '';
@@ -88,11 +100,11 @@ export const HistoryTab = ({
         label = `${typeLabel}: ${node.instance.key}`;
       }
 
-      result.push({ label, callPath: isRoot ? undefined : node.callPath, data: node.history });
+      result.push({ label, callPath: isRoot ? undefined : node.callPath, data: filteredHistory });
     }
 
     return { sections: result.length > 0 ? result : undefined, flatData: [] };
-  }, [instanceTree, t]);
+  }, [instanceTree, t, filterHistory]);
 
   const columns: Column<FlowElementHistory>[] = useMemo(
     () => [
@@ -222,6 +234,28 @@ export const HistoryTab = ({
     [t, onElementIdClick, openInputOutputDialog]
   );
 
+  const toolbar = (
+    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+      <FormControlLabel
+        control={
+          <IOSSwitch
+            checked={showSequenceFlows}
+            onChange={(_, checked) => setShowSequenceFlows(checked)}
+          />
+        }
+        label={t('processInstance:filters.includeSequenceFlows')}
+        labelPlacement={'end'}
+        sx={{
+          ml: 0,
+          gap: 1,
+          '& .MuiFormControlLabel-label': {
+            fontSize: '0.875rem',
+          },
+        }}
+      />
+    </Box>
+  );
+
   return (
     <ClientSideDataTable
       columns={columns}
@@ -229,6 +263,7 @@ export const HistoryTab = ({
       sections={sections}
       rowKey="key"
       data-testid="history-table"
+      toolbar={toolbar}
       onElementIdClick={onElementIdClick}
     />
   );
