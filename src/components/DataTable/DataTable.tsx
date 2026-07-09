@@ -151,7 +151,7 @@ export const DataTable = <T extends object>({
       sx={{ cursor: onRowClick ? 'pointer' : 'default' }}
     >
       {columns.map((column) => (
-        <TableCell key={String(column.id)} align={column.align || 'left'}>
+        <TableCell key={String(column.id)} align={column.align || 'left'} data-testid={`cell-${String(column.id)}`}>
           {getCellValue(row, column)}
         </TableCell>
       ))}
@@ -300,7 +300,7 @@ export const DataTable = <T extends object>({
           <TableHead>
             <TableRow>
               {columns.map((column) => (
-                <TableCell key={String(column.id)} align={column.align || 'left'} sx={scrollableTableHeaderCellSx(column)}>
+                <TableCell key={String(column.id)} align={column.align || 'left'} sx={scrollableTableHeaderCellSx(column)} data-testid={`header-${String(column.id)}`}>
                   {column.sortable && onSortChange ? (
                     <TableSortLabel
                       active={sortBy === column.id}

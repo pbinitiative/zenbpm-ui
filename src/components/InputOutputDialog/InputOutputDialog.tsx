@@ -10,6 +10,7 @@ export interface InputOutputDialogInput {
 
 export interface InputOutputDialogData {
   title?: string;
+  subtitle?: string;
   inputs?: InputOutputDialogInput[];
   outputs?: Array<Record<string, unknown>>;
   inputVariables?: Record<string, unknown>;
@@ -83,6 +84,11 @@ export const InputOutputDialog = ({ data, onClose }: InputOutputDialogProps) => 
         <Typography variant="h6" sx={{ fontSize: '1rem' }}>
           {data.title || ''}
         </Typography>
+        {data.subtitle && (
+          <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+            {data.subtitle}
+          </Typography>
+        )}
         <IconButton onClick={onClose} size="small">
           <CloseIcon />
         </IconButton>
