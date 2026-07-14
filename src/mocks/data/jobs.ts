@@ -6,9 +6,19 @@ import * as showcaseProcess from './bpmn/showcase-process';
 import * as simpleUserTask from './bpmn/simple-user-task';
 import * as simpleBusinessRuleTaskExternal from './bpmn/simple-business-rule-task-external';
 import * as userTasksWithAssignments from './bpmn/user-tasks-with-assignments';
+import { addMinutes, daysAgo } from './types';
+import {
+  MULTI_INSTANCE_CHILD_B_KEY,
+  MULTI_INSTANCE_PROCESS_DEFINITION_KEY,
+} from './well-known-keys';
 
 export interface MockJob {
   key: string;
+  /**
+   * Optional for legacy fixtures. Process-instance responses prefer this explicit value,
+   * then use an unambiguous history/active match and finally the job key as a schema fallback.
+   */
+  elementInstanceKey?: string;
   elementId: string;
   elementName?: string;
   type: string;
@@ -154,6 +164,26 @@ const legacyJobs: MockJob[] = [
   },
 ];
 
+// Endpoint-scoped pagination fixtures. They model completed service-task jobs owned by
+// Child B, whose history contains the focused element instance. Every explicit correlation
+// points at a real Child B service-task history row; item 11 targets Child B Task 5.
+// Keeping them outside `jobs` prevents global /jobs counts and showcase instances changing.
+const paginationParentCreatedAt = daysAgo(1);
+const paginationTaskNumbers = [1, 2, 3, 4, 6, 1, 2, 3, 4, 6, 5];
+const processInstanceOnlyJobs: MockJob[] = paginationTaskNumbers.map((taskNumber, index) => ({
+  key: `70000000000000000${String(index + 1).padStart(2, '0')}`,
+  elementInstanceKey: `${MULTI_INSTANCE_CHILD_B_KEY}${String(taskNumber + 1).padStart(3, '0')}`,
+  elementId: `Task_${taskNumber}`,
+  elementName: `Task ${taskNumber}`,
+  type: 'task-type',
+  processInstanceKey: MULTI_INSTANCE_CHILD_B_KEY,
+  processDefinitionKey: MULTI_INSTANCE_PROCESS_DEFINITION_KEY,
+  state: 'completed' as const,
+  createdAt: addMinutes(paginationParentCreatedAt, index * 5 + 6),
+  completedAt: addMinutes(paginationParentCreatedAt, index * 5 + 10),
+  inputVariables: { loopIndex: 1, taskNumber },
+}));
+
 // Aggregate jobs from process files
 export const jobs: MockJob[] = [
   ...legacyJobs,
@@ -176,7 +206,10 @@ export const getActiveUserTasks = (): MockJob[] => {
 
 // Helper to get jobs by process instance key
 export const getJobsByProcessInstanceKey = (processInstanceKey: string): MockJob[] => {
-  return jobs.filter((j) => j.processInstanceKey === processInstanceKey);
+  return [
+    ...jobs.filter((job) => job.processInstanceKey === processInstanceKey),
+    ...processInstanceOnlyJobs.filter((job) => job.processInstanceKey === processInstanceKey),
+  ];
 };
 
 // Helper to find job by key

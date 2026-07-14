@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { instanceKeys } from '../../fixtures/instance-keys';
+import {
+  MULTI_INSTANCE_CHILD_B_KEY,
+  MULTI_INSTANCE_PARENT_KEY,
+} from '../../../src/mocks/data/well-known-keys';
 
 const { ACTIVE_INSTANCE_KEY, COMPLETED_INSTANCE_KEY, TERMINATED_INSTANCE_KEY } = instanceKeys;
 
@@ -208,6 +212,338 @@ test.describe('Process Instance Detail Page', () => {
     // Give the network a beat to make sure nothing fired
     await page.waitForTimeout(200);
     expect(failRequestFired).toBe(false);
+  });
+});
+
+test.describe('Process Instance Detail - cross-tab focus', () => {
+  const historyElementInstanceKey = `${ACTIVE_INSTANCE_KEY}002`;
+  const correlatedJobKey = '5000000000000000005';
+
+  test('navigates from a History row action to the exact focused Job row', async ({ page }) => {
+    await page.goto(
+      `/process-instances/${ACTIVE_INSTANCE_KEY}?tab=history&elementId=task-a`
+    );
+
+    const historyTable = page.getByTestId('history-table');
+    await expect(historyTable).toBeVisible();
+    const historyRow = historyTable.locator('tbody tr').filter({ hasText: historyElementInstanceKey });
+    await expect(historyRow).toBeVisible();
+
+    const menuButton = historyRow.getByRole('button').last();
+    await expect(menuButton).toBeVisible();
+    await menuButton.click();
+    const viewRelatedJobAction = page.getByRole('menuitem', { name: /view related job/i });
+    await expect(viewRelatedJobAction).toBeVisible();
+    await viewRelatedJobAction.click();
+
+    await expect.poll(() => {
+      const url = new URL(page.url());
+      return {
+        pathname: url.pathname,
+        tab: url.searchParams.get('tab'),
+        focusElementInstanceKey: url.searchParams.get('focusElementInstanceKey'),
+        elementId: url.searchParams.get('elementId'),
+      };
+    }).toEqual({
+      pathname: `/process-instances/${ACTIVE_INSTANCE_KEY}`,
+      tab: 'jobs',
+      focusElementInstanceKey: historyElementInstanceKey,
+      elementId: 'task-a',
+    });
+
+    const focusedJobRow = page
+      .getByTestId('jobs-table')
+      .locator('tbody tr')
+      .filter({ hasText: correlatedJobKey });
+    await expect(focusedJobRow).toHaveAttribute('data-focused', 'true');
+  });
+
+  test('navigates from an external Business Rule Task History row to its Job', async ({ page }) => {
+    const processInstanceKey = '3100000000000000184';
+    const elementInstanceKey = `${processInstanceKey}002`;
+    const jobKey = '5000000000000000029';
+
+    await page.goto(`/process-instances/${processInstanceKey}?tab=history`);
+
+    const historyRow = page
+      .getByTestId('history-table')
+      .locator('tbody tr')
+      .filter({ hasText: elementInstanceKey });
+    await historyRow.getByRole('button', { name: /row actions/i }).click();
+    await page.getByRole('menuitem', { name: /view related job/i }).click();
+
+    const focusedJobRow = page
+      .getByTestId('jobs-table')
+      .locator('tbody tr')
+      .filter({ hasText: jobKey });
+    await expect(focusedJobRow).toHaveAttribute('data-focused', 'true');
+  });
+
+  test('navigates from a Job row action to the exact focused History row', async ({ page }) => {
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=jobs`);
+
+    const jobsTable = page.getByTestId('jobs-table');
+    await expect(jobsTable).toBeVisible();
+    const jobRow = jobsTable.locator('tbody tr').filter({ hasText: correlatedJobKey });
+    await expect(jobRow).toBeVisible();
+
+    const menuButton = jobRow.getByRole('button').last();
+    await expect(menuButton).toBeVisible();
+    await menuButton.click();
+    const viewInHistoryAction = page.getByRole('menuitem', { name: /view in history/i });
+    await expect(viewInHistoryAction).toBeVisible();
+    await viewInHistoryAction.click();
+
+    await expect.poll(() => {
+      const url = new URL(page.url());
+      return {
+        pathname: url.pathname,
+        tab: url.searchParams.get('tab'),
+        focusElementInstanceKey: url.searchParams.get('focusElementInstanceKey'),
+      };
+    }).toEqual({
+      pathname: `/process-instances/${ACTIVE_INSTANCE_KEY}`,
+      tab: 'history',
+      focusElementInstanceKey: historyElementInstanceKey,
+    });
+
+    const focusedHistoryRow = page
+      .getByTestId('history-table')
+      .locator('tbody tr')
+      .filter({ hasText: historyElementInstanceKey });
+    await expect(focusedHistoryRow).toHaveAttribute('data-focused', 'true');
+  });
+
+  test('navigates from History to the first related Event type and highlights all matches', async ({ page }) => {
+    const eventElementInstanceKey = `${ACTIVE_INSTANCE_KEY}007`;
+
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=history&elementId=messageCatchEvent`);
+
+    const historyTable = page.getByTestId('history-table');
+    const startRow = historyTable.locator('tbody tr').filter({ hasText: `${ACTIVE_INSTANCE_KEY}001` });
+    await expect(startRow.getByRole('button', { name: /row actions/i })).toHaveCount(0);
+
+    const eventHistoryRow = historyTable
+      .locator('tbody tr')
+      .filter({ hasText: eventElementInstanceKey });
+    await eventHistoryRow.getByRole('button', { name: /row actions/i }).click();
+    await expect(page.getByRole('menuitem', { name: /view related job/i })).toHaveCount(0);
+    await page.getByRole('menuitem', { name: /view related event/i }).click();
+
+    await expect.poll(() => {
+      const url = new URL(page.url());
+      return {
+        tab: url.searchParams.get('tab'),
+        eventType: url.searchParams.get('eventType'),
+        focusElementInstanceKey: url.searchParams.get('focusElementInstanceKey'),
+        elementId: url.searchParams.get('elementId'),
+      };
+    }).toEqual({
+      tab: 'events',
+      eventType: 'messages',
+      focusElementInstanceKey: eventElementInstanceKey,
+      elementId: 'messageCatchEvent',
+    });
+
+    const eventTable = page.getByTestId('message-subscriptions-table');
+    await expect(eventTable.locator('tbody tr[data-focused="true"]')).toHaveCount(2);
+  });
+
+  test('switches the Event state filter to reveal a related subscription', async ({ page }) => {
+    const eventElementInstanceKey = `${ACTIVE_INSTANCE_KEY}007`;
+
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=events&eventType=messages`);
+    const messagesPanel = page.getByTestId('event-subscriptions-messages-panel');
+    await messagesPanel.getByRole('combobox').first().click();
+    await page.getByRole('option', { name: /completed/i }).click();
+
+    await page.getByRole('tab', { name: /History/i }).click();
+    const eventHistoryRow = page
+      .getByTestId('history-table')
+      .locator('tbody tr')
+      .filter({ hasText: eventElementInstanceKey });
+    await eventHistoryRow.getByRole('button', { name: /row actions/i }).click();
+    await page.getByRole('menuitem', { name: /view related event/i }).click();
+
+    await expect(messagesPanel.getByRole('combobox').first()).toContainText(/active/i);
+    await expect(
+      page.getByTestId('message-subscriptions-table').locator('tbody tr[data-focused="true"]')
+    ).toHaveCount(2);
+  });
+
+  test('navigates from an Event row to its exact History row', async ({ page }) => {
+    const eventElementInstanceKey = `${ACTIVE_INSTANCE_KEY}007`;
+    const messageName = 'OrderConfirmed';
+
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=events&eventType=messages`);
+
+    const eventRow = page
+      .getByTestId('message-subscriptions-table')
+      .locator('tbody tr')
+      .filter({ hasText: messageName });
+    await expect(eventRow).toBeVisible();
+    await eventRow.getByRole('button', { name: /row actions/i }).click();
+    await page.getByRole('menuitem', { name: /view in history/i }).click();
+
+    await expect.poll(() => {
+      const url = new URL(page.url());
+      return {
+        tab: url.searchParams.get('tab'),
+        focusElementInstanceKey: url.searchParams.get('focusElementInstanceKey'),
+      };
+    }).toEqual({
+      tab: 'history',
+      focusElementInstanceKey: eventElementInstanceKey,
+    });
+
+    const focusedHistoryRow = page
+      .getByTestId('history-table')
+      .locator('tbody tr')
+      .filter({ hasText: eventElementInstanceKey });
+    await expect(focusedHistoryRow).toHaveAttribute('data-focused', 'true');
+  });
+
+  test('browser back and forward resolves a previously focused later Jobs page again', async ({ page }) => {
+    const targetJobKey = '7000000000000000011';
+    const targetElementInstanceKey = `${MULTI_INSTANCE_CHILD_B_KEY}006`;
+
+    await page.goto(`/process-instances/${MULTI_INSTANCE_PARENT_KEY}?tab=history`);
+
+    const historyRow = page
+      .getByTestId('history-table')
+      .locator('tbody tr')
+      .filter({ hasText: targetElementInstanceKey });
+    await historyRow.getByRole('button', { name: /row actions/i }).click();
+    await page.getByRole('menuitem', { name: /view related job/i }).click();
+
+    const jobsTable = page.getByTestId('jobs-table');
+    const targetRow = jobsTable.locator('tbody tr').filter({ hasText: targetJobKey });
+    await expect(targetRow).toHaveAttribute('data-focused', 'true');
+
+    await jobsTable.getByRole('button', { name: /page 1/i }).click();
+    await expect(targetRow).toHaveCount(0);
+
+    await page.goBack();
+    await expect(page.getByTestId('history-table')).toBeVisible();
+    await page.goForward();
+
+    await expect(targetRow).toHaveAttribute('data-focused', 'true');
+    await expect(jobsTable.getByRole('button', { name: /page 2/i }))
+      .toHaveAttribute('aria-current', 'page');
+  });
+
+  test('manual Jobs page-size changes are not overwritten by an in-flight focus scan', async ({ page }) => {
+    const targetElementInstanceKey = `${MULTI_INSTANCE_CHILD_B_KEY}006`;
+    let page2Requested = false;
+
+    page.on('request', (request) => {
+      const url = new URL(request.url());
+      if (
+        url.pathname === `/v1/process-instances/${MULTI_INSTANCE_CHILD_B_KEY}/jobs` &&
+        url.searchParams.get('page') === '2'
+      ) {
+        page2Requested = true;
+      }
+    });
+
+    await page.goto(`/process-instances/${MULTI_INSTANCE_PARENT_KEY}?tab=history`);
+    const devtools = await page.context().newCDPSession(page);
+    await devtools.send('Network.enable');
+    await devtools.send('Network.emulateNetworkConditions', {
+      offline: false,
+      latency: 300,
+      downloadThroughput: -1,
+      uploadThroughput: -1,
+    });
+
+    const historyRow = page
+      .getByTestId('history-table')
+      .locator('tbody tr')
+      .filter({ hasText: targetElementInstanceKey });
+    await historyRow.getByRole('button', { name: /row actions/i }).click();
+    await page.getByRole('menuitem', { name: /view related job/i }).click();
+
+    const jobsTable = page.getByTestId('jobs-table');
+    await expect.poll(() => page2Requested).toBe(true);
+    await jobsTable.getByRole('combobox').click();
+    await page.getByRole('option', { name: '5', exact: true }).click();
+
+    await page.waitForTimeout(700);
+    await expect(jobsTable.getByRole('button', { name: 'page 1' }))
+      .toHaveAttribute('aria-current', 'page');
+  });
+
+  test('direct Jobs focus scans to page 2 and respects later manual navigation', async ({ page }) => {
+    const firstJobKey = '7000000000000000001';
+    const targetJobKey = '7000000000000000011';
+    const targetElementInstanceKey = `${MULTI_INSTANCE_CHILD_B_KEY}006`;
+    let page2RequestCount = 0;
+
+    page.on('request', (request) => {
+      const url = new URL(request.url());
+      if (
+        url.pathname === `/v1/process-instances/${MULTI_INSTANCE_CHILD_B_KEY}/jobs` &&
+        url.searchParams.get('page') === '2'
+      ) {
+        page2RequestCount++;
+      }
+    });
+
+    await page.goto(
+      `/process-instances/${MULTI_INSTANCE_PARENT_KEY}?tab=jobs&focusElementInstanceKey=${targetElementInstanceKey}`
+    );
+
+    const jobsTable = page.getByTestId('jobs-table');
+    await expect(jobsTable).toBeVisible({ timeout: 10000 });
+    await expect.poll(() => {
+      const url = new URL(page.url());
+      return {
+        pathname: url.pathname,
+        tab: url.searchParams.get('tab'),
+        focusElementInstanceKey: url.searchParams.get('focusElementInstanceKey'),
+      };
+    }).toEqual({
+      pathname: `/process-instances/${MULTI_INSTANCE_PARENT_KEY}`,
+      tab: 'jobs',
+      focusElementInstanceKey: targetElementInstanceKey,
+    });
+
+    const targetRow = jobsTable.locator('tbody tr').filter({ hasText: targetJobKey });
+    await expect(jobsTable.getByRole('button', { name: /page 2/i }))
+      .toHaveAttribute('aria-current', 'page');
+    await expect(targetRow).toHaveAttribute('data-focused', 'true');
+    expect(page2RequestCount).toBeGreaterThan(0);
+    const requestCountAfterInitialScan = page2RequestCount;
+
+    await jobsTable.getByRole('button', { name: /page 1/i }).click();
+    await expect(
+      jobsTable.locator('tbody tr').filter({ hasText: firstJobKey })
+    ).toBeVisible();
+
+    await page.getByRole('tab', { name: /History/i }).click();
+    await expect(page.getByTestId('history-table')).toBeVisible();
+    await page.getByRole('tab', { name: /Jobs/i }).click();
+    await expect(jobsTable).toBeVisible();
+    await expect.poll(() => {
+      const url = new URL(page.url());
+      return {
+        pathname: url.pathname,
+        tab: url.searchParams.get('tab'),
+        focusElementInstanceKey: url.searchParams.get('focusElementInstanceKey'),
+      };
+    }).toEqual({
+      pathname: `/process-instances/${MULTI_INSTANCE_PARENT_KEY}`,
+      tab: 'jobs',
+      focusElementInstanceKey: targetElementInstanceKey,
+    });
+
+    await expect(jobsTable.getByRole('button', { name: 'page 1' }))
+      .toHaveAttribute('aria-current', 'page');
+    await expect(targetRow).toHaveCount(0);
+
+    // Let tab/query effects settle before asserting that the focus scan did not restart.
+    await page.waitForTimeout(500);
+    expect(page2RequestCount).toBe(requestCountAfterInitialScan);
   });
 });
 

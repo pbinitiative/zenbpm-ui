@@ -16,6 +16,7 @@ import { SHOWCASE_ACTIVE_INSTANCE_KEY, SHOWCASE_PROCESS_DEFINITION_KEY } from '.
 const MOCK_MESSAGE_SUBSCRIPTIONS = [
   {
     key: '4200000000000000001',
+    elementInstanceKey: `${SHOWCASE_ACTIVE_INSTANCE_KEY}007`,
     elementId: 'messageCatchEvent',
     processDefinitionKey: SHOWCASE_PROCESS_DEFINITION_KEY,
     processInstanceKey: SHOWCASE_ACTIVE_INSTANCE_KEY,
@@ -24,11 +25,23 @@ const MOCK_MESSAGE_SUBSCRIPTIONS = [
     state: 'active',
     createdAt: '2024-01-15T10:30:00Z',
   },
+  {
+    key: '4200000000000000002',
+    elementInstanceKey: `${SHOWCASE_ACTIVE_INSTANCE_KEY}007`,
+    elementId: 'messageCatchEvent',
+    processDefinitionKey: SHOWCASE_PROCESS_DEFINITION_KEY,
+    processInstanceKey: SHOWCASE_ACTIVE_INSTANCE_KEY,
+    messageName: 'OrderUpdated',
+    correlationKey: 'CUST-001',
+    state: 'active',
+    createdAt: '2024-01-15T10:31:00Z',
+  },
 ];
 
 const MOCK_TIMER_SUBSCRIPTIONS = [
   {
     key: '4300000000000000001',
+    elementInstanceKey: `${SHOWCASE_ACTIVE_INSTANCE_KEY}007`,
     elementId: 'timerBoundaryEvent',
     processDefinitionKey: SHOWCASE_PROCESS_DEFINITION_KEY,
     processInstanceKey: SHOWCASE_ACTIVE_INSTANCE_KEY,
@@ -41,7 +54,7 @@ const MOCK_TIMER_SUBSCRIPTIONS = [
 const MOCK_ERROR_SUBSCRIPTIONS = [
   {
     key: '4400000000000000001',
-    elementInstanceKey: '4400000000000000002',
+    elementInstanceKey: `${SHOWCASE_ACTIVE_INSTANCE_KEY}007`,
     elementId: 'errorBoundaryEvent',
     processDefinitionKey: SHOWCASE_PROCESS_DEFINITION_KEY,
     processInstanceKey: SHOWCASE_ACTIVE_INSTANCE_KEY,
@@ -50,6 +63,24 @@ const MOCK_ERROR_SUBSCRIPTIONS = [
     createdAt: '2024-01-15T10:30:00Z',
   },
 ];
+
+function paginateEventSubscriptions<T extends { state: string }>(items: T[], request: Request) {
+  const url = new URL(request.url);
+  const page = parseInt(url.searchParams.get('page') || '1', 10);
+  const size = parseInt(url.searchParams.get('size') || '10', 10);
+  const state = url.searchParams.get('state');
+  const filteredItems = state ? items.filter((item) => item.state === state) : items;
+  const startIndex = (page - 1) * size;
+  const paginatedItems = filteredItems.slice(startIndex, startIndex + size);
+
+  return {
+    items: paginatedItems,
+    totalCount: filteredItems.length,
+    count: paginatedItems.length,
+    page,
+    size,
+  };
+}
 
 // Helper to transform a process instance to response format (reused across handlers)
 function transformInstance(pi: (typeof processInstances)[0]) {
@@ -369,18 +400,38 @@ export const processInstanceHandlers = [
       const endIndex = startIndex + size;
       const paginatedItems = jobs.slice(startIndex, endIndex);
 
-      const items = paginatedItems.map((job) => ({
-        key: job.key,
-        elementId: job.elementId,
-        elementName: job.elementName,
-        type: job.type,
-        processInstanceKey: job.processInstanceKey,
-        processDefinitionKey: job.processDefinitionKey,
-        state: job.state,
-        createdAt: job.createdAt,
-        completedAt: job.completedAt,
-        inputVariables: job.inputVariables,
-      }));
+      const items = paginatedItems.map((job) => {
+        const owningInstance = findProcessInstanceByKey(job.processInstanceKey);
+        const candidateElementInstanceKeys = new Set([
+          ...(owningInstance?.history
+            ?.filter((historyItem) => historyItem.elementId === job.elementId)
+            .map((historyItem) => historyItem.key) ?? []),
+          ...(owningInstance?.activeElementInstances
+            .filter((elementInstance) => elementInstance.elementId === job.elementId)
+            .map((elementInstance) => elementInstance.key) ?? []),
+        ]);
+        const inferredElementInstanceKey =
+          candidateElementInstanceKeys.size === 1
+            ? candidateElementInstanceKeys.values().next().value
+            : undefined;
+
+        return {
+          key: job.key,
+          // Explicit fixture correlation always wins. The job key is retained only as a safe
+          // schema fallback for old fixtures that have no unambiguous history or active match.
+          elementInstanceKey:
+            job.elementInstanceKey ?? inferredElementInstanceKey ?? job.key,
+          elementId: job.elementId,
+          elementName: job.elementName,
+          type: job.type,
+          processInstanceKey: job.processInstanceKey,
+          processDefinitionKey: job.processDefinitionKey,
+          state: job.state,
+          createdAt: job.createdAt,
+          completedAt: job.completedAt,
+          inputVariables: job.inputVariables,
+        };
+      });
 
       return HttpResponse.json({
         items,
@@ -607,7 +658,7 @@ export const processInstanceHandlers = [
   // GET /process-instances/:processInstanceKey/event-subscriptions/messages
   http.get(
     `${BASE_URL}/process-instances/:processInstanceKey/event-subscriptions/messages`,
-    withValidation(({ params }) => {
+    withValidation(({ params, request }) => {
       const { processInstanceKey } = params;
       const instance = findProcessInstanceByKey(processInstanceKey as string);
       if (!instance) {
@@ -617,14 +668,14 @@ export const processInstanceHandlers = [
         );
       }
       const items = processInstanceKey === SHOWCASE_ACTIVE_INSTANCE_KEY ? MOCK_MESSAGE_SUBSCRIPTIONS : [];
-      return HttpResponse.json({ items, totalCount: items.length, count: items.length, page: 1, size: 10 });
+      return HttpResponse.json(paginateEventSubscriptions(items, request));
     })
   ),
 
   // GET /process-instances/:processInstanceKey/event-subscriptions/timers
   http.get(
     `${BASE_URL}/process-instances/:processInstanceKey/event-subscriptions/timers`,
-    withValidation(({ params }) => {
+    withValidation(({ params, request }) => {
       const { processInstanceKey } = params;
       const instance = findProcessInstanceByKey(processInstanceKey as string);
       if (!instance) {
@@ -634,14 +685,14 @@ export const processInstanceHandlers = [
         );
       }
       const items = processInstanceKey === SHOWCASE_ACTIVE_INSTANCE_KEY ? MOCK_TIMER_SUBSCRIPTIONS : [];
-      return HttpResponse.json({ items, totalCount: items.length, count: items.length, page: 1, size: 10 });
+      return HttpResponse.json(paginateEventSubscriptions(items, request));
     })
   ),
 
   // GET /process-instances/:processInstanceKey/event-subscriptions/errors
   http.get(
     `${BASE_URL}/process-instances/:processInstanceKey/event-subscriptions/errors`,
-    withValidation(({ params }) => {
+    withValidation(({ params, request }) => {
       const { processInstanceKey } = params;
       const instance = findProcessInstanceByKey(processInstanceKey as string);
       if (!instance) {
@@ -651,7 +702,7 @@ export const processInstanceHandlers = [
         );
       }
       const items = processInstanceKey === SHOWCASE_ACTIVE_INSTANCE_KEY ? MOCK_ERROR_SUBSCRIPTIONS : [];
-      return HttpResponse.json({ items, totalCount: items.length, count: items.length, page: 1, size: 10 });
+      return HttpResponse.json(paginateEventSubscriptions(items, request));
     })
   ),
 ];

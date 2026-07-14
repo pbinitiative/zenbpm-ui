@@ -81,6 +81,18 @@ const createInstance = (
       completedAt: startCompletedAt,
       inputVariables: pickVars(variables, INPUT_MAPPING.StartEvent_1),
     },
+    // This synthetic entry exists only to correlate the active showcase
+    // instance's event subscriptions with its history row.
+    ...(key === SHOWCASE_ACTIVE_INSTANCE_KEY
+      ? [{
+          key: `${key}007`,
+          elementId: 'messageCatchEvent',
+          elementType: 'intermediateCatchEvent',
+          state: 'completed' as const,
+          startedAt: startCompletedAt,
+          completedAt: startCompletedAt,
+        }]
+      : []),
     // Task A (Base approval)
     {
       key: `${key}002`,
@@ -444,6 +456,7 @@ export const jobs = [
   // task-a (Base approval) jobs
   {
     key: '5000000000000000005',
+    elementInstanceKey: `${SHOWCASE_ACTIVE_INSTANCE_KEY}002`,
     elementId: 'task-a',
     elementName: 'Base approval',
     type: 'user-task-type',

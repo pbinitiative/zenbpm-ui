@@ -19,6 +19,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
+import HistoryIcon from '@mui/icons-material/History';
 import { DataTable, type Column, type SortOrder, type DataTableSection } from '@components/DataTable';
 import { JOB_STATE_COLORS, type Job, type JobState } from '../types';
 import { useCompleteJobDialog } from '../modals/useCompleteJobDialog';
@@ -51,10 +52,16 @@ interface JobsTabProps {
   jobsPageSize: number;
   setJobsPage: (page: number) => void;
   setJobsPageSize: (size: number) => void;
+  onManualNavigation: () => void;
   onRefetch: () => Promise<void>;
   onShowNotification: (message: string, severity: 'success' | 'error') => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
   onElementIdClick?: (elementId: string) => void;
+  onNavigateToHistory?: (elementInstanceKey: string) => void;
+  focusedElementInstanceKey?: string;
+  autoScrollToFocusedRow?: boolean;
+  onFocusedRowVisible?: () => void;
+  findingFocusedJob?: boolean;
 }
 
 /** Walk the tree BFS and collect all nodes (root first) */
@@ -76,9 +83,15 @@ export const JobsTab = ({
   jobsPageSize,
   setJobsPage,
   setJobsPageSize,
+  onManualNavigation,
   onRefetch,
   onShowNotification,
   onElementIdClick,
+  onNavigateToHistory,
+  focusedElementInstanceKey,
+  autoScrollToFocusedRow = false,
+  onFocusedRowVisible,
+  findingFocusedJob = false,
 }: JobsTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance, ns.processes]);
 
@@ -295,7 +308,6 @@ export const JobsTab = ({
         width: 140,
         render: (row) => {
           const isActive = isJobActive(row.state);
-          const isUserTask = row.type === 'user-task-type';
           return (
             <Box sx={{ display: 'flex', gap: 0.5 }}>
               {isActive && (
@@ -312,11 +324,13 @@ export const JobsTab = ({
                   {t('processInstance:actions.complete')}
                 </Button>
               )}
-              {(isActive || isUserTask) && (
-                <IconButton size="small" onClick={(e) => handleMenuOpen(e, row)}>
-                  <MoreVertIcon fontSize="small" />
-                </IconButton>
-              )}
+              <IconButton
+                size="small"
+                aria-label={t('processInstance:actions.rowActions')}
+                onClick={(e) => handleMenuOpen(e, row)}
+              >
+                <MoreVertIcon fontSize="small" />
+              </IconButton>
             </Box>
           );
         },
@@ -392,8 +406,12 @@ export const JobsTab = ({
         data-testid="jobs-table"
         page={jobsPage}
         pageSize={jobsPageSize}
-        onPageChange={setJobsPage}
-        onPageSizeChange={(newSize) => { setJobsPageSize(newSize); setJobsPage(0); }}
+        onPageChange={(page) => { onManualNavigation(); setJobsPage(page); }}
+        onPageSizeChange={(newSize) => {
+          onManualNavigation();
+          setJobsPageSize(newSize);
+          setJobsPage(0);
+        }}
         sortBy={sortBy}
         sortOrder={sortOrder}
         onSortChange={(newSortBy, newSortOrder) => {
@@ -401,20 +419,36 @@ export const JobsTab = ({
           setSortOrder(newSortOrder);
         }}
         totalCount={totalCount}
+        loading={findingFocusedJob}
         onElementIdClick={onElementIdClick}
+        focusedRowKey={focusedElementInstanceKey}
+        getRowFocusKey={(row) => row.elementInstanceKey}
+        autoScrollToFocusedRow={autoScrollToFocusedRow}
+        onFocusedRowVisible={onFocusedRowVisible}
       />
 
       <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
+        <MenuItem
+          onClick={() => {
+            if (menuJob) onNavigateToHistory?.(menuJob.elementInstanceKey);
+            handleMenuClose();
+          }}
+        >
+          <ListItemIcon><HistoryIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>{t('processInstance:actions.viewInHistory')}</ListItemText>
+        </MenuItem>
         {menuJob?.type === 'user-task-type' && (
           <MenuItem onClick={() => { openAssignJobDialog({ job: menuJob, onAssign: handleAssignJob }); handleMenuClose(); }}>
             <ListItemIcon><PersonAddIcon fontSize="small" /></ListItemIcon>
             <ListItemText>{t('processInstance:actions.assign')}</ListItemText>
           </MenuItem>
         )}
-        <MenuItem onClick={() => { if (menuJob) openUpdateRetriesDialog({ job: menuJob, onUpdate: handleUpdateRetries }); handleMenuClose(); }}>
-          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>{t('processInstance:actions.updateRetries')}</ListItemText>
-        </MenuItem>
+        {menuJob && (isJobActive(menuJob.state) || menuJob.type === 'user-task-type') && (
+          <MenuItem onClick={() => { openUpdateRetriesDialog({ job: menuJob, onUpdate: handleUpdateRetries }); handleMenuClose(); }}>
+            <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{t('processInstance:actions.updateRetries')}</ListItemText>
+          </MenuItem>
+        )}
         {menuJob && isJobActive(menuJob.state) && (
           <MenuItem onClick={() => {
             if (menuJob) {

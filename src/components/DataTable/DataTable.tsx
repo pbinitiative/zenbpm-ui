@@ -1,4 +1,4 @@
-import { useMemo, useCallback, Fragment } from 'react';
+import { useMemo, useCallback, useEffect, useRef, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import {
@@ -83,6 +83,14 @@ export interface DataTableProps<T> {
    * Called when a breadcrumb element-ID link in a section header is clicked.
    */
   onElementIdClick?: (elementId: string) => void;
+  /** Stable identity of the row that should be highlighted. */
+  focusedRowKey?: string;
+  /** Maps a row to the identity compared with `focusedRowKey`. */
+  getRowFocusKey?: (row: T) => string | undefined;
+  /** Scroll the focused row into view when it is rendered. */
+  autoScrollToFocusedRow?: boolean;
+  /** Called after the focused row has been rendered and scrolled into view. */
+  onFocusedRowVisible?: () => void;
 }
 
 export const DataTable = <T extends object>({
@@ -103,8 +111,13 @@ export const DataTable = <T extends object>({
   'data-testid': testId,
   toolbar,
   onElementIdClick,
+  focusedRowKey,
+  getRowFocusKey,
+  autoScrollToFocusedRow = false,
+  onFocusedRowVisible,
 }: DataTableProps<T>) => {
   const { t } = useTranslation([ns.common]);
+  const focusedRowRef = useRef<HTMLTableRowElement | null>(null);
 
   const handleSortClick = useCallback(
     (columnId: string) => {
@@ -136,6 +149,30 @@ export const DataTable = <T extends object>({
 
   const effectiveTotalCount = totalCount ?? displayedData.length;
 
+  const isFocusedRow = useCallback(
+    (row: T) =>
+      focusedRowKey !== undefined &&
+      getRowFocusKey !== undefined &&
+      getRowFocusKey(row) === focusedRowKey,
+    [focusedRowKey, getRowFocusKey]
+  );
+
+  const focusedRowIsVisible = useMemo(
+    () => displayedData.some(isFocusedRow),
+    [displayedData, isFocusedRow]
+  );
+
+  useEffect(() => {
+    if (!autoScrollToFocusedRow || !focusedRowIsVisible) return;
+
+    const frame = requestAnimationFrame(() => {
+      focusedRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      onFocusedRowVisible?.();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [autoScrollToFocusedRow, focusedRowIsVisible, onFocusedRowVisible]);
+
   const getCellValue = (row: T, column: Column<T>): React.ReactNode => {
     if (column.render) return column.render(row);
     const value = row[column.id as keyof T];
@@ -143,20 +180,32 @@ export const DataTable = <T extends object>({
     return String(value);
   };
 
-  const renderDataRow = (row: T, sectionKey?: string) => (
-    <TableRow
-      key={sectionKey !== undefined ? `s${sectionKey}-${String(row[rowKey])}` : String(row[rowKey])}
-      hover={!!onRowClick}
-      onClick={() => onRowClick?.(row)}
-      sx={{ cursor: onRowClick ? 'pointer' : 'default' }}
-    >
-      {columns.map((column) => (
-        <TableCell key={String(column.id)} align={column.align || 'left'} data-testid={`cell-${String(column.id)}`}>
-          {getCellValue(row, column)}
-        </TableCell>
-      ))}
-    </TableRow>
-  );
+  const renderDataRow = (row: T, sectionKey?: string) => {
+    const focused = isFocusedRow(row);
+
+    return (
+      <TableRow
+        key={sectionKey !== undefined ? `s${sectionKey}-${String(row[rowKey])}` : String(row[rowKey])}
+        ref={focused ? focusedRowRef : undefined}
+        data-focused={focused ? 'true' : undefined}
+        hover={!!onRowClick}
+        onClick={() => onRowClick?.(row)}
+        sx={{
+          cursor: onRowClick ? 'pointer' : 'default',
+          ...(focused && {
+            bgcolor: themeColors.primaryBg,
+            '&:hover': { bgcolor: themeColors.primaryBg },
+          }),
+        }}
+      >
+        {columns.map((column) => (
+          <TableCell key={String(column.id)} align={column.align || 'left'} data-testid={`cell-${String(column.id)}`}>
+            {getCellValue(row, column)}
+          </TableCell>
+        ))}
+      </TableRow>
+    );
+  };
 
   const renderBody = () => {
     if (loading && displayedData.length === 0) {

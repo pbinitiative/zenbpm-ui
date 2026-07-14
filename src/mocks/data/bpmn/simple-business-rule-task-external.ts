@@ -111,6 +111,7 @@ export const incidents: MockIncident[] = [];
 export const jobs = [
   {
     key: '5000000000000000029',
+    elementInstanceKey: '3100000000000000184002',
     elementId: 'BusinessRuleTask1',
     elementName: 'Test Simple External Business Rule Task 1',
     type: 'test-business-rule-task-job',

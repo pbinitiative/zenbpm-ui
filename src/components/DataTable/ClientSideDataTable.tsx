@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { DataTable } from './DataTable';
 import type { Column, SortOrder, DataTableSection } from './DataTable';
 
@@ -26,6 +26,14 @@ export interface ClientSideDataTableProps<T> {
   toolbar?: React.ReactNode;
   /** Called when a breadcrumb element-ID link in a section header is clicked. */
   onElementIdClick?: (elementId: string) => void;
+  /** Stable identity of the row that should be highlighted. */
+  focusedRowKey?: string;
+  /** Maps a row to the identity compared with `focusedRowKey`. */
+  getRowFocusKey?: (row: T) => string | undefined;
+  /** Navigate to and scroll to the focused row for the current focus request. */
+  autoNavigateToFocusedRow?: boolean;
+  /** Called after the focused row is visible. */
+  onFocusedRowVisible?: () => void;
 }
 
 /**
@@ -52,6 +60,10 @@ export const ClientSideDataTable = <T extends object>({
   'data-testid': testId,
   toolbar,
   onElementIdClick,
+  focusedRowKey,
+  getRowFocusKey,
+  autoNavigateToFocusedRow = false,
+  onFocusedRowVisible,
 }: ClientSideDataTableProps<T>) => {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -75,7 +87,7 @@ export const ClientSideDataTable = <T extends object>({
 
   // ── Sorting ────────────────────────────────────────────────────────────────
 
-  const sortRows = (rows: T[]): T[] => {
+  const sortRows = useCallback((rows: T[]): T[] => {
     if (!sortBy) return rows;
     return [...rows].sort((a, b) => {
       const aVal = a[sortBy as keyof T];
@@ -88,9 +100,9 @@ export const ClientSideDataTable = <T extends object>({
         : String(aVal).localeCompare(String(bVal));
       return sortOrder === 'asc' ? cmp : -cmp;
     });
-  };
+  }, [sortBy, sortOrder]);
 
-  const sortedData = useMemo(() => sortRows(data), [data, sortBy, sortOrder]);
+  const sortedData = useMemo(() => sortRows(data), [data, sortRows]);
 
   const sortedSections = useMemo(() => {
     if (!sections) return undefined;
@@ -98,7 +110,7 @@ export const ClientSideDataTable = <T extends object>({
       ...section,
       data: sortRows(section.data),
     }));
-  }, [sections, sortBy, sortOrder]);
+  }, [sections, sortRows]);
 
   // ── Pagination ─────────────────────────────────────────────────────────────
 
@@ -128,6 +140,47 @@ export const ClientSideDataTable = <T extends object>({
       }))
       .filter((s) => s.data.length > 0);
   }, [sortedSections, page, pageSize]);
+
+  useEffect(() => {
+    if (
+      !autoNavigateToFocusedRow ||
+      focusedRowKey === undefined ||
+      getRowFocusKey === undefined
+    ) {
+      return;
+    }
+
+    let focusedPage: number | undefined;
+    if (sortedSections) {
+      for (const section of sortedSections) {
+        const index = section.data.findIndex(
+          (row) => getRowFocusKey(row) === focusedRowKey
+        );
+        if (index >= 0) {
+          focusedPage = Math.floor(index / pageSize);
+          break;
+        }
+      }
+    } else {
+      const index = sortedData.findIndex((row) => getRowFocusKey(row) === focusedRowKey);
+      if (index >= 0) focusedPage = Math.floor(index / pageSize);
+    }
+
+    if (focusedPage === undefined || focusedPage === page) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setPage(focusedPage);
+    });
+    return () => { cancelled = true; };
+  }, [
+    autoNavigateToFocusedRow,
+    focusedRowKey,
+    getRowFocusKey,
+    sortedData,
+    sortedSections,
+    page,
+    pageSize,
+  ]);
 
   // totalCount drives the number of pages shown in the paginator.
   // • Flat mode    → total number of rows.
@@ -160,6 +213,10 @@ export const ClientSideDataTable = <T extends object>({
       data-testid={testId}
       toolbar={toolbar}
       onElementIdClick={onElementIdClick}
+      focusedRowKey={focusedRowKey}
+      getRowFocusKey={getRowFocusKey}
+      autoScrollToFocusedRow={autoNavigateToFocusedRow}
+      onFocusedRowVisible={onFocusedRowVisible}
     />
   );
 };
