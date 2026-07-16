@@ -182,7 +182,6 @@
     "decisionDefinition": "Decision Definition",
     "decisionInstance": "Decision Instance",
     "businessKey": "Business Key",
-    "type": "Type",
-    "variables": "Variables"
+    "type": "Type"
   }
 }

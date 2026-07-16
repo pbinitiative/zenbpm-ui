@@ -12,6 +12,7 @@
     "state": "State",
     "createdAt": "Created At",
     "completedAt": "Completed At",
+    "duration": "Duration",
     "processDefinition": "Process Definition",
     "version": "Version",
     "bpmnProcessId": "BPMN Process ID",
@@ -26,6 +27,10 @@
     "candidateGroups": "Candidate Groups",
     "retries": "Retries",
     "currentRetries": "Current Retries",
+    "activityInputOutput": "Activity input/output",
+    "activityInputOutputSubtitle": "process point of view variables",
+    "jobInputOutput": "Job input/output",
+    "jobInputOutputSubtitle": "job point of view variables",
     "errorType": "Error Type",
     "errorMessage": "Error Message",
     "childProcess": "Child Process",
@@ -43,6 +48,13 @@
     "calledProcesses": "Called Processes",
     "decisions": "Decisions",
     "eventSubscriptions": "Event Subscriptions"
+  },
+  "filters": {
+    "includeSequenceFlows": "Include flows"
+  },
+  "variables": {
+    "in": "In",
+    "out": "Out"
   },
   "jobStates": {
     "activatable": "Activatable",

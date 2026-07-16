@@ -39,6 +39,7 @@ const createInstance = (
       state: 'completed' as const,
       startedAt: createdAt,
       completedAt: startCompletedAt,
+      inputVariables: variables,
     },
     {
       key: `${key}002`,
@@ -47,6 +48,11 @@ const createInstance = (
       state: (stoppedAt === 'assignee-task' ? state : 'completed'),
       startedAt: startCompletedAt,
       completedAt: assigneeTaskCompletedAt,
+      inputVariables: variables,
+      // assignee-task emits `assigneeApproved` when it completes
+      ...(stoppedAt !== 'assignee-task'
+        ? { outputVariables: { ...variables, assigneeApproved: true } }
+        : {}),
     },
     ...(stoppedAt !== 'assignee-task'
       ? [
@@ -57,6 +63,11 @@ const createInstance = (
             state: (stoppedAt === 'group-task' ? state : 'completed'),
             startedAt: assigneeTaskCompletedAt!,
             completedAt: groupTaskCompletedAt,
+            inputVariables: { ...variables, assigneeApproved: true },
+            // group-task finalises the approval when the instance completes
+            ...(stoppedAt === 'completed'
+              ? { outputVariables: { ...variables, assigneeApproved: true, groupApproved: true, approved: true } }
+              : {}),
           },
         ]
       : []),
@@ -69,6 +80,8 @@ const createInstance = (
             state: 'completed' as const,
             startedAt: groupTaskCompletedAt!,
             completedAt: endCompletedAt,
+            inputVariables: { ...variables, assigneeApproved: true, groupApproved: true, approved: true },
+            outputVariables: { ...variables, assigneeApproved: true, groupApproved: true, approved: true, finalStatus: 'approved' },
           },
         ]
       : []),

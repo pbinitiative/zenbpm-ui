@@ -3,7 +3,7 @@ openapi: 3.0.0
 info:
   title: ZenBPM OpenAPI
   description: REST API for ZenBPM
-  version: 1.2.0
+  version: 1.4.0
   contact:
     name: API Support
     email: info@pbinitiative.org
@@ -1592,7 +1592,6 @@ paths:
                     inputVariables:
                       formKey: "loan-application-form"
                       assignee: "john.doe"
-                    outputVariables: {}
                   - key: 4503599627370511
                     elementId: "Task_CreditCheck"
                     type: "service-task"
@@ -1600,10 +1599,11 @@ paths:
                     state: "completed"
                     createdAt: "2025-08-22T14:32:15Z"
                     inputVariables:
+                      applicantId: "APP-12345"
+                      creditScoreThreshold: 80
+                    outputVariables:
                       result: "approved"
                       score: 85
-                    outputVariables:
-                      approved: true
                 page: 1
                 size: 10
                 count: 2
@@ -1682,14 +1682,17 @@ paths:
                 items:
                   - key: 4503599627370525
                     elementId: "StartEvent_1"
+                    elementType: "START_EVENT"
                     processInstanceKey: 4503599627370501
                     createdAt: "2025-08-22T14:30:26Z"
                   - key: 4503599627370526
                     elementId: "Flow_1"
+                    elementType: "SEQUENCE_FLOW"
                     processInstanceKey: 4503599627370501
                     createdAt: "2025-08-22T14:30:26Z"
                   - key: 4503599627370527
                     elementId: "Task_CheckApplication"
+                    elementType: "SERVICE_TASK"
                     processInstanceKey: 4503599627370501
                     createdAt: "2025-08-22T14:30:27Z"
                 page: 1
@@ -2107,7 +2110,6 @@ paths:
                         retries: 3
                         inputVariables:
                           formKey: "loan-review-form"
-                        outputVariables: {}
                   - partition: 2
                     items:
                       - key: 9007199254740995
@@ -2120,7 +2122,6 @@ paths:
                         inputVariables:
                           notificationType: "email"
                           recipient: "customer@example.com"
-                        outputVariables: {}
                 page: 1
                 size: 10
                 count: 2
@@ -2168,7 +2169,7 @@ paths:
               example:
                 key: 4503599627370540
                 elementId: "Task_ReviewApplication"
-                type: "io.camunda.zeebe:userTask"
+                type: "zenbpm:userTask"
                 processInstanceKey: 4503599627370501
                 state: "active"
                 createdAt: "2025-08-22T15:10:26Z"
@@ -2178,7 +2179,6 @@ paths:
                   formKey: "loan-review-form"
                   applicationId: "APP-12345"
                   customerName: "Alice Johnson"
-                outputVariables: {}
         404:
           description: Not found
           content:
@@ -3431,7 +3431,7 @@ components:
           description: Variables provided to the job at creation/activation time (from BPMN input mappings)
         outputVariables:
           type: object
-          description: Output variables set on job completion or failure
+          description: Output variables set on job completion or failure (full output before mapping)
         assignee:
           type: string
           description: Assignee (user assigned to this job)
@@ -3500,6 +3500,8 @@ components:
         - processInstanceKey
         - createdAt
         - elementId
+        - elementType
+        - inputVariables
       properties:
         key:
           type: integer
@@ -3510,8 +3512,19 @@ components:
         createdAt:
           type: string
           format: date-time
+        completedAt:
+          type: string
+          format: date-time
         elementId:
           type: string
+        elementType:
+          type: string
+        inputVariables:
+          type: object
+          description: Variables provided to the flow element at creation time (from BPMN input mappings)
+        outputVariables:
+          type: object
+          description: Output variables produced by the flow element on completion (after BPMN output mapping)
     IncidentPage:
       type: object
       allOf:

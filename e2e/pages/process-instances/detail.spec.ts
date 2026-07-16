@@ -462,46 +462,7 @@ test.describe('Process Instance Detail - Process Type Display', () => {
   });
 });
 
-test.describe('Process Instance Detail - Jobs Tab Variables Column', () => {
-  // Use showcase process active instance which has jobs with variables
-  const instanceKey = '3100000000000000014';
-
-  test.beforeEach(async ({ page }) => {
-    await page.goto(`/process-instances/${instanceKey}`);
-    await expect(page.getByText('Instance Details')).toBeVisible({ timeout: 10000 });
-  });
-
-  test('should show Variables column header in jobs table', async ({ page }) => {
-    // Jobs tab is active by default
-    await expect(page.getByRole('columnheader', { name: /variables/i }).first()).toBeVisible({ timeout: 5000 });
-  });
-
-  test('should show job variables content in jobs table', async ({ page }) => {
-    // The job for this instance has { customerId: 'CUST-001', ... }
-    // Variables column should render some JSON content or key names
-    const jobsTable = page.getByTestId('jobs-table');
-    await expect(jobsTable).toBeVisible({ timeout: 5000 });
-
-    // There should be a variables cell with content (non-empty)
-    const variablesCells = jobsTable.locator('tbody tr td').filter({ hasText: /CUST-001|customerId|loanAmount/ });
-    await expect(variablesCells.first()).toBeVisible();
-  });
-
-  test('should open variables dialog when clicking variables cell', async ({ page }) => {
-    const jobsTable = page.getByTestId('jobs-table');
-    await expect(jobsTable).toBeVisible({ timeout: 5000 });
-
-    // Click a variables cell that has content
-    const variablesCell = jobsTable.locator('tbody tr td').filter({ hasText: /CUST-001|customerId|loanAmount/ }).first();
-    await variablesCell.click();
-
-    // A dialog should open
-    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 3000 });
-
-    // Dialog should show the variables heading
-    await expect(page.getByRole('dialog').getByText(/variables/i).first()).toBeVisible();
-  });
-});
+// Jobs-tab variable-cell coverage lives in jobs-input-output.spec.ts.
 
 test.describe('Process Instance Detail - Include Child Processes Filter', () => {
   test('should show Include child processes switch on process instances list', async ({ page }) => {

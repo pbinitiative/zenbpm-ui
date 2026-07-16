@@ -42,6 +42,8 @@ export interface ProcessInstancesTableProps {
   syncWithUrl?: boolean;
   /** Callback when activity filter changes (for syncing with diagram highlight) */
   onActivityFilterChange?: (activityId: string | undefined) => void;
+  /** Callback when all filters are cleared (Clear All). Used to fully clear URL params, not just activityId. */
+  onClearAllFilters?: () => void;
   /** If set, table re-fetches data on this interval (ms). Set to 0/undefined to disable. */
   autoRefreshInterval?: number;
 }
@@ -57,6 +59,7 @@ export const ProcessInstancesTable = ({
   defaultPageSize,
   selectedActivityId: _selectedActivityId,
   onActivityFilterChange,
+  onClearAllFilters,
   autoRefreshInterval = 0,
 }: ProcessInstancesTableProps) => {
   // Note: _selectedActivityId is not used directly - the table reads activityId from URL via syncWithUrl.
@@ -87,11 +90,27 @@ export const ProcessInstancesTable = ({
     (filters: FilterValues) => {
       externalOnFilterChange?.(filters);
 
+      // Detect Clear All: all filter values are empty. In this case, fully clear
+      // the URL (not just the activityId) so the URL-sync useEffect doesn't
+      // re-hydrate non-activity filters (e.g. state) and unmount the Clear All
+      // button mid-click.
+      const hasAnyFilter = Object.values(filters).some((v) => {
+        if (typeof v === 'string') return v !== '';
+        if (Array.isArray(v)) return v.length > 0;
+        if (typeof v === 'object' && v !== null) return !!(v.from || v.to);
+        return false;
+      });
+
+      if (!hasAnyFilter) {
+        onClearAllFilters?.();
+        return;
+      }
+
       // Notify parent of activity filter changes for diagram sync
       const newActivityId = typeof filters.activityId === 'string' ? filters.activityId : undefined;
       onActivityFilterChange?.(newActivityId || undefined);
     },
-    [externalOnFilterChange, onActivityFilterChange]
+    [externalOnFilterChange, onActivityFilterChange, onClearAllFilters]
   );
 
   // Fetch process instances data using API service

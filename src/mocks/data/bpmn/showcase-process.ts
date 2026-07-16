@@ -23,6 +23,29 @@ export const definition: MockProcessDefinition = {
 
 type StoppedAt = 'task-a' | 'task-b' | 'completed';
 
+// Per-element BPMN input mappings. The engine returns only the variables
+// the mapping references; missing keys are silently dropped.
+const INPUT_MAPPING: Record<string, readonly string[]> = {
+  StartEvent_1: [],            // no mapping = pass all initial variables through
+  'task-a': ['customerId', 'customerName', 'loanAmount', 'price'],
+  Gateway_01wr5g0: ['price'],
+  'task-b': ['customerId', 'customerName', 'loanAmount', 'price', 'baseApproved', 'isHighValue'],
+  Gateway_1dkelqq: [],
+  Event_196zxhe: ['approved'],
+};
+
+function pickVars(
+  source: Record<string, unknown>,
+  keys: readonly string[],
+): Record<string, unknown> {
+  if (keys.length === 0) return { ...source };
+  const result: Record<string, unknown> = {};
+  for (const k of keys) {
+    if (k in source) result[k] = source[k];
+  }
+  return result;
+}
+
 // Helper to generate history for showcase process
 const createInstance = (
   key: string,
@@ -42,6 +65,11 @@ const createInstance = (
     : undefined;
   const endCompletedAt = joinGatewayCompletedAt ? addMinutes(joinGatewayCompletedAt, 1) : undefined;
 
+  // Process-state snapshots downstream elements read from.
+  const afterTaskA = { ...variables, baseApproved: true };
+  const afterGateway = { ...afterTaskA, isHighValue };
+  const afterTaskB = { ...afterGateway, approved: true };
+
   const history = [
     // Start Event always completed
     {
@@ -51,6 +79,7 @@ const createInstance = (
       state: 'completed' as const,
       startedAt: createdAt,
       completedAt: startCompletedAt,
+      inputVariables: pickVars(variables, INPUT_MAPPING.StartEvent_1),
     },
     // Task A (Base approval)
     {
@@ -60,6 +89,11 @@ const createInstance = (
       state: (stoppedAt === 'task-a' ? state : 'completed'),
       startedAt: startCompletedAt,
       completedAt: taskACompletedAt,
+      inputVariables: pickVars(variables, INPUT_MAPPING['task-a']),
+      // task-a approves the loan on completion (only when it completes)
+      ...(stoppedAt !== 'task-a'
+        ? { outputVariables: { ...variables, baseApproved: true } }
+        : {}),
     },
     // Gateway (only if task-a completed)
     ...(stoppedAt !== 'task-a'
@@ -71,6 +105,8 @@ const createInstance = (
             state: 'completed' as const,
             startedAt: taskACompletedAt!,
             completedAt: gatewayCompletedAt,
+            inputVariables: pickVars(afterTaskA, INPUT_MAPPING.Gateway_01wr5g0),
+            outputVariables: { ...variables, baseApproved: true, isHighValue },
           },
         ]
       : []),
@@ -84,6 +120,11 @@ const createInstance = (
             state: (stoppedAt === 'task-b' ? state : 'completed'),
             startedAt: gatewayCompletedAt!,
             completedAt: taskBCompletedAt,
+            inputVariables: pickVars(afterGateway, INPUT_MAPPING['task-b']),
+            // task-b finalises the approval when it completes
+            ...(stoppedAt === 'completed'
+              ? { outputVariables: { ...variables, baseApproved: true, isHighValue, approved: true } }
+              : {}),
           },
         ]
       : []),
@@ -97,6 +138,10 @@ const createInstance = (
             state: 'completed' as const,
             startedAt: isHighValue ? taskBCompletedAt! : gatewayCompletedAt!,
             completedAt: joinGatewayCompletedAt,
+            inputVariables: pickVars(
+              isHighValue ? afterTaskB : { ...afterGateway, isHighValue: false },
+              INPUT_MAPPING.Gateway_1dkelqq,
+            ),
           },
           {
             key: `${key}006`,
@@ -105,6 +150,11 @@ const createInstance = (
             state: 'completed' as const,
             startedAt: joinGatewayCompletedAt!,
             completedAt: endCompletedAt,
+            inputVariables: pickVars(afterTaskB, INPUT_MAPPING.Event_196zxhe),
+            // End events in BPMN don't produce their own output variables — they
+            // simply terminate the process. The final state is reflected in
+            // the process-scope variables, not as a transformation at the end
+            // event itself.
           },
         ]
       : []),

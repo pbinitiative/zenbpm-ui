@@ -29,6 +29,7 @@ import { useInputOutputDialog } from '@components/InputOutputDialog';
 import { assignJob, completeJob, customInstance, failJob } from '@base/openapi';
 import { MonoText } from "@components/MonoText";
 import { formatDate } from "@components/DiagramDetailLayout/utils";
+import { VariablesBadgeCell } from '../components/VariablesBadgeCell';
 import type { ProcessInstanceNode } from '../types/tree';
 
 // updateJobRetries is not in generated API, use direct axios call
@@ -178,45 +179,25 @@ export const JobsTab = ({
       },
       {
         id: 'variables',
-        label: t('common:fields.variables'),
-        sortable: true,
-        width: 150,
-        render: (row) => {
-          const { ZEN_FORM: _, ...displayVariablesIn } = row.inputVariables ?? {};
-          const displayVariablesOut = row.outputVariables ?? {};
-          const value = JSON.stringify(displayVariablesIn) + ", " + JSON.stringify(displayVariablesOut);
-          const hasInputOutput = row.inputVariables || row.outputVariables;
-          return (
-            <Tooltip title={hasInputOutput ? t('processInstance:actions.viewInputOutput') : ''} placement="top-start">
-              <Typography
-                variant="body2"
-                onClick={() => {
-                  if (hasInputOutput) {
-                    openInputOutputDialog({
-                      data: {
-                        title: t('common:fields.variables'),
-                        inputVariables: displayVariablesIn,
-                        outputVariables: displayVariablesOut,
-                      },
-                    });
-                  }
-                }}
-                sx={{
-                  fontFamily: '"SF Mono", Monaco, monospace',
-                  display: 'block',
-                  maxWidth: 150,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  cursor: hasInputOutput ? 'pointer' : 'default',
-                  '&:hover': hasInputOutput ? { opacity: 0.7 } : {},
-                }}
-              >
-                {value}
-              </Typography>
-            </Tooltip>
-          );
-        },
+        label: t('processInstance:fields.jobInputOutput'),
+        width: 200,
+        render: (row) => (
+          <VariablesBadgeCell
+            inputVariables={row.inputVariables}
+            outputVariables={row.outputVariables}
+            excludeFromInputKeys={['ZEN_FORM']}
+            onOpenDialog={(inputVariables, outputVariables) =>
+              openInputOutputDialog({
+                data: {
+                  title: t('processInstance:fields.jobInputOutput'),
+                  subtitle: t('processInstance:fields.jobInputOutputSubtitle'),
+                  inputVariables,
+                  outputVariables,
+                },
+              })
+            }
+          />
+        ),
       },
       {
         id: 'elementId',

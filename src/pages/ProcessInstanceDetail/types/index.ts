@@ -49,6 +49,10 @@ export interface FlowElementHistory extends ApiFlowElementHistory {
   completedAt?: string;
   /** Element state */
   state?: string;
+  /** Input variables provided to the flow element at creation time (from BPMN input mappings) */
+  inputVariables: Record<string, unknown>;
+  /** Output variables produced by the flow element on completion (after BPMN output mapping) */
+  outputVariables?: Record<string, unknown>;
 }
 
 // Incident - extend API type with additional fields

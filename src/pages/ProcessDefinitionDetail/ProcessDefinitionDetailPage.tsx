@@ -35,6 +35,7 @@ export const ProcessDefinitionDetailPage = () => {
     handleVersionChange,
     handleElementClick,
     handleActivityFilterChange,
+    handleClearAllFilters,
     handleStartInstance,
     handleEditDefinition,
     handleSnackbarClose,
@@ -125,6 +126,7 @@ export const ProcessDefinitionDetailPage = () => {
       syncWithUrl
       selectedActivityId={selectedActivityId}
       onActivityFilterChange={handleActivityFilterChange}
+      onClearAllFilters={handleClearAllFilters}
       autoRefreshInterval={10000}
     />
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
@@ -33,6 +33,7 @@ interface UseProcessDefinitionDataResult {
   handleVersionChange: (key: string) => void;
   handleElementClick: (elementId: string) => void;
   handleActivityFilterChange: (activityId: string | undefined) => void;
+  handleClearAllFilters: () => void;
   handleStartInstance: () => void;
   handleInstanceCreated: (instanceKey: string) => void;
   handleEditDefinition: () => void;
@@ -47,6 +48,15 @@ export function useProcessDefinitionData({
   const [searchParams, setSearchParams] = useSearchParams();
   const { t } = useTranslation([ns.common, ns.processes]);
   const { openStartInstance } = useStartInstanceDialog();
+
+  // Ref that always points at the latest searchParams. We can't rely on the
+  // closure of useCallback because the table re-emits the same callback
+  // identity across renders until its dependency (`searchParams`) changes;
+  // if the next filter change fires before React re-renders with the new
+  // searchParams, we'd build the new URL from a stale value and drop other
+  // filter params (e.g. state=active) on the floor.
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
 
   // State
   const [processDefinition, setProcessDefinition] = useState<ProcessDefinition | null>(null);
@@ -139,14 +149,25 @@ export function useProcessDefinitionData({
   const handleActivityFilterChange = useCallback((activityId: string | undefined) => {
     // Sync URL with filter changes from the table
     // This is called when the activity filter changes in the table
-    const newParams = new URLSearchParams(searchParams);
+    // Read the latest searchParams via a ref to avoid a race where the
+    // callback is invoked before React has re-rendered with the new
+    // searchParams and would otherwise overwrite other filter params.
+    const newParams = new URLSearchParams(searchParamsRef.current);
     if (activityId) {
       newParams.set('activityId', activityId);
     } else {
       newParams.delete('activityId');
     }
     setSearchParams(newParams, { replace: true });
-  }, [searchParams, setSearchParams]);
+  }, [setSearchParams]);
+
+  const handleClearAllFilters = useCallback(() => {
+    // Clear All: remove every URL param. The debounced URL-sync effect in
+    // useTableState would otherwise re-hydrate filters from the leftover URL
+    // params (e.g. state) and unmount the Clear All button before Playwright
+    // can click it.
+    setSearchParams(new URLSearchParams(), { replace: true });
+  }, [setSearchParams]);
 
   const handleInstanceCreated = useCallback(
     (instanceKey: string) => {
@@ -210,6 +231,7 @@ export function useProcessDefinitionData({
     handleVersionChange,
     handleElementClick,
     handleActivityFilterChange,
+    handleClearAllFilters,
     handleStartInstance,
     handleInstanceCreated,
     handleEditDefinition,
