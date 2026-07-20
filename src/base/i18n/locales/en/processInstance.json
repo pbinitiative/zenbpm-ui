@@ -69,6 +69,10 @@
     "unresolved": "Unresolved",
     "resolved": "Resolved"
   },
+  "historyStates": {
+    "active": "Active",
+    "completed": "Completed"
+  },
   "actions": {
     "complete": "Complete",
     "resolve": "Resolve",

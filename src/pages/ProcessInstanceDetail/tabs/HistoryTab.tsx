@@ -8,6 +8,7 @@ import {
   type DataTableSection,
   ClientSideDataTable
 } from '@components/DataTable';
+import { StateBadge } from '@components/StateBadge';
 import type { FlowElementHistory } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
 import { formatDate, formatDuration } from '@/components/DiagramDetailLayout/utils';
@@ -15,6 +16,7 @@ import { useInputOutputDialog } from '@components/InputOutputDialog';
 import { VariablesBadgeCell } from '../components/VariablesBadgeCell';
 import type { GetHistorySortBy } from '@base/openapi/generated-api/schemas/getHistorySortBy';
 import type { GetHistorySortOrder } from '@base/openapi/generated-api/schemas/getHistorySortOrder';
+import { MonoText } from '@/components/MonoText';
 
 // processType display order — determines section ordering after the main instance
 const PROCESS_TYPE_ORDER: Record<string, number> = {
@@ -113,17 +115,7 @@ export const HistoryTab = ({
         id: 'key',
         label: t('processInstance:fields.key'),
         width: 180,
-        render: (row) => (
-          <Typography
-            variant="body2"
-            sx={{
-              fontFamily: '"SF Mono", Monaco, monospace',
-              fontSize: '0.75rem',
-            }}
-          >
-            {row.key}
-          </Typography>
-        ),
+        render: (row) => <MonoText>{row.key}</MonoText>,
       },
       {
         id: 'variables',
@@ -176,8 +168,19 @@ export const HistoryTab = ({
       {
         id: 'state',
         label: t('processInstance:fields.state'),
-        width: 100,
-        render: (row) => row.state || '-',
+        width: 110,
+        render: (row) => {
+          // The API does not return a `state` field on flow element history —
+          // derive it from completedAt. completedAt present => 'completed',
+          // otherwise the element is still 'active'.
+          const state = row.completedAt ? 'completed' : 'active';
+          return (
+            <StateBadge
+              state={state}
+              label={t(`processInstance:historyStates.${state}`)}
+            />
+          );
+        },
       },
       {
         id: 'createdAt',

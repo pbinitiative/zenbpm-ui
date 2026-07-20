@@ -1,7 +1,6 @@
 // Types for Process Instance Detail page
 // Re-export and extend OpenAPI generated types
 
-import { themeColors } from '@base/theme';
 import {
   type ProcessInstance as ApiProcessInstance,
   type ProcessInstanceState as ApiProcessInstanceState,
@@ -47,8 +46,6 @@ export interface Job extends Omit<ApiJob, 'state'> {
 export interface FlowElementHistory extends ApiFlowElementHistory {
   /** When the element was completed */
   completedAt?: string;
-  /** Element state */
-  state?: string;
   /** Input variables provided to the flow element at creation time (from BPMN input mappings) */
   inputVariables: Record<string, unknown>;
   /** Output variables produced by the flow element on completion (after BPMN output mapping) */
@@ -74,14 +71,3 @@ export interface Variable {
 
 // Tree types
 export type { ProcessInstanceNode, NodePagination, TreeDatasetPagination } from './tree';
-
-// Job state colors for UI display
-export const JOB_STATE_COLORS: Record<JobState, string> = {
-  activatable: themeColors.stateBadge.created,
-  activated: themeColors.stateBadge.terminated,
-  active: themeColors.stateBadge.active,
-  completed: themeColors.stateBadge.completed,
-  failed: themeColors.stateBadge.failed,
-  canceled: themeColors.stateBadge.completed,
-  terminated: themeColors.stateBadge.completed,
-};
