@@ -1,4 +1,4 @@
-import { Box } from '@mui/material';
+import { Box, Chip } from '@mui/material';
 import { StateBadge } from '@components/StateBadge';
 import { MonoText } from '@components/MonoText';
 import type { Column } from '@components/DataTable';
@@ -52,6 +52,36 @@ export const getProcessInstanceColumns = (
       render: (row) => (
         <StateBadge state={row.state} label={t(`processes:states.${row.state}`)} />
       ),
+    },
+    {
+      id: 'incidentCount',
+      label: t('processes:fields.incidents'),
+      width: 100,
+      align: 'center' as const,
+      render: (row) =>
+        row.incidentCount > 0 ? (
+          <Chip
+            size="small"
+            label={row.incidentCount}
+            sx={{
+              bgcolor: 'error.main',
+              color: 'white',
+              fontWeight: 600,
+              minWidth: 40,
+            }}
+          />
+        ) : (
+          <Chip
+            size="small"
+            label="0"
+            sx={{
+              bgcolor: 'grey.200',
+              color: 'text.secondary',
+              fontWeight: 600,
+              minWidth: 40,
+            }}
+          />
+        ),
     },
     {
       id: 'processType',

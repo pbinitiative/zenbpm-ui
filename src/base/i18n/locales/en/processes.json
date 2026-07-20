@@ -29,7 +29,8 @@
     "variables": "Variables",
     "activities": "Activities",
     "activityFilter": "Activity",
-    "type": "Type"
+    "type": "Type",
+    "incidents": "Incidents"
   },
   "types": {
     "default": "Default",
@@ -46,7 +47,8 @@
   "statistics": {
     "active": "Active",
     "completed": "Completed",
-    "incidents": "Incidents"
+    "incidents": "Failed",
+    "withIncident": "With Incident"
   },
   "actions": {
     "create": "Create Process",

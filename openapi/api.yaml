@@ -3135,6 +3135,7 @@ components:
         - completed
         - terminated
         - failed
+        - withIncident
       properties:
         total:
           type: integer
@@ -3151,6 +3152,13 @@ components:
         failed:
           type: integer
           description: Number of failed instances
+        withIncident:
+          type: integer
+          description: >
+            Number of process instances that currently have at least one
+            unresolved incident. Counted regardless of the instance state
+            (i.e. active, completed, terminated or failed instances are
+            all included when they have an open incident).
     ProcessInstancePage:
       type: object
       allOf:
@@ -3183,6 +3191,7 @@ components:
         - state
         - variables
         - processType
+        - incidentCount
       properties:
         key:
           type: integer
@@ -3206,6 +3215,11 @@ components:
           $ref: "#/components/schemas/ProcessInstanceProcessType"
         variables:
           type: object
+        incidentCount:
+          type: integer
+          description: >
+            Number of currently unresolved incidents on this process
+            instance. Zero when the instance has no open incidents.
     ProcessInstanceProcessType:
       type: string
       enum:

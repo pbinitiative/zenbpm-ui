@@ -117,7 +117,7 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
         // Merge definitions with statistics
         const items: ProcessDefinitionWithStats[] = definitions.map((def) => {
           const stats = statisticsMap.get(def.key) ?? {
-            instanceCounts: { total: 0, active: 0, completed: 0, terminated: 0, failed: 0 },
+            instanceCounts: { total: 0, active: 0, completed: 0, terminated: 0, failed: 0, withIncident: 0 },
           };
           return { ...def, instanceCounts: stats.instanceCounts };
         });
@@ -188,13 +188,43 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
       {
         id: 'instanceCounts.failed',
         label: t('processes:statistics.incidents'),
-        width: 100,
+        width: 90,
         align: 'center' as const,
         render: (row) =>
           row.instanceCounts.failed > 0 ? (
             <Chip
               size="small"
               label={row.instanceCounts.failed}
+              sx={{
+                bgcolor: 'error.main',
+                color: 'white',
+                fontWeight: 600,
+                minWidth: 40,
+              }}
+            />
+          ) : (
+            <Chip
+              size="small"
+              label="0"
+              sx={{
+                bgcolor: 'grey.200',
+                color: 'text.secondary',
+                fontWeight: 600,
+                minWidth: 40,
+              }}
+            />
+          ),
+      },
+      {
+        id: 'instanceCounts.withIncident',
+        label: t('processes:statistics.withIncident'),
+        width: 110,
+        align: 'center' as const,
+        render: (row) =>
+          row.instanceCounts.withIncident > 0 ? (
+            <Chip
+              size="small"
+              label={row.instanceCounts.withIncident}
               sx={{
                 bgcolor: 'error.main',
                 color: 'white',
