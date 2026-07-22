@@ -2,9 +2,10 @@ import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import { Box, Chip } from '@mui/material';
+import { Box } from '@mui/material';
 import { useNotification } from '@base/contexts';
 import { VersionPill } from '@components/VersionPill';
+import { NumericBadge } from '@components/NumericBadge';
 import { MonoText } from '@components/MonoText';
 import {
   TableWithFilters,
@@ -172,78 +173,21 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
         label: t('processes:statistics.active'),
         width: 90,
         align: 'center' as const,
-        render: (row) => (
-          <Chip
-            size="small"
-            label={row.instanceCounts.active}
-            sx={{
-              bgcolor: row.instanceCounts.active > 0 ? 'primary.main' : 'grey.200',
-              color: row.instanceCounts.active > 0 ? 'white' : 'text.secondary',
-              fontWeight: 600,
-              minWidth: 40,
-            }}
-          />
-        ),
+        render: (row) => <NumericBadge value={row.instanceCounts.active} color="primary" />,
       },
       {
         id: 'instanceCounts.failed',
         label: t('processes:statistics.failed'),
         width: 90,
         align: 'center' as const,
-        render: (row) =>
-          row.instanceCounts.failed > 0 ? (
-            <Chip
-              size="small"
-              label={row.instanceCounts.failed}
-              sx={{
-                bgcolor: 'error.main',
-                color: 'white',
-                fontWeight: 600,
-                minWidth: 40,
-              }}
-            />
-          ) : (
-            <Chip
-              size="small"
-              label="0"
-              sx={{
-                bgcolor: 'grey.200',
-                color: 'text.secondary',
-                fontWeight: 600,
-                minWidth: 40,
-              }}
-            />
-          ),
+        render: (row) => <NumericBadge value={row.instanceCounts.failed} color="error" />,
       },
       {
         id: 'instanceCounts.withIncident',
         label: t('processes:statistics.withIncident'),
         width: 110,
         align: 'center' as const,
-        render: (row) =>
-          row.instanceCounts.withIncident > 0 ? (
-            <Chip
-              size="small"
-              label={row.instanceCounts.withIncident}
-              sx={{
-                bgcolor: 'error.main',
-                color: 'white',
-                fontWeight: 600,
-                minWidth: 40,
-              }}
-            />
-          ) : (
-            <Chip
-              size="small"
-              label="0"
-              sx={{
-                bgcolor: 'grey.200',
-                color: 'text.secondary',
-                fontWeight: 600,
-                minWidth: 40,
-              }}
-            />
-          ),
+        render: (row) => <NumericBadge value={row.instanceCounts.withIncident} color="error" />,
       },
     ],
     [t]
