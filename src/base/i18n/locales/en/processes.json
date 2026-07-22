@@ -47,7 +47,7 @@
   "statistics": {
     "active": "Active",
     "completed": "Completed",
-    "incidents": "Failed",
+    "failed": "Failed",
     "withIncident": "With Incident"
   },
   "actions": {

@@ -187,7 +187,7 @@ export const ProcessDefinitionsTab = ({ refreshKey = 0 }: ProcessDefinitionsTabP
       },
       {
         id: 'instanceCounts.failed',
-        label: t('processes:statistics.incidents'),
+        label: t('processes:statistics.failed'),
         width: 90,
         align: 'center' as const,
         render: (row) =>
