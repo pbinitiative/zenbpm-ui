@@ -5,6 +5,9 @@ RUN corepack enable pnpm
 
 WORKDIR /app
 
+ARG VITE_BUILD_COMMIT
+ENV VITE_BUILD_COMMIT=$VITE_BUILD_COMMIT
+
 # Cache dependencies
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
