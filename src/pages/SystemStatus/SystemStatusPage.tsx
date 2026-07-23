@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import {
@@ -22,6 +23,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { themeColors } from '@base/theme';
+import { frontendBuildMetadata, type BuildMetadata } from '@base/buildMetadata';
 
 // ── Types (mirroring /internal/cluster/state/state.go) ───────────────────────
 
@@ -45,7 +47,7 @@ interface ClusterNode {
   partitions: Record<string, NodePartition>;
 }
 
-interface ClusterStatus {
+interface ClusterStatus extends BuildMetadata {
   clusterConfig: { desiredPartitions: number };
   partitions: Record<string, { id: number; leaderId: string }>;
   nodes: Record<string, ClusterNode>;
@@ -111,18 +113,18 @@ const PartitionCell = ({ np, leaderId, nodeId }: { np: NodePartition | undefined
         sx={
           isLeader
             ? {
-                bgcolor: themeColors.primaryBg,
-                color: themeColors.primaryDark,
-                fontWeight: 700,
-                fontSize: '0.7rem',
-                height: 20,
-              }
+              bgcolor: themeColors.primaryBg,
+              color: themeColors.primaryDark,
+              fontWeight: 700,
+              fontSize: '0.7rem',
+              height: 20,
+            }
             : {
-                fontSize: '0.7rem',
-                height: 20,
-                color: themeColors.textSecondary,
-                borderColor: themeColors.borderMedium,
-              }
+              fontSize: '0.7rem',
+              height: 20,
+              color: themeColors.textSecondary,
+              borderColor: themeColors.borderMedium,
+            }
         }
       />
       {!isHealthy && (
@@ -145,6 +147,54 @@ const Stat = ({ label, value }: { label: string; value: React.ReactNode }) => (
     </Typography>
   </Box>
 );
+
+interface BuildInformationColumnProps {
+  metadata?: BuildMetadata;
+  testId: string;
+  title: string;
+  loading?: boolean;
+}
+
+const BuildInformationColumn = ({ metadata, testId, title, loading = false }: BuildInformationColumnProps) => {
+  const { t } = useTranslation([ns.common]);
+  const fields = [
+    { label: t('common:systemStatus.version'), value: metadata?.build.version },
+    { label: t('common:systemStatus.buildTime'), value: metadata?.build.time },
+    { label: t('common:systemStatus.branch'), value: metadata?.git.branch },
+    { label: t('common:systemStatus.commitId'), value: metadata?.git.commitId },
+  ];
+
+  return (
+    <Box data-testid={testId} sx={{ minWidth: 0, p: 3 }}>
+      <Typography sx={{ color: themeColors.textPrimary, fontSize: '0.875rem', fontWeight: 700, mb: 2 }}>
+        {title}
+      </Typography>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(100px, auto) minmax(0, 1fr)', gap: '10px 24px' }}>
+        {fields.map(({ label, value }) => (
+          <Fragment key={label}>
+            <Typography variant="captionNormal" sx={{ color: themeColors.textMuted }}>
+              {label}
+            </Typography>
+            {loading ? (
+              <Skeleton width={160} />
+            ) : (
+              <Typography
+                sx={{
+                  color: themeColors.textPrimary,
+                  fontFamily: 'monospace',
+                  fontSize: '0.8rem',
+                  overflowWrap: 'anywhere',
+                }}
+              >
+                {value || 'unknown'}
+              </Typography>
+            )}
+          </Fragment>
+        ))}
+      </Box>
+    </Box>
+  );
+};
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -246,7 +296,9 @@ export const SystemStatusPage = () => {
 
       {/* ── Cluster topology matrix ── */}
       <Paper
+        data-testid="system-cluster-topology"
         sx={{
+          mb: 3,
           borderRadius: '12px',
           border: `1px solid ${themeColors.borderLight}`,
           overflow: 'hidden',
@@ -385,7 +437,7 @@ export const SystemStatusPage = () => {
                             borderLeft: `1px solid ${themeColors.borderLight}`,
                             bgcolor:
                               node.partitions?.[String(pid)]?.role === 2 &&
-                              data?.partitions?.[String(pid)]?.leaderId === node.id
+                                data?.partitions?.[String(pid)]?.leaderId === node.id
                                 ? alpha(themeColors.primaryBg, 0.4) // faint green tint for leader cells
                                 : undefined,
                           }}
@@ -404,6 +456,44 @@ export const SystemStatusPage = () => {
             </Table>
           </TableContainer>
         )}
+      </Paper>
+
+      {/* ── Build information ── */}
+      <Paper
+        data-testid="system-build-information"
+        sx={{
+          border: `1px solid ${themeColors.borderLight}`,
+          borderRadius: '12px',
+          overflow: 'hidden',
+        }}
+      >
+        <Box sx={{ px: 3, py: 1.75, borderBottom: `1px solid ${themeColors.borderLight}` }}>
+          <Typography sx={{ color: themeColors.textPrimary, fontSize: '0.95rem', fontWeight: 600 }}>
+            {t('common:systemStatus.buildInformation')}
+          </Typography>
+        </Box>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
+            '& > :not(:first-of-type)': {
+              borderLeft: { md: `1px solid ${themeColors.borderLight}` },
+              borderTop: { xs: `1px solid ${themeColors.borderLight}`, md: 0 },
+            },
+          }}
+        >
+          <BuildInformationColumn
+            metadata={data}
+            testId="backend-build-information"
+            title={t('common:buildMetadata.zenbpm')}
+            loading={isLoading}
+          />
+          <BuildInformationColumn
+            metadata={frontendBuildMetadata}
+            testId="frontend-build-information"
+            title={t('common:buildMetadata.ui')}
+          />
+        </Box>
       </Paper>
     </Box>
   );

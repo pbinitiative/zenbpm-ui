@@ -1,4 +1,21 @@
+import type { CSSProperties } from 'react';
 import { createTheme, alpha } from '@mui/material/styles';
+
+declare module '@mui/material/styles' {
+  interface TypographyVariants {
+    captionNormal: CSSProperties;
+  }
+
+  interface TypographyVariantsOptions {
+    captionNormal?: CSSProperties;
+  }
+}
+
+declare module '@mui/material/Typography' {
+  interface TypographyPropsVariantOverrides {
+    captionNormal: true;
+  }
+}
 
 // Design 3 - "Clean White" color palette
 const colors = {
@@ -268,6 +285,13 @@ export const theme = createTheme({
       fontWeight: 600,
       color: colors.textMuted,
       textTransform: 'uppercase',
+      letterSpacing: '0.5px',
+    },
+    captionNormal: {
+      fontSize: '0.6875rem',
+      fontWeight: 600,
+      color: colors.textMuted,
+      textTransform: 'none',
       letterSpacing: '0.5px',
     },
     button: {

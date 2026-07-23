@@ -46,6 +46,29 @@ pnpm dev
 pnpm dev --mode live
 ```
 
+### Build metadata
+
+The application footer displays the UI build version and 12-character commit alongside the metadata returned by `GET /system/status`. The System Status page shows version, commit, branch, and build time for both ZenBPM and the UI. Frontend metadata is embedded when Vite starts or builds; the browser never invokes Git.
+
+The UI version comes from `info.version` in `openapi/api.yaml`. By default, Vite reads the commit and branch from Git, shortens the commit to 12 characters, and records the current UTC time. Builds outside a Git checkout can supply the metadata explicitly:
+
+```bash
+VITE_BUILD_COMMIT=7af392e12345 \
+VITE_BUILD_BRANCH=main \
+VITE_BUILD_TIME=2026-08-10T08:00:00Z \
+pnpm build
+```
+
+Docker accepts the same values as build arguments. The release workflow resolves and supplies all three automatically:
+
+```bash
+docker build \
+  --build-arg VITE_BUILD_COMMIT=7af392e12345 \
+  --build-arg VITE_BUILD_BRANCH=main \
+  --build-arg VITE_BUILD_TIME=2026-08-10T08:00:00Z \
+  -t zenbpm-ui .
+```
+
 ## Quality Checks
 
 Before submitting a PR, ensure all quality checks pass:

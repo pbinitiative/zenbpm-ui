@@ -28,6 +28,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import RuleIcon from '@mui/icons-material/Rule';
 import LogoutIcon from '@mui/icons-material/Logout';
+import { BuildMetadataFooter } from '@components/BuildMetadataFooter';
 
 const navItems = [
   {
@@ -369,7 +370,6 @@ export const MainLayout = () => {
         sx={{
           flexGrow: 1,
           bgcolor: 'background.default',
-          minHeight: 'calc(100vh - 64px)',
         }}
       >
         <Box
@@ -391,6 +391,8 @@ export const MainLayout = () => {
           <Outlet />
         </Box>
       </Box>
+
+      <BuildMetadataFooter />
     </Box>
   );
 };

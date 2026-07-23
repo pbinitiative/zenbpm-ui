@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+declare const __BUILD_VERSION__: string;
+declare const __BUILD_COMMIT__: string;
+declare const __BUILD_BRANCH__: string;
+declare const __BUILD_TIME__: string;
+
 interface ImportMetaEnv {
   /**
    * Backend API Strategy
@@ -31,6 +36,18 @@ interface ImportMetaEnv {
    * Example: "/jobs/**,/messages"
    */
   readonly VITE_LIVE_ENDPOINTS?: string;
+
+  /** Overrides the Git commit embedded in frontend build metadata. */
+  readonly VITE_BUILD_COMMIT?: string;
+
+  /** Overrides the Git branch embedded in frontend build metadata. */
+  readonly VITE_BUILD_BRANCH?: string;
+
+  /** Overrides the UTC timestamp embedded in frontend build metadata. */
+  readonly VITE_BUILD_TIME?: string;
+
+  /** Enables test-only mock scenarios in the Playwright web server. */
+  readonly VITE_E2E_TEST?: string;
 
   /** Enable OIDC authentication ('true' to enable) */
   readonly VITE_AUTH_ENABLED?: string;

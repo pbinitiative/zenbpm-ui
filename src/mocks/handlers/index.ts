@@ -7,6 +7,7 @@ import { decisionDefinitionHandlers } from './decisionDefinitions';
 import { decisionInstanceHandlers } from './decisionInstances';
 import { messageHandlers } from './messages';
 import { clusterHandlers } from './cluster';
+import { systemStatusHandlers } from './systemStatus';
 
 export const handlers = [
   ...processDefinitionHandlers,
@@ -17,4 +18,5 @@ export const handlers = [
   ...decisionInstanceHandlers,
   ...messageHandlers,
   ...clusterHandlers,
+  ...systemStatusHandlers,
 ];

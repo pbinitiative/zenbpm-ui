@@ -1,10 +1,63 @@
+import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import i18nTypesPlugin from './scripts/generate-i18n-types.mjs'
 
+interface BuildMetadata {
+  version: string
+  commit: string
+  branch: string
+  time: string
+}
+
+const unknownBuildMetadata = 'unknown'
+
+const runGit = (args: string[]): string | undefined => {
+  try {
+    return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || undefined
+  } catch {
+    return undefined
+  }
+}
+
+const getApiVersion = (): string => {
+  try {
+    const apiDefinition = readFileSync(path.resolve(__dirname, 'openapi/api.yaml'), 'utf8')
+    const infoSection = apiDefinition.match(/^info:\s*$([\s\S]*?)(?=^\S)/m)?.[1]
+    return infoSection?.match(/^\s+version:\s*["']?([^\s"'#]+)["']?/m)?.[1] ?? 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
+const getBuildCommit = (): string => {
+  const commit = process.env.VITE_BUILD_COMMIT?.trim() || runGit(['rev-parse', 'HEAD'])
+  return commit?.slice(0, 12) || unknownBuildMetadata
+}
+
+const getBuildBranch = (): string =>
+  process.env.VITE_BUILD_BRANCH?.trim() || runGit(['branch', '--show-current']) || unknownBuildMetadata
+
+const getBuildTime = (): string =>
+  process.env.VITE_BUILD_TIME?.trim() || new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
+
+const buildMetadata: BuildMetadata = {
+  version: getApiVersion(),
+  commit: getBuildCommit(),
+  branch: getBuildBranch(),
+  time: getBuildTime(),
+}
+
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __BUILD_VERSION__: JSON.stringify(buildMetadata.version),
+    __BUILD_COMMIT__: JSON.stringify(buildMetadata.commit),
+    __BUILD_BRANCH__: JSON.stringify(buildMetadata.branch),
+    __BUILD_TIME__: JSON.stringify(buildMetadata.time),
+  },
   plugins: [react(), i18nTypesPlugin()],
   resolve: {
     alias: {
