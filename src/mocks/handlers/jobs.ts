@@ -37,6 +37,7 @@ export const jobHandlers = [
       // Format as partitioned response (single partition for mock)
       const items = paginatedItems.map((job) => ({
         key: job.key,
+        elementInstanceKey: job.elementInstanceKey ?? job.key,
         elementId: job.elementId,
         elementName: job.elementName,
         type: job.type,

@@ -1,7 +1,8 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
+import type { EventSubscriptionState } from '@base/openapi/generated-api/schemas/eventSubscriptionState';
 import {
   Box,
   Paper,
@@ -19,7 +20,12 @@ import {
 import { BpmnDiagram } from '@components/BpmnDiagram';
 import { MetadataPanel } from '@components/DiagramDetailLayout';
 import type { DefinitionInfo } from '@components/DiagramDetailLayout';
-import { useInstanceData } from './hooks';
+import {
+  findFocusedEventPage,
+  findFocusedJobPage,
+  useInstanceData,
+  type FocusedEventType,
+} from './hooks';
 import { JobsTab, VariablesTab, IncidentsTab, HistoryTab, ChildProcessesTab, DecisionInstancesTab, EventSubscriptionsTab } from './tabs';
 
 // Tab panel component
@@ -41,6 +47,11 @@ const TabPanel = ({ children, value, index }: TabPanelProps) => (
 );
 
 // Map tab name to index
+const orderEventStates = (
+  current: EventSubscriptionState,
+  supported: readonly EventSubscriptionState[]
+) => [current, ...supported.filter((state) => state !== current)];
+
 const TAB_MAP: Record<string, number> = {
   jobs: 0,
   history: 1,
@@ -48,6 +59,7 @@ const TAB_MAP: Record<string, number> = {
   variables: 3,
   'child-processes': 4,
   decisions: 5,
+  events: 6,
   'event-subscriptions': 6,
 };
 
@@ -64,24 +76,113 @@ export const ProcessInstanceDetailPage = () => {
 
   // Selected element from URL param (for diagram highlight)
   const selectedElement = searchParams.get('elementId') ?? undefined;
+  const focusedElementInstanceKey = searchParams.get('focusElementInstanceKey') ?? undefined;
+  const eventTypeParam = searchParams.get('eventType');
+  const eventType: FocusedEventType =
+    eventTypeParam === 'timers' || eventTypeParam === 'errors' ? eventTypeParam : 'messages';
 
-  // Handle element ID click — toggle selection and persist in URL
+  // A URL focus is resolved only once. The key remains in the URL afterward so
+  // either table can continue highlighting it whenever the row is visible.
+  const [pendingFocusKey, setPendingFocusKey] = useState<string | undefined>(
+    focusedElementInstanceKey
+  );
+  const [findingFocusedJob, setFindingFocusedJob] = useState(false);
+  const handledJobFocusesRef = useRef(new Set<string>());
+  const handledEventFocusesRef = useRef(new Set<string>());
+  const jobSearchAbortRef = useRef<AbortController | null>(null);
+  const eventSearchAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    jobSearchAbortRef.current?.abort();
+    eventSearchAbortRef.current?.abort();
+    if (focusedElementInstanceKey) {
+      const requestKey = `${processInstanceKey}:${focusedElementInstanceKey}`;
+      handledJobFocusesRef.current.delete(requestKey);
+      handledEventFocusesRef.current.delete(requestKey);
+    }
+    jobSearchAbortRef.current = null;
+    eventSearchAbortRef.current = null;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setFindingFocusedJob(false);
+      setPendingFocusKey(focusedElementInstanceKey);
+    });
+    return () => { cancelled = true; };
+  }, [focusedElementInstanceKey, processInstanceKey]);
+
+  useEffect(
+    () => () => {
+      jobSearchAbortRef.current?.abort();
+      eventSearchAbortRef.current?.abort();
+    },
+    []
+  );
+
+  // Handle element ID click — toggle selection and preserve all other URL state.
   const handleElementIdClick = useCallback((elementId: string) => {
-    const current = searchParams.get('elementId');
-    const tabParam = searchParams.get('tab');
-    const next: Record<string, string> = {};
-    if (tabParam) next.tab = tabParam;
-    if (current !== elementId) next.elementId = elementId;
+    const next = new URLSearchParams(searchParams);
+    if (next.get('elementId') === elementId) next.delete('elementId');
+    else next.set('elementId', elementId);
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  // Handle tab change - update URL (preserve elementId if set)
+  const handleFocusNavigation = useCallback((tab: 'jobs' | 'history', elementInstanceKey: string) => {
+    const requestKey = `${processInstanceKey}:${elementInstanceKey}`;
+    handledJobFocusesRef.current.delete(requestKey);
+    jobSearchAbortRef.current?.abort();
+    eventSearchAbortRef.current?.abort();
+    setPendingFocusKey(elementInstanceKey);
+
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', tab);
+    next.set('focusElementInstanceKey', elementInstanceKey);
+    setSearchParams(next);
+  }, [processInstanceKey, searchParams, setSearchParams]);
+
+  const handleEventFocusNavigation = useCallback((elementInstanceKey: string) => {
+    const requestKey = `${processInstanceKey}:${elementInstanceKey}`;
+    handledEventFocusesRef.current.delete(requestKey);
+    eventSearchAbortRef.current?.abort();
+    setPendingFocusKey(elementInstanceKey);
+
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', 'events');
+    next.set('eventType', 'messages');
+    next.set('focusElementInstanceKey', elementInstanceKey);
+    setSearchParams(next);
+  }, [processInstanceKey, searchParams, setSearchParams]);
+
+  const handleJobManualNavigation = useCallback(() => {
+    jobSearchAbortRef.current?.abort();
+    jobSearchAbortRef.current = null;
+    setFindingFocusedJob(false);
+    setPendingFocusKey(undefined);
+  }, []);
+
+  const handleEventManualNavigation = useCallback(() => {
+    eventSearchAbortRef.current?.abort();
+    setPendingFocusKey(undefined);
+  }, []);
+
+  const handleEventTypeChange = useCallback((type: FocusedEventType) => {
+    handleEventManualNavigation();
+    const next = new URLSearchParams(searchParams);
+    next.set('eventType', type);
+    setSearchParams(next, { replace: true });
+  }, [handleEventManualNavigation, searchParams, setSearchParams]);
+
+  // Manual tab changes preserve URL focus but never restart its page resolution.
   const handleTabChange = useCallback((_: React.SyntheticEvent, newValue: number) => {
     const tabName = Object.entries(TAB_MAP).find(([, index]) => index === newValue)?.[0];
-    const elementId = searchParams.get('elementId');
-    const next: Record<string, string> = {};
-    if (tabName) next.tab = tabName;
-    if (elementId) next.elementId = elementId;
+    jobSearchAbortRef.current?.abort();
+    eventSearchAbortRef.current?.abort();
+    setFindingFocusedJob(false);
+    setPendingFocusKey(undefined);
+
+    const next = new URLSearchParams(searchParams);
+    if (tabName) next.set('tab', tabName);
+    else next.delete('tab');
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
@@ -168,6 +269,243 @@ export const ProcessInstanceDetailPage = () => {
   const showNotification = useCallback((message: string, severity: 'success' | 'error') => {
     setSnackbar({ open: true, message, severity });
   }, []);
+
+  const focusResolutionPending =
+    focusedElementInstanceKey !== undefined && pendingFocusKey === focusedElementInstanceKey;
+
+  const handleFocusedRowVisible = useCallback(() => {
+    setPendingFocusKey((current) =>
+      current === focusedElementInstanceKey ? undefined : current
+    );
+  }, [focusedElementInstanceKey]);
+
+  useEffect(() => {
+    if (
+      activeTab !== TAB_MAP.jobs ||
+      !focusResolutionPending ||
+      !focusedElementInstanceKey ||
+      !instanceTree
+    ) {
+      return;
+    }
+
+    const nodes: typeof instanceTree[] = [];
+    const queue: typeof instanceTree[] = [instanceTree];
+    while (queue.length > 0) {
+      const node = queue.shift();
+      if (!node) continue;
+      nodes.push(node);
+      queue.push(...node.children);
+    }
+
+    // The desired row may already be on the currently displayed server page.
+    if (nodes.some((node) =>
+      node.jobs.some((job) => job.elementInstanceKey === focusedElementInstanceKey)
+    )) {
+      return;
+    }
+
+    // Full History is client-side, so it identifies the exact process node whose
+    // server-paginated Jobs endpoint needs to be scanned.
+    const owner = nodes.find((node) =>
+      node.history.some((history) => history.key === focusedElementInstanceKey)
+    );
+    const requestKey = `${processInstanceKey}:${focusedElementInstanceKey}`;
+
+    if (!owner || owner.jobsTotalCount === 0) {
+      handledJobFocusesRef.current.add(requestKey);
+      queueMicrotask(() => {
+        setPendingFocusKey(undefined);
+        showNotification(t('processInstance:messages.relatedJobNotFound'), 'error');
+      });
+      return;
+    }
+
+    if (handledJobFocusesRef.current.has(requestKey)) return;
+    handledJobFocusesRef.current.add(requestKey);
+
+    const controller = new AbortController();
+    jobSearchAbortRef.current?.abort();
+    jobSearchAbortRef.current = controller;
+    setFindingFocusedJob(true);
+
+    void findFocusedJobPage({
+      processInstanceKey: owner.instance.key,
+      elementInstanceKey: focusedElementInstanceKey,
+      pageSize: jobsPageSize,
+      totalCount: owner.jobsTotalCount,
+      signal: controller.signal,
+    })
+      .then((page) => {
+        if (controller.signal.aborted) return;
+        if (page === undefined) {
+          setPendingFocusKey(undefined);
+          showNotification(t('processInstance:messages.relatedJobNotFound'), 'error');
+          return;
+        }
+        setJobsPage(page);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setPendingFocusKey(undefined);
+        showNotification(t('processInstance:messages.relatedJobSearchFailed'), 'error');
+      })
+      .finally(() => {
+        if (jobSearchAbortRef.current === controller) {
+          jobSearchAbortRef.current = null;
+          setFindingFocusedJob(false);
+        }
+      });
+  }, [
+    activeTab,
+    focusResolutionPending,
+    focusedElementInstanceKey,
+    instanceTree,
+    jobsPageSize,
+    processInstanceKey,
+    setJobsPage,
+    showNotification,
+    t,
+  ]);
+
+  useEffect(() => {
+    if (
+      activeTab !== TAB_MAP.events ||
+      !focusResolutionPending ||
+      !focusedElementInstanceKey ||
+      !instanceTree
+    ) {
+      return;
+    }
+
+    const nodes: typeof instanceTree[] = [];
+    const queue: typeof instanceTree[] = [instanceTree];
+    while (queue.length > 0) {
+      const node = queue.shift();
+      if (!node) continue;
+      nodes.push(node);
+      queue.push(...node.children);
+    }
+
+    const visibleMatch = nodes.some((node) => {
+      const subscriptions = eventType === 'messages'
+        ? node.messageSubscriptions
+        : eventType === 'timers'
+          ? node.timerSubscriptions
+          : node.errorSubscriptions;
+      return subscriptions.some(
+        (subscription) => subscription.elementInstanceKey === focusedElementInstanceKey
+      );
+    });
+    if (visibleMatch) return;
+
+    const owner = nodes.find((node) =>
+      node.history.some((history) => history.key === focusedElementInstanceKey)
+    );
+    const requestKey = `${processInstanceKey}:${focusedElementInstanceKey}`;
+
+    if (!owner) {
+      handledEventFocusesRef.current.add(requestKey);
+      queueMicrotask(() => {
+        setPendingFocusKey(undefined);
+        showNotification(t('processInstance:messages.relatedEventNotFound'), 'error');
+      });
+      return;
+    }
+
+    if (handledEventFocusesRef.current.has(requestKey)) return;
+    handledEventFocusesRef.current.add(requestKey);
+
+    const controller = new AbortController();
+    eventSearchAbortRef.current?.abort();
+    eventSearchAbortRef.current = controller;
+
+    void findFocusedEventPage({
+      processInstanceKey: owner.instance.key,
+      elementInstanceKey: focusedElementInstanceKey,
+      searches: [
+        ...orderEventStates(messageSubscriptionsState, ['active', 'completed', 'withdrawn'])
+          .map((state, index) => ({
+            type: 'messages' as const,
+            pageSize: messageSubscriptionsPageSize,
+            totalCount: index === 0 ? owner.messageSubscriptionsTotalCount : undefined,
+            state,
+          })),
+        ...orderEventStates(timerSubscriptionsState, ['active', 'completed', 'withdrawn'])
+          .map((state, index) => ({
+            type: 'timers' as const,
+            pageSize: timerSubscriptionsPageSize,
+            totalCount: index === 0 ? owner.timerSubscriptionsTotalCount : undefined,
+            state,
+          })),
+        ...orderEventStates(errorSubscriptionsState, ['active', 'withdrawn'])
+          .map((state, index) => ({
+            type: 'errors' as const,
+            pageSize: errorSubscriptionsPageSize,
+            totalCount: index === 0 ? owner.errorSubscriptionsTotalCount : undefined,
+            state,
+          })),
+      ],
+      signal: controller.signal,
+    })
+      .then((result) => {
+        if (controller.signal.aborted) return;
+        if (!result) {
+          setPendingFocusKey(undefined);
+          showNotification(t('processInstance:messages.relatedEventNotFound'), 'error');
+          return;
+        }
+
+        if (result.type === 'messages') {
+          setMessageSubscriptionsState(result.state);
+          setMessageSubscriptionsPage(result.page);
+        } else if (result.type === 'timers') {
+          setTimerSubscriptionsState(result.state);
+          setTimerSubscriptionsPage(result.page);
+        } else {
+          setErrorSubscriptionsState(result.state);
+          setErrorSubscriptionsPage(result.page);
+        }
+
+        setSearchParams((current) => {
+          const next = new URLSearchParams(current);
+          next.set('eventType', result.type);
+          return next;
+        }, { replace: true });
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setPendingFocusKey(undefined);
+        showNotification(t('processInstance:messages.relatedEventSearchFailed'), 'error');
+      })
+      .finally(() => {
+        if (eventSearchAbortRef.current === controller) {
+          eventSearchAbortRef.current = null;
+        }
+      });
+  }, [
+    activeTab,
+    errorSubscriptionsPageSize,
+    errorSubscriptionsState,
+    eventType,
+    focusResolutionPending,
+    focusedElementInstanceKey,
+    instanceTree,
+    messageSubscriptionsPageSize,
+    messageSubscriptionsState,
+    processInstanceKey,
+    setErrorSubscriptionsPage,
+    setErrorSubscriptionsState,
+    setMessageSubscriptionsPage,
+    setMessageSubscriptionsState,
+    setSearchParams,
+    setTimerSubscriptionsPage,
+    setTimerSubscriptionsState,
+    showNotification,
+    t,
+    timerSubscriptionsPageSize,
+    timerSubscriptionsState,
+  ]);
 
   // Count unresolved incidents across the entire instance tree using the
   // server-reported total — accurate regardless of which page is loaded.
@@ -420,9 +758,15 @@ export const ProcessInstanceDetailPage = () => {
               jobsPageSize={jobsPageSize}
               setJobsPage={setJobsPage}
               setJobsPageSize={setJobsPageSize}
+              onManualNavigation={handleJobManualNavigation}
               onRefetch={refetchAll}
               onShowNotification={showNotification}
               onElementIdClick={handleElementIdClick}
+              onNavigateToHistory={(key) => handleFocusNavigation('history', key)}
+              focusedElementInstanceKey={focusedElementInstanceKey}
+              autoScrollToFocusedRow={focusResolutionPending}
+              onFocusedRowVisible={handleFocusedRowVisible}
+              findingFocusedJob={findingFocusedJob}
             />
           </TabPanel>
 
@@ -434,6 +778,11 @@ export const ProcessInstanceDetailPage = () => {
               historySortOrder={historySortOrder}
               onSortChange={setHistorySort}
               onElementIdClick={handleElementIdClick}
+              onNavigateToJobs={(key) => handleFocusNavigation('jobs', key)}
+              onNavigateToEvents={handleEventFocusNavigation}
+              focusedElementInstanceKey={focusedElementInstanceKey}
+              autoNavigateToFocusedRow={focusResolutionPending}
+              onFocusedRowVisible={handleFocusedRowVisible}
             />
           </TabPanel>
 
@@ -511,6 +860,13 @@ export const ProcessInstanceDetailPage = () => {
               onRefetch={refetchAll}
               onShowNotification={showNotification}
               onElementIdClick={handleElementIdClick}
+              eventType={eventType}
+              onEventTypeChange={handleEventTypeChange}
+              onManualNavigation={handleEventManualNavigation}
+              onNavigateToHistory={(key) => handleFocusNavigation('history', key)}
+              focusedElementInstanceKey={focusedElementInstanceKey}
+              autoScrollToFocusedRow={focusResolutionPending}
+              onFocusedRowVisible={handleFocusedRowVisible}
             />
           </TabPanel>
         </Box>

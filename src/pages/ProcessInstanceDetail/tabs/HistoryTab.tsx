@@ -1,7 +1,20 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import { Box, FormControlLabel, Link, Typography } from '@mui/material';
+import {
+  Box,
+  IconButton,
+  Link,
+  ListItemIcon,
+  ListItemText,
+  FormControlLabel,
+  Menu,
+  MenuItem,
+  Typography,
+} from '@mui/material';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import { IOSSwitch } from '@components/IOSSwitch';
 import {
   type Column,
@@ -31,7 +44,37 @@ interface HistoryTabProps {
   onSortChange: (sortBy: GetHistorySortBy, sortOrder: GetHistorySortOrder) => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
   onElementIdClick?: (elementId: string) => void;
+  onNavigateToJobs?: (elementInstanceKey: string) => void;
+  onNavigateToEvents?: (elementInstanceKey: string) => void;
+  focusedElementInstanceKey?: string;
+  autoNavigateToFocusedRow?: boolean;
+  onFocusedRowVisible?: () => void;
 }
+
+const JOB_ELEMENT_TYPES = new Set([
+  'BUSINESS_RULE_TASK',
+  'SERVICE_TASK',
+  'USER_TASK',
+]);
+const EVENT_ELEMENT_TYPES = new Set([
+  'INTERMEDIATE_CATCH_EVENT',
+  'INTERMEDIATE_THROW_EVENT',
+  'BOUNDARY_EVENT',
+  'INTERMEDIATE_MESSAGE_THROW_EVENT',
+  'RECEIVE_TASK',
+  `EVENT_BASED_GATEWAY`,
+]);
+
+const normalizeElementType = (elementType: string) =>
+  elementType
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replaceAll('-', '_')
+    .toUpperCase();
+
+const canLinkToJob = (row: FlowElementHistory) =>
+  JOB_ELEMENT_TYPES.has(normalizeElementType(row.elementType));
+const canLinkToEvent = (row: FlowElementHistory) =>
+  EVENT_ELEMENT_TYPES.has(normalizeElementType(row.elementType));
 
 /** BFS walk — returns all nodes, root first */
 function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
@@ -49,6 +92,11 @@ function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
 export const HistoryTab = ({
   instanceTree,
   onElementIdClick,
+  onNavigateToJobs,
+  onNavigateToEvents,
+  focusedElementInstanceKey,
+  autoNavigateToFocusedRow = false,
+  onFocusedRowVisible,
 }: HistoryTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance, ns.processes]);
   const { openInputOutputDialog } = useInputOutputDialog();
@@ -62,6 +110,22 @@ export const HistoryTab = ({
         : history.filter((h) => h.elementType !== 'SEQUENCE_FLOW'),
     [showSequenceFlows],
   );
+  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
+  const [menuHistory, setMenuHistory] = useState<FlowElementHistory | null>(null);
+
+  const handleMenuOpen = useCallback(
+    (event: React.MouseEvent<HTMLElement>, history: FlowElementHistory) => {
+      event.stopPropagation();
+      setMenuAnchorEl(event.currentTarget);
+      setMenuHistory(history);
+    },
+    []
+  );
+
+  const handleMenuClose = useCallback(() => {
+    setMenuAnchorEl(null);
+    setMenuHistory(null);
+  }, []);
 
   // Build sections from the tree: root section unlabelled, child sections labelled.
   const { sections, flatData } = useMemo(() => {
@@ -192,8 +256,27 @@ export const HistoryTab = ({
         width: 140,
         render: (row) => (row.completedAt ? formatDuration(row.createdAt, row.completedAt) : '-'),
       },
+      {
+        id: 'actions',
+        label: '',
+        width: 56,
+        render: (row) => {
+          if (!canLinkToJob(row) && !canLinkToEvent(row)) return null;
+          return (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <IconButton
+                size="small"
+                aria-label={t('processInstance:actions.rowActions')}
+                onClick={(event) => handleMenuOpen(event, row)}
+              >
+                <MoreVertIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          );
+        },
+      },
     ],
-    [t, onElementIdClick, openInputOutputDialog]
+    [t, onElementIdClick, handleMenuOpen, openInputOutputDialog]
   );
 
   const toolbar = (
@@ -219,14 +302,45 @@ export const HistoryTab = ({
   );
 
   return (
-    <ClientSideDataTable
-      columns={columns}
-      data={flatData}
-      sections={sections}
-      rowKey="key"
-      data-testid="history-table"
-      toolbar={toolbar}
-      onElementIdClick={onElementIdClick}
-    />
+    <>
+      <ClientSideDataTable
+        columns={columns}
+        data={flatData}
+        sections={sections}
+        rowKey="key"
+        data-testid="history-table"
+        toolbar={toolbar}
+        onElementIdClick={onElementIdClick}
+        focusedRowKey={focusedElementInstanceKey}
+        getRowFocusKey={(row) => row.key}
+        autoNavigateToFocusedRow={autoNavigateToFocusedRow}
+        onFocusedRowVisible={onFocusedRowVisible}
+      />
+
+      <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
+        {menuHistory && canLinkToJob(menuHistory) && (
+          <MenuItem
+            onClick={() => {
+              onNavigateToJobs?.(menuHistory.key);
+              handleMenuClose();
+            }}
+          >
+            <ListItemIcon><WorkOutlineIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{t('processInstance:actions.viewRelatedJob')}</ListItemText>
+          </MenuItem>
+        )}
+        {menuHistory && canLinkToEvent(menuHistory) && (
+          <MenuItem
+            onClick={() => {
+              onNavigateToEvents?.(menuHistory.key);
+              handleMenuClose();
+            }}
+          >
+            <ListItemIcon><EventAvailableIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{t('processInstance:actions.viewRelatedEvent')}</ListItemText>
+          </MenuItem>
+        )}
+      </Menu>
+    </>
   );
 };

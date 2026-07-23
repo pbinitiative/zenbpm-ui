@@ -80,7 +80,11 @@
     "addVariable": "Add Variable",
     "cancelProcess": "Cancel Process",
     "trigger": "Trigger",
-    "viewInputOutput": "View Inputs & Outputs"
+    "viewInputOutput": "View Inputs & Outputs",
+    "rowActions": "Row actions",
+    "viewRelatedJob": "View related job",
+    "viewRelatedEvent": "View related event",
+    "viewInHistory": "View in history"
   },
   "messages": {
     "jobCompleted": "Job completed successfully",
@@ -104,7 +108,11 @@
     "processCancelled": "Process cancelled successfully",
     "processCancelFailed": "Failed to cancel process",
     "messageSent": "Message sent successfully",
-    "messageSendFailed": "Failed to send message"
+    "messageSendFailed": "Failed to send message",
+    "relatedJobNotFound": "No related job was found",
+    "relatedJobSearchFailed": "Failed to find the related job",
+    "relatedEventNotFound": "No related event subscription was found",
+    "relatedEventSearchFailed": "Failed to find the related event subscription"
   },
   "dialogs": {
     "completeJob": {
@@ -195,7 +203,7 @@
     "message": {
       "active": "Active",
       "completed": "Completed",
-      "withdrawn": "Withdrawn"
+      "terminated": "Terminated"
     },
     "timer": {
       "active": "Created",

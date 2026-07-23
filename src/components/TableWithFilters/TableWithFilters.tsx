@@ -34,6 +34,10 @@ export interface TableWithFiltersProps<T extends object> {
 
   // Row interaction
   onRowClick?: (row: T) => void;
+  focusedRowKey?: string;
+  getRowFocusKey?: (row: T) => string | undefined;
+  autoScrollToFocusedRow?: boolean;
+  onFocusedRowVisible?: () => void;
 
   // Test ID
   'data-testid'?: string;
@@ -66,6 +70,10 @@ export const TableWithFilters = <T extends object>({
   serverSideSorting = false,
   onSortChange: externalOnSortChange,
   onRowClick,
+  focusedRowKey,
+  getRowFocusKey,
+  autoScrollToFocusedRow = false,
+  onFocusedRowVisible,
   'data-testid': testId,
   refreshKey = 0,
   syncWithUrl = false,
@@ -328,6 +336,10 @@ export const TableWithFilters = <T extends object>({
           sortOrder={sortOrder}
           onSortChange={handleSortChange}
           onRowClick={onRowClick}
+          focusedRowKey={focusedRowKey}
+          getRowFocusKey={getRowFocusKey}
+          autoScrollToFocusedRow={autoScrollToFocusedRow}
+          onFocusedRowVisible={onFocusedRowVisible}
           toolbar={
             simpleToolbar || hideableFiltersPanel || filters.length > 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>

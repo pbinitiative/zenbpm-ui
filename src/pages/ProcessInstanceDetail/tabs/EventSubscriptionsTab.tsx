@@ -1,9 +1,20 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
 import { ns } from '@base/i18n';
-import { Box, Button, Link, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  IconButton,
+  Link,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Typography,
+} from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import HistoryIcon from '@mui/icons-material/History';
 import { type Column, type DataTableSection } from '@components/DataTable';
 import { TableWithFilters } from '@components/TableWithFilters';
 import type { FilterConfig, FilterValues } from '@components/TableWithFilters';
@@ -16,6 +27,7 @@ import type { MessageSubscription, TimerSubscription, ErrorSubscription } from '
 import type { EventSubscriptionState } from '@base/openapi/generated-api/schemas/eventSubscriptionState';
 import { useTriggerMessageDialog } from '../modals/useTriggerMessageDialog';
 import type { ProcessInstanceNode } from '../types/tree';
+import type { FocusedEventType } from '../hooks';
 
 // processType display order — determines section ordering after the main instance
 const PROCESS_TYPE_ORDER: Record<string, number> = {
@@ -48,6 +60,13 @@ interface EventSubscriptionsTabProps {
   onRefetch: () => Promise<void>;
   onShowNotification: (message: string, severity: 'success' | 'error') => void;
   onElementIdClick?: (elementId: string) => void;
+  eventType: FocusedEventType;
+  onEventTypeChange: (type: FocusedEventType) => void;
+  onManualNavigation: () => void;
+  onNavigateToHistory?: (elementInstanceKey: string) => void;
+  focusedElementInstanceKey?: string;
+  autoScrollToFocusedRow?: boolean;
+  onFocusedRowVisible?: () => void;
 }
 
 /** BFS walk — returns all nodes, root first, skipping non-root callActivity */
@@ -76,8 +95,6 @@ function getSortedNodes(nodes: ProcessInstanceNode[]): ProcessInstanceNode[] {
   return [root, ...sorted];
 }
 
-type SubscriptionType = 'messages' | 'timers' | 'errors';
-
 export const EventSubscriptionsTab = ({
   instanceTree,
   messageSubscriptionsPage,
@@ -101,10 +118,40 @@ export const EventSubscriptionsTab = ({
   onRefetch,
   onShowNotification,
   onElementIdClick,
+  eventType,
+  onEventTypeChange,
+  onManualNavigation,
+  onNavigateToHistory,
+  focusedElementInstanceKey,
+  autoScrollToFocusedRow = false,
+  onFocusedRowVisible,
 }: EventSubscriptionsTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance, ns.processes]);
-  const [subscriptionType, setSubscriptionType] = useState<SubscriptionType>('messages');
+  const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
+  const [menuElementInstanceKey, setMenuElementInstanceKey] = useState<string | null>(null);
   const { openTriggerMessageDialog } = useTriggerMessageDialog();
+
+  const handleMenuClose = useCallback(() => {
+    setMenuAnchorEl(null);
+    setMenuElementInstanceKey(null);
+  }, []);
+
+  const renderRowActions = useCallback((elementInstanceKey?: string | null) => {
+    if (!elementInstanceKey) return null;
+    return (
+      <IconButton
+        size="small"
+        aria-label={t('processInstance:actions.rowActions')}
+        onClick={(event) => {
+          event.stopPropagation();
+          setMenuAnchorEl(event.currentTarget);
+          setMenuElementInstanceKey(elementInstanceKey);
+        }}
+      >
+        <MoreVertIcon fontSize="small" />
+      </IconButton>
+    );
+  }, [t]);
 
   const handleTriggerMessage = useCallback(
     async (messageName: string, correlationKey: string, variables: Record<string, unknown>) => {
@@ -130,9 +177,9 @@ export const EventSubscriptionsTab = ({
         label: t('processInstance:fields.state'),
         zone: 'exposed_first_line',
         options: [
-          { value: 'active',    label: t('processInstance:eventSubscriptionStates.message.active'),    renderContent: <StateBadge state="active"    label={t('processInstance:eventSubscriptionStates.message.active')}    /> },
+          { value: 'active', label: t('processInstance:eventSubscriptionStates.message.active'), renderContent: <StateBadge state="active" label={t('processInstance:eventSubscriptionStates.message.active')} /> },
           { value: 'completed', label: t('processInstance:eventSubscriptionStates.message.completed'), renderContent: <StateBadge state="completed" label={t('processInstance:eventSubscriptionStates.message.completed')} /> },
-          { value: 'withdrawn', label: t('processInstance:eventSubscriptionStates.message.withdrawn'), renderContent: <StateBadge state="withdrawn" label={t('processInstance:eventSubscriptionStates.message.withdrawn')} /> },
+          { value: 'terminated', label: t('processInstance:eventSubscriptionStates.message.terminated'), renderContent: <StateBadge state="terminated" label={t('processInstance:eventSubscriptionStates.message.terminated')} /> },
         ],
       } as FilterConfig,
     ],
@@ -147,9 +194,9 @@ export const EventSubscriptionsTab = ({
         label: t('processInstance:fields.state'),
         zone: 'exposed_first_line',
         options: [
-          { value: 'active',    label: t('processInstance:eventSubscriptionStates.timer.active'),    renderContent: <StateBadge state="active"   label={t('processInstance:eventSubscriptionStates.timer.active')}    /> },
+          { value: 'active', label: t('processInstance:eventSubscriptionStates.timer.active'), renderContent: <StateBadge state="active" label={t('processInstance:eventSubscriptionStates.timer.active')} /> },
           { value: 'completed', label: t('processInstance:eventSubscriptionStates.timer.completed'), renderContent: <StateBadge state="completed" label={t('processInstance:eventSubscriptionStates.timer.completed')} /> },
-          { value: 'withdrawn', label: t('processInstance:eventSubscriptionStates.timer.withdrawn'), renderContent: <StateBadge state="canceled"  label={t('processInstance:eventSubscriptionStates.timer.withdrawn')} /> },
+          { value: 'withdrawn', label: t('processInstance:eventSubscriptionStates.timer.withdrawn'), renderContent: <StateBadge state="canceled" label={t('processInstance:eventSubscriptionStates.timer.withdrawn')} /> },
         ],
       } as FilterConfig,
     ],
@@ -164,7 +211,7 @@ export const EventSubscriptionsTab = ({
         label: t('processInstance:fields.state'),
         zone: 'exposed_first_line',
         options: [
-          { value: 'active',    label: t('processInstance:eventSubscriptionStates.error.active'),    renderContent: <StateBadge state="active"  label={t('processInstance:eventSubscriptionStates.error.active')}    /> },
+          { value: 'active', label: t('processInstance:eventSubscriptionStates.error.active'), renderContent: <StateBadge state="active" label={t('processInstance:eventSubscriptionStates.error.active')} /> },
           { value: 'withdrawn', label: t('processInstance:eventSubscriptionStates.error.withdrawn'), renderContent: <StateBadge state="canceled" label={t('processInstance:eventSubscriptionStates.error.withdrawn')} /> },
         ],
       } as FilterConfig,
@@ -175,28 +222,31 @@ export const EventSubscriptionsTab = ({
   const handleMessageFilterChange = useCallback(
     (values: FilterValues) => {
       const state = values['state'] as EventSubscriptionState | undefined;
+      onManualNavigation();
       setMessageSubscriptionsState(state ?? 'active');
       setMessageSubscriptionsPage(0);
     },
-    [setMessageSubscriptionsState, setMessageSubscriptionsPage],
+    [onManualNavigation, setMessageSubscriptionsState, setMessageSubscriptionsPage],
   );
 
   const handleTimerFilterChange = useCallback(
     (values: FilterValues) => {
       const state = values['state'] as EventSubscriptionState | undefined;
+      onManualNavigation();
       setTimerSubscriptionsState(state ?? 'active');
       setTimerSubscriptionsPage(0);
     },
-    [setTimerSubscriptionsState, setTimerSubscriptionsPage],
+    [onManualNavigation, setTimerSubscriptionsState, setTimerSubscriptionsPage],
   );
 
   const handleErrorFilterChange = useCallback(
     (values: FilterValues) => {
       const state = values['state'] as EventSubscriptionState | undefined;
+      onManualNavigation();
       setErrorSubscriptionsState(state ?? 'active');
       setErrorSubscriptionsPage(0);
     },
-    [setErrorSubscriptionsState, setErrorSubscriptionsPage],
+    [onManualNavigation, setErrorSubscriptionsState, setErrorSubscriptionsPage],
   );
 
   // ── Messages ─────────────────────────────────────────────────────────────
@@ -248,28 +298,32 @@ export const EventSubscriptionsTab = ({
       {
         id: 'actions',
         label: '',
-        width: 120,
-        render: (row) =>
-          row.state === 'active' ? (
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<SendIcon sx={{ fontSize: '1rem' }} />}
-              onClick={(e) => {
-                e.stopPropagation();
-                openTriggerMessageDialog({
-                  subscription: row,
-                  onTrigger: handleTriggerMessage,
-                });
-              }}
-              sx={{ textTransform: 'none', fontSize: 'caption.fontSize' }}
-            >
-              {t('processInstance:actions.trigger')}
-            </Button>
-          ) : null,
+        width: 160,
+        render: (row) => (
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+            {row.state === 'active' && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<SendIcon sx={{ fontSize: '1rem' }} />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openTriggerMessageDialog({
+                    subscription: row,
+                    onTrigger: handleTriggerMessage,
+                  });
+                }}
+                sx={{ textTransform: 'none', fontSize: 'caption.fontSize' }}
+              >
+                {t('processInstance:actions.trigger')}
+              </Button>
+            )}
+            {renderRowActions(row.elementInstanceKey)}
+          </Box>
+        ),
       },
     ],
-    [t, openTriggerMessageDialog, handleTriggerMessage, onElementIdClick],
+    [t, openTriggerMessageDialog, handleTriggerMessage, onElementIdClick, renderRowActions],
   );
 
   const { messageFlatData, messageSections, messageTotalCount, messagePaginationTotal } = useMemo(() => {
@@ -342,8 +396,14 @@ export const EventSubscriptionsTab = ({
         width: 120,
         render: (row) => <StateBadge state={row.state} />,
       },
+      {
+        id: 'actions',
+        label: '',
+        width: 56,
+        render: (row) => renderRowActions(row.elementInstanceKey),
+      },
     ],
-    [t, onElementIdClick],
+    [t, onElementIdClick, renderRowActions],
   );
 
   const { timerFlatData, timerSections, timerTotalCount, timerPaginationTotal } = useMemo(() => {
@@ -419,8 +479,14 @@ export const EventSubscriptionsTab = ({
         width: 120,
         render: (row) => <StateBadge state={row.state} />,
       },
+      {
+        id: 'actions',
+        label: '',
+        width: 56,
+        render: (row) => renderRowActions(row.elementInstanceKey),
+      },
     ],
-    [t, onElementIdClick],
+    [t, onElementIdClick, renderRowActions],
   );
 
   const { errorFlatData, errorSections, errorTotalCount, errorPaginationTotal } = useMemo(() => {
@@ -459,11 +525,11 @@ export const EventSubscriptionsTab = ({
           { value: 'timers', label: t('processInstance:eventSubscriptions.timers'), badge: timerTotalCount > 0 ? timerTotalCount : undefined } as SubTab,
           { value: 'errors', label: t('processInstance:eventSubscriptions.errors'), badge: errorTotalCount > 0 ? errorTotalCount : undefined } as SubTab,
         ]}
-        value={subscriptionType}
-        onChange={(value) => setSubscriptionType(value as SubscriptionType)}
+        value={eventType}
+        onChange={(value) => onEventTypeChange(value as FocusedEventType)}
       />
 
-      {subscriptionType === 'messages' && (
+      {eventType === 'messages' && (
         <Box data-testid="event-subscriptions-messages-panel" sx={{ mt: 2 }}>
           <TableWithFilters
             columns={messageColumns}
@@ -472,6 +538,10 @@ export const EventSubscriptionsTab = ({
             filters={messageStateFilters}
             filterValues={{ state: messageSubscriptionsState }}
             onFilterChange={handleMessageFilterChange}
+            focusedRowKey={focusedElementInstanceKey}
+            getRowFocusKey={(row) => row.elementInstanceKey ?? undefined}
+            autoScrollToFocusedRow={autoScrollToFocusedRow}
+            onFocusedRowVisible={onFocusedRowVisible}
             tableConfig={{
               mode: 'simple',
               data: messageFlatData,
@@ -479,14 +549,14 @@ export const EventSubscriptionsTab = ({
               totalCount: messagePaginationTotal,
               page: messageSubscriptionsPage,
               pageSize: messageSubscriptionsPageSize,
-              onPageChange: setMessageSubscriptionsPage,
-              onPageSizeChange: (size) => { setMessageSubscriptionsPageSize(size); setMessageSubscriptionsPage(0); },
+              onPageChange: (page) => { onManualNavigation(); setMessageSubscriptionsPage(page); },
+              onPageSizeChange: (size) => { onManualNavigation(); setMessageSubscriptionsPageSize(size); setMessageSubscriptionsPage(0); },
             }}
           />
         </Box>
       )}
 
-      {subscriptionType === 'timers' && (
+      {eventType === 'timers' && (
         <Box data-testid="event-subscriptions-timers-panel" sx={{ mt: 2 }}>
           <TableWithFilters
             columns={timerColumns}
@@ -495,6 +565,10 @@ export const EventSubscriptionsTab = ({
             filters={timerStateFilters}
             filterValues={{ state: timerSubscriptionsState }}
             onFilterChange={handleTimerFilterChange}
+            focusedRowKey={focusedElementInstanceKey}
+            getRowFocusKey={(row) => row.elementInstanceKey ?? undefined}
+            autoScrollToFocusedRow={autoScrollToFocusedRow}
+            onFocusedRowVisible={onFocusedRowVisible}
             tableConfig={{
               mode: 'simple',
               data: timerFlatData,
@@ -502,14 +576,14 @@ export const EventSubscriptionsTab = ({
               totalCount: timerPaginationTotal,
               page: timerSubscriptionsPage,
               pageSize: timerSubscriptionsPageSize,
-              onPageChange: setTimerSubscriptionsPage,
-              onPageSizeChange: (size) => { setTimerSubscriptionsPageSize(size); setTimerSubscriptionsPage(0); },
+              onPageChange: (page) => { onManualNavigation(); setTimerSubscriptionsPage(page); },
+              onPageSizeChange: (size) => { onManualNavigation(); setTimerSubscriptionsPageSize(size); setTimerSubscriptionsPage(0); },
             }}
           />
         </Box>
       )}
 
-      {subscriptionType === 'errors' && (
+      {eventType === 'errors' && (
         <Box data-testid="event-subscriptions-errors-panel" sx={{ mt: 2 }}>
           <TableWithFilters
             columns={errorColumns}
@@ -518,6 +592,10 @@ export const EventSubscriptionsTab = ({
             filters={errorStateFilters}
             filterValues={{ state: errorSubscriptionsState }}
             onFilterChange={handleErrorFilterChange}
+            focusedRowKey={focusedElementInstanceKey}
+            getRowFocusKey={(row) => row.elementInstanceKey}
+            autoScrollToFocusedRow={autoScrollToFocusedRow}
+            onFocusedRowVisible={onFocusedRowVisible}
             tableConfig={{
               mode: 'simple',
               data: errorFlatData,
@@ -525,12 +603,24 @@ export const EventSubscriptionsTab = ({
               totalCount: errorPaginationTotal,
               page: errorSubscriptionsPage,
               pageSize: errorSubscriptionsPageSize,
-              onPageChange: setErrorSubscriptionsPage,
-              onPageSizeChange: (size) => { setErrorSubscriptionsPageSize(size); setErrorSubscriptionsPage(0); },
+              onPageChange: (page) => { onManualNavigation(); setErrorSubscriptionsPage(page); },
+              onPageSizeChange: (size) => { onManualNavigation(); setErrorSubscriptionsPageSize(size); setErrorSubscriptionsPage(0); },
             }}
           />
         </Box>
       )}
+
+      <Menu anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
+        <MenuItem
+          onClick={() => {
+            if (menuElementInstanceKey) onNavigateToHistory?.(menuElementInstanceKey);
+            handleMenuClose();
+          }}
+        >
+          <ListItemIcon><HistoryIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>{t('processInstance:actions.viewInHistory')}</ListItemText>
+        </MenuItem>
+      </Menu>
     </Box>
   );
 };
