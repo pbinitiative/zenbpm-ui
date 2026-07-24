@@ -21,7 +21,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
 import HistoryIcon from '@mui/icons-material/History';
 import { DataTable, type Column, type SortOrder, type DataTableSection } from '@components/DataTable';
-import { JOB_STATE_COLORS, type Job, type JobState } from '../types';
+import { StateBadge } from '@components/StateBadge';
+import { type Job, type JobState } from '../types';
 import { useCompleteJobDialog } from '../modals/useCompleteJobDialog';
 import { useAssignJobDialog } from '../modals/useAssignJobDialog';
 import { useUpdateRetriesDialog } from '@pages/ProcessInstanceDetail/modals/useUpdateRetriesDialog.ts';
@@ -270,18 +271,11 @@ export const JobsTab = ({
         id: 'state',
         label: t('processInstance:fields.state'),
         sortable: true,
-        width: 100,
+        width: 110,
         render: (row) => (
-          <Chip
+          <StateBadge
+            state={row.state}
             label={t(`processInstance:jobStates.${row.state}`)}
-            size="small"
-            sx={{
-              bgcolor: JOB_STATE_COLORS[row.state] || 'grey.500',
-              color: 'white',
-              fontWeight: 600,
-              fontSize: 'caption.fontSize',
-              height: 22,
-            }}
           />
         ),
       },

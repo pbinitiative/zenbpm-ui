@@ -1,4 +1,5 @@
 import { Box } from '@mui/material';
+import { NumericBadge } from '@components/NumericBadge';
 import { StateBadge } from '@components/StateBadge';
 import { MonoText } from '@components/MonoText';
 import type { Column } from '@components/DataTable';
@@ -52,6 +53,13 @@ export const getProcessInstanceColumns = (
       render: (row) => (
         <StateBadge state={row.state} label={t(`processes:states.${row.state}`)} />
       ),
+    },
+    {
+      id: 'incidentCount',
+      label: t('processes:fields.incidents'),
+      width: 100,
+      align: 'center' as const,
+      render: (row) => <NumericBadge value={row.incidentCount} color="error" />,
     },
     {
       id: 'processType',
