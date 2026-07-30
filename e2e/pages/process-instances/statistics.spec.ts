@@ -7,6 +7,8 @@ import { test, expect, type ConsoleMessage } from '@playwright/test';
 // This gives both badge types (.running-badge and .failed-badge) on the same element.
 const STATS_INSTANCE_KEY = '3100000000000000250';
 const SUBPROCESS_ROOT_STATS_INSTANCE_KEY = '3100000000000000251';
+const NESTED_INCIDENT_ROOT_KEY = '3100000000000000290';
+const NESTED_INCIDENT_CALLED_KEY = '3100000000000000292';
 
 test.describe('Process Instance Detail - Statistics Overlays', () => {
   test.beforeEach(async ({ page }) => {
@@ -72,6 +74,34 @@ test.describe('Process Instance Detail - Subprocess Root Statistics', () => {
 
     // The subprocess root has exactly one active instance on task-a.
     await expect(page.locator('.running-badge').first()).toHaveText('1', { timeout: 10000 });
+  });
+});
+
+test.describe('Process Instance Detail - Nested Incident Overlays', () => {
+  test('propagates called-process incidents without additional API calls', async ({ page }) => {
+    const calledProcessDatasetRequests: string[] = [];
+    page.on('request', (request) => {
+      const url = request.url();
+      if (
+        url.includes(`/process-instances/${NESTED_INCIDENT_CALLED_KEY}/incidents`) ||
+        url.includes(`/process-instances/${NESTED_INCIDENT_CALLED_KEY}/statistics`)
+      ) {
+        calledProcessDatasetRequests.push(url);
+      }
+    });
+
+    await page.goto(`/process-instances/${NESTED_INCIDENT_ROOT_KEY}`);
+    await expect(page.getByText('Instance Details')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.bjs-container')).toBeVisible({ timeout: 10000 });
+
+    // The direct incident count from the called-process child is projected onto
+    // both its call activity and the containing multi-instance subprocess.
+    const failedBadges = page.locator('.failed-badge');
+    await expect(failedBadges).toHaveCount(2, { timeout: 10000 });
+    await expect(page.locator('[data-container-id="CallActivity"] .failed-badge')).toHaveText('1');
+    await expect(page.locator('[data-container-id="Activity_044v303"] .failed-badge')).toHaveText('1');
+
+    expect(calledProcessDatasetRequests).toEqual([]);
   });
 });
 

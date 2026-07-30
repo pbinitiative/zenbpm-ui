@@ -6,6 +6,7 @@ import { Box } from '@mui/material';
 import { ClientSideDataTable, type Column, type DataTableSection } from '@components/DataTable';
 import { StateBadge } from '@components/StateBadge';
 import { MonoText } from '@components/MonoText';
+import { NumericBadge } from '@components/NumericBadge';
 import type { ProcessInstance } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
 import { formatDate } from '@/components/DiagramDetailLayout/utils';
@@ -70,6 +71,13 @@ export const ChildProcessesTab = ({
         render: (row) => (
           <StateBadge state={row.state} label={t(`processes:states.${row.state}`)} />
         ),
+      },
+      {
+        id: 'incidentCount',
+        label: t('processes:fields.incidents'),
+        width: 100,
+        align: 'center',
+        render: (row) => <NumericBadge value={row.incidentCount ?? 0} color="error" />,
       },
       {
         id: 'processType',

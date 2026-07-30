@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_MultiInstanceCallIncident" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="multi_instance_call_incident" name="Multi-instance call activity incident" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Activity_044v303" />
+    <bpmn:subProcess id="Activity_044v303" name="Multi-instance subprocess">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics />
+      <bpmn:startEvent id="NestedStartEvent">
+        <bpmn:outgoing>NestedFlow_1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:sequenceFlow id="NestedFlow_1" sourceRef="NestedStartEvent" targetRef="CallActivity" />
+      <bpmn:callActivity id="CallActivity" name="Called process">
+        <bpmn:incoming>NestedFlow_1</bpmn:incoming>
+        <bpmn:outgoing>NestedFlow_2</bpmn:outgoing>
+      </bpmn:callActivity>
+      <bpmn:sequenceFlow id="NestedFlow_2" sourceRef="CallActivity" targetRef="NestedEndEvent" />
+      <bpmn:endEvent id="NestedEndEvent">
+        <bpmn:incoming>NestedFlow_2</bpmn:incoming>
+      </bpmn:endEvent>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Activity_044v303" targetRef="EndEvent_1" />
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="multi_instance_call_incident">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="152" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_044v303_di" bpmnElement="Activity_044v303" isExpanded="true">
+        <dc:Bounds x="270" y="140" width="430" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="NestedStartEvent_di" bpmnElement="NestedStartEvent">
+        <dc:Bounds x="312" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CallActivity_di" bpmnElement="CallActivity">
+        <dc:Bounds x="430" y="200" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="NestedEndEvent_di" bpmnElement="NestedEndEvent">
+        <dc:Bounds x="612" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
+        <dc:Bounds x="782" y="222" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="188" y="240" />
+        <di:waypoint x="270" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="NestedFlow_1_di" bpmnElement="NestedFlow_1">
+        <di:waypoint x="348" y="240" />
+        <di:waypoint x="430" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="NestedFlow_2_di" bpmnElement="NestedFlow_2">
+        <di:waypoint x="530" y="240" />
+        <di:waypoint x="612" y="240" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="700" y="240" />
+        <di:waypoint x="782" y="240" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
