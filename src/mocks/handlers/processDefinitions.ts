@@ -35,6 +35,7 @@ function computeStatisticsForDefinition(processDefinitionKey: string) {
       completed: completedCount,
       terminated: terminatedCount,
       failed: failedCount,
+      withIncident: new Set(defIncidents.map((incident) => incident.processInstanceKey)).size,
     },
     incidentCounts: {
       total: incidents.filter((i) => i.processDefinitionKey === processDefinitionKey).length,
