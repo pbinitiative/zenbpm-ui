@@ -378,6 +378,20 @@ export const instances: MockProcessInstance[] = [
     1,
     'task-a'
   ),
+  // Dedicated subprocess-root instance for statistics aggregation regression testing.
+  // The synthetic parent key keeps this fixture out of root-instance list results.
+  {
+    ...createInstance(
+      '3100000000000000251',
+      hoursAgo(3),
+      'active',
+      { customerId: 'CUST-STATS-002', customerName: 'Subprocess Statistics Test User', loanAmount: 25000 },
+      1,
+      'task-a'
+    ),
+    processType: 'subprocess',
+    parentProcessInstanceKey: '3100000000000000999',
+  },
 ];
 
 export const incidents: MockIncident[] = [

@@ -6,6 +6,7 @@ import { test, expect, type ConsoleMessage } from '@playwright/test';
 //   - one unresolved incident on task-a                  → incidentCount: 1 on task-a
 // This gives both badge types (.running-badge and .failed-badge) on the same element.
 const STATS_INSTANCE_KEY = '3100000000000000250';
+const SUBPROCESS_ROOT_STATS_INSTANCE_KEY = '3100000000000000251';
 
 test.describe('Process Instance Detail - Statistics Overlays', () => {
   test.beforeEach(async ({ page }) => {
@@ -58,6 +59,19 @@ test.describe('Process Instance Detail - Statistics Overlays', () => {
 
     page.off('console', handler);
     expect(validationErrors, `MSW schema violations: ${validationErrors.join('\n')}`).toHaveLength(0);
+  });
+});
+
+test.describe('Process Instance Detail - Subprocess Root Statistics', () => {
+  test('should not double element statistics when the viewed root instance is a subprocess', async ({ page }) => {
+    await page.goto(`/process-instances/${SUBPROCESS_ROOT_STATS_INSTANCE_KEY}`);
+    await expect(page.getByText('Instance Details')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.bjs-container')).toBeVisible({ timeout: 10000 });
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(500);
+
+    // The subprocess root has exactly one active instance on task-a.
+    await expect(page.locator('.running-badge').first()).toHaveText('1', { timeout: 10000 });
   });
 });
 
