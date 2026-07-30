@@ -22,6 +22,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { themeColors } from '@base/theme';
+import type { BuildMetadata } from '@base/buildMetadata';
 
 // ── Types (mirroring /internal/cluster/state/state.go) ───────────────────────
 
@@ -45,7 +46,7 @@ interface ClusterNode {
   partitions: Record<string, NodePartition>;
 }
 
-interface ClusterStatus {
+interface ClusterStatus extends BuildMetadata {
   clusterConfig: { desiredPartitions: number };
   partitions: Record<string, { id: number; leaderId: string }>;
   nodes: Record<string, ClusterNode>;

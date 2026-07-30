@@ -1,0 +1,1 @@
+export { BuildMetadataFooter } from './BuildMetadataFooter';

@@ -46,6 +46,24 @@ pnpm dev
 pnpm dev --mode live
 ```
 
+### Build metadata
+
+The application footer displays the UI build version and short commit alongside the metadata returned by `GET /system/status`. Frontend metadata is embedded when Vite starts or builds; the browser never invokes Git.
+
+The UI version comes from `info.version` in `openapi/api.yaml`. The short commit is read from Git at build time, or can be supplied explicitly when building outside a Git checkout:
+
+```bash
+VITE_BUILD_COMMIT=7af392e pnpm build
+```
+
+Docker accepts the commit as a build argument. The release workflow supplies the checked-out commit automatically:
+
+```bash
+docker build \
+  --build-arg VITE_BUILD_COMMIT=7af392e \
+  -t zenbpm-ui .
+```
+
 ## Quality Checks
 
 Before submitting a PR, ensure all quality checks pass:

@@ -13,6 +13,13 @@
       "instances": "Instances"
     }
   },
+  "buildMetadata": {
+    "ui": "UI",
+    "zenbpm": "ZenBPM",
+    "loading": "loading",
+    "unavailable": "unavailable",
+    "mismatch": "Build metadata mismatch"
+  },
   "systemStatus": {
     "title": "System Status",
     "description": "Live overview of the ZenBPM engine cluster — nodes, partitions and configuration.",

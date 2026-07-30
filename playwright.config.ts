@@ -9,7 +9,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:3001',
     trace: 'on-first-retry',
   },
   projects: [
@@ -19,9 +19,13 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm dev --mode mocks',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    command: 'pnpm dev --mode mocks --port 3001',
+    env: {
+      VITE_BUILD_COMMIT: 'abcdef0',
+      VITE_E2E_TEST: 'true',
+    },
+    url: 'http://localhost:3001',
+    reuseExistingServer: false,
     timeout: 120 * 1000,
   },
 });
