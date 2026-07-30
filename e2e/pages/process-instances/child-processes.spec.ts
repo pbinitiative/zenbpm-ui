@@ -5,6 +5,8 @@ const parentInstanceKey = '3100000000000000066';
 // Child process instances spawned by the parent above
 const childInstanceKey1 = '3100000000000000200'; // active child
 const childInstanceKey2 = '3100000000000000202'; // completed child
+const nestedIncidentRootKey = '3100000000000000290';
+const nestedIncidentCalledKey = '3100000000000000292';
 
 test.describe('Process Instance Detail - Child Processes Tab', () => {
   test.beforeEach(async ({ page }) => {
@@ -84,6 +86,20 @@ test.describe('Process Instance Detail - Child Processes Tab', () => {
     // Should navigate to the child instance detail page
     await expect(page).toHaveURL(new RegExp(`/process-instances/${childInstanceKey1}`));
     await expect(page.getByText('Instance Details')).toBeVisible({ timeout: 10000 });
+  });
+});
+
+test.describe('Process Instance Detail - Called Process Incidents', () => {
+  test('should display the direct unresolved incident count for a called process', async ({ page }) => {
+    await page.goto(`/process-instances/${nestedIncidentRootKey}`);
+    await expect(page.getByText('Instance Details')).toBeVisible({ timeout: 10000 });
+
+    await page.getByRole('tab', { name: /Called Processes/i }).click();
+    await expect(page.getByRole('columnheader', { name: 'Incidents' })).toBeVisible();
+
+    const calledProcessRow = page.getByRole('row').filter({ hasText: nestedIncidentCalledKey });
+    await expect(calledProcessRow).toBeVisible();
+    await expect(calledProcessRow.getByText('1', { exact: true })).toBeVisible();
   });
 });
 
