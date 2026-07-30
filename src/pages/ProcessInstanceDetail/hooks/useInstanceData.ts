@@ -237,7 +237,7 @@ export const useInstanceData = (
   const fetchSubprocessStats = useCallback(
     async (root: ProcessInstanceNode) => {
       const subprocessNodes = collectAllNodes(root).filter(
-        (n) => n.instance.processType === 'subprocess',
+        (n) => !n.isRoot && n.instance.processType === 'subprocess',
       );
 
       if (subprocessNodes.length === 0) {
