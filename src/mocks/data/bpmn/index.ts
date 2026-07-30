@@ -62,6 +62,7 @@ import * as simpleUserTaskV2 from './simple-user-task_v2';
 import * as longTaskChainV2 from './long-task-chain_v2';
 // Pagination test fixture
 import * as multiInstancePagination from './multi-instance-pagination';
+import * as multiInstanceCallActivityIncident from './multi-instance-call-activity-incident';
 
 // Export individual process modules for direct access
 export {
@@ -121,6 +122,7 @@ export {
   simpleUserTaskV2,
   longTaskChainV2,
   multiInstancePagination,
+  multiInstanceCallActivityIncident,
 };
 
 // Aggregate all definitions
@@ -181,6 +183,7 @@ export const allDefinitions: MockProcessDefinition[] = [
   simpleUserTaskV2.definition,
   longTaskChainV2.definition,
   multiInstancePagination.definition,
+  multiInstanceCallActivityIncident.definition,
 ];
 
 // Aggregate all instances
@@ -242,6 +245,7 @@ export const allInstances: MockProcessInstance[] = [
   ...longTaskChainV2.instances,
   // Pagination test fixture
   ...multiInstancePagination.instances,
+  ...multiInstanceCallActivityIncident.instances,
 ];
 
 // Aggregate all incidents
@@ -303,4 +307,5 @@ export const allIncidents: MockIncident[] = [
   ...longTaskChainV2.incidents,
   // Pagination test fixture
   ...multiInstancePagination.incidents,
+  ...multiInstanceCallActivityIncident.incidents,
 ];

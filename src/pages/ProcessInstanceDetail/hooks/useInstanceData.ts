@@ -130,6 +130,40 @@ function collectAllNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
   return result;
 }
 
+/**
+ * Project direct incidents from called processes onto the elements that lead
+ * to them in the currently displayed parent diagram. Child list responses
+ * already contain incidentCount, so this does not require another API call.
+ */
+function projectCalledProcessIncidents(
+  root: ProcessInstanceNode | null,
+): ElementStatistics | undefined {
+  if (!root) return undefined;
+
+  const projected: ElementStatistics = {};
+  for (const node of collectAllNodes(root)) {
+    if (node.isRoot || node.instance.processType !== 'callActivity') continue;
+
+    const incidentCount = node.instance.incidentCount ?? 0;
+    if (incidentCount <= 0) continue;
+
+    // A path can contain the same BPMN element more than once in nested loops.
+    // Count this called instance only once per affected diagram element.
+    for (const elementId of new Set(node.callPath)) {
+      const counts = projected[elementId] ?? {
+        activeCount: 0,
+        incidentCount: 0,
+        completedCount: 0,
+        terminatedCount: 0,
+      };
+      counts.incidentCount += incidentCount;
+      projected[elementId] = counts;
+    }
+  }
+
+  return Object.keys(projected).length > 0 ? projected : undefined;
+}
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -426,22 +460,40 @@ export const useInstanceData = (
     },
   );
 
+  const calledProcessIncidentStatistics = useMemo(
+    () => projectCalledProcessIncidents(instanceTree),
+    [instanceTree],
+  );
+
   const elementStatistics = useMemo(() => {
     const base = transformStatisticsToElementStatistics(rawElementStatistics);
-    if (!subprocessElementStatistics) return base;
-    if (!base) return subprocessElementStatistics;
-    const merged: ElementStatistics = { ...base };
-    for (const [elementId, counts] of Object.entries(subprocessElementStatistics)) {
-      if (!merged[elementId]) merged[elementId] = { activeCount: 0, incidentCount: 0, completedCount: 0, terminatedCount: 0 };
-      merged[elementId] = {
-        activeCount: merged[elementId].activeCount + counts.activeCount,
-        incidentCount: merged[elementId].incidentCount + counts.incidentCount,
-        completedCount: (merged[elementId].completedCount ?? 0) + (counts.completedCount ?? 0),
-        terminatedCount: (merged[elementId].terminatedCount ?? 0) + (counts.terminatedCount ?? 0),
-      };
+    const additionalStatistics = [
+      subprocessElementStatistics,
+      calledProcessIncidentStatistics,
+    ].filter((statistics): statistics is ElementStatistics => statistics !== undefined);
+
+    if (additionalStatistics.length === 0) return base;
+
+    const merged: ElementStatistics = {};
+    for (const statistics of [base, ...additionalStatistics]) {
+      if (!statistics) continue;
+      for (const [elementId, counts] of Object.entries(statistics)) {
+        const current = merged[elementId] ?? {
+          activeCount: 0,
+          incidentCount: 0,
+          completedCount: 0,
+          terminatedCount: 0,
+        };
+        merged[elementId] = {
+          activeCount: current.activeCount + counts.activeCount,
+          incidentCount: current.incidentCount + counts.incidentCount,
+          completedCount: (current.completedCount ?? 0) + (counts.completedCount ?? 0),
+          terminatedCount: (current.terminatedCount ?? 0) + (counts.terminatedCount ?? 0),
+        };
+      }
     }
     return merged;
-  }, [rawElementStatistics, subprocessElementStatistics]);
+  }, [rawElementStatistics, subprocessElementStatistics, calledProcessIncidentStatistics]);
 
   // ── Pagination effects — update the current page in the tree ─────────────
   // These only fire after the initial load completes (guard via ref).

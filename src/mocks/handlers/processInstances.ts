@@ -92,6 +92,7 @@ function transformInstance(pi: (typeof processInstances)[0]) {
     state: pi.state,
     variables: pi.variables,
     processType: pi.processType ?? 'default',
+    incidentCount: getIncidentsByProcessInstanceKey(pi.key).filter((incident) => !incident.resolvedAt).length,
     ...(pi.parentProcessInstanceKey ? { parentProcessInstanceKey: pi.parentProcessInstanceKey } : {}),
     activeElementInstances: pi.activeElementInstances.map((ei) => ({
       elementInstanceKey: ei.key,
