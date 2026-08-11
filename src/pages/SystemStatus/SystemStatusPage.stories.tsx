@@ -21,6 +21,14 @@ type Story = StoryObj<typeof SystemStatusPage>;
 
 /** Mock data: 3 nodes, each leading a distinct partition, all partition state Initialized. */
 const mockData = {
+  git: {
+    branch: 'main',
+    commitId: 'ac80841035e9',
+  },
+  build: {
+    version: 'v1.5.0',
+    time: '2026-08-10T07:33:20Z',
+  },
   clusterConfig: { desiredPartitions: 3 },
   partitions: {
     '1': { id: 1, leaderId: 'node-1' },

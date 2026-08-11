@@ -13,11 +13,23 @@
       "instances": "Instances"
     }
   },
+  "buildMetadata": {
+    "ui": "UI",
+    "zenbpm": "ZenBPM",
+    "loading": "loading",
+    "unavailable": "unavailable",
+    "mismatch": "Build metadata mismatch"
+  },
   "systemStatus": {
     "title": "System Status",
     "description": "Live overview of the ZenBPM engine cluster — nodes, partitions and configuration.",
     "link": "View system status",
     "lastUpdated": "Updated at {{time}}",
+    "buildInformation": "Build Information",
+    "version": "Version",
+    "buildTime": "Build Time",
+    "branch": "Branch",
+    "commitId": "Commit ID",
     "topology": "Cluster Topology",
     "clusterConfig": "Cluster Configuration",
     "nodes": "Nodes",

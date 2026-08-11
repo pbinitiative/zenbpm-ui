@@ -50,6 +50,7 @@ jobs:
         with:
           ref: ${{ inputs.checkout-ref }}
           submodules: 'true'
+          fetch-depth: 0
 
       - name: login to github
         if: inputs.publish
@@ -75,6 +76,15 @@ jobs:
         env:
           BUILDX_BUILDER: ${{ steps.buildx.outputs.name }}
 
+      - name: Resolve frontend build metadata
+        id: build_metadata
+        env:
+          REPOSITORY_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          echo "commit=$(git rev-parse HEAD | cut -c1-12)" >> "$GITHUB_OUTPUT"
+          echo "branch=$(scripts/ci/resolve-build-branch.sh)" >> "$GITHUB_OUTPUT"
+          echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: Build and publish Docker image
         uses: docker/build-push-action@v7
         with:
@@ -83,6 +93,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: ${{ inputs.publish }}
           tags: ${{ env.IMAGE_NAME }}:${{ inputs.release-tag }}
+          build-args: |
+            VITE_BUILD_COMMIT=${{ steps.build_metadata.outputs.commit }}
+            VITE_BUILD_BRANCH=${{ steps.build_metadata.outputs.branch }}
+            VITE_BUILD_TIME=${{ steps.build_metadata.outputs.time }}
 
   release_security:
     runs-on: ubuntu-latest
