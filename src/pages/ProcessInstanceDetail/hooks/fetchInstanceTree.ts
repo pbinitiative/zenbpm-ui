@@ -38,6 +38,25 @@ export const MESSAGE_SUBSCRIPTIONS_PAGE_SIZE = 10;
 export const TIMER_SUBSCRIPTIONS_PAGE_SIZE = 10;
 export const ERROR_SUBSCRIPTIONS_PAGE_SIZE = 10;
 
+/** History page size — matches the API maximum (max 1000). */
+export const HISTORY_PAGE_SIZE = 1000;
+
+/**
+ * Maximum total number of history pages fetched: one initial request plus up
+ * to `HISTORY_MAX_PAGES - 1` follow-up requests. Total entries capped at
+ * `HISTORY_PAGE_SIZE * HISTORY_MAX_PAGES` = 10 000. Guards against runaway
+ * fetches on processes with extremely large histories.
+ */
+export const HISTORY_MAX_PAGES = 10;
+
+/**
+ * Threshold above which the user is warned that the history is extremely large
+ * and the displayed set is incomplete.  We intentionally surface this even
+ * when the displayed count equals the API total so the user knows they are
+ * looking at an unusually large dataset.
+ */
+export const HISTORY_LARGE_THRESHOLD = 10000;
+
 /**
  * Maximum number of simultaneous dataset-fetch requests in Phase 2.
  * Matches the browser's ~6 connections-per-host limit so we never queue
@@ -83,6 +102,12 @@ export async function runConcurrently<T>(
 export interface FetchInstanceTreeOptions {
   maxDepth?: number;
   childrenPageSize?: number;
+  /**
+   * Invoked once per `fetchInstanceTree` call if any node's history exceeded
+   * `HISTORY_LARGE_THRESHOLD` and could not be loaded in full. Aggregates
+   * all such nodes so the caller can show a single summary notification.
+   */
+  onHistoryPartial?: (info: { instances: number; loadedCount: number; totalCount: number }) => void;
   jobsPage?: number;
   jobsPageSize?: number;
   incidentsPage?: number;
@@ -188,6 +213,81 @@ function inferCallElementId(
 }
 
 // ---------------------------------------------------------------------------
+// History pagination
+// ---------------------------------------------------------------------------
+
+/**
+ * Aggregated result of a single node's history fetch.
+ *
+ * - `items`     — all history entries that were loaded, in API order.
+ * - `totalCount` — the value reported by the API in the first response.
+ * - `isPartial` — true when `items.length < totalCount`, i.e. the loop
+ *   stopped before reading every entry because it hit `HISTORY_MAX_PAGES`.
+ */
+interface FetchedHistory {
+  items: FlowElementHistory[];
+  totalCount: number;
+  isPartial: boolean;
+}
+
+/**
+ * Fetch every history page for one process instance using the configured
+ * page size, capping the total number of round-trips at `HISTORY_MAX_PAGES`.
+ *
+ * The first request establishes the authoritative `totalCount`. Subsequent
+ * pages are appended as long as:
+ *   - we have not reached the requested `HISTORY_MAX_PAGES` total pages,
+ *   - the previous page was non-empty (early-stop on a short final page),
+ *   - and we have not already collected every entry the API reported.
+ */
+async function fetchAllHistory(
+  key: string,
+  sortBy: GetHistorySortBy,
+  sortOrder: GetHistorySortOrder,
+): Promise<FetchedHistory> {
+  const firstPage = await getHistory(key, {
+    page: 1,
+    size: HISTORY_PAGE_SIZE,
+    sortBy,
+    sortOrder,
+  });
+
+  const items: FlowElementHistory[] = [...((firstPage.items ?? []) as FlowElementHistory[])];
+  const totalCount = firstPage.totalCount ?? items.length;
+
+  // Already complete: first page contained every entry.
+  if (items.length === 0 || items.length >= totalCount) {
+    return { items, totalCount, isPartial: false };
+  }
+
+  // Walk subsequent pages. We start at page 2 because page 1 is already loaded.
+  // With `HISTORY_MAX_PAGES` = 10 total pages this loop performs at most
+  // nine requests after page 1.
+  let knownTotal = totalCount;
+  for (let page = 2; page <= HISTORY_MAX_PAGES; page += 1) {
+    const next = await getHistory(key, {
+      page,
+      size: HISTORY_PAGE_SIZE,
+      sortBy,
+      sortOrder,
+    });
+    const nextItems = (next.items ?? []) as FlowElementHistory[];
+    if (nextItems.length === 0) break;
+    items.push(...nextItems);
+
+    // Refresh the total from a later response in case the backend updates it.
+    if (typeof next.totalCount === 'number' && next.totalCount > knownTotal) {
+      knownTotal = next.totalCount;
+    }
+
+    if (items.length >= knownTotal) break;
+    if (nextItems.length < HISTORY_PAGE_SIZE) break;
+  }
+
+  return { items, totalCount: knownTotal, isPartial: items.length < knownTotal };
+}
+
+// ---------------------------------------------------------------------------
 // Per-node dataset fetch
 // ---------------------------------------------------------------------------
 
@@ -212,7 +312,7 @@ async function fetchNodeDatasets(
     | 'messageSubscriptionsPage' | 'messageSubscriptionsPageSize' | 'messageSubscriptionsState'
     | 'timerSubscriptionsPage' | 'timerSubscriptionsPageSize' | 'timerSubscriptionsState'
     | 'errorSubscriptionsPage' | 'errorSubscriptionsPageSize' | 'errorSubscriptionsState'
-  >> & { incidentsState?: GetIncidentsState },
+  >> & { incidentsState?: GetIncidentsState; onHistoryPartial?: (info: { totalCount: number; loadedCount: number }) => void },
 ): Promise<void> {
   if (!node.isRoot && node.instance.processType === 'callActivity') {
     return;
@@ -220,13 +320,16 @@ async function fetchNodeDatasets(
 
   const key = node.instance.key;
 
+  // History is paginated sequentially (up to HISTORY_MAX_PAGES pages), so
+  // it is intentionally NOT in the parallel batch — keeping it separate also
+  // lets us surface the "extremely large" partial-history warning without
+  // entangling it with the other datasets.
   const requests: Promise<unknown>[] = [
     getProcessInstanceJobs(key, { page: opts.jobsPage, size: opts.jobsPageSize }),
     getJobs({ processInstanceKey: key, state: 'active' as JobState, page: 1, size: 1 }),
     getIncidents(key, { page: opts.incidentsPage, size: opts.incidentsPageSize, state: opts.incidentsState }),
     getIncidents(key, { state: 'unresolved' as GetIncidentsState, page: 1, size: 1 }),
     getDecisionInstances({ processInstanceKey: key, page: opts.decisionsPage, size: opts.decisionsPageSize }),
-    getHistory(key, { page: 1, size: -1, sortBy: opts.historySortBy, sortOrder: opts.historySortOrder }),
     getProcessInstanceMessageSubscriptions(key, { state: opts.messageSubscriptionsState ?? "active", page: opts.messageSubscriptionsPage, size: opts.messageSubscriptionsPageSize }),
     getProcessInstanceTimerSubscriptions(key, { state: opts.timerSubscriptionsState ?? "active", page: opts.timerSubscriptionsPage, size: opts.timerSubscriptionsPageSize }),
     getProcessInstanceErrorSubscriptions(key, { state: opts.errorSubscriptionsState ?? "active", page: opts.errorSubscriptionsPage, size: opts.errorSubscriptionsPageSize }),
@@ -237,7 +340,7 @@ async function fetchNodeDatasets(
     getProcessInstanceErrorSubscriptions(key, { state: 'active', page: 1, size: 100 }),
   ];
 
-  const [jobsResult, activeJobsResult, incidentsResult, unresolvedResult, decisionsResult, historyResult, messageSubsResult, timerSubsResult, errorSubsResult, allMsgSubsResult, allTimerSubsResult, allErrSubsResult] = await Promise.allSettled(requests);
+  const [jobsResult, activeJobsResult, incidentsResult, unresolvedResult, decisionsResult, messageSubsResult, timerSubsResult, errorSubsResult, allMsgSubsResult, allTimerSubsResult, allErrSubsResult] = await Promise.allSettled(requests);
 
   if (jobsResult.status === 'fulfilled' && jobsResult.value) {
     const v = jobsResult.value as Awaited<ReturnType<typeof getProcessInstanceJobs>>;
@@ -265,11 +368,6 @@ async function fetchNodeDatasets(
     const v = decisionsResult.value as Awaited<ReturnType<typeof getDecisionInstances>>;
     node.decisions = (v.partitions ?? []).flatMap((p) => p.items ?? []) as DecisionInstanceSummary[];
     node.decisionsTotalCount = v.totalCount ?? 0;
-  }
-
-  if (historyResult.status === 'fulfilled' && historyResult.value) {
-    const v = historyResult.value as Awaited<ReturnType<typeof getHistory>>;
-    node.history = (v.items ?? []) as FlowElementHistory[];
   }
 
   if (messageSubsResult.status === 'fulfilled' && messageSubsResult.value) {
@@ -303,6 +401,22 @@ async function fetchNodeDatasets(
   if (allErrSubsResult.status === 'fulfilled' && allErrSubsResult.value) {
     const v = allErrSubsResult.value as Awaited<ReturnType<typeof getProcessInstanceErrorSubscriptions>>;
     node.allActiveErrorSubscriptions = (v.items ?? []) as ErrorSubscription[];
+  }
+
+  // History: paged sequentially so we can stop early on a short final page.
+  // Failures are swallowed (logged elsewhere) so one bad history fetch cannot
+  // abort the rest of the tree load.
+  try {
+    const history = await fetchAllHistory(key, opts.historySortBy, opts.historySortOrder);
+    node.history = history.items;
+    // Only surface the "extremely large" warning when the dataset is genuinely
+    // incomplete AND the reported total crosses the threshold.  We still
+    // attach `totalCount` for callers that want it later.
+    if (history.isPartial && history.totalCount > HISTORY_LARGE_THRESHOLD) {
+      opts.onHistoryPartial?.({ totalCount: history.totalCount, loadedCount: history.items.length });
+    }
+  } catch (err) {
+    console.error(`Failed to fetch history for ${key}:`, err);
   }
 
   // Variables are embedded in instance.variables — slice the current page
@@ -340,7 +454,7 @@ export async function fetchInstanceTree(
 ): Promise<ProcessInstanceNode> {
   const maxDepth = opts.maxDepth ?? MAX_TREE_DEPTH;
   const childrenPageSize = opts.childrenPageSize ?? CHILDREN_PAGE_SIZE;
-  const datasetOpts = {
+  const datasetOpts: Parameters<typeof fetchNodeDatasets>[1] = {
     jobsPage: opts.jobsPage ?? 1,
     jobsPageSize: opts.jobsPageSize ?? JOBS_PAGE_SIZE,
     incidentsPage: opts.incidentsPage ?? 1,
@@ -363,6 +477,12 @@ export async function fetchInstanceTree(
     errorSubscriptionsState: opts.errorSubscriptionsState ?? 'active',
   };
   const terminalCache = opts.terminalNodeCache ?? new Map<string, ProcessInstanceNode>();
+
+  // Per-call accumulator for nodes whose history was truncated. Filled by the
+  // `onHistoryPartial` callback below and reported once after Phase 2 completes
+  // so the caller can show a single summary notification instead of one per node.
+  const partialHistories: Array<{ totalCount: number; loadedCount: number }> = [];
+  datasetOpts.onHistoryPartial = (info) => partialHistories.push(info);
 
   // ── Phase 1: build tree shape ────────────────────────────────────────────
 
@@ -466,6 +586,19 @@ export async function fetchInstanceTree(
     // (N_deep_nodes × 5) API calls on every refresh.
     return fetchNodeDatasets(node, datasetOpts);
   });
+
+  // Surface a single aggregated "extremely large history" event after all
+  // dataset fetches have settled, so the user sees one summary instead of N
+  // snackbars (one per truncated node, especially during 5s auto-refresh).
+  if (partialHistories.length > 0) {
+    const loadedCount = partialHistories.reduce((sum, p) => sum + p.loadedCount, 0);
+    const totalCount = partialHistories.reduce((sum, p) => sum + p.totalCount, 0);
+    opts.onHistoryPartial?.({
+      instances: partialHistories.length,
+      loadedCount,
+      totalCount,
+    });
+  }
 
   // ── Phase 3: derive callElementId for each non-root node ─────────────────
   // Now that history is populated, infer which element in the parent called
@@ -617,17 +750,40 @@ export function refetchNodeVariables(
 
 /**
  * Re-fetch history for a specific node with new sort parameters (mutates the node).
+ *
+ * Uses the same paginated fetch as the initial load so a sort change on a node
+ * with a very large history still shows all available entries (up to
+ * `HISTORY_MAX_PAGES` pages).  If the dataset is larger than that and is
+ * truncated, the partial-history warning callback supplied via
+ * `options.onHistoryPartial` fires once with the aggregated info.
+ *
+ * Pass `options.isStale` to skip applying results when the request has been
+ * superseded by a newer one. The check is performed after the network
+ * response arrives but BEFORE mutating `node.history`, so a slow older
+ * request that resolves last cannot clobber the fresh data already written
+ * by a newer request.
+ *
  * Returns the updated node for convenience.
  */
 export async function refetchNodeHistory(
   node: ProcessInstanceNode,
   sortBy: GetHistorySortBy,
   sortOrder: GetHistorySortOrder,
+  options: {
+    onHistoryPartial?: (info: { totalCount: number; loadedCount: number }) => void;
+    isStale?: () => boolean;
+  } = {},
 ): Promise<ProcessInstanceNode> {
   if (!node.isRoot && node.instance.processType === 'callActivity') return node;
   try {
-    const data = await getHistory(node.instance.key, { page: 1, size: 100, sortBy, sortOrder });
-    node.history = (data.items ?? []) as FlowElementHistory[];
+    const history = await fetchAllHistory(node.instance.key, sortBy, sortOrder);
+    // Bail before mutating the shared tree if this request belongs to a
+    // sort generation the caller has already moved past.
+    if (options.isStale?.()) return node;
+    node.history = history.items;
+    if (history.isPartial && history.totalCount > HISTORY_LARGE_THRESHOLD) {
+      options.onHistoryPartial?.({ totalCount: history.totalCount, loadedCount: history.items.length });
+    }
   } catch (err) {
     console.error(`Failed to refetch history for ${node.instance.key}:`, err);
   }

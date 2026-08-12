@@ -28,8 +28,12 @@ export type TreeDatasetPagination = Record<string, NodePagination>;
  * The root node sits at depth=0.  Each node carries its own paginated
  * dataset snapshots; child nodes are nested under `children`.
  *
- * History is fetched in full (size: -1) and is therefore client-paged only —
- * there is no server-side pagination state for it.
+ * History is fetched across up to `HISTORY_MAX_PAGES` server pages of
+ * `HISTORY_PAGE_SIZE` items each (see `fetchInstanceTree`) so a normal-sized
+ * instance loads in a single round-trip.  When the server reports more
+ * entries than fit in those pages, the displayed `history` array is
+ * truncated and the user is warned.  There is no server-side pagination
+ * state for history — the tab itself is client-paged.
  */
 export interface ProcessInstanceNode {
   /** Full process instance object — includes `variables` and `activeElementInstances` */
@@ -79,7 +83,7 @@ export interface ProcessInstanceNode {
   variableEntries: Array<{ name: string; value: unknown }>;
   variablesTotalCount: number;
 
-  // --- History (client-paged only, fetched in full) ---
+  // --- History (client-paged only; server-paginated up to HISTORY_MAX_PAGES pages) ---
   history: FlowElementHistory[];
 
   // --- Message subscriptions (server-paginated) ---
@@ -101,14 +105,14 @@ export interface ProcessInstanceNode {
   allActiveMessageSubscriptions: MessageSubscription[];
 
   /**
-   * All active timer subscriptions for this node, fetched in full (size: -1,
-   * state: 'active'). Used for diagram badges.
+   * All active timer subscriptions for this node, fetched with a large page
+   * size (size: 100, state: 'active'). Used for diagram badges.
    */
   allActiveTimerSubscriptions: TimerSubscription[];
 
   /**
-   * All active error subscriptions for this node, fetched in full (size: -1,
-   * state: 'active'). Used for diagram badges.
+   * All active error subscriptions for this node, fetched with a large page
+   * size (size: 100, state: 'active'). Used for diagram badges.
    */
   allActiveErrorSubscriptions: ErrorSubscription[];
 
