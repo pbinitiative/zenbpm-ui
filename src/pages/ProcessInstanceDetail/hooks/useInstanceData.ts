@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useLatestRef } from '@base/hooks/useLatestRef';
 import {
   getProcessDefinition,
   getProcessInstance,
@@ -219,10 +220,8 @@ export const useInstanceData = (
   // History sort state
   const [historySortBy, setHistorySortBy] = useState<GetHistorySortBy>('createdAt');
   const [historySortOrder, setHistorySortOrder] = useState<GetHistorySortOrder>('asc');
-  const historySortByRef = useRef<GetHistorySortBy>('createdAt');
-  const historySortOrderRef = useRef<GetHistorySortOrder>('asc');
-  historySortByRef.current = historySortBy;
-  historySortOrderRef.current = historySortOrder;
+  const historySortByRef = useLatestRef(historySortBy);
+  const historySortOrderRef = useLatestRef(historySortOrder);
   // Generation counter for the history-sort effect. Bumped in the effect
   // cleanup so an in-flight (slower) sort request whose response arrives
   // after the user has already triggered a newer sort change cannot
@@ -232,49 +231,29 @@ export const useInstanceData = (
 
   // Refs so fetchAll (auto-refresh) always reads the current pagination values
   // without stale closure captures.
-  const jobsPageRef = useRef(0);
-  const jobsPageSizeRef = useRef(JOBS_PAGE_SIZE);
-  const incidentsPageRef = useRef(0);
-  const incidentsPageSizeRef = useRef(INCIDENTS_PAGE_SIZE);
-  const incidentsStateRef = useRef<GetIncidentsState | 'all'>('all');
-  const decisionsPageRef = useRef(0);
-  const decisionsPageSizeRef = useRef(DECISIONS_PAGE_SIZE);
-  const variablesPageRef = useRef(0);
-  const variablesPageSizeRef = useRef(VARIABLES_PAGE_SIZE);
+  const jobsPageRef = useLatestRef(jobsPage);
+  const jobsPageSizeRef = useLatestRef(jobsPageSize);
+  const incidentsPageRef = useLatestRef(incidentsPage);
+  const incidentsPageSizeRef = useLatestRef(incidentsPageSize);
+  const incidentsStateRef = useLatestRef(incidentsState);
+  const decisionsPageRef = useLatestRef(decisionsPage);
+  const decisionsPageSizeRef = useLatestRef(decisionsPageSize);
+  const variablesPageRef = useLatestRef(variablesPage);
+  const variablesPageSizeRef = useLatestRef(variablesPageSize);
 
   // Subscription pagination refs
-  const messageSubscriptionsPageRef = useRef(0);
-  const messageSubscriptionsPageSizeRef = useRef(MESSAGE_SUBSCRIPTIONS_PAGE_SIZE);
-  const messageSubscriptionsStateRef = useRef<EventSubscriptionState>('active');
-  const timerSubscriptionsPageRef = useRef(0);
-  const timerSubscriptionsPageSizeRef = useRef(TIMER_SUBSCRIPTIONS_PAGE_SIZE);
-  const timerSubscriptionsStateRef = useRef<EventSubscriptionState>('active');
-  const errorSubscriptionsPageRef = useRef(0);
-  const errorSubscriptionsPageSizeRef = useRef(ERROR_SUBSCRIPTIONS_PAGE_SIZE);
-  const errorSubscriptionsStateRef = useRef<EventSubscriptionState>('active');
-  jobsPageRef.current = jobsPage;
-  jobsPageSizeRef.current = jobsPageSize;
-  incidentsPageRef.current = incidentsPage;
-  incidentsPageSizeRef.current = incidentsPageSize;
-  incidentsStateRef.current = incidentsState;
-  decisionsPageRef.current = decisionsPage;
-  decisionsPageSizeRef.current = decisionsPageSize;
-  variablesPageRef.current = variablesPage;
-  variablesPageSizeRef.current = variablesPageSize;
-
-  messageSubscriptionsPageRef.current = messageSubscriptionsPage;
-  messageSubscriptionsPageSizeRef.current = messageSubscriptionsPageSize;
-  messageSubscriptionsStateRef.current = messageSubscriptionsState;
-  timerSubscriptionsPageRef.current = timerSubscriptionsPage;
-  timerSubscriptionsPageSizeRef.current = timerSubscriptionsPageSize;
-  timerSubscriptionsStateRef.current = timerSubscriptionsState;
-  errorSubscriptionsPageRef.current = errorSubscriptionsPage;
-  errorSubscriptionsPageSizeRef.current = errorSubscriptionsPageSize;
-  errorSubscriptionsStateRef.current = errorSubscriptionsState;
+  const messageSubscriptionsPageRef = useLatestRef(messageSubscriptionsPage);
+  const messageSubscriptionsPageSizeRef = useLatestRef(messageSubscriptionsPageSize);
+  const messageSubscriptionsStateRef = useLatestRef(messageSubscriptionsState);
+  const timerSubscriptionsPageRef = useLatestRef(timerSubscriptionsPage);
+  const timerSubscriptionsPageSizeRef = useLatestRef(timerSubscriptionsPageSize);
+  const timerSubscriptionsStateRef = useLatestRef(timerSubscriptionsState);
+  const errorSubscriptionsPageRef = useLatestRef(errorSubscriptionsPage);
+  const errorSubscriptionsPageSizeRef = useLatestRef(errorSubscriptionsPageSize);
+  const errorSubscriptionsStateRef = useLatestRef(errorSubscriptionsState);
 
   // Ref to always access the latest tree without stale closures.
-  const instanceTreeRef = useRef(instanceTree);
-  instanceTreeRef.current = instanceTree;
+  const instanceTreeRef = useLatestRef(instanceTree);
 
   // Track the last successfully fetched process definition key so we never
   // re-fetch the definition (it never changes for the same instance).
@@ -291,8 +270,7 @@ export const useInstanceData = (
   // Latest caller-provided history callback. Stored in a ref so refreshes
   // always read the freshest closure without forcing the whole hook to
   // re-subscribe to `options`.
-  const onHistoryPartialRef = useRef(options?.onHistoryPartial);
-  onHistoryPartialRef.current = options?.onHistoryPartial;
+  const onHistoryPartialRef = useLatestRef(options?.onHistoryPartial);
 
   // ── Subprocess element statistics ─────────────────────────────────────────
   const fetchSubprocessStats = useCallback(
@@ -392,6 +370,10 @@ export const useInstanceData = (
     } finally {
       isFetchingRef.current = false;
     }
+    // The pagination/history/tree/onHistoryPartial refs read inside this callback are
+    // all stable (created via useLatestRef). Tracking each one in the deps array would
+    // be runtime-identical but visually noisy; suppress the rule instead.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [processInstanceKey, fetchSubprocessStats]);
 
   // ── Initial data fetch ────────────────────────────────────────────────────
@@ -456,14 +438,17 @@ export const useInstanceData = (
     };
 
     void fetchData();
+    // `fetchAll` reads all stable refs (created via useLatestRef); they are captured
+    // transitively through `fetchAll`'s identity. Adding each one here would be
+    // runtime-identical but visually noisy; suppress the rule instead.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [processInstanceKey, fetchAll]);
 
   // ── Periodic auto-refresh for active instances ────────────────────────────
   const isActiveInstance =
     instanceTree?.instance && !TERMINAL_STATES.includes(instanceTree.instance.state);
 
-  const fetchAllRef = useRef(fetchAll);
-  fetchAllRef.current = fetchAll;
+  const fetchAllRef = useLatestRef(fetchAll);
 
   useEffect(() => {
     if (!processInstanceKey || loading || !isActiveInstance) return;
@@ -474,7 +459,9 @@ export const useInstanceData = (
       void fetchAllRef.current();
     }, AUTO_REFRESH_INTERVAL);
     return () => clearInterval(intervalId);
-  }, [processInstanceKey, loading, isActiveInstance]);
+    // fetchAllRef is a stable ref (created via useLatestRef); omitting it
+    // here would be harmless at runtime but trips the exhaustive-deps rule.
+  }, [processInstanceKey, loading, isActiveInstance, fetchAllRef]);
 
   // ── Root element statistics via React Query (auto-poll) ───────────────────
   // Enabled as soon as the key is known — no need to wait for the definition.
@@ -533,7 +520,8 @@ export const useInstanceData = (
     const nodes = collectAllNodes(tree);
     void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeJobs(node, jobsPage + 1, jobsPageSize))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
-  }, [jobsPage, jobsPageSize]);
+    // instanceTreeRef is a stable ref (created via useLatestRef).
+  }, [jobsPage, jobsPageSize, instanceTreeRef]);
 
   useEffect(() => {
     if (!initialLoadDoneRef.current) return;
@@ -542,7 +530,8 @@ export const useInstanceData = (
     const nodes = collectAllNodes(tree);
     void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeIncidents(node, incidentsPage + 1, incidentsPageSize, incidentsState === 'all' ? undefined : incidentsState))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
-  }, [incidentsPage, incidentsPageSize, incidentsState]);
+    // instanceTreeRef is a stable ref (created via useLatestRef).
+  }, [incidentsPage, incidentsPageSize, incidentsState, instanceTreeRef]);
 
   useEffect(() => {
     if (!initialLoadDoneRef.current) return;
@@ -551,7 +540,8 @@ export const useInstanceData = (
     const nodes = collectAllNodes(tree);
     void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeDecisions(node, decisionsPage + 1, decisionsPageSize))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
-  }, [decisionsPage, decisionsPageSize]);
+    // instanceTreeRef is a stable ref (created via useLatestRef).
+  }, [decisionsPage, decisionsPageSize, instanceTreeRef]);
 
   useEffect(() => {
     if (!initialLoadDoneRef.current) return;
@@ -560,7 +550,8 @@ export const useInstanceData = (
     const nodes = collectAllNodes(tree);
     nodes.forEach((node) => doRefetchNodeVariables(node, variablesPage + 1, variablesPageSize));
     setInstanceTree((prev) => (prev ? { ...prev } : prev));
-  }, [variablesPage, variablesPageSize]);
+    // instanceTreeRef is a stable ref (created via useLatestRef).
+  }, [variablesPage, variablesPageSize, instanceTreeRef]);
 
   const setHistorySort = useCallback((sortBy: GetHistorySortBy, sortOrder: GetHistorySortOrder) => {
     setHistorySortBy(sortBy);
@@ -619,7 +610,8 @@ export const useInstanceData = (
         historySortGenerationRef.current += 1;
       }
     };
-  }, [historySortBy, historySortOrder]);
+    // instanceTreeRef and onHistoryPartialRef are stable refs (created via useLatestRef).
+  }, [historySortBy, historySortOrder, instanceTreeRef, onHistoryPartialRef]);
 
   useEffect(() => {
     if (!initialLoadDoneRef.current) return;
@@ -629,7 +621,8 @@ export const useInstanceData = (
     void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeMessageSubscriptions(node, messageSubscriptionsPage + 1, messageSubscriptionsPageSize, messageSubscriptionsState))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)))
       .catch((err: unknown) => console.error('Failed to paginate message subscriptions:', err));
-  }, [messageSubscriptionsPage, messageSubscriptionsPageSize, messageSubscriptionsState]);
+    // instanceTreeRef is a stable ref (created via useLatestRef).
+  }, [messageSubscriptionsPage, messageSubscriptionsPageSize, messageSubscriptionsState, instanceTreeRef]);
 
   useEffect(() => {
     if (!initialLoadDoneRef.current) return;
@@ -639,7 +632,8 @@ export const useInstanceData = (
     void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeTimerSubscriptions(node, timerSubscriptionsPage + 1, timerSubscriptionsPageSize, timerSubscriptionsState))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)))
       .catch((err: unknown) => console.error('Failed to paginate timer subscriptions:', err));
-  }, [timerSubscriptionsPage, timerSubscriptionsPageSize, timerSubscriptionsState]);
+    // instanceTreeRef is a stable ref (created via useLatestRef).
+  }, [timerSubscriptionsPage, timerSubscriptionsPageSize, timerSubscriptionsState, instanceTreeRef]);
 
   useEffect(() => {
     if (!initialLoadDoneRef.current) return;
@@ -649,7 +643,8 @@ export const useInstanceData = (
     void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeErrorSubscriptions(node, errorSubscriptionsPage + 1, errorSubscriptionsPageSize, errorSubscriptionsState))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)))
       .catch((err: unknown) => console.error('Failed to paginate error subscriptions:', err));
-  }, [errorSubscriptionsPage, errorSubscriptionsPageSize, errorSubscriptionsState]);
+    // instanceTreeRef is a stable ref (created via useLatestRef).
+  }, [errorSubscriptionsPage, errorSubscriptionsPageSize, errorSubscriptionsState, instanceTreeRef]);
 
   const totalEventSubscriptionsCount = useMemo(() => {
     if (!instanceTree) return 0;
