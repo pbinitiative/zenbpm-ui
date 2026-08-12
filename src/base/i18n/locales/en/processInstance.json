@@ -116,7 +116,9 @@
     "relatedJobNotFound": "No related job was found",
     "relatedJobSearchFailed": "Failed to find the related job",
     "relatedEventNotFound": "No related event subscription was found",
-    "relatedEventSearchFailed": "Failed to find the related event subscription"
+    "relatedEventSearchFailed": "Failed to find the related event subscription",
+    "historyExtremelyLarge": "History is extremely large: displaying {{loaded}} of {{total}} entries. Some data may be missing.",
+    "historyExtremelyLargeMultiple": "History is extremely large across {{instances}} process instances: displaying {{loaded}} of {{total}} entries in total. Some data may be missing."
   },
   "dialogs": {
     "completeJob": {

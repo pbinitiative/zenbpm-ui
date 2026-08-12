@@ -189,12 +189,57 @@ export const ProcessInstanceDetailPage = () => {
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
-    severity: 'success' | 'error';
+    severity: 'success' | 'error' | 'warning';
   }>({
     open: false,
     message: '',
     severity: 'success',
   });
+
+  // Show notification helper
+  const showNotification = useCallback(
+    (message: string, severity: 'success' | 'error' | 'warning') => {
+      setSnackbar({ open: true, message, severity });
+    },
+    [],
+  );
+
+  /**
+   * History was truncated because one or more process instances reported a
+   * totalCount that exceeds the per-fetch limit. We only want to surface a
+   * single warning per fetch cycle, even when several nodes trigger it, and
+   * we suppress repeated warnings on auto-refresh by remembering the last
+   * signature we already showed.
+   */
+  const lastHistoryWarningRef = useRef<string | null>(null);
+  const handleHistoryPartial = useCallback(
+    (info: { instances: number; loadedCount: number; totalCount: number }) => {
+      // Signature covers the interesting bits so refreshing the same tree
+      // does not re-trigger the snackbar, but a real change does.
+      const signature = `${info.instances}|${info.loadedCount}|${info.totalCount}`;
+      if (lastHistoryWarningRef.current === signature) return;
+      lastHistoryWarningRef.current = signature;
+      const message =
+        info.instances > 1
+          ? t('processInstance:messages.historyExtremelyLargeMultiple', {
+              instances: info.instances,
+              loaded: info.loadedCount,
+              total: info.totalCount,
+            })
+          : t('processInstance:messages.historyExtremelyLarge', {
+              loaded: info.loadedCount,
+              total: info.totalCount,
+            });
+      showNotification(message, 'warning');
+    },
+    [showNotification, t],
+  );
+
+  // Reset the history-warning dedup signature whenever we navigate to a
+  // different process instance so the new tree is allowed to warn once too.
+  useEffect(() => {
+    lastHistoryWarningRef.current = null;
+  }, [processInstanceKey]);
 
   // Fetch data
   const {
@@ -245,7 +290,9 @@ export const ProcessInstanceDetailPage = () => {
     setErrorSubscriptionsPageSize,
     setErrorSubscriptionsState,
     totalEventSubscriptionsCount,
-  } = useInstanceData(processInstanceKey);
+  } = useInstanceData(processInstanceKey, {
+    onHistoryPartial: handleHistoryPartial,
+  });
 
   // Count of process instances shown in the Child Processes tab
   // (depth-1 + depth-2, excluding engine-internal multiInstance and subprocess wrappers).
@@ -264,11 +311,6 @@ export const ProcessInstanceDetailPage = () => {
     }
     return count;
   }, [instanceTree]);
-
-  // Show notification helper
-  const showNotification = useCallback((message: string, severity: 'success' | 'error') => {
-    setSnackbar({ open: true, message, severity });
-  }, []);
 
   const focusResolutionPending =
     focusedElementInstanceKey !== undefined && pendingFocusKey === focusedElementInstanceKey;
@@ -872,13 +914,22 @@ export const ProcessInstanceDetailPage = () => {
         </Box>
       </Paper>
 
-      {/* Success/Error Snackbar */}
+      {/* Success/Error/Warning Snackbar — Alert wrapper gives us severity coloring */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        message={snackbar.message}
-      />
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          variant="filled"
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

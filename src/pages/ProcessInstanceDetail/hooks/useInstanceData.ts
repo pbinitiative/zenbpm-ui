@@ -45,6 +45,20 @@ export const TERMINAL_STATES = ['completed', 'terminated'];
 export const AUTO_REFRESH_INTERVAL = 5000;
 
 // ---------------------------------------------------------------------------
+// Options
+// ---------------------------------------------------------------------------
+
+export interface UseInstanceDataOptions {
+  /**
+   * Fired when one or more process instances in the tree report a total
+   * history count greater than the API/page limit so the displayed set is
+   * incomplete. The hook aggregates per-fetch results into a single call
+   * (one snackbar per fetch cycle, not one per truncated node).
+   */
+  onHistoryPartial?: (info: { instances: number; loadedCount: number; totalCount: number }) => void;
+}
+
+// ---------------------------------------------------------------------------
 // Result interface
 // ---------------------------------------------------------------------------
 
@@ -170,6 +184,7 @@ function projectCalledProcessIncidents(
 
 export const useInstanceData = (
   processInstanceKey: string | undefined,
+  options?: UseInstanceDataOptions,
 ): UseInstanceDataResult => {
   const [instanceTree, setInstanceTree] = useState<ProcessInstanceNode | null>(null);
   const [processDefinition, setProcessDefinition] = useState<ProcessDefinition | null>(null);
@@ -208,6 +223,12 @@ export const useInstanceData = (
   const historySortOrderRef = useRef<GetHistorySortOrder>('asc');
   historySortByRef.current = historySortBy;
   historySortOrderRef.current = historySortOrder;
+  // Generation counter for the history-sort effect. Bumped in the effect
+  // cleanup so an in-flight (slower) sort request whose response arrives
+  // after the user has already triggered a newer sort change cannot
+  // overwrite `node.history` on the shared tree. Without this guard, an
+  // older request that finishes last silently corrupts the rendered order.
+  const historySortGenerationRef = useRef(0);
 
   // Refs so fetchAll (auto-refresh) always reads the current pagination values
   // without stale closure captures.
@@ -266,6 +287,12 @@ export const useInstanceData = (
   // takes longer than AUTO_REFRESH_INTERVAL the next tick starts a second rebuild
   // before the first finishes, doubling the load and causing state flicker.
   const isFetchingRef = useRef(false);
+
+  // Latest caller-provided history callback. Stored in a ref so refreshes
+  // always read the freshest closure without forcing the whole hook to
+  // re-subscribe to `options`.
+  const onHistoryPartialRef = useRef(options?.onHistoryPartial);
+  onHistoryPartialRef.current = options?.onHistoryPartial;
 
   // ── Subprocess element statistics ─────────────────────────────────────────
   const fetchSubprocessStats = useCallback(
@@ -335,6 +362,7 @@ export const useInstanceData = (
         maxDepth: MAX_TREE_DEPTH,
         preloadedRoot: rootInstance,
         terminalNodeCache,
+        onHistoryPartial: (info) => onHistoryPartialRef.current?.(info),
         jobsPage: jobsPageRef.current + 1,
         jobsPageSize: jobsPageSizeRef.current,
         incidentsPage: incidentsPageRef.current + 1,
@@ -544,8 +572,53 @@ export const useInstanceData = (
     const tree = instanceTreeRef.current;
     if (!tree) return;
     const nodes = collectAllNodes(tree);
-    void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeHistory(node, historySortBy, historySortOrder))
-      .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
+    // Capture the current generation. Cleanup runs before the next effect
+    // and bumps the ref, so any in-flight request whose response arrives
+    // later can compare against `historySortGenerationRef.current` and
+    // bail out — both before mutating `node.history` (handled inside
+    // `refetchNodeHistory` via `isStale`) and before triggering a re-render
+    // or snackbar here. This prevents a slow older sort request that
+    // resolves last from clobbering fresh data already written by a
+    // newer sort request.
+    const myGeneration = ++historySortGenerationRef.current;
+    const isStale = () => historySortGenerationRef.current !== myGeneration;
+    // Per-sort-change aggregator so we still emit a single notification even
+    // when several nodes in the tree trigger partial-history warnings.
+    const partialHistories: Array<{ totalCount: number; loadedCount: number }> = [];
+    void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) =>
+      doRefetchNodeHistory(node, historySortBy, historySortOrder, {
+        // Discard partial-history signals from stale sort generations.
+        onHistoryPartial: (info) => {
+          if (isStale()) return;
+          partialHistories.push(info);
+        },
+        isStale,
+      }),
+    )
+      .then(() => {
+        // If the user has since changed the sort, this response is stale —
+        // skip the re-render and snackbar. (The mutation guard inside
+        // `refetchNodeHistory` already prevented `node.history` from being
+        // overwritten by stale data.)
+        if (isStale()) return;
+        if (partialHistories.length > 0) {
+          onHistoryPartialRef.current?.({
+            instances: partialHistories.length,
+            loadedCount: partialHistories.reduce((sum, p) => sum + p.loadedCount, 0),
+            totalCount: partialHistories.reduce((sum, p) => sum + p.totalCount, 0),
+          });
+        }
+        setInstanceTree((prev) => (prev ? { ...prev } : prev));
+      });
+    // Invalidate this generation on the next render. Order matters: the
+    // bump MUST happen after we've captured `myGeneration` above (so this
+    // effect's own body isn't self-invalidated) and BEFORE the next
+    // effect's body runs (so the new effect sees a fresh generation).
+    return () => {
+      if (historySortGenerationRef.current === myGeneration) {
+        historySortGenerationRef.current += 1;
+      }
+    };
   }, [historySortBy, historySortOrder]);
 
   useEffect(() => {
