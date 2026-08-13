@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { e2eBuildMetadata } from './e2e/fixtures/build-metadata';
 
 const e2eBaseURL = 'http://localhost:3100';
 
@@ -23,9 +24,9 @@ export default defineConfig({
   webServer: {
     command: 'pnpm dev --mode mocks --port 3100 --strictPort',
     env: {
-      VITE_BUILD_COMMIT: 'abcdef0123456789abcdef0123456789abcdef01',
-      VITE_BUILD_BRANCH: 'feat/system-status',
-      VITE_BUILD_TIME: '2026-08-10T08:00:00Z',
+      VITE_BUILD_COMMIT: e2eBuildMetadata.commit,
+      VITE_BUILD_BRANCH: e2eBuildMetadata.branch,
+      VITE_BUILD_TIME: e2eBuildMetadata.time,
       VITE_E2E_TEST: 'true',
     },
     url: e2eBaseURL,
