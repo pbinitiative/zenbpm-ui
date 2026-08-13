@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { e2eBuildMetadata, e2eShortCommit } from '../fixtures/build-metadata';
 
-const frontendMetadata = '1.5.0 (abcdef012345)';
-const backendMetadata = 'v1.5.0 (abcdef012345)';
+const frontendMetadata = `${e2eBuildMetadata.version} (${e2eShortCommit})`;
+const backendMetadata = `v${e2eBuildMetadata.version} (${e2eShortCommit})`;
 
 test.describe('Build metadata footer', () => {
   test('displays embedded frontend metadata', async ({ page }) => {
@@ -60,20 +61,20 @@ test.describe('Build metadata footer', () => {
     await expect(status).toHaveText('Build metadata mismatch');
     await expect(status.locator('.MuiTypography-root')).toHaveClass(/MuiTypography-captionNormal/);
     await expect(status.locator('.MuiTypography-root')).toHaveCSS('text-transform', 'none');
-    await expect(page.getByTestId('build-metadata-footer')).toContainText('ZenBPM: v1.5.0+ (abcdef012345)');
+    await expect(page.getByTestId('build-metadata-footer')).toContainText(`ZenBPM: v${e2eBuildMetadata.version}+ (${e2eShortCommit})`);
   });
 
   test('treats a backend release candidate as matching the same UI version', async ({ page }) => {
     await page.goto('/?systemStatusScenario=release-candidate');
 
-    await expect(page.getByTestId('build-metadata-footer')).toContainText('ZenBPM: v1.5.0-rc1 (abcdef012345)');
+    await expect(page.getByTestId('build-metadata-footer')).toContainText(`ZenBPM: v${e2eBuildMetadata.version}-rc1 (${e2eShortCommit})`);
     await expect(page.getByTestId('build-metadata-status')).not.toBeVisible();
   });
 
   test('treats differing frontend and backend commits as matching when versions match', async ({ page }) => {
     await page.goto('/?systemStatusScenario=commit-difference');
 
-    await expect(page.getByTestId('build-metadata-footer')).toContainText('ZenBPM: v1.5.0 (123456789abc)');
+    await expect(page.getByTestId('build-metadata-footer')).toContainText(`ZenBPM: v${e2eBuildMetadata.version} (123456789abc)`);
     await expect(page.getByTestId('build-metadata-status')).not.toBeVisible();
   });
 });
