@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test';
+import { e2eBuildMetadata, e2eShortCommit } from '../fixtures/build-metadata';
+
+const escapedVersion = e2eBuildMetadata.version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 test.describe('System status', () => {
   test('displays backend and frontend build information', async ({ page }) => {
@@ -23,15 +26,15 @@ test.describe('System status', () => {
     await expect(frontend).toHaveCSS('border-top-color', 'rgb(240, 240, 240)');
 
     await expect(backend).toContainText('ZenBPM');
-    await expect(backend).toContainText(/Version\s*v1\.5\.0/);
+    await expect(backend).toContainText(new RegExp(`Version\\s*v${escapedVersion}`));
     await expect(backend).toContainText(/Build Time\s*2026-08-10T07:33:20Z/);
     await expect(backend).toContainText(/Branch\s*main/);
-    await expect(backend).toContainText(/Commit ID\s*abcdef012345/);
+    await expect(backend).toContainText(new RegExp(`Commit ID\\s*${e2eShortCommit}`));
 
     await expect(frontend).toContainText('UI');
-    await expect(frontend).toContainText(/Version\s*1\.5\.0/);
-    await expect(frontend).toContainText(/Build Time\s*2026-08-10T08:00:00Z/);
-    await expect(frontend).toContainText(/Branch\s*feat\/system-status/);
-    await expect(frontend).toContainText(/Commit ID\s*abcdef012345/);
+    await expect(frontend).toContainText(new RegExp(`Version\\s*${escapedVersion}`));
+    await expect(frontend).toContainText(new RegExp(`Build Time\\s*${e2eBuildMetadata.time}`));
+    await expect(frontend).toContainText(new RegExp(`Branch\\s*${e2eBuildMetadata.branch}`));
+    await expect(frontend).toContainText(new RegExp(`Commit ID\\s*${e2eShortCommit}`));
   });
 });
