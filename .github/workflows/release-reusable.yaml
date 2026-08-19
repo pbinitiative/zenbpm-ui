@@ -101,7 +101,7 @@ jobs:
   release_security:
     runs-on: ubuntu-latest
     needs: release
-    if: ${{ always() && inputs.security-scan }}
+    if: ${{ needs.release.result == 'success' && inputs.security-scan }}
     continue-on-error: true
     steps:
       - name: checkout code
@@ -177,7 +177,7 @@ jobs:
     needs:
       - release_security
       - release
-    if: ${{ always() && inputs.notify }}
+    if: ${{ always() && needs.release.result == 'success' && inputs.notify }}
     continue-on-error: true
     steps:
       - name: checkout code

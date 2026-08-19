@@ -11,6 +11,11 @@ on:
         description: Ref to build. Defaults to release/<version>.
         required: false
         type: string
+      notify:
+        description: Whether to send the Discord release notification.
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   actions: read
@@ -18,8 +23,25 @@ permissions:
   packages: write
   security-events: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate release tag
+        env:
+          RELEASE_TAG: ${{ inputs.version }}
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.?[1-9][0-9]*)?$ ]]; then
+            echo "Release tag must be vX.Y.Z, vX.Y.Z-rcN, or vX.Y.Z-rc.N: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
   release:
+    needs: validate
     uses: ./.github/workflows/release-reusable.yaml
     with:
       release-tag: ${{ inputs.version || github.ref_name }}
@@ -27,7 +49,7 @@ jobs:
       artifact-prefix: trivy-release-reports
       publish: true
       security-scan: true
-      notify: true
+      notify: ${{ inputs.notify }}
     secrets: inherit
 
   github-release:
@@ -38,4 +60,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ inputs.version || github.ref_name }}
-        run: gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --generate-notes --verify-tag
+        run: |
+          release_args=(--generate-notes --verify-tag)
+          if [[ "$RELEASE_TAG" =~ -rc\.?[1-9][0-9]*$ ]]; then
+            release_args+=(--prerelease)
+          fi
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" "${release_args[@]}"
