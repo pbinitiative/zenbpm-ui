@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:dmndi="https://www.omg.org/spec/DMN/20191111/DMNDI/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:biodi="http://bpmn.io/schema/dmn/biodi/2.0" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" id="DRD_ApproverDetermination_EN" name="(DRD) Approver Determination" namespace="http://camunda.org/schema/1.0/dmn">
+  <decision id="ApproverDetermination_EN" name="(2) Approver Determination">
+    <informationRequirement id="InformationRequirement_058hysz">
+      <requiredInput href="#type" />
+    </informationRequirement>
+    <informationRequirement id="InformationRequirement_18utsil">
+      <requiredInput href="#amount" />
+    </informationRequirement>
+    <decisionTable id="DecisionTable_1" hitPolicy="COLLECT">
+      <input id="Input_1" label="Commission Type">
+        <inputExpression id="InputExpression_1" typeRef="string">
+          <text>type</text>
+        </inputExpression>
+      </input>
+      <input id="InputClause_1cncvq8" label="Commission Amount">
+        <inputExpression id="LiteralExpression_0ewch37" typeRef="number">
+          <text>amount</text>
+        </inputExpression>
+      </input>
+      <output id="Output_1" label="Approver" name="approverRole" typeRef="string" biodi:width="276" />
+      <rule id="DecisionRule_0suk0nm">
+        <inputEntry id="UnaryTests_0rukxyn">
+          <text>"Regular"</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_1v4ypz4">
+          <text></text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_0vtzkas">
+          <text>"Sales Support Manager"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_1jiwejz">
+        <inputEntry id="UnaryTests_1jwys8u">
+          <text>"Regular"</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_1f021x2">
+          <text>&gt;500000</text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_0bkmdg4">
+          <text>"Sales Director"</text>
+        </outputEntry>
+      </rule>
+      <rule id="DecisionRule_0ozhwhn">
+        <inputEntry id="UnaryTests_18pu5lo">
+          <text>"VIP"</text>
+        </inputEntry>
+        <inputEntry id="UnaryTests_0m0m4vb">
+          <text></text>
+        </inputEntry>
+        <outputEntry id="LiteralExpression_1dlwjp5">
+          <text>"Sales Director"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <inputData id="type" name="type" />
+  <inputData id="amount" name="amount" />
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram>
+      <dmndi:DMNShape dmnElementRef="ApproverDetermination_EN">
+        <dc:Bounds height="80" width="180" x="380" y="300" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="DMNShape_0ximw1l" dmnElementRef="type">
+        <dc:Bounds height="45" width="125" x="327" y="188" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="DMNEdge_1951xsl" dmnElementRef="InformationRequirement_058hysz">
+        <di:waypoint x="390" y="233" />
+        <di:waypoint x="440" y="280" />
+        <di:waypoint x="440" y="300" />
+      </dmndi:DMNEdge>
+      <dmndi:DMNShape id="DMNShape_14h0bia" dmnElementRef="amount">
+        <dc:Bounds height="45" width="125" x="507" y="189" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="DMNEdge_0oj2b8a" dmnElementRef="InformationRequirement_18utsil">
+        <di:waypoint x="570" y="234" />
+        <di:waypoint x="500" y="280" />
+        <di:waypoint x="500" y="300" />
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

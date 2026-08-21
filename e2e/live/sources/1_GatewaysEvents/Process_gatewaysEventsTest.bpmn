@@ -1,0 +1,440 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zenbpm="http://zenbpm.pbinitiative.org/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_Process_b362aac3" targetNamespace="http://bpmn.io/schema/bpmn" exporter="ZenBPM Modeler" exporterVersion="1.0.0">
+  <bpmn:process id="Process_gatewaysEventsTest" name="Otestování gateways a klíčových eventů" isExecutable="true">
+    <bpmn:startEvent id="StarrtEvent" name="Spuštění testů pro gateways a eventy">
+      <bpmn:outgoing>Flow_0fl7g9g</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="ScriptTask_setCorrelationKey" name="Nastav correlation key">
+      <bpmn:extensionElements>
+        <zenbpm:taskDefinition type="script" />
+        <zenbpm:ioMapping>
+          <zenbpm:output source="=&#34;Neco&#34;" target="Message" />
+        </zenbpm:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0fl7g9g</bpmn:incoming>
+      <bpmn:outgoing>Flow_1vokyqb</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:parallelGateway id="ParalellGateway">
+      <bpmn:incoming>Flow_1vokyqb</bpmn:incoming>
+      <bpmn:outgoing>Flow_parallel1</bpmn:outgoing>
+      <bpmn:outgoing>Flow_parallel2</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="Flow_parallel1" name="Paralelní větev č.1" sourceRef="ParalellGateway" targetRef="UserTask_rozhodnutiProExclusiveGateway" />
+    <bpmn:sequenceFlow id="Flow_parallel2" name="Paralelní větev č.2" sourceRef="ParalellGateway" targetRef="UserTask_rozhodnutiProInclusiveGateway" />
+    <bpmn:exclusiveGateway id="ExclusiveGateway" name="Co dál?">
+      <bpmn:incoming>Flow_0s5vvqv</bpmn:incoming>
+      <bpmn:outgoing>Flow_1sg939x</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0x1ag63</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0s5vvqv" sourceRef="UserTask_rozhodnutiProExclusiveGateway" targetRef="ExclusiveGateway" />
+    <bpmn:sequenceFlow id="Flow_1sg939x" name="Otestovat event based gateway" sourceRef="ExclusiveGateway" targetRef="EventBasedGateway">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=eventBasedGateway = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:endEvent id="EndEvent_KonecParalelniVetve1" name="Konec paralelní větve č.1">
+      <bpmn:incoming>Flow_0x1ag63</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0x1ag63" name="Otestovat okmžitý konec" sourceRef="ExclusiveGateway" targetRef="EndEvent_KonecParalelniVetve1">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=endEvent = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:userTask id="UserTask_rozhodnutiProExclusiveGateway" name="Rozhodnutí o dalším postupu Exc.Gateway">
+      <bpmn:extensionElements>
+        <zenbpm:ioMapping>
+          <zenbpm:input source="=&#34;{\&#34;components\&#34;:[{\&#34;label\&#34;:\&#34;Otestovat event based gateway?\&#34;,\&#34;type\&#34;:\&#34;checkbox\&#34;,\&#34;layout\&#34;:{\&#34;row\&#34;:\&#34;Row_05dr746\&#34;,\&#34;columns\&#34;:null},\&#34;id\&#34;:\&#34;Field_1ycmg4t\&#34;,\&#34;key\&#34;:\&#34;eventBasedGateway\&#34;},{\&#34;label\&#34;:\&#34;Otestovat okamžitý konec?\&#34;,\&#34;type\&#34;:\&#34;checkbox\&#34;,\&#34;layout\&#34;:{\&#34;row\&#34;:\&#34;Row_0s079s9\&#34;,\&#34;columns\&#34;:null},\&#34;id\&#34;:\&#34;Field_1ji02ri\&#34;,\&#34;key\&#34;:\&#34;endEvent\&#34;}],\&#34;type\&#34;:\&#34;default\&#34;,\&#34;id\&#34;:\&#34;Form_0ogf4md\&#34;,\&#34;schemaVersion\&#34;:19}&#34;" target="ZEN_FORM" />
+          <zenbpm:output source="=eventBasedGateway" target="eventBasedGateway" />
+          <zenbpm:output source="=endEvent" target="endEvent" />
+        </zenbpm:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_parallel1</bpmn:incoming>
+      <bpmn:outgoing>Flow_0s5vvqv</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="UserTask_rozhodnutiProInclusiveGateway" name="Rozhodnutí o dalším postupu Inc.Gateway">
+      <bpmn:extensionElements>
+        <zenbpm:ioMapping>
+          <zenbpm:input source="=&#34;{\&#34;components\&#34;:[{\&#34;label\&#34;:\&#34;Skončit po 2 min?\&#34;,\&#34;type\&#34;:\&#34;checkbox\&#34;,\&#34;layout\&#34;:{\&#34;row\&#34;:\&#34;Row_0s0vygw\&#34;,\&#34;columns\&#34;:null},\&#34;id\&#34;:\&#34;Field_1acer3d\&#34;,\&#34;key\&#34;:\&#34;timerTest\&#34;},{\&#34;label\&#34;:\&#34;Otestovat error event?\&#34;,\&#34;type\&#34;:\&#34;checkbox\&#34;,\&#34;layout\&#34;:{\&#34;row\&#34;:\&#34;Row_149jkp7\&#34;,\&#34;columns\&#34;:null},\&#34;id\&#34;:\&#34;Field_1nktvcr\&#34;,\&#34;key\&#34;:\&#34;errorTest\&#34;},{\&#34;label\&#34;:\&#34;Okamžité ukončení celé procesní instance?\&#34;,\&#34;type\&#34;:\&#34;checkbox\&#34;,\&#34;layout\&#34;:{\&#34;row\&#34;:\&#34;Row_010dg6e\&#34;,\&#34;columns\&#34;:null},\&#34;id\&#34;:\&#34;Field_0xyn2z3\&#34;,\&#34;key\&#34;:\&#34;terminateTest\&#34;}],\&#34;type\&#34;:\&#34;default\&#34;,\&#34;id\&#34;:\&#34;Form_1i6kujl\&#34;,\&#34;schemaVersion\&#34;:19}&#34;" target="ZEN_FORM" />
+          <zenbpm:output source="=timerTest" target="timerTest" />
+          <zenbpm:output source="=errorTest" target="errorTest" />
+          <zenbpm:output source="=terminateTest" target="terminateTest" />
+        </zenbpm:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_parallel2</bpmn:incoming>
+      <bpmn:outgoing>Flow_1pl4yqh</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_1pl4yqh" sourceRef="UserTask_rozhodnutiProInclusiveGateway" targetRef="InclusiveGateway" />
+    <bpmn:inclusiveGateway id="InclusiveGateway" name="Co dál?">
+      <bpmn:incoming>Flow_1pl4yqh</bpmn:incoming>
+      <bpmn:outgoing>Flow_0ht3hl9</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1wya3pi</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1acr5l7</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0ht3hl9" name="Otestovat error event" sourceRef="InclusiveGateway" targetRef="SubProcess_ErrorEndEvent">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=errorTest = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:subProcess id="SubProcess_ErrorEndEvent" name="Podproces na error end event">
+      <bpmn:incoming>Flow_0ht3hl9</bpmn:incoming>
+      <bpmn:outgoing>Flow_08z59ei</bpmn:outgoing>
+      <bpmn:startEvent id="StartEvent_SubProcess" name="Start podprocesu na error">
+        <bpmn:outgoing>Flow1_SubProcess</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:sequenceFlow id="Flow1_SubProcess" sourceRef="StartEvent_SubProcess" targetRef="UserTask_rozhodnutiOVyskytuErroru" />
+      <bpmn:endEvent id="ErrorEndEvent_SubProcess" name="Error">
+        <bpmn:incoming>Flow3_SubProcess</bpmn:incoming>
+        <bpmn:errorEventDefinition id="ErrorEventDefinition_1g42ts4" errorRef="Error_0pq6wft" />
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow2_SubProcess" sourceRef="UserTask_rozhodnutiOVyskytuErroru" targetRef="ExclusiveGateway_SubProcess" />
+      <bpmn:userTask id="UserTask_rozhodnutiOVyskytuErroru" name="Rozhodni o výskytu erroru">
+        <bpmn:extensionElements>
+          <zenbpm:ioMapping>
+            <zenbpm:input source="=&#34;{\&#34;components\&#34;:[{\&#34;label\&#34;:\&#34;Error?\&#34;,\&#34;type\&#34;:\&#34;checkbox\&#34;,\&#34;layout\&#34;:{\&#34;row\&#34;:\&#34;Row_1yjlsvi\&#34;,\&#34;columns\&#34;:null},\&#34;id\&#34;:\&#34;Field_093ma44\&#34;,\&#34;key\&#34;:\&#34;error\&#34;}],\&#34;type\&#34;:\&#34;default\&#34;,\&#34;id\&#34;:\&#34;Form_145egjq\&#34;,\&#34;schemaVersion\&#34;:19}&#34;" target="ZEN_FORM" />
+            <zenbpm:output source="=error" target="error" />
+          </zenbpm:ioMapping>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow1_SubProcess</bpmn:incoming>
+        <bpmn:outgoing>Flow2_SubProcess</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:exclusiveGateway id="ExclusiveGateway_SubProcess" name="Error?" default="Flow4_SubProcess">
+        <bpmn:incoming>Flow2_SubProcess</bpmn:incoming>
+        <bpmn:outgoing>Flow3_SubProcess</bpmn:outgoing>
+        <bpmn:outgoing>Flow4_SubProcess</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:sequenceFlow id="Flow3_SubProcess" name="Ano" sourceRef="ExclusiveGateway_SubProcess" targetRef="ErrorEndEvent_SubProcess">
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=error = true</bpmn:conditionExpression>
+      </bpmn:sequenceFlow>
+      <bpmn:endEvent id="EndEvent_bezErroru" name="Bez erroru">
+        <bpmn:incoming>Flow4_SubProcess</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow4_SubProcess" name="Ne" sourceRef="ExclusiveGateway_SubProcess" targetRef="EndEvent_bezErroru" />
+    </bpmn:subProcess>
+    <bpmn:endEvent id="EndEvent_KonecPodmineneFlowBezErroru" name="Konec paralelní větve č.2 v rámci error end eventu">
+      <bpmn:incoming>Flow_08z59ei</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_08z59ei" sourceRef="SubProcess_ErrorEndEvent" targetRef="EndEvent_KonecPodmineneFlowBezErroru" />
+    <bpmn:eventBasedGateway id="EventBasedGateway">
+      <bpmn:incoming>Flow_1sg939x</bpmn:incoming>
+      <bpmn:outgoing>Flow_1eow4dm</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0h1zlk5</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="TimerEvent_60sec" name="60sec">
+      <bpmn:incoming>Flow_1eow4dm</bpmn:incoming>
+      <bpmn:outgoing>Flow_06oluv4</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_14cf871">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT60S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_1eow4dm" sourceRef="EventBasedGateway" targetRef="TimerEvent_60sec" />
+    <bpmn:intermediateCatchEvent id="MessageEvent" name="Message">
+      <bpmn:incoming>Flow_0h1zlk5</bpmn:incoming>
+      <bpmn:outgoing>Flow_0gpkzhu</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_0gb00j5" messageRef="Message_2ja96g5" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_0h1zlk5" sourceRef="EventBasedGateway" targetRef="MessageEvent" />
+    <bpmn:endEvent id="EndEvent_KonecParalelniVetve1PresMessage" name="Konec paralelní větve č.1 - přes message">
+      <bpmn:incoming>Flow_0gpkzhu</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0gpkzhu" sourceRef="MessageEvent" targetRef="EndEvent_KonecParalelniVetve1PresMessage" />
+    <bpmn:endEvent id="EndEvent_KonecParalelniVetve1PresTimer" name="Konec paralelní větve č.1 - přes timer">
+      <bpmn:incoming>Flow_06oluv4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_06oluv4" sourceRef="TimerEvent_60sec" targetRef="EndEvent_KonecParalelniVetve1PresTimer" />
+    <bpmn:sequenceFlow id="Flow_1wya3pi" name="Skončit po 2 min" sourceRef="InclusiveGateway" targetRef="TimerEvent_2min">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=timerTest = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_1acr5l7" name="Okamžité ukončení celé procesní instance" sourceRef="InclusiveGateway" targetRef="TermineEndEvent">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=terminateTest = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:endEvent id="TermineEndEvent" name="Okamžitě ukončit procesní instanci">
+      <bpmn:incoming>Flow_1acr5l7</bpmn:incoming>
+      <bpmn:terminateEventDefinition id="TerminateEventDefinition_10tpikn" />
+    </bpmn:endEvent>
+    <bpmn:intermediateCatchEvent id="TimerEvent_2min" name="2min">
+      <bpmn:incoming>Flow_1wya3pi</bpmn:incoming>
+      <bpmn:outgoing>Flow_14vj18f</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_1nroprd">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT2M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="EndEvent_KonecPodmineneFlowPo2min" name="Konec podmíněné flow po 2 min.">
+      <bpmn:incoming>Flow_14vj18f</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_14vj18f" sourceRef="TimerEvent_2min" targetRef="EndEvent_KonecPodmineneFlowPo2min" />
+    <bpmn:boundaryEvent id="ErrorBoundaryEvent" name="Error" attachedToRef="SubProcess_ErrorEndEvent">
+      <bpmn:outgoing>Flow_0x808z8</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_11yohvh" errorRef="Error_0pq6wft" />
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="EndEvent_KonecPodmineneFlowSErrorem" name="Došlo k chybě">
+      <bpmn:incoming>Flow_0x808z8</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0x808z8" sourceRef="ErrorBoundaryEvent" targetRef="EndEvent_KonecPodmineneFlowSErrorem" />
+    <bpmn:sequenceFlow id="Flow_0fl7g9g" sourceRef="StarrtEvent" targetRef="ScriptTask_setCorrelationKey" />
+    <bpmn:sequenceFlow id="Flow_1vokyqb" sourceRef="ScriptTask_setCorrelationKey" targetRef="ParalellGateway" />
+  </bpmn:process>
+  <bpmn:error id="Error_0pq6wft" name="error" errorCode="error" />
+  <bpmn:message id="Message_2ja96g5" name="Message">
+    <bpmn:extensionElements>
+      <zenbpm:subscription correlationKey="=Message" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_gatewaysEventsTest">
+      <bpmndi:BPMNShape id="Event_1wdt3y7_di" bpmnElement="StarrtEvent">
+        <dc:Bounds x="52" y="262" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="33" y="305" width="75" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ScriptTask_setCorrelationKey_di" bpmnElement="ScriptTask_setCorrelationKey">
+        <dc:Bounds x="120" y="240" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0kmf6su_di" bpmnElement="ParalellGateway">
+        <dc:Bounds x="252" y="255" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1kj3i5a_di" bpmnElement="ExclusiveGateway" isMarkerVisible="true">
+        <dc:Bounds x="425" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="431" y="232" width="38" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0w8xape_di" bpmnElement="EndEvent_KonecParalelniVetve1">
+        <dc:Bounds x="732" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="712" y="225" width="77" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0pa0ket_di" bpmnElement="UserTask_rozhodnutiProExclusiveGateway">
+        <dc:Bounds x="310" y="160" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1e5ob7a_di" bpmnElement="UserTask_rozhodnutiProInclusiveGateway">
+        <dc:Bounds x="300" y="380" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1h53t9z_di" bpmnElement="InclusiveGateway">
+        <dc:Bounds x="425" y="395" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="461" y="443" width="38" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1vavmn1_di" bpmnElement="SubProcess_ErrorEndEvent">
+        <dc:Bounds x="560" y="380" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_146o2k5_di" bpmnElement="EndEvent_KonecPodmineneFlowBezErroru">
+        <dc:Bounds x="732" y="402" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="709" y="445" width="83" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_10t7qmi_di" bpmnElement="EventBasedGateway">
+        <dc:Bounds x="555" y="75" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1d9vlz3_di" bpmnElement="TimerEvent_60sec">
+        <dc:Bounds x="652" y="-28" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="655" y="15" width="30" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_109rkv6_di" bpmnElement="MessageEvent">
+        <dc:Bounds x="652" y="82" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="648" y="125" width="45" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1mlybog_di" bpmnElement="EndEvent_KonecParalelniVetve1PresMessage">
+        <dc:Bounds x="732" y="82" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="712" y="125" width="77" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1sgisej_di" bpmnElement="EndEvent_KonecParalelniVetve1PresTimer">
+        <dc:Bounds x="732" y="-28" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="712" y="15" width="77" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0xcdyxx_di" bpmnElement="TermineEndEvent">
+        <dc:Bounds x="732" y="612" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="708" y="655" width="85" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1kxx9tk_di" bpmnElement="TimerEvent_2min">
+        <dc:Bounds x="592" y="302" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="598" y="345" width="24" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_12io5cg_di" bpmnElement="EndEvent_KonecPodmineneFlowPo2min">
+        <dc:Bounds x="732" y="302" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="705" y="345" width="90" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1algdj3_di" bpmnElement="EndEvent_KonecPodmineneFlowSErrorem">
+        <dc:Bounds x="732" y="522" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="715" y="565" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0bvzg2l_di" bpmnElement="ErrorBoundaryEvent">
+        <dc:Bounds x="642" y="442" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="667" y="483" width="25" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0cg0kh4_di" bpmnElement="Flow_parallel1">
+        <di:waypoint x="277" y="255" />
+        <di:waypoint x="277" y="200" />
+        <di:waypoint x="310" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="205" y="176" width="73" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0cjpxlp_di" bpmnElement="Flow_parallel2">
+        <di:waypoint x="277" y="305" />
+        <di:waypoint x="277" y="420" />
+        <di:waypoint x="300" y="420" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="200" y="372" width="73" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0s5vvqv_di" bpmnElement="Flow_0s5vvqv">
+        <di:waypoint x="410" y="200" />
+        <di:waypoint x="425" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1sg939x_di" bpmnElement="Flow_1sg939x">
+        <di:waypoint x="450" y="175" />
+        <di:waypoint x="450" y="100" />
+        <di:waypoint x="555" y="100" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="451" y="50" width="78" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0x1ag63_di" bpmnElement="Flow_0x1ag63">
+        <di:waypoint x="475" y="200" />
+        <di:waypoint x="732" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="565" y="166" width="88" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1pl4yqh_di" bpmnElement="Flow_1pl4yqh">
+        <di:waypoint x="400" y="420" />
+        <di:waypoint x="425" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0ht3hl9_di" bpmnElement="Flow_0ht3hl9">
+        <di:waypoint x="475" y="420" />
+        <di:waypoint x="560" y="420" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="481" y="386" width="74" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_08z59ei_di" bpmnElement="Flow_08z59ei">
+        <di:waypoint x="660" y="420" />
+        <di:waypoint x="732" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1eow4dm_di" bpmnElement="Flow_1eow4dm">
+        <di:waypoint x="580" y="75" />
+        <di:waypoint x="580" y="-10" />
+        <di:waypoint x="652" y="-10" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0h1zlk5_di" bpmnElement="Flow_0h1zlk5">
+        <di:waypoint x="605" y="100" />
+        <di:waypoint x="652" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0gpkzhu_di" bpmnElement="Flow_0gpkzhu">
+        <di:waypoint x="688" y="100" />
+        <di:waypoint x="732" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_06oluv4_di" bpmnElement="Flow_06oluv4">
+        <di:waypoint x="688" y="-10" />
+        <di:waypoint x="732" y="-10" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1wya3pi_di" bpmnElement="Flow_1wya3pi">
+        <di:waypoint x="450" y="395" />
+        <di:waypoint x="450" y="320" />
+        <di:waypoint x="592" y="320" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="460" y="293" width="82" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1acr5l7_di" bpmnElement="Flow_1acr5l7">
+        <di:waypoint x="450" y="445" />
+        <di:waypoint x="450" y="630" />
+        <di:waypoint x="732" y="630" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="457" y="510" width="87" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_14vj18f_di" bpmnElement="Flow_14vj18f">
+        <di:waypoint x="628" y="320" />
+        <di:waypoint x="732" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0x808z8_di" bpmnElement="Flow_0x808z8">
+        <di:waypoint x="660" y="478" />
+        <di:waypoint x="660" y="540" />
+        <di:waypoint x="732" y="540" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0fl7g9g_di" bpmnElement="Flow_0fl7g9g">
+        <di:waypoint x="88" y="280" />
+        <di:waypoint x="120" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1vokyqb_di" bpmnElement="Flow_1vokyqb">
+        <di:waypoint x="220" y="280" />
+        <di:waypoint x="252" y="280" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_0ylsaib">
+    <bpmndi:BPMNPlane id="BPMNPlane_0hnolmf" bpmnElement="SubProcess_ErrorEndEvent">
+      <bpmndi:BPMNShape id="Event_1h0uduy_di" bpmnElement="StartEvent_SubProcess">
+        <dc:Bounds x="302" y="242" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="278" y="285" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1fewt02_di" bpmnElement="ErrorEndEvent_SubProcess">
+        <dc:Bounds x="602" y="242" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="608" y="285" width="25" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1m9hn71_di" bpmnElement="UserTask_rozhodnutiOVyskytuErroru">
+        <dc:Bounds x="370" y="220" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1rhim3x_di" bpmnElement="ExclusiveGateway_SubProcess" isMarkerVisible="true">
+        <dc:Bounds x="495" y="235" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="504" y="213" width="31" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0xeuo6v_di" bpmnElement="EndEvent_bezErroru">
+        <dc:Bounds x="602" y="322" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="594" y="365" width="52" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_04xcylq_di" bpmnElement="Flow1_SubProcess">
+        <di:waypoint x="338" y="260" />
+        <di:waypoint x="370" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0zqvtsv_di" bpmnElement="Flow2_SubProcess">
+        <di:waypoint x="470" y="260" />
+        <di:waypoint x="495" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ny0tiy_di" bpmnElement="Flow3_SubProcess">
+        <di:waypoint x="545" y="260" />
+        <di:waypoint x="602" y="260" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="564" y="242" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1exvyhf_di" bpmnElement="Flow4_SubProcess">
+        <di:waypoint x="520" y="285" />
+        <di:waypoint x="520" y="340" />
+        <di:waypoint x="602" y="340" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="528" y="308" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

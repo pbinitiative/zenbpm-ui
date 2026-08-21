@@ -278,6 +278,7 @@ export const MainLayout = () => {
               size="small"
               placeholder={t('search.placeholder')}
               sx={{
+                visibility: 'hidden',
                 width: { xs: 160, sm: 280 },
                 '& .MuiOutlinedInput-root': {
                   bgcolor: 'grey.100',

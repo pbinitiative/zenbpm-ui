@@ -18,10 +18,11 @@ export default defineConfig([
     'dist',
     'src/base/openapi/generated-api',
     'public/mockServiceWorker.js',
-    // E2E tests and config files have separate tsconfig
+    // E2E tests and Playwright config files are checked separately
     'e2e/**',
     'orval.config.ts',
     'playwright.config.ts',
+    'playwright.live.config.ts',
     // Storybook
     '.storybook/**',
     'storybook-static/**',
