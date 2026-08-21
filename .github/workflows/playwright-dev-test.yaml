@@ -1,0 +1,67 @@
+name: Playwright Tests
+
+on:
+  workflow_run:
+    workflows: [release-dev]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: playwright-live
+  cancel-in-progress: false
+
+jobs:
+  test:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    env:
+      E2E_BASE_URL: ${{ vars.E2E_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.29.3
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Validate live test target
+        shell: bash
+        run: |
+          case "${E2E_BASE_URL:-}" in
+            http://*|https://*) ;;
+            '')
+              echo "::error::Configure the E2E_BASE_URL repository variable before running live Playwright tests."
+              exit 1
+              ;;
+            *)
+              echo "::error::E2E_BASE_URL must use the http or https protocol."
+              exit 1
+              ;;
+          esac
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run live Playwright tests
+        run: pnpm test:e2e:live
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-live-report
+          path: playwright-report/
+          retention-days: 30

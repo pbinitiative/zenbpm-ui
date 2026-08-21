@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zenbpm="http://zenbpm.pbinitiative.org/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_Process_7944bfa5" targetNamespace="http://bpmn.io/schema/bpmn" exporter="ZenBPM Modeler" exporterVersion="1.0.0">
+  <bpmn:collaboration id="Collaboration_0wbarsu">
+    <bpmn:participant id="Participant_ZenBPM" name="ZenBPM" processRef="salesCommisionPayoutsZenEN" />
+    <bpmn:participant id="Participant_Payer" name="Payer" />
+    <bpmn:messageFlow id="Flow_01ofxqu" sourceRef="ServiceTask_SendRequestForCommissionPayout" targetRef="Participant_Payer" />
+  </bpmn:collaboration>
+  <bpmn:process id="salesCommisionPayoutsZenEN" name="Sales Commission Payouts - multiInstance ZEN (EN)" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1m5x8l9">
+      <bpmn:lane id="Lane_Requester" name="Requester">
+        <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>UserTask_FillApplication</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Decision_DetermineApprovers</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Approver" name="Approver">
+        <bpmn:flowNodeRef>UserTask_ApplicationApproval</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Approved</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ServiceTask_SendRequestForCommissionPayout</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_ApplicationApproved</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_ApplicationRejected</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:sequenceFlow id="Flow_1as8w0w" sourceRef="StartEvent_1" targetRef="UserTask_FillApplication" />
+    <bpmn:sequenceFlow id="Flow_1jg88zv" sourceRef="UserTask_FillApplication" targetRef="Decision_DetermineApprovers" />
+    <bpmn:sequenceFlow id="Flow_0pii3as" sourceRef="Decision_DetermineApprovers" targetRef="UserTask_ApplicationApproval" />
+    <bpmn:sequenceFlow id="Flow_0xkvfvq" sourceRef="UserTask_ApplicationApproval" targetRef="Gateway_Approved" />
+    <bpmn:sequenceFlow id="Flow_1seznqo" name="Yes" sourceRef="Gateway_Approved" targetRef="ServiceTask_SendRequestForCommissionPayout">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=every item in approvalResults satisfies item.approved</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_1swp4ju" sourceRef="ServiceTask_SendRequestForCommissionPayout" targetRef="EndEvent_ApplicationApproved" />
+    <bpmn:sequenceFlow id="Flow_03mzn5c" name="No" sourceRef="Gateway_Approved" targetRef="EndEvent_ApplicationRejected" />
+    <bpmn:startEvent id="StartEvent_1" name="Request for extraordinary commission payout">
+      <bpmn:outgoing>Flow_1as8w0w</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="UserTask_FillApplication" name="(1) Fill Application">
+      <bpmn:extensionElements>
+        <zenbpm:ioMapping>
+          <zenbpm:input source="=&#34;{\&#34;components\&#34;:[{\&#34;label\&#34;:\&#34;Commission Type\&#34;,\&#34;values\&#34;:[{\&#34;label\&#34;:\&#34;Regular\&#34;,\&#34;value\&#34;:\&#34;Regular\&#34;},{\&#34;label\&#34;:\&#34;VIP\&#34;,\&#34;value\&#34;:\&#34;VIP\&#34;}],\&#34;type\&#34;:\&#34;select\&#34;,\&#34;layout\&#34;:{\&#34;row\&#34;:\&#34;Row_0xtrayf\&#34;,\&#34;columns\&#34;:null},\&#34;id\&#34;:\&#34;Field_0kted9w\&#34;,\&#34;key\&#34;:\&#34;type\&#34;,\&#34;description\&#34;:\&#34;Select a specific commission type\&#34;},{\&#34;label\&#34;:\&#34;Commission Amount\&#34;,\&#34;type\&#34;:\&#34;number\&#34;,\&#34;layout\&#34;:{\&#34;row\&#34;:\&#34;Row_1qtcm70\&#34;,\&#34;columns\&#34;:null},\&#34;id\&#34;:\&#34;Field_1c4cqfq\&#34;,\&#34;key\&#34;:\&#34;amount\&#34;,\&#34;description\&#34;:\&#34;Enter the requested commission amount\&#34;}],\&#34;type\&#34;:\&#34;default\&#34;,\&#34;id\&#34;:\&#34;Form_0lzxdjx\&#34;,\&#34;schemaVersion\&#34;:19}&#34;" target="ZEN_FORM" />
+          <zenbpm:output source="=type" target="type" />
+          <zenbpm:output source="=amount" target="amount" />
+        </zenbpm:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1as8w0w</bpmn:incoming>
+      <bpmn:outgoing>Flow_1jg88zv</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:businessRuleTask id="Decision_DetermineApprovers" name="(2) Determine Approver">
+      <bpmn:extensionElements>
+        <zenbpm:ioMapping>
+          <zenbpm:input source="=type" target="type" />
+          <zenbpm:input source="=amount" target="amount" />
+          <zenbpm:output source="=approvers.approverRole" target="approvers" />
+        </zenbpm:ioMapping>
+        <zenbpm:calledDecision decisionId="ApproverDetermination_EN" resultVariable="approvers" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1jg88zv</bpmn:incoming>
+      <bpmn:outgoing>Flow_0pii3as</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:userTask id="UserTask_ApplicationApproval" name="(3) Application Approval">
+      <bpmn:extensionElements>
+        <zenbpm:ioMapping>
+          <zenbpm:input source="=type" target="type" />
+          <zenbpm:input source="=amount" target="amount" />
+          <zenbpm:input source="=&#34;{\&#34;components\&#34;:[{\&#34;label\&#34;:\&#34;Designated Approver\&#34;,\&#34;type\&#34;:\&#34;textfield\&#34;,\&#34;layout\&#34;:{\&#34;row\&#34;:\&#34;Row_01wrml8\&#34;,\&#34;columns\&#34;:null},\&#34;id\&#34;:\&#34;Field_0a4qey3\&#34;,\&#34;key\&#34;:\&#34;approver\&#34;,\&#34;description\&#34;:\&#34;Name of the role approving this task\&#34;,\&#34;readonly\&#34;:true},{\&#34;label\&#34;:\&#34;Commission Type\&#34;,\&#34;type\&#34;:\&#34;textfield\&#34;,\&#34;layout\&#34;:{\&#34;row\&#34;:\&#34;Row_1s1frks\&#34;,\&#34;columns\&#34;:null},\&#34;id\&#34;:\&#34;Field_0eygxkb\&#34;,\&#34;key\&#34;:\&#34;type\&#34;,\&#34;readonly\&#34;:true},{\&#34;label\&#34;:\&#34;Commission Amount\&#34;,\&#34;type\&#34;:\&#34;textfield\&#34;,\&#34;layout\&#34;:{\&#34;row\&#34;:\&#34;Row_1en0e5u\&#34;,\&#34;columns\&#34;:null},\&#34;id\&#34;:\&#34;Field_1vpdcp3\&#34;,\&#34;key\&#34;:\&#34;amount\&#34;,\&#34;readonly\&#34;:true},{\&#34;label\&#34;:\&#34;Approve Payout\&#34;,\&#34;type\&#34;:\&#34;checkbox\&#34;,\&#34;layout\&#34;:{\&#34;row\&#34;:\&#34;Row_125ifk5\&#34;,\&#34;columns\&#34;:null},\&#34;id\&#34;:\&#34;Field_08vjl7c\&#34;,\&#34;key\&#34;:\&#34;approved\&#34;}],\&#34;type\&#34;:\&#34;default\&#34;,\&#34;id\&#34;:\&#34;Form_0hglroc\&#34;,\&#34;schemaVersion\&#34;:19}&#34;" target="ZEN_FORM" />
+          <zenbpm:output source="=approver" target="approver" />
+          <zenbpm:output source="=type" target="type" />
+          <zenbpm:output source="=amount" target="amount" />
+          <zenbpm:output source="=approved" target="approved" />
+        </zenbpm:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0pii3as</bpmn:incoming>
+      <bpmn:outgoing>Flow_0xkvfvq</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics>
+        <bpmn:extensionElements>
+          <zenbpm:loopCharacteristics inputCollection="=approvers" inputElement="approver" outputCollection="approvalResults" outputElement="={&#34;approver&#34;: approver, &#34;approved&#34;: approved}" />
+        </bpmn:extensionElements>
+      </bpmn:multiInstanceLoopCharacteristics>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Approved" name="Approved?" default="Flow_03mzn5c">
+      <bpmn:incoming>Flow_0xkvfvq</bpmn:incoming>
+      <bpmn:outgoing>Flow_1seznqo</bpmn:outgoing>
+      <bpmn:outgoing>Flow_03mzn5c</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="ServiceTask_SendRequestForCommissionPayout" name="(4) Send request for commission payout">
+      <bpmn:incoming>Flow_1seznqo</bpmn:incoming>
+      <bpmn:outgoing>Flow_1swp4ju</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_ApplicationApproved" name="Application approved and paid out">
+      <bpmn:incoming>Flow_1swp4ju</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_ApplicationRejected" name="Application Rejected">
+      <bpmn:incoming>Flow_03mzn5c</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_0wbarsu">
+      <bpmndi:BPMNShape id="Participant_0f7v3uu_di" bpmnElement="Participant_ZenBPM" isHorizontal="true">
+        <dc:Bounds x="123" y="50" width="675" height="358" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_1rcb1hd_di" bpmnElement="Lane_Approver" isHorizontal="true">
+        <dc:Bounds x="153" y="207" width="645" height="201" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_0xk9ap2_di" bpmnElement="Lane_Requester" isHorizontal="true">
+        <dc:Bounds x="153" y="50" width="645" height="157" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_1" bpmnElement="StartEvent_1">
+        <dc:Bounds x="202" y="92" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="188" y="135" width="65" height="66" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0nttbxu_di" bpmnElement="UserTask_FillApplication">
+        <dc:Bounds x="260" y="70" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1n0lz3v_di" bpmnElement="Decision_DetermineApprovers">
+        <dc:Bounds x="380" y="70" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0npri4r_di" bpmnElement="UserTask_ApplicationApproval">
+        <dc:Bounds x="380" y="230" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0m81mhd_di" bpmnElement="Gateway_Approved" isMarkerVisible="true">
+        <dc:Bounds x="505" y="245" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="503" y="221" width="54" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_13nhdv0_di" bpmnElement="ServiceTask_SendRequestForCommissionPayout">
+        <dc:Bounds x="600" y="230" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0jjudy3_di" bpmnElement="EndEvent_ApplicationApproved">
+        <dc:Bounds x="722" y="252" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="706" y="295" width="68" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_10oortr_di" bpmnElement="EndEvent_ApplicationRejected">
+        <dc:Bounds x="512" y="332" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="503" y="375" width="54" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1as8w0w_di" bpmnElement="Flow_1as8w0w">
+        <di:waypoint x="238" y="110" />
+        <di:waypoint x="260" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1jg88zv_di" bpmnElement="Flow_1jg88zv">
+        <di:waypoint x="360" y="110" />
+        <di:waypoint x="380" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0pii3as_di" bpmnElement="Flow_0pii3as">
+        <di:waypoint x="430" y="150" />
+        <di:waypoint x="430" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0xkvfvq_di" bpmnElement="Flow_0xkvfvq">
+        <di:waypoint x="480" y="270" />
+        <di:waypoint x="505" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1seznqo_di" bpmnElement="Flow_1seznqo">
+        <di:waypoint x="555" y="270" />
+        <di:waypoint x="600" y="270" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="569" y="252" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1swp4ju_di" bpmnElement="Flow_1swp4ju">
+        <di:waypoint x="700" y="270" />
+        <di:waypoint x="722" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_03mzn5c_di" bpmnElement="Flow_03mzn5c">
+        <di:waypoint x="530" y="295" />
+        <di:waypoint x="530" y="332" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="538" y="309.5" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Participant_10bss7h_di" bpmnElement="Participant_Payer" isHorizontal="true">
+        <dc:Bounds x="498" y="430" width="300" height="60" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_01ofxqu_di" bpmnElement="Flow_01ofxqu">
+        <di:waypoint x="650" y="310" />
+        <di:waypoint x="650" y="430" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
