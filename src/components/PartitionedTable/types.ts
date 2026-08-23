@@ -4,8 +4,8 @@ import type { Column, SortOrder } from '@components/DataTable';
 export interface PartitionData<T> {
   partition: number;
   items: T[];
-  /** Total count of items in this partition (for pagination display) */
-  count?: number;
+  /** Total count of items available in this partition (for pagination display) */
+  totalCount: number;
 }
 
 export interface PartitionedResponse<T> {

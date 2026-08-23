@@ -235,7 +235,7 @@ export const processDefinitionHandlers = [
       const paginatedItems = allItems.slice(startIndex, endIndex);
 
       return HttpResponse.json({
-        partitions: [{ partition: 1, items: paginatedItems }],
+        partitions: [{ partition: 1, items: paginatedItems, totalCount: allItems.length }],
         page,
         size,
         count: paginatedItems.length,

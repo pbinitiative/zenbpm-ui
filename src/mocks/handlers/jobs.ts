@@ -57,6 +57,7 @@ export const jobHandlers = [
         partitions: [
           {
             partition: 1,
+            totalCount: filteredJobs.length,
             items,
           },
         ],
