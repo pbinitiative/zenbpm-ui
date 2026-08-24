@@ -6,6 +6,7 @@ import * as showcaseProcess from './bpmn/showcase-process';
 import * as simpleUserTask from './bpmn/simple-user-task';
 import * as simpleBusinessRuleTaskExternal from './bpmn/simple-business-rule-task-external';
 import * as userTasksWithAssignments from './bpmn/user-tasks-with-assignments';
+import * as userTaskClassificationTree from './bpmn/user-task-classification-tree';
 import { addMinutes, daysAgo } from './types';
 import {
   MULTI_INSTANCE_CHILD_B_KEY,
@@ -22,6 +23,11 @@ export interface MockJob {
   elementId: string;
   elementName?: string;
   type: string;
+  /**
+   * BPMN element type that created the job (e.g. USER_TASK, SERVICE_TASK, BUSINESS_RULE_TASK).
+   * Independent from the configurable worker-routing `type` value above.
+   */
+  elementType: string;
   processInstanceKey: string;
   processDefinitionKey: string;
   state: 'active' | 'activatable' | 'activated' | 'completed' | 'failed' | 'canceled';
@@ -59,6 +65,7 @@ const legacyJobs: MockJob[] = [
     elementId: 'Task_Approval',
     elementName: 'Final Approval',
     type: 'user-task-type',
+    elementType: 'USER_TASK',
     processInstanceKey: '3100000000000000021',
     processDefinitionKey: '1997302399374458880',
     state: 'active',
@@ -79,6 +86,7 @@ const legacyJobs: MockJob[] = [
     elementId: 'Task_CreditCheck',
     elementName: 'Credit Check',
     type: 'service-task',
+    elementType: 'SERVICE_TASK',
     processInstanceKey: '3100000000000000022',
     processDefinitionKey: '1997302399374458880',
     state: 'completed',
@@ -96,6 +104,7 @@ const legacyJobs: MockJob[] = [
     elementId: 'Task_Manager',
     elementName: 'Manager Review',
     type: 'user-task-type',
+    elementType: 'USER_TASK',
     processInstanceKey: '3100000000000000002',
     processDefinitionKey: '1997302353098702848',
     state: 'active',
@@ -114,6 +123,7 @@ const legacyJobs: MockJob[] = [
     elementId: 'Task_HR',
     elementName: 'HR Verification',
     type: 'user-task-type',
+    elementType: 'USER_TASK',
     processInstanceKey: '3100000000000000003',
     processDefinitionKey: '1997302353098702848',
     state: 'active',
@@ -135,6 +145,7 @@ const legacyJobs: MockJob[] = [
     elementId: 'Task_1',
     elementName: 'Process Task',
     type: 'service-task',
+    elementType: 'SERVICE_TASK',
     processInstanceKey: '3100000000000000001',
     processDefinitionKey: '1997302186542891008',
     state: 'failed',
@@ -153,6 +164,7 @@ const legacyJobs: MockJob[] = [
     elementId: 'Task_1',
     elementName: 'Process Task',
     type: 'service-task',
+    elementType: 'SERVICE_TASK',
     processInstanceKey: '3100000000000000004',
     processDefinitionKey: '1997302376817491968',
     state: 'active',
@@ -176,6 +188,7 @@ const processInstanceOnlyJobs: MockJob[] = paginationTaskNumbers.map((taskNumber
   elementId: `Task_${taskNumber}`,
   elementName: `Task ${taskNumber}`,
   type: 'task-type',
+  elementType: 'SERVICE_TASK',
   processInstanceKey: MULTI_INSTANCE_CHILD_B_KEY,
   processDefinitionKey: MULTI_INSTANCE_PROCESS_DEFINITION_KEY,
   state: 'completed' as const,
@@ -192,17 +205,8 @@ export const jobs: MockJob[] = [
   ...(simpleUserTask.jobs as MockJob[]),
   ...(simpleBusinessRuleTaskExternal.jobs as MockJob[]),
   ...(userTasksWithAssignments.jobs as MockJob[]),
+  ...(userTaskClassificationTree.jobs as MockJob[]),
 ];
-
-// Helper to get user tasks only
-export const getUserTasks = (): MockJob[] => {
-  return jobs.filter((j) => j.type === 'user-task-type');
-};
-
-// Helper to get active user tasks
-export const getActiveUserTasks = (): MockJob[] => {
-  return jobs.filter((j) => j.type === 'user-task-type' && j.state === 'active');
-};
 
 // Helper to get jobs by process instance key
 export const getJobsByProcessInstanceKey = (processInstanceKey: string): MockJob[] => {

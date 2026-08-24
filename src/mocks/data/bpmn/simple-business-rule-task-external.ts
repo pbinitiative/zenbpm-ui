@@ -115,6 +115,7 @@ export const jobs = [
     elementId: 'BusinessRuleTask1',
     elementName: 'Test Simple External Business Rule Task 1',
     type: 'test-business-rule-task-job',
+    elementType: 'BUSINESS_RULE_TASK',
     processInstanceKey: '3100000000000000184',
     processDefinitionKey: '3000000000000000036',
     state: 'active' as const,
