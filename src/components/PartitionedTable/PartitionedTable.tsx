@@ -179,7 +179,7 @@ export const PartitionedTable = <T extends object>({
                   <Fragment key={partition.partition}>
                     <PartitionHeader
                       partition={partition.partition}
-                      count={partition.count}
+                      count={partition.totalCount}
                       page={page}
                       pageSize={pageSize}
                       colSpan={columns.length}

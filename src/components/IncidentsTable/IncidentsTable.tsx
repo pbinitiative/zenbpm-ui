@@ -67,7 +67,7 @@ export const IncidentsTable = ({
 
       // Wrap simple paginated response in partitioned format
       return {
-        partitions: [{ partition: 1, items: responseData.items as Incident[] }],
+        partitions: [{ partition: 1, items: responseData.items as Incident[], totalCount: responseData.totalCount }],
         page: responseData.page,
         size: responseData.size,
         count: responseData.count,

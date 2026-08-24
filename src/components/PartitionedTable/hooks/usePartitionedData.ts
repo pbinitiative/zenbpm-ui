@@ -78,7 +78,6 @@ export function usePartitionedData<T extends object>({
   const prevFiltersRef = useRef<FilterValues | undefined>(filters);
   // Bumped by the auto-refresh interval to trigger a re-fetch.
   const [autoRefreshTick, setAutoRefreshTick] = useState(0);
-  const lastTickRef = useRef(autoRefreshTick);
   const serializedFilters = JSON.stringify(filters);
 
   // Fetch data when page, filters, sorting, or refreshKey change
@@ -203,9 +202,10 @@ export function usePartitionedData<T extends object>({
   );
 
   const maxPartitionCount = useMemo(() => {
-    // TODO REST endponts listing partitions are now inconsistent.
-    // We have add getting maxPartitionCount after it is fixed.
-    return data?.totalCount ?? 0;
+    if (!data || data.partitions.length === 0) return 0;
+    // Pagination is driven by the largest partition: pages exist until the
+    // partition with the most items is exhausted.
+    return data.partitions.reduce((max, partition) => Math.max(max, partition.totalCount), 0);
   }, [data]);
 
   return {

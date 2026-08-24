@@ -265,14 +265,14 @@ export const processInstanceHandlers = [
       });
 
       // Build partitioned response
-      let partitionsResponse: Array<{ partition: number; items: unknown[]; count: number }>;
+      let partitionsResponse: Array<{ partition: number; items: unknown[]; totalCount: number }>;
       let totalCount: number;
 
       if (partition !== null) {
         // Single partition requested - paginate just that partition's data
         const partitionData = partitionMap.get(partition) || [];
         const paginatedItems = partitionData.slice(startIndex, endIndex).map(transformInstance);
-        partitionsResponse = [{ partition, items: paginatedItems, count: partitionData.length }];
+        partitionsResponse = [{ partition, items: paginatedItems, totalCount: partitionData.length }];
         totalCount = partitionData.length;
       } else {
         // All partitions - paginate each partition independently
@@ -280,7 +280,7 @@ export const processInstanceHandlers = [
         partitionsResponse = [1, 2, 3, 4].map((p) => {
           const partitionData = partitionMap.get(p) || [];
           const paginatedItems = partitionData.slice(startIndex, endIndex).map(transformInstance);
-          return { partition: p, items: paginatedItems, count: partitionData.length };
+          return { partition: p, items: paginatedItems, totalCount: partitionData.length };
         });
         // Total count is sum of all items across all partitions
         totalCount = [1, 2, 3, 4].reduce((sum, p) => sum + (partitionMap.get(p)?.length || 0), 0);
@@ -370,7 +370,7 @@ export const processInstanceHandlers = [
       const partitionsResponse = [1, 2, 3, 4].map((p) => {
         const partitionData = partitionMap.get(p) || [];
         const paginatedItems = partitionData.slice(startIndex, endIndex).map(transformInstance);
-        return { partition: p, items: paginatedItems, count: partitionData.length };
+        return { partition: p, items: paginatedItems, totalCount: partitionData.length };
       });
 
       const totalCount = children.length;

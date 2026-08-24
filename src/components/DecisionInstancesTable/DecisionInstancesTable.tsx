@@ -166,7 +166,7 @@ export const DecisionInstancesTable = ({
       return {
         partitions: data.partitions?.map((p) => ({
           partition: p.partition,
-          count: p.count,
+          totalCount: p.totalCount,
           items: p.items || [],
         })) || [],
         page: data.page,
