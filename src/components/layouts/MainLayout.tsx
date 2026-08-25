@@ -18,7 +18,6 @@ import {
   ListItemText,
   Menu,
   MenuItem,
-  TextField,
   Toolbar,
   Typography,
   useMediaQuery,
@@ -251,7 +250,7 @@ export const MainLayout = () => {
             )}
           </Box>
 
-          {/* Right section: Design button, Search and Avatar */}
+          {/* Right section: Design button, reserved search space and Avatar */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
             {/* Design Button */}
             <Button
@@ -273,37 +272,11 @@ export const MainLayout = () => {
               {t('navigation.design')}
             </Button>
 
-            {/* Search */}
-            <TextField
-              size="small"
-              placeholder={t('search.placeholder')}
-              sx={{
-                visibility: 'hidden',
-                width: { xs: 160, sm: 280 },
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: 'grey.100',
-                  border: 'none',
-                  '& fieldset': {
-                    border: 'none',
-                  },
-                  '&:hover': {
-                    bgcolor: 'grey.200',
-                  },
-                  '&.Mui-focused': {
-                    bgcolor: 'grey.200',
-                    boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.2)',
-                  },
-                },
-                '& .MuiInputBase-input': {
-                  fontSize: '0.875rem',
-                  py: 1.25,
-                  px: 2,
-                  '&::placeholder': {
-                    color: 'text.secondary',
-                    opacity: 1,
-                  },
-                },
-              }}
+            {/* Keep the Design button aligned while global search is unavailable. */}
+            <Box
+              aria-hidden="true"
+              data-testid="header-search-spacer"
+              sx={{ display: { xs: 'none', md: 'block' }, width: 280, minWidth: 0, flexShrink: 1 }}
             />
 
             {/* Avatar + User Menu */}

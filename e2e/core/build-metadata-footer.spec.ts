@@ -48,6 +48,17 @@ test.describe('Build metadata footer', () => {
     await expect(page.getByTestId('build-metadata-footer')).toContainText('ZenBPM: unavailable');
   });
 
+  test('does not crash when the status response has no build metadata', async ({ page }) => {
+    const pageErrors: string[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+
+    await page.goto('/?systemStatusScenario=malformed');
+
+    await expect(page.getByTestId('build-metadata-footer')).toContainText('ZenBPM: unavailable');
+    await expect(page.getByText('Unexpected Application Error!')).not.toBeVisible();
+    expect(pageErrors).toEqual([]);
+  });
+
   test('hides the status indicator when frontend and backend metadata match', async ({ page }) => {
     await page.goto('/');
 

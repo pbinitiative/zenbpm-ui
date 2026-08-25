@@ -23,7 +23,11 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { themeColors } from '@base/theme';
-import { frontendBuildMetadata, type BuildMetadata } from '@base/buildMetadata';
+import {
+  frontendBuildMetadata,
+  isBuildMetadata,
+  type BuildMetadata,
+} from '@base/buildMetadata';
 
 // ── Types (mirroring /internal/cluster/state/state.go) ───────────────────────
 
@@ -53,6 +57,50 @@ interface ClusterStatus extends BuildMetadata {
   nodes: Record<string, ClusterNode>;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isInteger = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value);
+
+const isNodePartition = (value: unknown): value is NodePartition =>
+  isRecord(value) &&
+  isInteger(value.id) &&
+  isInteger(value.state) &&
+  isInteger(value.role);
+
+const isClusterNode = (value: unknown): value is ClusterNode =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.addr === 'string' &&
+  isInteger(value.suffrage) &&
+  isInteger(value.state) &&
+  isInteger(value.role) &&
+  isRecord(value.partitions) &&
+  Object.values(value.partitions).every(isNodePartition);
+
+const isClusterPartition = (
+  value: unknown,
+): value is { id: number; leaderId: string } =>
+  isRecord(value) && isInteger(value.id) && typeof value.leaderId === 'string';
+
+const isClusterStatus = (value: unknown): value is ClusterStatus => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const status = value;
+  return (
+    isBuildMetadata(status) &&
+    isRecord(status.clusterConfig) &&
+    isInteger(status.clusterConfig.desiredPartitions) &&
+    isRecord(status.partitions) &&
+    Object.values(status.partitions).every(isClusterPartition) &&
+    isRecord(status.nodes) &&
+    Object.values(status.nodes).every(isClusterNode)
+  );
+};
+
 // ── Enum maps ─────────────────────────────────────────────────────────────────
 
 const NODE_STATE_COLOR: Record<number, string> = {
@@ -69,7 +117,13 @@ const SUFFRAGE_LABEL: Record<number, string> = { 0: 'Voter', 1: 'Nonvoter', 2: '
 // ── Data fetching ─────────────────────────────────────────────────────────────
 
 const fetchSystemStatus = (): Promise<ClusterStatus> =>
-  axios.get<ClusterStatus>('/system/status').then((r) => r.data);
+  axios.get<unknown>('/system/status').then(({ data }) => {
+    if (!isClusterStatus(data)) {
+      throw new Error('Invalid system status response');
+    }
+
+    return data;
+  });
 
 // ── Small atoms ───────────────────────────────────────────────────────────────
 
@@ -158,10 +212,10 @@ interface BuildInformationColumnProps {
 const BuildInformationColumn = ({ metadata, testId, title, loading = false }: BuildInformationColumnProps) => {
   const { t } = useTranslation([ns.common]);
   const fields = [
-    { label: t('common:systemStatus.version'), value: metadata?.build.version },
-    { label: t('common:systemStatus.buildTime'), value: metadata?.build.time },
-    { label: t('common:systemStatus.branch'), value: metadata?.git.branch },
-    { label: t('common:systemStatus.commitId'), value: metadata?.git.commitId },
+    { label: t('common:systemStatus.version'), value: metadata?.build?.version },
+    { label: t('common:systemStatus.buildTime'), value: metadata?.build?.time },
+    { label: t('common:systemStatus.branch'), value: metadata?.git?.branch },
+    { label: t('common:systemStatus.commitId'), value: metadata?.git?.commitId },
   ];
 
   return (
@@ -204,6 +258,7 @@ export const SystemStatusPage = () => {
   const { data, isLoading, isError, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['systemStatus'],
     queryFn: fetchSystemStatus,
+    retry: false,
     refetchInterval: 10_000,
   });
 
@@ -273,7 +328,7 @@ export const SystemStatusPage = () => {
           [...Array(4) as number[]].map((_, i) => <Skeleton key={i} width={80} height={44} />)
         ) : (
           <>
-            <Stat label={t("common:systemStatus.desiredPartitions")} value={data?.clusterConfig.desiredPartitions ?? '—'} />
+            <Stat label={t("common:systemStatus.desiredPartitions")} value={data?.clusterConfig?.desiredPartitions ?? '—'} />
             <Divider orientation="vertical" flexItem />
             <Stat label={t("common:systemStatus.activePartitions")} value={partitionIds.length} />
             <Divider orientation="vertical" flexItem />

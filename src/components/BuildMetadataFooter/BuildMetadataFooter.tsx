@@ -8,11 +8,12 @@ import { ns } from '@base/i18n';
 import {
   frontendBuildMetadata,
   isBuildMetadataMatch,
+  parseBuildMetadata,
   type BuildMetadata,
 } from '@base/buildMetadata';
 
 const fetchSystemStatus = (): Promise<BuildMetadata> =>
-  axios.get<BuildMetadata>('/system/status').then(({ data }) => data);
+  axios.get<unknown>('/system/status').then(({ data }) => parseBuildMetadata(data));
 
 const formatMetadata = ({ git, build }: BuildMetadata): string =>
   `${build.version} (${git.commitId})`;
