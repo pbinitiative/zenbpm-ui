@@ -12,8 +12,13 @@ test.describe('System status', () => {
     const buildInformation = page.getByTestId('system-build-information');
     const backend = buildInformation.getByTestId('backend-build-information');
     const frontend = buildInformation.getByTestId('frontend-build-information');
+    const topology = page.getByTestId('system-cluster-topology');
+    const nodeRow = topology.getByRole('row').filter({ hasText: 'node-1' });
 
     await expect(buildInformation).toContainText('Build Information');
+    await expect(topology.getByRole('columnheader', { name: /partition 1/i })).toBeVisible();
+    await expect(nodeRow).toContainText('127.0.0.1:8091');
+    await expect(nodeRow.getByText('Leader', { exact: true })).toBeVisible();
 
     const sectionOrder = await page
       .locator('[data-testid="system-cluster-topology"], [data-testid="system-build-information"]')
@@ -36,5 +41,26 @@ test.describe('System status', () => {
     await expect(frontend).toContainText(new RegExp(`Build Time\\s*${e2eBuildMetadata.time}`));
     await expect(frontend).toContainText(new RegExp(`Branch\\s*${e2eBuildMetadata.branch}`));
     await expect(frontend).toContainText(new RegExp(`Commit ID\\s*${e2eShortCommit}`));
+  });
+
+  test('stays usable when the backend returns a malformed status response', async ({ page }) => {
+    const pageErrors: string[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+
+    await page.goto('/');
+    await page.getByRole('link', { name: 'System Status' }).click();
+    await expect(page.getByTestId('system-status-page')).toBeVisible();
+    await page.evaluate(() => {
+      window.history.replaceState(
+        window.history.state,
+        '',
+        '/system-status?systemStatusScenario=malformed',
+      );
+    });
+    await page.getByRole('button', { name: 'Refresh' }).click();
+
+    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.getByText('Unexpected Application Error!')).not.toBeVisible();
+    expect(pageErrors).toEqual([]);
   });
 });
