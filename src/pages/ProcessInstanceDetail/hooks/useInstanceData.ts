@@ -36,45 +36,6 @@ import type { EventSubscriptionState } from '@base/openapi/generated-api/schemas
 import type { GetIncidentsState } from '@base/openapi/generated-api/schemas/getIncidentsState';
 
 // ---------------------------------------------------------------------------
-// Process definition cache
-// ---------------------------------------------------------------------------
-// Definitions are immutable for the lifetime of the app, so we keep a
-// module-level promise cache keyed by process definition key. This prevents
-// re-fetching the same definition across tree rebuilds, auto-refreshes, and
-// navigations between instances that share a definition. The hook still
-// owns its own (smaller) per-tree state for the definitions it actually
-// needs right now; the cache only exists to avoid duplicate network calls.
-const processDefinitionCache = new Map<string, Promise<ProcessDefinition>>();
-
-function getCachedProcessDefinition(key: string): Promise<ProcessDefinition> {
-  let p = processDefinitionCache.get(key);
-  if (!p) {
-    p = getProcessDefinition(key) as unknown as Promise<ProcessDefinition>;
-    processDefinitionCache.set(key, p);
-    // Drop rejected promises from the cache so the next caller can retry.
-    // If `getProcessDefinition` rejects (404, 5xx, transient network error),
-    // holding the rejected promise in the cache for the lifetime of the app
-    // would mean every subsequent refresh and every later navigation back to
-    // the same instance returns the same dead rejection, so the diagram and
-    // the definition-derived User Task classification stay broken until the
-    // browser is reloaded.
-    //
-    // Only evict the entry if it still references *this* exact promise. A
-    // concurrent caller may have already replaced it with a fresh in-flight
-    // request; we must not clobber that one.
-    //
-    // The `.catch` returns a fresh resolved promise which is intentionally
-    // discarded — we only care about the side effect on the cache.
-    p.catch(() => {
-      if (processDefinitionCache.get(key) === p) {
-        processDefinitionCache.delete(key);
-      }
-    });
-  }
-  return p;
-}
-
-// ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
@@ -107,17 +68,12 @@ export interface UseInstanceDataResult {
   processInstance: ProcessInstance | null;
   /**
    * The process definition for the current root instance — i.e. the diagram
-   * shown in the header. Convenience for the root definition, equivalent to
-   * `processDefinitionsByKey.get(processInstance.processDefinitionKey)`.
+   * shown in the header. Only the root definition is loaded; child process
+   * definitions referenced by the call tree are NOT fetched, because
+   * classification of jobs (e.g. User Task vs. service task) uses the
+   * persisted `job.elementType` and never needs the BPMN model of a child.
    */
   processDefinition: ProcessDefinition | null;
-  /**
-   * Every process definition referenced by any node in the current tree,
-   * keyed by `processDefinitionKey`. Required for per-node classification
-   * (e.g. a User Task in a child process definition must be classified
-   * against the child definition, not the loaded/root one).
-   */
-  processDefinitionsByKey: ReadonlyMap<string, ProcessDefinition>;
   elementStatistics: ElementStatistics | undefined;
   loading: boolean;
   error: string | null;
@@ -240,13 +196,11 @@ export const useInstanceData = (
   options?: UseInstanceDataOptions,
 ): UseInstanceDataResult => {
   const [instanceTree, setInstanceTree] = useState<ProcessInstanceNode | null>(null);
-  // One `ProcessDefinition` per distinct `processDefinitionKey` referenced in
-  // the current tree. Populated by the tree fetch path via the module-level
-  // promise cache. Resets to an empty map on every `processInstanceKey`
-  // change so the consumer never sees stale definitions from a prior tree.
-  const [processDefinitionsByKey, setProcessDefinitionsByKey] = useState<
-    ReadonlyMap<string, ProcessDefinition>
-  >(new Map());
+  // The definition for the *root* process instance only. Reset to `null` on
+  // every `processInstanceKey` change so the consumer never sees a stale
+  // diagram from a prior instance. Child definitions referenced by the call
+  // tree are intentionally NOT loaded — see `UseInstanceDataResult`.
+  const [processDefinition, setProcessDefinition] = useState<ProcessDefinition | null>(null);
   const [subprocessElementStatistics, setSubprocessElementStatistics] = useState<
     ElementStatistics | undefined
   >(undefined);
@@ -398,32 +352,26 @@ export const useInstanceData = (
 
       // Fire the root definition fetch immediately, in parallel with the
       // tree build, so the BPMN diagram can render as soon as the root
-      // definition arrives (same behaviour as before the multi-definition
-      // refactor). The module-level promise cache guarantees we never
-      // duplicate the request even though we also fire it from the
-      // post-tree loop below.
-      void getCachedProcessDefinition(rootInstance.processDefinitionKey)
+      // definition arrives. Only the root is requested: child process
+      // definitions referenced by the call tree are NOT loaded because
+      // job classification uses the persisted `job.elementType` (see
+      // `JobsTab`) and never needs the BPMN model of a child.
+      void getProcessDefinition(rootInstance.processDefinitionKey)
         .then((def) => {
-          // Guard against stale updates: only apply if we're still on the
-          // same instance. We can't use `isCurrentFetch()` here because
-          // fetchAll's finally block nulls `activeFetchRef` once the
-          // tree build completes — but the definition request is still
-          // in flight at that point, so a strict id match would drop
-          // the response and the map would never see the root definition.
-          if (
-            activeFetchRef.current !== null &&
-            activeFetchRef.current.processInstanceKey !== processInstanceKey
-          ) {
-            return;
-          }
-          setProcessDefinitionsByKey((prev) => {
-            if (prev.has(rootInstance.processDefinitionKey)) return prev;
-            const next = new Map(prev);
-            next.set(rootInstance.processDefinitionKey, def);
-            return next;
-          });
+          // Guard against stale responses that belong to a *different*
+          // instance — i.e. the user has navigated to another instance
+          // while this request was in flight. We only need to compare the
+          // current key, not the per-fetch id, because the definition is
+          // bound to the instance it was requested for.
+          if (processInstanceKeyRef.current !== processInstanceKey) return;
+          setProcessDefinition(def);
         })
-        .catch(() => { /* root definition unavailable — diagram stays hidden, page still interactive */ });
+        .catch(() => {
+          // Root definition unavailable — keep the page interactive and
+          // just hide the diagram. The process instance still loads.
+          if (processInstanceKeyRef.current !== processInstanceKey) return;
+          setProcessDefinition(null);
+        });
 
       // Build terminal-node cache to skip re-fetching immutable data on refresh.
       const terminalNodeCache = new Map<string, ProcessInstanceNode>();
@@ -467,47 +415,9 @@ export const useInstanceData = (
       if (isCurrentFetch()) setError(null); // tree fetched OK — drop any stale error from a previous attempt
       // Pass the current key so the subprocess fetch can guard against navigation while its requests are in flight.
       void fetchSubprocessStats(root, processInstanceKey);
-
-      // For every distinct process definition referenced by the freshly
-      // built tree, fire the fetch (root hits the module-level cache; child
-      // definitions actually go on the wire) and update the map
-      // **incrementally** as each one resolves. The JobsTab re-renders once
-      // per definition, so even on a deep tree the root User Task
-      // classification is correct as soon as the root definition lands —
-      // we never wait for the slowest child before showing anything.
-      // Failures are isolated per key: a missing child definition simply
-      // stays out of the map and JobsTab treats its jobs as non-User-Tasks.
-      const distinctKeys = new Set<string>();
-      for (const node of collectAllNodes(root)) {
-        distinctKeys.add(node.instance.processDefinitionKey);
-      }
-      for (const key of distinctKeys) {
-        void getCachedProcessDefinition(key)
-          .then((def) => {
-            // See the matching comment on the root-definition parallel fetch
-            // above: the finally block of THIS fetchAll will null
-            // `activeFetchRef` before the network response arrives, so a
-            // strict `isCurrentFetch()` check would silently drop the
-            // update. We only need to guard against stale responses that
-            // belong to a *different* instance — i.e. a new fetchAll
-            // started for another processInstanceKey. In that case
-            // `activeFetchRef.current` is set to the new key, and we
-            // bail out so the wrong map is never written to.
-            if (
-              activeFetchRef.current !== null &&
-              activeFetchRef.current.processInstanceKey !== processInstanceKey
-            ) {
-              return;
-            }
-            setProcessDefinitionsByKey((prev) => {
-              if (prev.has(key)) return prev;
-              const next = new Map(prev);
-              next.set(key, def);
-              return next;
-            });
-          })
-          .catch(() => { /* key stays out of map; JobsTab classifies its jobs as non-User-Tasks */ });
-      }
+      // Intentionally no per-child-definition fetch loop: classification
+      // uses `job.elementType` and only the root definition drives the
+      // diagram. See `UseInstanceDataResult.processDefinition`.
     } catch (err) {
       if (isCurrentFetch()) {
         console.error('Failed to fetch instance tree:', err);
@@ -552,7 +462,7 @@ export const useInstanceData = (
       setErrorSubscriptionsPage(0);
       setErrorSubscriptionsPageSize(ERROR_SUBSCRIPTIONS_PAGE_SIZE);
       setErrorSubscriptionsState('active');
-      setProcessDefinitionsByKey(new Map());
+      setProcessDefinition(null);
       // Clear subprocess stats synchronously: fetchSubprocessStats for the
       // new instance is async, and until it resolves the previous
       // instance's counts would otherwise be merged into the new tree
@@ -816,10 +726,7 @@ export const useInstanceData = (
 
   return {
     processInstance: instanceTree?.instance ?? null,
-    processDefinition: instanceTree
-      ? processDefinitionsByKey.get(instanceTree.instance.processDefinitionKey) ?? null
-      : null,
-    processDefinitionsByKey,
+    processDefinition,
     elementStatistics,
     loading,
     error,
