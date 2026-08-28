@@ -41,6 +41,7 @@ export const jobHandlers = [
         elementId: job.elementId,
         elementName: job.elementName,
         type: job.type,
+        elementType: job.elementType,
         processInstanceKey: job.processInstanceKey,
         processDefinitionKey: job.processDefinitionKey,
         state: job.state,

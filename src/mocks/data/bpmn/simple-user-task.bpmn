@@ -11,6 +11,7 @@
     <bpmn:sequenceFlow id="Flow_1vz4oo2" sourceRef="user-task" targetRef="Event_1j4mcqg" />
     <bpmn:userTask id="user-task" name="user-task">
       <bpmn:extensionElements>
+        <zenbpm:taskDefinition type="approval" />
         <zenbpm:assignmentDefinition assignee="assignee" candidateGroups="candicate-groups" />
         <zenbpm:formDefinition formKey="form-key" />
       </bpmn:extensionElements>

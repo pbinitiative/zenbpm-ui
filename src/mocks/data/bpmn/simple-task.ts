@@ -2,6 +2,7 @@
 // BPMN Flow: StartEvent_1 -> id (serviceTask "Test") -> Event_1j4mcqg (EndEvent)
 import type { MockProcessDefinition, MockProcessInstance, MockIncident } from '../types';
 import { hoursAgo, daysAgo, addMinutes } from '../types';
+import { SIMPLE_TASK_ACTIVE_INSTANCE_KEY, SIMPLE_TASK_FALSY_FORM_INSTANCE_KEY } from '../well-known-keys';
 import bpmnData from './simple_task.bpmn?raw';
 
 export const definition: MockProcessDefinition = {
@@ -255,11 +256,32 @@ export const jobs = [
     elementId: 'id',
     elementName: 'Test',
     type: 'TestType',
-    processInstanceKey: '3100000000000000017',
+    elementType: 'SERVICE_TASK',
+    processInstanceKey: SIMPLE_TASK_ACTIVE_INSTANCE_KEY,
     processDefinitionKey: '3000000000000000046',
     state: 'active' as const,
     createdAt: addMinutes(hoursAgo(1), 1),
-    inputVariables: { customerId: 'NEW-001', customerName: 'Tech Corp Inc.' },
+    // ZEN_FORM is provided as a parsed object (rather than a string) to prove
+    // that any truthy, schema-shaped value triggers the form dialog regardless
+    // of job type.
+    inputVariables: {
+      customerId: 'NEW-001',
+      customerName: 'Tech Corp Inc.',
+      ZEN_FORM: {
+        components: [
+          {
+            label: 'Approved',
+            type: 'checkbox',
+            layout: { row: 'Row_1', columns: null },
+            id: 'Field_approved',
+            key: 'approved',
+          },
+        ],
+        type: 'default',
+        id: 'Form_approval',
+        schemaVersion: 19,
+      },
+    },
     retries: 3,
   },
   {
@@ -267,11 +289,13 @@ export const jobs = [
     elementId: 'id',
     elementName: 'Test',
     type: 'TestType',
-    processInstanceKey: '3100000000000000025',
+    elementType: 'SERVICE_TASK',
+    processInstanceKey: SIMPLE_TASK_FALSY_FORM_INSTANCE_KEY,
     processDefinitionKey: '3000000000000000046',
     state: 'active' as const,
     createdAt: addMinutes(hoursAgo(2), 1),
-    inputVariables: { customerId: 'NEW-101', customerName: 'Global Services Ltd.' },
+    // Falsy ZEN_FORM keeps the generic completion dialog.
+    inputVariables: { customerId: 'NEW-101', customerName: 'Global Services Ltd.', ZEN_FORM: '' },
     retries: 3,
   },
   {
@@ -279,6 +303,7 @@ export const jobs = [
     elementId: 'id',
     elementName: 'Test',
     type: 'TestType',
+    elementType: 'SERVICE_TASK',
     processInstanceKey: '3100000000000000030',
     processDefinitionKey: '3000000000000000046',
     state: 'active' as const,
@@ -291,6 +316,7 @@ export const jobs = [
     elementId: 'id',
     elementName: 'Test',
     type: 'TestType',
+    elementType: 'SERVICE_TASK',
     processInstanceKey: '3100000000000000036',
     processDefinitionKey: '3000000000000000046',
     state: 'active' as const,
@@ -303,6 +329,7 @@ export const jobs = [
     elementId: 'id',
     elementName: 'Test',
     type: 'TestType',
+    elementType: 'SERVICE_TASK',
     processInstanceKey: '3100000000000000037',
     processDefinitionKey: '3000000000000000046',
     state: 'active' as const,
@@ -315,6 +342,7 @@ export const jobs = [
     elementId: 'id',
     elementName: 'Test',
     type: 'TestType',
+    elementType: 'SERVICE_TASK',
     processInstanceKey: '3100000000000000038',
     processDefinitionKey: '3000000000000000046',
     state: 'failed' as const,

@@ -2,6 +2,10 @@
 // BPMN Flow: StartEvent_1 -> user-task (userTask) -> Event_1j4mcqg (EndEvent)
 import type { MockProcessDefinition, MockProcessInstance, MockIncident } from '../types';
 import { daysAgo, hoursAgo, addMinutes } from '../types';
+import {
+  SIMPLE_USER_TASK_PROCESS_DEFINITION_KEY,
+} from '../well-known-keys';
+import { TEST_ZEN_FORM } from '../forms';
 import bpmnData from './simple-user-task.bpmn?raw';
 
 export const definition: MockProcessDefinition = {
@@ -59,7 +63,7 @@ const createInstance = (
 
   return {
     key,
-    processDefinitionKey: '3000000000000000047',
+    processDefinitionKey: SIMPLE_USER_TASK_PROCESS_DEFINITION_KEY,
     bpmnProcessId: 'simple-user-task',
     createdAt,
     state,
@@ -120,12 +124,13 @@ export const jobs = [
     key: '5000000000000000030',
     elementId: 'user-task',
     elementName: 'user-task',
-    type: 'user-task-type',
+    type: 'approval',
+    elementType: 'USER_TASK',
     processInstanceKey: '3100000000000000210',
     processDefinitionKey: '3000000000000000047',
     state: 'active' as const,
     createdAt: addMinutes(hoursAgo(4), 1),
-    inputVariables: { assignee: 'john.doe', taskTitle: 'Review Document' },
+    inputVariables: { assignee: 'john.doe', taskTitle: 'Review Document', ZEN_FORM: TEST_ZEN_FORM },
     assignee: 'john.doe',
     candidateGroups: ['candicate-groups'],
   },
@@ -133,7 +138,8 @@ export const jobs = [
     key: '5000000000000000031',
     elementId: 'user-task',
     elementName: 'user-task',
-    type: 'user-task-type',
+    type: 'approval',
+    elementType: 'USER_TASK',
     processInstanceKey: '3100000000000000211',
     processDefinitionKey: '3000000000000000047',
     state: 'active' as const,

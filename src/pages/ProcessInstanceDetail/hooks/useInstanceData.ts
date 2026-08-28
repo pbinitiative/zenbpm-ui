@@ -66,6 +66,13 @@ export interface UseInstanceDataOptions {
 export interface UseInstanceDataResult {
   // ── Root ─────────────────────────────────────────────────────────────────
   processInstance: ProcessInstance | null;
+  /**
+   * The process definition for the current root instance — i.e. the diagram
+   * shown in the header. Only the root definition is loaded; child process
+   * definitions referenced by the call tree are NOT fetched, because
+   * classification of jobs (e.g. User Task vs. service task) uses the
+   * persisted `job.elementType` and never needs the BPMN model of a child.
+   */
   processDefinition: ProcessDefinition | null;
   elementStatistics: ElementStatistics | undefined;
   loading: boolean;
@@ -183,11 +190,16 @@ function projectCalledProcessIncidents(
 // Hook
 // ---------------------------------------------------------------------------
 
+/** Loads a process instance tree, paginated child datasets and subprocess element statistics; auto-refreshes while the tab is active. */
 export const useInstanceData = (
   processInstanceKey: string | undefined,
   options?: UseInstanceDataOptions,
 ): UseInstanceDataResult => {
   const [instanceTree, setInstanceTree] = useState<ProcessInstanceNode | null>(null);
+  // The definition for the *root* process instance only. Reset to `null` on
+  // every `processInstanceKey` change so the consumer never sees a stale
+  // diagram from a prior instance. Child definitions referenced by the call
+  // tree are intentionally NOT loaded — see `UseInstanceDataResult`.
   const [processDefinition, setProcessDefinition] = useState<ProcessDefinition | null>(null);
   const [subprocessElementStatistics, setSubprocessElementStatistics] = useState<
     ElementStatistics | undefined
@@ -255,31 +267,40 @@ export const useInstanceData = (
   // Ref to always access the latest tree without stale closures.
   const instanceTreeRef = useLatestRef(instanceTree);
 
-  // Track the last successfully fetched process definition key so we never
-  // re-fetch the definition (it never changes for the same instance).
-  const fetchedDefinitionKeyRef = useRef<string | null>(null);
-
   // Guard: pagination effects must not fire before the initial load completes.
   const initialLoadDoneRef = useRef(false);
 
   // Guard: prevent overlapping fetchAll calls. Without this, if a tree rebuild
   // takes longer than AUTO_REFRESH_INTERVAL the next tick starts a second rebuild
   // before the first finishes, doubling the load and causing state flicker.
-  const isFetchingRef = useRef(false);
+  const activeFetchRef = useRef<{ id: number; processInstanceKey: string } | null>(null);
+  const nextFetchIdRef = useRef(0);
+  // Monotonic generation counter for fetchSubprocessStats invocations — distinguishes same-instance re-fetches (which the processInstanceKey check can't).
+  const subprocessStatsFetchIdRef = useRef(0);
 
   // Latest caller-provided history callback. Stored in a ref so refreshes
   // always read the freshest closure without forcing the whole hook to
   // re-subscribe to `options`.
   const onHistoryPartialRef = useLatestRef(options?.onHistoryPartial);
 
+  // Latest process instance key — used by `fetchSubprocessStats` to bail out if the user navigates away mid-fetch (activeFetchRef is cleared before its requests settle).
+  const processInstanceKeyRef = useLatestRef(processInstanceKey);
+
   // ── Subprocess element statistics ─────────────────────────────────────────
   const fetchSubprocessStats = useCallback(
-    async (root: ProcessInstanceNode) => {
+    async (root: ProcessInstanceNode, instanceKey: string) => {
+      const generation = ++subprocessStatsFetchIdRef.current;
+      const isStale = () =>
+        subprocessStatsFetchIdRef.current !== generation ||
+        processInstanceKeyRef.current !== instanceKey;
+
       const subprocessNodes = collectAllNodes(root).filter(
         (n) => !n.isRoot && n.instance.processType === 'subprocess',
       );
 
       if (subprocessNodes.length === 0) {
+        // Same staleness guard as below — skip if superseded.
+        if (isStale()) return;
         setSubprocessElementStatistics(undefined);
         return;
       }
@@ -288,6 +309,9 @@ export const useInstanceData = (
       const results = await Promise.allSettled(
         subprocessNodes.map((node) => getProcessInstanceElementStatistics(node.instance.key)),
       );
+
+      // Bail if the user navigated away OR a newer fetchAll already fired for the same instance.
+      if (isStale()) return;
 
       const merged: ElementStatistics = {};
       for (const result of results) {
@@ -302,29 +326,52 @@ export const useInstanceData = (
           merged[elementId].terminatedCount = (merged[elementId].terminatedCount ?? 0) + (counts.terminatedCount ?? 0);
         }
       }
+      // Final staleness re-check before writing — protects against a newer fetchAll or navigation landing mid-merge.
+      if (isStale()) return;
       setSubprocessElementStatistics(Object.keys(merged).length > 0 ? merged : undefined);
     },
+    // processInstanceKeyRef is a stable ref, so listing it in deps would just be noise.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
   // ── Core fetch: build / rebuild the whole tree ────────────────────────────
   const fetchAll = useCallback(async () => {
     if (!processInstanceKey) return;
-    if (isFetchingRef.current) return;   // drop concurrent calls
-    isFetchingRef.current = true;
+    if (activeFetchRef.current?.processInstanceKey === processInstanceKey) return;
+
+    const fetchId = nextFetchIdRef.current + 1;
+    nextFetchIdRef.current = fetchId;
+    activeFetchRef.current = { id: fetchId, processInstanceKey };
+
+    const isCurrentFetch = () => activeFetchRef.current?.id === fetchId;
+
     try {
       const rootInstance = (await getProcessInstance(processInstanceKey)) as unknown as ProcessInstance;
+      if (!isCurrentFetch()) return;
 
-      // Process definition never changes — only fetch it once per definition key.
-      const pdKey = rootInstance.processDefinitionKey;
-      if (pdKey !== fetchedDefinitionKeyRef.current) {
-        void getProcessDefinition(pdKey)
-          .then((def) => {
-            setProcessDefinition(def as unknown as ProcessDefinition);
-            fetchedDefinitionKeyRef.current = pdKey;
-          })
-          .catch(() => { /* non-critical */ });
-      }
+      // Fire the root definition fetch immediately, in parallel with the
+      // tree build, so the BPMN diagram can render as soon as the root
+      // definition arrives. Only the root is requested: child process
+      // definitions referenced by the call tree are NOT loaded because
+      // job classification uses the persisted `job.elementType` (see
+      // `JobsTab`) and never needs the BPMN model of a child.
+      void getProcessDefinition(rootInstance.processDefinitionKey)
+        .then((def) => {
+          // Guard against stale responses that belong to a *different*
+          // instance — i.e. the user has navigated to another instance
+          // while this request was in flight. We only need to compare the
+          // current key, not the per-fetch id, because the definition is
+          // bound to the instance it was requested for.
+          if (processInstanceKeyRef.current !== processInstanceKey) return;
+          setProcessDefinition(def);
+        })
+        .catch(() => {
+          // Root definition unavailable — keep the page interactive and
+          // just hide the diagram. The process instance still loads.
+          if (processInstanceKeyRef.current !== processInstanceKey) return;
+          setProcessDefinition(null);
+        });
 
       // Build terminal-node cache to skip re-fetching immutable data on refresh.
       const terminalNodeCache = new Map<string, ProcessInstanceNode>();
@@ -363,12 +410,23 @@ export const useInstanceData = (
         errorSubscriptionsState: errorSubscriptionsStateRef.current,
       });
 
+      if (!isCurrentFetch()) return;
       setInstanceTree(root);
-      void fetchSubprocessStats(root);
+      if (isCurrentFetch()) setError(null); // tree fetched OK — drop any stale error from a previous attempt
+      // Pass the current key so the subprocess fetch can guard against navigation while its requests are in flight.
+      void fetchSubprocessStats(root, processInstanceKey);
+      // Intentionally no per-child-definition fetch loop: classification
+      // uses `job.elementType` and only the root definition drives the
+      // diagram. See `UseInstanceDataResult.processDefinition`.
     } catch (err) {
-      console.error('Failed to fetch instance tree:', err);
+      if (isCurrentFetch()) {
+        console.error('Failed to fetch instance tree:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load process instance');
+      }
     } finally {
-      isFetchingRef.current = false;
+      if (isCurrentFetch()) {
+        activeFetchRef.current = null;
+      }
     }
     // The pagination/history/tree/onHistoryPartial refs read inside this callback are
     // all stable (created via useLatestRef). Tracking each one in the deps array would
@@ -404,7 +462,12 @@ export const useInstanceData = (
       setErrorSubscriptionsPage(0);
       setErrorSubscriptionsPageSize(ERROR_SUBSCRIPTIONS_PAGE_SIZE);
       setErrorSubscriptionsState('active');
-      fetchedDefinitionKeyRef.current = null;
+      setProcessDefinition(null);
+      // Clear subprocess stats synchronously: fetchSubprocessStats for the
+      // new instance is async, and until it resolves the previous
+      // instance's counts would otherwise be merged into the new tree
+      // (elementStatistics combines base + subprocessElementStatistics).
+      setSubprocessElementStatistics(undefined);
       // Also reset pagination refs so fetchAll uses page 1 for the new instance.
       jobsPageRef.current = 0;
       jobsPageSizeRef.current = JOBS_PAGE_SIZE;
@@ -430,7 +493,7 @@ export const useInstanceData = (
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load process instance');
       } finally {
-        if (!isFetchingRef.current) {    // this avoids e error message instead loading
+        if (!activeFetchRef.current) {    // this avoids e error message instead loading
           setLoading(false);
           initialLoadDoneRef.current = true;
         }

@@ -111,6 +111,23 @@ export const JobsTab = ({
   const isJobActive = (state: JobState): boolean =>
     state === 'activatable' || state === 'activated' || state === 'active';
 
+  // User Task classification uses the persisted BPMN element kind exposed by the
+  // backend as `job.elementType`. This is independent of the configurable worker
+  // routing value (`job.type`), so a custom-typed User Task (`type: "approval"`,
+  // `elementType: "USER_TASK"`) is correctly classified even though its routing
+  // type is not `user-task-type`. Definitions don't need to be loaded for this to
+  // work — the value arrives with the job itself.
+  const userTaskJobKeys = useMemo(() => {
+    const keys = new Set<string>();
+    if (!instanceTree) return keys;
+    for (const node of collectNodes(instanceTree)) {
+      for (const job of node.jobs) {
+        if (job.elementType === 'USER_TASK') keys.add(job.key);
+      }
+    }
+    return keys;
+  }, [instanceTree]);
+
   const handleMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>, job: Job) => {
     event.stopPropagation();
     setMenuAnchorEl(event.currentTarget);
@@ -431,13 +448,13 @@ export const JobsTab = ({
           <ListItemIcon><HistoryIcon fontSize="small" /></ListItemIcon>
           <ListItemText>{t('processInstance:actions.viewInHistory')}</ListItemText>
         </MenuItem>
-        {menuJob?.type === 'user-task-type' && (
+        {menuJob && userTaskJobKeys.has(menuJob.key) && (
           <MenuItem onClick={() => { openAssignJobDialog({ job: menuJob, onAssign: handleAssignJob }); handleMenuClose(); }}>
             <ListItemIcon><PersonAddIcon fontSize="small" /></ListItemIcon>
             <ListItemText>{t('processInstance:actions.assign')}</ListItemText>
           </MenuItem>
         )}
-        {menuJob && (isJobActive(menuJob.state) || menuJob.type === 'user-task-type') && (
+        {menuJob && (isJobActive(menuJob.state) || userTaskJobKeys.has(menuJob.key)) && (
           <MenuItem onClick={() => { openUpdateRetriesDialog({ job: menuJob, onUpdate: handleUpdateRetries }); handleMenuClose(); }}>
             <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
             <ListItemText>{t('processInstance:actions.updateRetries')}</ListItemText>

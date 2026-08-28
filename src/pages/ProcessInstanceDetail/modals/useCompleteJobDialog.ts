@@ -25,10 +25,12 @@ export function useCompleteJobDialog() {
 
   const openCompleteJobDialog = useCallback(
     (props: OpenCompleteJobDialogProps) => {
-      const isUserTaskWithForm =
-        props.job.type === 'user-task-type' && !!props.job.inputVariables?.ZEN_FORM;
+      // Form completion is independent of BPMN element type and job type — a
+      // truthy `inputVariables.ZEN_FORM` is the sole signal that the dialog
+      // should be the form-based variant.
+      const hasZenForm = !!props.job.inputVariables?.ZEN_FORM;
 
-      if (isUserTaskWithForm) {
+      if (hasZenForm) {
         openFormJobModal({
           job: props.job,
           onComplete: async (jobKey: string, variables: Record<string, unknown>) => {

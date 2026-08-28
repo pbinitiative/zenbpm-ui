@@ -1,5 +1,5 @@
 // MSW handlers for process instances endpoints
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import {
   processInstances,
   findProcessInstanceByKey,
@@ -7,7 +7,11 @@ import {
 import { getJobsByProcessInstanceKey } from '../data/jobs';
 import { getIncidentsByProcessInstanceKey } from '../data/incidents';
 import { withValidation } from '../validation';
-import { SHOWCASE_ACTIVE_INSTANCE_KEY, SHOWCASE_PROCESS_DEFINITION_KEY } from '../data/well-known-keys';
+import {
+  SHOWCASE_ACTIVE_INSTANCE_KEY,
+  SHOWCASE_PROCESS_DEFINITION_KEY,
+  USER_TASK_CLASSIFICATION_ROOT_INSTANCE_KEY,
+} from '../data/well-known-keys';
 
 // ---------------------------------------------------------------------------
 // Static mock data for event subscriptions (showcase active instance)
@@ -299,9 +303,15 @@ export const processInstanceHandlers = [
   // GET /process-instances/:processInstanceKey - Get single process instance
   http.get(
     `${BASE_URL}/process-instances/:processInstanceKey`,
-    withValidation(({ params }) => {
+    withValidation(async ({ params }) => {
       const { processInstanceKey } = params;
-      const instance = findProcessInstanceByKey(processInstanceKey as string);
+      const instanceKey = processInstanceKey as string;
+
+      if (instanceKey === USER_TASK_CLASSIFICATION_ROOT_INSTANCE_KEY) {
+        await delay(2000);
+      }
+
+      const instance = findProcessInstanceByKey(instanceKey);
 
       if (!instance) {
         return HttpResponse.json(
@@ -425,6 +435,7 @@ export const processInstanceHandlers = [
           elementId: job.elementId,
           elementName: job.elementName,
           type: job.type,
+          elementType: job.elementType,
           processInstanceKey: job.processInstanceKey,
           processDefinitionKey: job.processDefinitionKey,
           state: job.state,

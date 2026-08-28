@@ -54,6 +54,7 @@ import * as simpleTaskModifiedTaskId from './simple_task_modified_taskId';
 import * as simpleTaskV2 from './simple_task_v2';
 import * as timerBoundaryEventInterrupting from './timer-boundary-event-interrupting';
 import * as userTasksWithAssignments from './user-tasks-with-assignments';
+import * as userTaskClassificationTree from './user-task-classification-tree';
 
 // Version 2 and 3 imports
 import * as showcaseProcessV2 from './showcase-process_v2';
@@ -116,6 +117,7 @@ export {
   simpleTaskV2,
   timerBoundaryEventInterrupting,
   userTasksWithAssignments,
+  userTaskClassificationTree,
   // Version 2 and 3 exports
   showcaseProcessV2,
   showcaseProcessV3,
@@ -177,6 +179,7 @@ export const allDefinitions: MockProcessDefinition[] = [
   simpleTaskV2.definition,
   timerBoundaryEventInterrupting.definition,
   userTasksWithAssignments.definition,
+  userTaskClassificationTree.definition,
   // Version 2 and 3 definitions
   showcaseProcessV2.definition,
   showcaseProcessV3.definition,
@@ -238,6 +241,7 @@ export const allInstances: MockProcessInstance[] = [
   ...simpleTaskV2.instances,
   ...timerBoundaryEventInterrupting.instances,
   ...userTasksWithAssignments.instances,
+  ...userTaskClassificationTree.instances,
   // Version 2 and 3 instances
   ...showcaseProcessV2.instances,
   ...showcaseProcessV3.instances,
@@ -300,6 +304,7 @@ export const allIncidents: MockIncident[] = [
   ...simpleTaskV2.incidents,
   ...timerBoundaryEventInterrupting.incidents,
   ...userTasksWithAssignments.incidents,
+  ...userTaskClassificationTree.incidents,
   // Version 2 and 3 incidents
   ...showcaseProcessV2.incidents,
   ...showcaseProcessV3.incidents,
