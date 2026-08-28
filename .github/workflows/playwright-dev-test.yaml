@@ -2,11 +2,10 @@ name: Playwright Tests
 
 on:
   workflow_dispatch:
-  # Temporarily disable automatic live tests after the dev deployment.
-  # workflow_run:
-  #   workflows: [release-dev]
-  #   types: [completed]
-  #   branches: [main]
+  workflow_run:
+    workflows: [release-dev]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: read
@@ -19,7 +18,7 @@ jobs:
   test:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     timeout-minutes: 60
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, vpn]
     env:
       E2E_BASE_URL: ${{ vars.E2E_BASE_URL }}
     steps:
@@ -41,22 +40,47 @@ jobs:
         shell: bash
         run: |
           case "${E2E_BASE_URL:-}" in
-            http://*|https://*) ;;
+            http://ui-dev.zen|http://ui-dev.zen/) ;;
             '')
               echo "::error::Configure the E2E_BASE_URL repository variable before running live Playwright tests."
               exit 1
               ;;
             *)
-              echo "::error::E2E_BASE_URL must use the http or https protocol."
+              echo "::error::E2E_BASE_URL must be http://ui-dev.zen."
               exit 1
               ;;
           esac
+
+      - name: Wait for live test target
+        shell: bash
+        run: |
+          if ! getent hosts ui-dev.zen >/dev/null; then
+            echo "::error::The VPN runner cannot resolve ui-dev.zen. Check its VPN DNS configuration."
+            exit 1
+          fi
+
+          status_url="${E2E_BASE_URL%/}/system/status"
+          deadline=$((SECONDS + 300))
+          attempt=1
+          while (( SECONDS < deadline )); do
+            if curl --fail --silent --show-error --max-time 10 "${status_url}" >/dev/null; then
+              echo "Live test target is ready."
+              exit 0
+            fi
+
+            echo "Target not ready (attempt ${attempt}); retrying in 10 seconds."
+            attempt=$((attempt + 1))
+            sleep 10
+          done
+
+          echo "::error::The live test target did not become ready within 5 minutes."
+          exit 1
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install chromium
 
       - name: Run live Playwright tests
         run: pnpm test:e2e:live
