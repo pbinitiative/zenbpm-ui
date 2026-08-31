@@ -113,27 +113,15 @@ export function useProcessDesigner({
     async (_: React.MouseEvent<HTMLElement>, newMode: EditorMode | null) => {
       if (!newMode) return;
 
-      if (newMode === 'xml' && editorMode === 'diagram') {
-        if (editorRef.current) {
-          try {
-            const xml = await editorRef.current.getXml();
-            setXmlContent(xml);
-          } catch {
-            setSnackbar({
-              open: true,
-              message: t('designer:messages.xmlExportFailed'),
-              severity: 'error',
-            });
-            return;
-          }
-        }
-      } else if (newMode === 'diagram' && editorMode === 'xml') {
+      // Switching to XML is a view change. Keep the source XML rather than
+      // serializing the bpmn-js model, since that serializer discards comments.
+      if (newMode === 'diagram' && editorMode === 'xml') {
         setInitialXml(xmlContent);
       }
 
       setEditorMode(newMode);
     },
-    [editorMode, xmlContent, t]
+    [editorMode, xmlContent]
   );
 
   // Handle deploy
