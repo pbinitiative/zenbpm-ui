@@ -17,6 +17,7 @@ export const definition: MockProcessDefinition = {
   bpmnProcessId: 'showcase-process',
   bpmnProcessName: 'Showcase Process',
   bpmnResourceName: 'showcase-process.bpmn',
+  versionTag: 'v1.0.0',
   bpmnData,
   createdAt: '2024-12-09T05:00:00.000Z',
 };

@@ -3,6 +3,7 @@ import { instanceKeys } from '../../fixtures/instance-keys';
 import {
   MULTI_INSTANCE_CHILD_B_KEY,
   MULTI_INSTANCE_PARENT_KEY,
+  SIMPLE_TASK_ACTIVE_INSTANCE_KEY,
 } from '../../../src/mocks/data/well-known-keys';
 
 const { ACTIVE_INSTANCE_KEY, COMPLETED_INSTANCE_KEY, TERMINATED_INSTANCE_KEY } = instanceKeys;
@@ -20,6 +21,18 @@ test.describe('Process Instance Detail Page', () => {
     await expect(page.getByText(ACTIVE_INSTANCE_KEY)).toBeVisible();
     // State chip in metadata section
     await expect(page.getByText('Active').first()).toBeVisible();
+    // The process version tag takes precedence over its numeric version.
+    await expect(
+      page.getByTestId('process-instance-metadata-panel').getByText('v1.0.0')
+    ).toBeVisible();
+  });
+
+  test('should fall back to the numeric version when no version tag is present', async ({ page }) => {
+    await page.goto(`/process-instances/${SIMPLE_TASK_ACTIVE_INSTANCE_KEY}`);
+
+    await expect(
+      page.getByTestId('process-instance-metadata-panel').getByText('v1', { exact: true })
+    ).toBeVisible();
   });
 
   test('should display BPMN diagram', async ({ page }) => {

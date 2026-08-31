@@ -3214,6 +3214,9 @@ components:
         bpmnProcessName:
           type: string
           description: Process name from BPMN
+        versionTag:
+          type: string
+          description: Optional process version tag from `zenbpm:versionTag`
     ProcessDefinitionDetail:
       type: object
       required:

@@ -698,6 +698,7 @@ export const ProcessInstanceDetailPage = () => {
               processType={processInstance.processType}
               name={processDefinition?.bpmnProcessName}
               version={processDefinition?.version}
+              versionTag={processDefinition?.versionTag}
               createdAt={processInstance.createdAt}
               businessKey={processInstance.businessKey}
               definitionInfo={{ key: processInstance.processDefinitionKey, type: 'process' } as DefinitionInfo}

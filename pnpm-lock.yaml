@@ -39,11 +39,11 @@ importers:
         specifier: ^7.3.6
         version: 7.3.11(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8))(@types/react@19.2.18)(react@19.2.8))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@pbinitiative/zenbpm-bpmn-moddle':
-        specifier: 0.3.0
-        version: 0.3.0(bpmn-moddle@10.1.0)
+        specifier: 0.3.1
+        version: 0.3.1(bpmn-moddle@10.1.0)
       '@pbinitiative/zenbpm-js-properties-panel':
-        specifier: 0.5.0
-        version: 0.5.0(@bpmn-io/properties-panel@3.48.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.1)(@codemirror/view@6.43.8)))(bpmn-js-properties-panel@5.63.0(@bpmn-io/properties-panel@3.48.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.1)(@codemirror/view@6.43.8)))(bpmn-js@18.22.1)(camunda-bpmn-js-behaviors@1.18.0(bpmn-js@18.22.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.16.0))(diagram-js@15.24.0))(bpmn-js@18.22.1)(bpmn-moddle@10.1.0)
+        specifier: 0.5.1
+        version: 0.5.1(@bpmn-io/properties-panel@3.48.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.1)(@codemirror/view@6.43.8)))(bpmn-js-properties-panel@5.63.0(@bpmn-io/properties-panel@3.48.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.1)(@codemirror/view@6.43.8)))(bpmn-js@18.22.1)(camunda-bpmn-js-behaviors@1.18.0(bpmn-js@18.22.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.16.0))(diagram-js@15.24.0))(bpmn-js@18.22.1)(bpmn-moddle@10.1.0)
       '@tanstack/react-query':
         specifier: ^5.101.4
         version: 5.101.4(react@19.2.8)
@@ -1168,14 +1168,14 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@pbinitiative/zenbpm-bpmn-moddle@0.3.0':
-    resolution: {integrity: sha512-dD8BOI3eIiBq1qBIj1YoFqY5QRwgjqhK/5htkLCoMih3x6HnT8IkTrL4kj1+kiHZ6wpf4d6qxTdLRHxSheHQdA==}
+  '@pbinitiative/zenbpm-bpmn-moddle@0.3.1':
+    resolution: {integrity: sha512-GpiSmLvkrVcyKT62KHeCPMHDK7AGBBeER+40EIOhPVdtie3YkCjUvMcqY/EuOzYvvqwXxp9AlnVHlB72X64u3Q==}
     engines: {node: '>=14'}
     peerDependencies:
       bpmn-moddle: '>=7'
 
-  '@pbinitiative/zenbpm-js-properties-panel@0.5.0':
-    resolution: {integrity: sha512-tc+dc1GfNrc/uwKLHbVKV3Q4xzv2EwkfgXo0MU8YwKV5SjgnR2gdajN4OlmXpssPFiKZ943Qj0nWnfUMOlFPeg==}
+  '@pbinitiative/zenbpm-js-properties-panel@0.5.1':
+    resolution: {integrity: sha512-9YiSoJMFmhEd1BUofiWPARLXoIkW8WoAhHlxGwRl3KlzZllrCcXpjwgh87EvipxxY1avNEDXQ3X6F+/Lz7CGVA==}
     peerDependencies:
       '@bpmn-io/properties-panel': '>= 3.7'
       bpmn-js: '>= 11.5'
@@ -4545,14 +4545,14 @@ snapshots:
   '@oxc-resolver/binding-win32-x64-msvc@11.24.2':
     optional: true
 
-  '@pbinitiative/zenbpm-bpmn-moddle@0.3.0(bpmn-moddle@10.1.0)':
+  '@pbinitiative/zenbpm-bpmn-moddle@0.3.1(bpmn-moddle@10.1.0)':
     dependencies:
       bpmn-moddle: 10.1.0
 
-  '@pbinitiative/zenbpm-js-properties-panel@0.5.0(@bpmn-io/properties-panel@3.48.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.1)(@codemirror/view@6.43.8)))(bpmn-js-properties-panel@5.63.0(@bpmn-io/properties-panel@3.48.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.1)(@codemirror/view@6.43.8)))(bpmn-js@18.22.1)(camunda-bpmn-js-behaviors@1.18.0(bpmn-js@18.22.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.16.0))(diagram-js@15.24.0))(bpmn-js@18.22.1)(bpmn-moddle@10.1.0)':
+  '@pbinitiative/zenbpm-js-properties-panel@0.5.1(@bpmn-io/properties-panel@3.48.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.1)(@codemirror/view@6.43.8)))(bpmn-js-properties-panel@5.63.0(@bpmn-io/properties-panel@3.48.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.1)(@codemirror/view@6.43.8)))(bpmn-js@18.22.1)(camunda-bpmn-js-behaviors@1.18.0(bpmn-js@18.22.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.16.0))(diagram-js@15.24.0))(bpmn-js@18.22.1)(bpmn-moddle@10.1.0)':
     dependencies:
       '@bpmn-io/properties-panel': 3.48.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.1)(@codemirror/view@6.43.8))
-      '@pbinitiative/zenbpm-bpmn-moddle': 0.3.0(bpmn-moddle@10.1.0)
+      '@pbinitiative/zenbpm-bpmn-moddle': 0.3.1(bpmn-moddle@10.1.0)
       bpmn-js: 18.22.1
       bpmn-js-properties-panel: 5.63.0(@bpmn-io/properties-panel@3.48.0(@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.1)(@codemirror/view@6.43.8)))(bpmn-js@18.22.1)(camunda-bpmn-js-behaviors@1.18.0(bpmn-js@18.22.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.16.0))(diagram-js@15.24.0)
     transitivePeerDependencies:

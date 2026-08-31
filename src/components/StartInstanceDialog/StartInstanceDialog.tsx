@@ -13,10 +13,8 @@ import {
   IconButton,
   CircularProgress,
   FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
 } from '@mui/material';
+import { VersionSelector } from '@components/VersionSelector';
 
 import CloseIcon from '@mui/icons-material/Close';
 import { JsonEditor } from '@components/JsonEditor';
@@ -258,21 +256,16 @@ export const StartInstanceDialog = ({
               size="small"
               disabled={!selectedDefinition || loadingVersions}
             >
-              <InputLabel id="version-select-label">
-                {t('processes:fields.version')}
-              </InputLabel>
-              <Select
-                labelId="version-select-label"
+              <VersionSelector
                 value={selectedVersion}
-                onChange={(e) => setSelectedVersion(e.target.value)}
-                label={t('processes:fields.version')}
-              >
-                {versionOptions.map((v) => (
-                  <MenuItem key={v.key} value={v.key}>
-                    v{v.version}
-                  </MenuItem>
-                ))}
-              </Select>
+                onChange={(val) => setSelectedVersion(val)}
+                options={versionOptions.map((v) => ({
+                  key: v.key,
+                  version: v.version,
+                  versionTag: v.versionTag,
+                }))}
+                showCurrentChip={false}
+              />
             </FormControl>
           </Box>
 

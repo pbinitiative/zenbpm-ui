@@ -161,12 +161,13 @@ export const processDefinitionHandlers = [
       const paginatedItems = filteredDefinitions.slice(startIndex, endIndex);
 
       // Map to API response format (without bpmnData for list view)
-      const items = paginatedItems.map(({ key, version, bpmnProcessId, bpmnProcessName, bpmnResourceName, createdAt }) => ({
+      const items = paginatedItems.map(({ key, version, bpmnProcessId, bpmnProcessName, bpmnResourceName, versionTag, createdAt }) => ({
         key,
         version,
         bpmnProcessId,
         bpmnProcessName,
         bpmnResourceName,
+        versionTag,
         createdAt,
       }));
 
@@ -267,6 +268,7 @@ export const processDefinitionHandlers = [
         bpmnProcessId: definition.bpmnProcessId,
         bpmnProcessName: definition.bpmnProcessName,
         bpmnResourceName: definition.bpmnResourceName,
+        versionTag: definition.versionTag,
         bpmnData: definition.bpmnData,
       });
     })
