@@ -8,6 +8,26 @@ import {
   observeProcessInstancesCall,
 } from '../supports/homeApiAssertions.ts';
 
+const displayedVersion = String.raw`(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)`;
+const backendVersionPattern = new RegExp(
+  `^ZenBPM:\\s+v${displayedVersion}\\s+\\([^)]+\\)$`,
+);
+const uiVersionPattern = new RegExp(
+  `^UI:\\s+${displayedVersion}\\s+\\([^)]+\\)$`,
+);
+
+function extractDisplayedVersion(
+  text: string,
+  pattern: RegExp,
+  label: string,
+): string {
+  const version = text.match(pattern)?.[1];
+  if (!version) {
+    throw new Error(`Could not read ${label} version from build metadata: ${text}`);
+  }
+  return version;
+}
+
 test('home page shows the application shell and introduction', async ({ page }) => {
   await page.goto('/');
 
@@ -18,6 +38,33 @@ test('home page shows the application shell and introduction', async ({ page }) 
   await expect(home).toBeVisible();
   await expect(home.getByText('ZenBPM', { exact: true })).toBeVisible();
   await expect(home.getByText('Business Process Management Engine', { exact: true })).toBeVisible();
+});
+
+test('home page shows matching UI and backend versions', async ({ page }) => {
+  await page.goto('/');
+
+  const footer = page.getByTestId('build-metadata-footer');
+  const backendMetadata = footer.locator('p').filter({ hasText: /^ZenBPM:/ });
+  const uiMetadata = footer.locator('p').filter({ hasText: /^UI:/ });
+
+  await expect(backendMetadata).toHaveText(backendVersionPattern);
+  await expect(uiMetadata).toHaveText(uiVersionPattern);
+
+  const backendVersion = extractDisplayedVersion(
+    await backendMetadata.innerText(),
+    backendVersionPattern,
+    'ZenBPM',
+  );
+  const uiVersion = extractDisplayedVersion(
+    await uiMetadata.innerText(),
+    uiVersionPattern,
+    'UI',
+  );
+
+  expect(
+    uiVersion,
+    `UI version ${uiVersion} must match ZenBPM version ${backendVersion}`,
+  ).toBe(backendVersion);
 });
 
 test('home page calls the system status endpoint and returns valid cluster data', async ({ page }) => {

@@ -55,6 +55,15 @@ function expectIsoDate(value: unknown, description: string): asserts value is st
   expect(Number.isNaN(Date.parse(value as string)), description).toBe(false);
 }
 
+function expectEnumString(
+  value: unknown,
+  description: string,
+  allowedValues: readonly string[],
+): asserts value is string {
+  expectString(value, description);
+  expect(allowedValues, description).toContain(value);
+}
+
 function expectRequest(response: Response, endpoint: ExpectedEndpoint): void {
   const url = new URL(response.url());
 
@@ -218,12 +227,21 @@ function validateStatus(body: unknown): void {
     expectString(node.id, `system status node ${nodeKey} id`);
     expect(node.id).toBe(nodeKey);
     expectString(node.addr, `system status node ${nodeKey} address`);
-    expectInteger(node.suffrage, `system status node ${nodeKey} suffrage`);
-    expect([0, 1, 2]).toContain(node.suffrage);
-    expectInteger(node.state, `system status node ${nodeKey} state`);
-    expect([1, 2, 3]).toContain(node.state);
-    expectInteger(node.role, `system status node ${nodeKey} role`);
-    expect([1, 2]).toContain(node.role);
+    expectEnumString(
+      node.suffrage,
+      `system status node ${nodeKey} suffrage`,
+      ['Voter', 'Nonvoter', 'Staging'],
+    );
+    expectEnumString(
+      node.state,
+      `system status node ${nodeKey} state`,
+      ['NodeStateError', 'NodeStateStarted', 'NodeStateShutdown'],
+    );
+    expectEnumString(
+      node.role,
+      `system status node ${nodeKey} role`,
+      ['RoleFollower', 'RoleLeader'],
+    );
 
     const nodePartitions = asRecord(
       node.partitions,
@@ -236,10 +254,22 @@ function validateStatus(body: unknown): void {
       );
       expectInteger(partition.id, `system status node partition ${partitionKey} id`, 1);
       expect(String(partition.id)).toBe(partitionKey);
-      expectInteger(partition.state, `system status node partition ${partitionKey} state`);
-      expect([1, 2, 3, 4, 5]).toContain(partition.state);
-      expectInteger(partition.role, `system status node partition ${partitionKey} role`);
-      expect([1, 2]).toContain(partition.role);
+      expectEnumString(
+        partition.state,
+        `system status node partition ${partitionKey} state`,
+        [
+          'NodePartitionStateError',
+          'NodePartitionStateJoining',
+          'NodePartitionStateLeaving',
+          'NodePartitionStateInitializing',
+          'NodePartitionStateInitialized',
+        ],
+      );
+      expectEnumString(
+        partition.role,
+        `system status node partition ${partitionKey} role`,
+        ['RoleFollower', 'RoleLeader'],
+      );
     }
   }
 }
