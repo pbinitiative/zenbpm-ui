@@ -53,7 +53,7 @@ export function VersionSelector({
         onChange={(e) => onChange(String(e.target.value))}
         size={size}
         fullWidth
-        MenuProps={{ sx: { maxHeight: 300 } }}
+        MenuProps={{ slotProps: { paper: { sx: { maxHeight: 300 } } } }}
         data-testid="version-selector"
       >
         {options.map((option) => (

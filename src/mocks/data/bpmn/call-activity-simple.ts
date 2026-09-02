@@ -9,6 +9,7 @@ export const definition: MockProcessDefinition = {
   bpmnProcessId: 'Simple_CallActivity_Process',
   bpmnProcessName: 'Call Activity Simple',
   bpmnResourceName: 'call-activity-simple.bpmn',
+  versionTag: 'release-single',
   bpmnData,
   createdAt: '2024-12-10T12:00:00.000Z',
 };

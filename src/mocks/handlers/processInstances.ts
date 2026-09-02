@@ -4,6 +4,7 @@ import {
   processInstances,
   findProcessInstanceByKey,
 } from '../data/processInstances';
+import { findProcessDefinitionByKey } from '../data/processDefinitions';
 import { getJobsByProcessInstanceKey } from '../data/jobs';
 import { getIncidentsByProcessInstanceKey } from '../data/incidents';
 import { withValidation } from '../validation';
@@ -86,12 +87,24 @@ function paginateEventSubscriptions<T extends { state: string }>(items: T[], req
   };
 }
 
+function getProcessDefinitionVersion(pi: (typeof processInstances)[0]) {
+  const definition = findProcessDefinitionByKey(pi.processDefinitionKey);
+
+  return definition
+    ? {
+        version: definition.version,
+        ...(definition.versionTag ? { versionTag: definition.versionTag } : {}),
+      }
+    : {};
+}
+
 // Helper to transform a process instance to response format (reused across handlers)
 function transformInstance(pi: (typeof processInstances)[0]) {
   return {
     key: pi.key,
     processDefinitionKey: pi.processDefinitionKey,
     bpmnProcessId: pi.bpmnProcessId,
+    ...getProcessDefinitionVersion(pi),
     createdAt: pi.createdAt,
     state: pi.state,
     variables: pi.variables,
@@ -256,6 +269,7 @@ export const processInstanceHandlers = [
         key: pi.key,
         processDefinitionKey: pi.processDefinitionKey,
         bpmnProcessId: pi.bpmnProcessId,
+        ...getProcessDefinitionVersion(pi),
         createdAt: pi.createdAt,
         state: pi.state,
         processType: pi.processType,

@@ -88,6 +88,7 @@ export const ProcessDefinitionDetailPage = () => {
       entityKey={processDefinition.key}
       name={processDefinition.bpmnProcessName}
       version={processDefinition.version}
+      versionTag={processDefinition.versionTag}
       versions={versions}
       additionalFields={additionalFields}
       onVersionChange={handleVersionChange}

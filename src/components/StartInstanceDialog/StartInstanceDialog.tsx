@@ -12,7 +12,6 @@ import {
   Alert,
   IconButton,
   CircularProgress,
-  FormControl,
 } from '@mui/material';
 import { VersionSelector } from '@components/VersionSelector';
 
@@ -251,22 +250,17 @@ export const StartInstanceDialog = ({
             </Box>
 
             {/* Version selector */}
-            <FormControl
-              sx={{ minWidth: 120 }}
-              size="small"
+            <VersionSelector
+              value={selectedVersion}
+              onChange={(val) => setSelectedVersion(val)}
+              options={versionOptions.map((v) => ({
+                key: v.key,
+                version: v.version,
+                versionTag: v.versionTag,
+              }))}
+              showCurrentChip={false}
               disabled={!selectedDefinition || loadingVersions}
-            >
-              <VersionSelector
-                value={selectedVersion}
-                onChange={(val) => setSelectedVersion(val)}
-                options={versionOptions.map((v) => ({
-                  key: v.key,
-                  version: v.version,
-                  versionTag: v.versionTag,
-                }))}
-                showCurrentChip={false}
-              />
-            </FormControl>
+            />
           </Box>
 
           {/* Business key */}

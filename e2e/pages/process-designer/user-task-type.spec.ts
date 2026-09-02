@@ -159,3 +159,47 @@ test.describe('Process Designer — User Task configurable Type', () => {
     ).toHaveCount(0);
   });
 });
+
+test.describe('Process Designer — Call Activity version-tag binding', () => {
+  test('defaults to Latest and serializes a selected version tag', async ({ page }) => {
+    await page.goto('/designer/process');
+    await expect(page.locator('.bjs-container')).toBeVisible({ timeout: 15000 });
+
+    await page.getByTestId('process-designer-file-input').setInputFiles(
+      path.join(FIXTURE_DIR, 'call-activity-default-binding.bpmn'),
+    );
+
+    const callActivity = page.locator('[data-element-id="callActivity"]');
+    await expect(callActivity).toBeVisible({ timeout: 10000 });
+    await callActivity.click();
+
+    const calledElementGroup = page.locator('[data-group-id="group-zenbpm-calledElement"]');
+    await expect(calledElementGroup).toBeVisible({ timeout: 10000 });
+    const entries = calledElementGroup.locator('.bio-properties-panel-group-entries');
+    if (!(await entries.evaluate((el) => el.classList.contains('open')))) {
+      await calledElementGroup.locator('.bio-properties-panel-group-header').click();
+    }
+
+    const bindingEntry = page.locator('[data-entry-id="zenbpm-calledEl-bindingType"]');
+    const bindingSelect = bindingEntry.locator('select');
+    await expect(bindingSelect).toHaveValue('latest');
+    await expect(bindingSelect.locator('option:checked')).toHaveText('Latest');
+    await expect(page.locator('[data-entry-id="zenbpm-calledEl-versionTag"]')).toHaveCount(0);
+    await bindingSelect.selectOption('versionTag');
+
+    const tagEntry = page.locator('[data-entry-id="zenbpm-calledEl-versionTag"]');
+    const tagInput = tagEntry.locator('input');
+    await expect(tagInput).toBeVisible();
+    await tagInput.fill('release-1');
+    await tagInput.press('Tab');
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: /^download$/i }).click(),
+    ]);
+    const xml = await readFile((await download.path())!, 'utf-8');
+
+    expect(xml).toMatch(/<zenbpm:calledElement[^>]*\bbindingType="versionTag"/);
+    expect(xml).toMatch(/<zenbpm:calledElement[^>]*\bversionTag="release-1"/);
+  });
+});

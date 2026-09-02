@@ -39,7 +39,16 @@ export const getProcessInstanceColumns = (
       sortable: true,
       render: (row: ProcessInstance) => {
         const name = options.processNameMap?.[row.bpmnProcessId ?? ''];
-        return name || row.bpmnProcessId || '-';
+        const displayName = name || row.bpmnProcessId || '-';
+
+        const versionText = row.versionTag || (row.version && `v${row.version}`)
+
+        return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+            <span>{displayName}</span>
+            {versionText && <MonoText>{versionText}</MonoText>}
+          </Box>
+        );
       },
     });
   }
