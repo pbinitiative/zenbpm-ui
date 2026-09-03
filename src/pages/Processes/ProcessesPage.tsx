@@ -73,8 +73,7 @@ export const ProcessesPage = () => {
 
     setUploading(true);
     try {
-      // Pass the file as a Blob for multipart/form-data upload
-      await createProcessDefinition({ resource: file });
+      await createProcessDefinition(file);
       setSnackbar({
         open: true,
         message: t('processes:messages.uploadSuccess'),

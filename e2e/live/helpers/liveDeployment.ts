@@ -225,13 +225,8 @@ async function deployBpmn(
   filename: string,
 ): Promise<string> {
   const response = await api.post('/v1/process-definitions', {
-    multipart: {
-      resource: {
-        buffer: Buffer.from(xml),
-        mimeType: 'application/xml',
-        name: filename,
-      },
-    },
+    data: Buffer.from(xml),
+    headers: { 'content-type': 'application/octet-stream' },
   });
   return readDefinitionKey(response, 'processDefinitionKey', filename);
 }
@@ -242,8 +237,8 @@ async function deployDmn(
   filename: string,
 ): Promise<string> {
   const response = await api.post('/v1/dmn-resource-definitions', {
-    data: xml,
-    headers: { 'content-type': 'application/xml' },
+    data: Buffer.from(xml),
+    headers: { 'content-type': 'application/octet-stream' },
   });
   return readDefinitionKey(response, 'dmnResourceDefinitionKey', filename);
 }

@@ -13,6 +13,9 @@ info:
 
 servers:
   - url: http://localhost:8080/v1
+  - url: http://localhost:8081/v1
+  - url: http://localhost:8082/v1
+  - url: http://zenbpm.local/v1
 
 tags:
   - name: process-definition
@@ -35,17 +38,11 @@ paths:
       requestBody:
         required: true
         content:
-          application/xml:
+          application/octet-stream:
             schema:
               type: string
-              format: xml
-            example: |
-              <?xml version="1.0" encoding="UTF-8"?>
-              <definitions>
-                <decision id="loan-approval" name="Loan Approval">
-                  ...
-                </decision>
-              </definitions>
+              format: binary
+              description: DMN resource definition file (.dmn format)
       responses:
         201:
           description: Dmn resource definition deployed
@@ -594,19 +591,11 @@ paths:
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/octet-stream:
             schema:
-              type: object
-              required:
-                - resource
-              properties:
-                resource:
-                  type: string
-                  format: binary
-                  description: BPMN process definition file (.bpmn format only, size limited by httpServer.maxRequestBodyBytes, 10 MiB by default)
-            encoding:
-              resource:
-                contentType: application/octet-stream, application/xml
+              type: string
+              format: binary
+              description: BPMN process definition file (.bpmn format only, size limited by httpServer.maxRequestBodyBytes, 10 MiB by default)
       responses:
         201:
           description: Process definition deployed
