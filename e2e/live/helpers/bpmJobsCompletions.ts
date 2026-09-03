@@ -15,8 +15,14 @@ export async function getBpmJobCount(page: Page, random: string): Promise<number
 return await row.count();
 }
 
-export async function processBpmJobClick(page: Page, row: string, label: string = 'Complete User Task'): Promise<void> {
-  const matchingRows = page.locator('tr[data-testid="data-row"]').filter({ hasText: row });
+export async function processBpmJobClick(page: Page, row: string, label: string = 'Complete Form'): Promise<void> {
+  const matchingRows = page
+    .getByTestId('jobs-table')
+    .locator('tbody tr')
+    .filter({
+      hasText: row,
+      has: page.getByRole('button', { name: 'Complete', exact: true }),
+    });
   const matchingRow = matchingRows.first();
 
   await expect(matchingRow).toBeVisible();

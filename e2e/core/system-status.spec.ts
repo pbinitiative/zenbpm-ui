@@ -43,13 +43,14 @@ test.describe('System status', () => {
     await expect(frontend).toContainText(new RegExp(`Commit ID\\s*${e2eShortCommit}`));
   });
 
-  test('stays usable when the backend returns a malformed status response', async ({ page }) => {
+  test('shows only available fields from a partial status response', async ({ page }) => {
     const pageErrors: string[] = [];
     page.on('pageerror', (error) => pageErrors.push(error.message));
 
     await page.goto('/');
     await page.getByRole('link', { name: 'System Status' }).click();
-    await expect(page.getByTestId('system-status-page')).toBeVisible();
+    const statusPage = page.getByTestId('system-status-page');
+    await expect(statusPage).toBeVisible();
     await page.evaluate(() => {
       window.history.replaceState(
         window.history.state,
@@ -59,7 +60,13 @@ test.describe('System status', () => {
     });
     await page.getByRole('button', { name: 'Refresh' }).click();
 
-    await expect(page.getByRole('alert')).toBeVisible();
+    const backend = page.getByTestId('backend-build-information');
+    await expect(statusPage).toContainText(/3\s*Desired Partitions/i);
+    await expect(backend).toContainText(/Branch\s*main/);
+    await expect(backend).toContainText(new RegExp(`Commit ID\\s*${e2eShortCommit}`));
+    await expect(backend.getByText('Version', { exact: true })).toHaveCount(0);
+    await expect(backend.getByText('Build Time', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('alert')).toHaveCount(0);
     await expect(page.getByText('Unexpected Application Error!')).not.toBeVisible();
     expect(pageErrors).toEqual([]);
   });

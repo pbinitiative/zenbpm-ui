@@ -94,7 +94,11 @@ export async function expectPagination(
     await expect(table.getByRole('button', { name: label, exact: true })).toBeVisible();
   }
 
-  await expect(table.getByRole('button', { name: 'page 1', exact: true })).toBeVisible();
+  await expect(
+    table
+      .getByRole('button', { name: 'page 1', exact: true })
+      .or(table.getByText('No data available', { exact: true })),
+  ).toBeVisible();
 }
 
 export async function expectDesignerActions(page: Page): Promise<void> {

@@ -26,11 +26,15 @@ const createSystemStatus = (version: string, commitId: string) => ({
     'node-1': {
       id: 'node-1',
       addr: '127.0.0.1:8091',
-      suffrage: 0,
-      state: 2,
-      role: 2,
+      suffrage: 'Voter',
+      state: 'NodeStateStarted',
+      role: 'RoleLeader',
       partitions: {
-        '1': { id: 1, state: 5, role: 2 },
+        '1': {
+          id: 1,
+          state: 'NodePartitionStateInitialized',
+          role: 'RoleLeader',
+        },
       },
     },
   },

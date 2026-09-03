@@ -39,37 +39,37 @@ const mockData = {
     'node-1': {
       id: 'node-1',
       addr: 'localhost:8091',
-      suffrage: 0, // Voter
-      state: 2, // Started
-      role: 2, // Leader (cluster leader)
+      suffrage: 'Voter',
+      state: 'NodeStateStarted',
+      role: 'RoleLeader', // Cluster leader
       partitions: {
-        '1': { id: 1, state: 5, role: 2 }, // Leader
-        '2': { id: 2, state: 5, role: 1 }, // Follower
-        '3': { id: 3, state: 5, role: 1 }, // Follower
+        '1': { id: 1, state: 'NodePartitionStateInitialized', role: 'RoleLeader' },
+        '2': { id: 2, state: 'NodePartitionStateInitialized', role: 'RoleFollower' },
+        '3': { id: 3, state: 'NodePartitionStateInitialized', role: 'RoleFollower' },
       },
     },
     'node-2': {
       id: 'node-2',
       addr: 'localhost:8092',
-      suffrage: 0, // Voter
-      state: 2, // Started
-      role: 1, // Follower
+      suffrage: 'Voter',
+      state: 'NodeStateStarted',
+      role: 'RoleFollower',
       partitions: {
-        '1': { id: 1, state: 5, role: 1 }, // Follower
-        '2': { id: 2, state: 5, role: 2 }, // Leader
-        '3': { id: 3, state: 5, role: 1 }, // Follower
+        '1': { id: 1, state: 'NodePartitionStateInitialized', role: 'RoleFollower' },
+        '2': { id: 2, state: 'NodePartitionStateInitialized', role: 'RoleLeader' },
+        '3': { id: 3, state: 'NodePartitionStateInitialized', role: 'RoleFollower' },
       },
     },
     'node-3': {
       id: 'node-3',
       addr: 'localhost:8093',
-      suffrage: 0, // Voter
-      state: 2, // Started
-      role: 1, // Follower
+      suffrage: 'Voter',
+      state: 'NodeStateStarted',
+      role: 'RoleFollower',
       partitions: {
-        '1': { id: 1, state: 5, role: 1 }, // Follower
-        '2': { id: 2, state: 5, role: 1 }, // Follower
-        '3': { id: 3, state: 5, role: 2 }, // Leader
+        '1': { id: 1, state: 'NodePartitionStateInitialized', role: 'RoleFollower' },
+        '2': { id: 2, state: 'NodePartitionStateInitialized', role: 'RoleFollower' },
+        '3': { id: 3, state: 'NodePartitionStateInitialized', role: 'RoleLeader' },
       },
     },
   },
