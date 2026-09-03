@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { expectAppShell } from '../supports/appAssertions.ts';
 import {
   observeDecisionInstancesCall,
@@ -26,6 +26,22 @@ function extractDisplayedVersion(
     throw new Error(`Could not read ${label} version from build metadata: ${text}`);
   }
   return version;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function expectLocalizedCount(
+  page: Page,
+  card: Locator,
+  count: number,
+  label: 'DEFINITIONS' | 'INSTANCES',
+): Promise<void> {
+  const displayedCount = await page.evaluate((value) => value.toLocaleString(), count);
+  await expect(card).toContainText(
+    new RegExp(`${escapeRegExp(displayedCount)}\\s*${label}`, 'i'),
+  );
 }
 
 test('home page shows the application shell and introduction', async ({ page }) => {
@@ -90,12 +106,8 @@ test('home page shows the Processes card with current API counters', async ({ pa
   await expect(processCard).toContainText(
     'Manage BPMN process definitions and view running instances',
   );
-  await expect(processCard).toContainText(
-    new RegExp(`${processDefinitions.totalCount}\\s*DEFINITIONS`, 'i'),
-  );
-  await expect(processCard).toContainText(
-    new RegExp(`${processInstances.totalCount}\\s*INSTANCES`, 'i'),
-  );
+  await expectLocalizedCount(page, processCard, processDefinitions.totalCount, 'DEFINITIONS');
+  await expectLocalizedCount(page, processCard, processInstances.totalCount, 'INSTANCES');
 });
 
 test('home page shows the Decisions card with current API counters', async ({ page }) => {
@@ -114,12 +126,13 @@ test('home page shows the Decisions card with current API counters', async ({ pa
   await expect(decisionCard).toContainText(
     'Manage DMN decision definitions and evaluate decisions',
   );
-  await expect(decisionCard).toContainText(
-    new RegExp(`${dmnResourceDefinitions.totalCount}\\s*DEFINITIONS`, 'i'),
+  await expectLocalizedCount(
+    page,
+    decisionCard,
+    dmnResourceDefinitions.totalCount,
+    'DEFINITIONS',
   );
-  await expect(decisionCard).toContainText(
-    new RegExp(`${decisionInstances.totalCount}\\s*INSTANCES`, 'i'),
-  );
+  await expectLocalizedCount(page, decisionCard, decisionInstances.totalCount, 'INSTANCES');
 });
 
 test('home page links to System Status', async ({ page }) => {
