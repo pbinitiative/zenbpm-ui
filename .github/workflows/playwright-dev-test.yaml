@@ -2,6 +2,9 @@ name: Playwright Tests
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 5 * * 1-5'
+      timezone: 'Europe/Prague'
   workflow_run:
     workflows: [release-dev]
     types: [completed]
@@ -16,7 +19,12 @@ concurrency:
 
 jobs:
   test:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'schedule' ||
+        github.event.workflow_run.conclusion == 'success'
+      }}
     timeout-minutes: 60
     runs-on: [self-hosted, linux, x64, vpn]
     env:
@@ -83,6 +91,7 @@ jobs:
         run: pnpm exec playwright install chromium
 
       - name: Run live Playwright tests
+        id: playwright_tests
         run: pnpm test:e2e:live
 
       - uses: actions/upload-artifact@v4
@@ -91,3 +100,63 @@ jobs:
           name: playwright-live-report
           path: playwright-report/
           retention-days: 30
+
+      - name: Notify Discord with Playwright test result
+        if: >-
+          ${{
+            always() &&
+            (github.event_name == 'schedule' || steps.playwright_tests.outcome == 'failure')
+          }}
+        continue-on-error: true
+        shell: bash
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_QA_WEBHOOK_URL }}
+          TEST_RESULT: ${{ steps.playwright_tests.outcome || 'skipped' }}
+          TESTED_BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
+            echo "::warning::DISCORD_QA_WEBHOOK_URL is not configured; skipping Discord notification."
+            exit 0
+          fi
+
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          short_sha="${TESTED_SHA:0:7}"
+
+          case "$TEST_RESULT" in
+            success)
+              result_text='passed'
+              result_icon=':white_check_mark:'
+              ;;
+            failure)
+              result_text='failed'
+              result_icon=':x:'
+              ;;
+            cancelled)
+              result_text='were cancelled'
+              result_icon=':warning:'
+              ;;
+            skipped)
+              result_text='did not run'
+              result_icon=':warning:'
+              ;;
+            *)
+              result_text="$TEST_RESULT"
+              result_icon=':warning:'
+              ;;
+          esac
+
+          message=$(printf '%s **ZenBPM UI live Playwright tests %s**\nBranch: `%s`\nCommit: `%s`\nRun details and HTML report: %s' \
+            "$result_icon" \
+            "$result_text" \
+            "$TESTED_BRANCH" \
+            "$short_sha" \
+            "$run_url")
+          payload=$(node -e 'process.stdout.write(JSON.stringify({ content: process.argv[1] }))' "$message")
+
+          curl --connect-timeout 10 --max-time 30 --fail --silent --show-error \
+            -H 'Content-Type: application/json' \
+            --data "$payload" \
+            "$DISCORD_WEBHOOK_URL"
