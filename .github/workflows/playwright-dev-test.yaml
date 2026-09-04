@@ -3,7 +3,7 @@ name: Playwright Tests
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 5 * * 1-5'
+    - cron: '7 5 * * 1-5'
       timezone: 'Europe/Prague'
   workflow_run:
     workflows: [release-dev]
