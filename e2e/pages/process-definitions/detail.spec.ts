@@ -27,9 +27,8 @@ test.describe('Process Definition Detail Page', () => {
   });
 
   test('should display version switcher', async ({ page }) => {
-    // Version switcher should show current version (v1 for showcase-process)
-    const versionChips = page.getByText('v1');
-    await expect(versionChips.first()).toBeVisible();
+    // Version tags are displayed verbatim for the current definition.
+    await expect(page.getByText('release-1', { exact: true }).first()).toBeVisible();
   });
 
   test('should display process instances table with partition groups', async ({ page }) => {
@@ -166,22 +165,129 @@ test.describe('Process Definition Detail - Navigation', () => {
   });
 });
 
-test.describe('Process Definition Detail - Version Switching', () => {
-  test('should show multiple versions in dropdown', async ({ page }) => {
-    // Go to Showcase Process which has 3 versions
-    await page.goto('/process-definitions/3000000000000000033');
+test.describe('Process definition version-tag displays', () => {
+  test('displays a single definition tag and prefers it in the instances table', async ({ page }) => {
+    await page.goto('/process-definitions/3000000000000000001');
+    const metadataPanel = page.locator('.MuiPaper-root').filter({
+      has: page.getByText('Definition Details', { exact: true }),
+    });
+    await expect(metadataPanel.getByText('release-single', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('version-selector')).toHaveCount(0);
 
-    // Wait for page to load
+    await page.goto('/processes/instances');
+    const processFilter = page.getByRole('combobox', { name: 'Select Process Definition' });
+    await processFilter.fill('Call Activity Simple');
+    await page.getByRole('option', { name: /Call Activity Simple/ }).click();
+    const instancesTable = page.getByTestId('process-instances-table');
+    await expect(instancesTable.getByText('release-single', { exact: true }).first()).toBeVisible();
+    await expect(instancesTable.getByText('v1', { exact: true })).toHaveCount(0);
+  });
+
+  test('uses the numeric version in the instances table when no tag exists', async ({ page }) => {
+    await page.goto('/processes/instances');
+    const processFilter = page.getByRole('combobox', { name: 'Select Process Definition' });
+    await processFilter.fill('Simple Task');
+    await page.getByRole('option', { name: /Simple Task/ }).first().click();
+    const instancesTable = page.getByTestId('process-instances-table');
+    await expect(instancesTable.getByText('v1', { exact: true }).first()).toBeVisible();
+  });
+});
+
+test.describe('Start Instance version selection', () => {
+  test('renders tagged options, hides Current, and starts the selected version', async ({ page }) => {
+    await page.goto('/process-definitions/3000000000000000033');
+    await page.getByTestId('process-definition-start-instance-button').click();
+
+    const dialog = page.getByRole('dialog');
+    const versionSelect = dialog.getByTestId('version-selector');
+    await expect(versionSelect).not.toHaveClass(/Mui-disabled/);
+    await versionSelect.getByRole('combobox').click();
+
+    const options = page.getByRole('option');
+    await expect(options).toHaveCount(3);
+    await expect(options.nth(0)).toHaveText('v3.0.0-rc1');
+    await expect(options.nth(1)).toHaveText('v2.1.0');
+    await expect(options.nth(2)).toHaveText('release-1');
+    await expect(options.getByText('Current', { exact: true })).toHaveCount(0);
+    await options.nth(1).click();
+
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        new URL(response.url()).pathname === '/v1/process-instances',
+    );
+    await dialog.getByRole('button', { name: 'Start', exact: true }).click();
+    const response = await responsePromise;
+    // Keys are int64 JSON numbers; inspect raw JSON to avoid JavaScript number rounding.
+    expect(response.request().postData()).toContain(
+      '"processDefinitionKey":3000000000000000034',
+    );
+  });
+
+  test('renders numeric fallback labels and sends the selected untagged version key', async ({ page }) => {
+    await page.goto('/process-definitions/3000000000000000047');
+    await page.getByTestId('process-definition-start-instance-button').click();
+
+    const dialog = page.getByRole('dialog');
+    const versionSelect = dialog.getByTestId('version-selector');
+    await expect(versionSelect).not.toHaveClass(/Mui-disabled/);
+    await versionSelect.getByRole('combobox').click();
+    const options = page.getByRole('option');
+    await expect(options).toHaveCount(2);
+    await expect(options.nth(0)).toHaveText('v2');
+    await expect(options.nth(1)).toHaveText('v1');
+    await options.nth(0).click();
+
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        new URL(response.url()).pathname === '/v1/process-instances',
+    );
+    await dialog.getByRole('button', { name: 'Start', exact: true }).click();
+    const response = await responsePromise;
+    // Keys are int64 JSON numbers; inspect raw JSON to avoid JavaScript number rounding.
+    expect(response.request().postData()).toContain(
+      '"processDefinitionKey":3000000000000000048',
+    );
+  });
+
+  test('disables version selection until a process is selected', async ({ page }) => {
+    await page.goto('/processes');
+    await page.getByTestId('start-instance-button').click();
+    await expect(page.getByRole('dialog').getByTestId('version-selector')).toHaveClass(/Mui-disabled/);
+  });
+});
+
+test.describe('Process Definition Detail - Version Switching', () => {
+  test('shows tagged versions, marks the current version, and navigates after selection', async ({ page }) => {
+    await page.goto('/process-definitions/3000000000000000033');
     await expect(page.getByText('Definition Details')).toBeVisible();
 
-    // Click version dropdown (if there are multiple versions)
-    const versionSelect = page.locator('[role="combobox"]').first();
-    if (await versionSelect.isVisible()) {
-      await versionSelect.click();
+    const versionSelect = page.getByTestId('version-selector');
+    await expect(versionSelect).toBeVisible();
+    await versionSelect.click();
 
-      // Should show version options (showcase-process has 3 versions)
-      await expect(page.getByRole('option')).toHaveCount(3);
-    }
+    const options = page.getByRole('option');
+    await expect(options).toHaveCount(3);
+    await expect(options.nth(0)).toHaveText('v3.0.0-rc1');
+    await expect(options.nth(1)).toHaveText('v2.1.0');
+    await expect(options.nth(2)).toContainText('release-1');
+    await expect(options.nth(2).getByText('current', { exact: true })).toBeVisible();
+
+    await options.nth(1).click();
+    await expect(page).toHaveURL(/\/process-definitions\/3000000000000000034$/);
+  });
+
+  test('uses numeric labels when versions have no tags', async ({ page }) => {
+    await page.goto('/process-definitions/3000000000000000047');
+    const versionSelect = page.getByTestId('version-selector');
+    await expect(versionSelect).toBeVisible();
+    await versionSelect.click();
+
+    const options = page.getByRole('option');
+    await expect(options).toHaveCount(2);
+    await expect(options.nth(0)).toHaveText('v2');
+    await expect(options.nth(1)).toContainText('v1');
   });
 });
 

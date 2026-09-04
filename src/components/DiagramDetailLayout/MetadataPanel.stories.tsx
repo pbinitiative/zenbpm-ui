@@ -37,8 +37,8 @@ export const ProcessDefinitionWithVersions: Story = {
     name: 'Order Processing',
     version: 2,
     versions: [
-      { key: '3000000000000048', version: 3 },
-      { key: '3000000000000047', version: 2 },
+      { key: '3000000000000048', version: 3, versionTag: 'v3.0.0' },
+      { key: '3000000000000047', version: 2, versionTag: 'v2.1.0' },
       { key: '3000000000000046', version: 1 },
     ],
     resourceName: 'order-process.bpmn',

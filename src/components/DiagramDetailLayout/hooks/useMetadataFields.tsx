@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import { Box, Chip, FormControl, Select, MenuItem, Tooltip } from '@mui/material';
+import { Box, Chip, Tooltip } from '@mui/material';
+import { VersionSelector } from '@components/VersionSelector';
 import ErrorIcon from '@mui/icons-material/Error';
 import { MonoText } from '@components/MonoText';
 import { StateBadge } from '@components/StateBadge';
@@ -18,8 +19,8 @@ interface UseMetadataFieldsOptions {
   businessKey?: string;
   name?: string;
   version?: number;
+  versionTag?: string;
   versions?: VersionInfo[];
-  id?: string;
   onVersionChange?: (key: string) => void;
   additionalFields?: MetadataField[];
   keyLabel?: string;
@@ -36,8 +37,8 @@ export function useMetadataFields({
   businessKey,
   name,
   version,
+  versionTag,
   versions = [],
-  id,
   onVersionChange,
   additionalFields = [],
   keyLabel,
@@ -105,26 +106,13 @@ export function useMetadataFields({
         result.push({
           label: t('common:fields.version'),
           value: (
-            <FormControl size="small" fullWidth>
-              <Select
-                value={entityKey}
-                onChange={(e) => onVersionChange(String(e.target.value))}
-                sx={{ fontSize: '0.875rem' }}
-              >
-                {versions.map((v) => (
-                  <MenuItem key={v.key} value={v.key}>
-                    v{v.version}
-                    {v.key === entityKey && (
-                      <Chip
-                        label={t('common:current')}
-                        size="small"
-                        sx={{ ml: 1, height: 18, fontSize: '0.65rem' }}
-                      />
-                    )}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <VersionSelector
+              value={String(entityKey ?? '')}
+              onChange={(val) => onVersionChange(val)}
+              options={versions}
+              currentKey={String(entityKey ?? '')}
+              showCurrentChip
+            />
           ),
         });
       } else {
@@ -132,7 +120,7 @@ export function useMetadataFields({
           label: t('common:fields.version'),
           value: (
             <Chip
-              label={`v${version}`}
+              label={versionTag || `v${version}`}
               size="small"
               sx={{
                 bgcolor: 'grey.100',
@@ -175,10 +163,11 @@ export function useMetadataFields({
     incidentsCount,
     processType,
     createdAt,
+    businessKey,
     name,
     version,
+    versionTag,
     versions,
-    id,
     onVersionChange,
     additionalFields,
     t,

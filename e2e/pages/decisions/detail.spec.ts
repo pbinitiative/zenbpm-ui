@@ -122,22 +122,19 @@ test.describe('Decision Definition Detail Page', () => {
     await page.goto('/decisions/definitions');
     await expect(page.locator('table')).toBeVisible({ timeout: 10000 });
 
-    // Wait for rows to load
-    const firstRow = page.locator('tbody tr').first();
-    await expect(firstRow).toBeVisible();
-    await page.waitForTimeout(500);
+    // Wait for a data row. The table initially renders its empty state while
+    // the definitions request is in flight, so visibility alone is insufficient.
+    const firstRow = page.getByTestId('decision-definitions-table').locator('tbody tr').first();
+    const keyCell = firstRow.getByTestId('cell-key');
+    await expect(keyCell).toHaveText(/^\d+$/, { timeout: 10000 });
 
-    // Get the key from the first cell to construct expected URL
-    const keyCell = firstRow.locator('td').first();
+    // Get the key from the loaded row to construct the expected URL.
     const key = await keyCell.textContent();
 
-    // Click on the row to navigate to detail page
-    await firstRow.click({ force: true });
+    // Click on the row to navigate to detail page.
+    await firstRow.click();
 
-    // Wait for navigation
-    await page.waitForTimeout(1000);
-
-    // Should navigate to detail page
+    // Should navigate to detail page.
     await expect(page).toHaveURL(new RegExp(`/decision-definitions/${key}`));
   });
 

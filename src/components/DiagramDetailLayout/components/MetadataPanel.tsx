@@ -44,6 +44,9 @@ export interface MetadataPanelProps {
   /** Current version number */
   version?: number;
 
+  /** Optional display tag for the current version */
+  versionTag?: string;
+
   /** All available versions for version selector */
   versions?: VersionInfo[];
 
@@ -88,6 +91,7 @@ export const MetadataPanel = ({
   businessKey,
   name,
   version,
+  versionTag,
   versions = [],
   onVersionChange,
   definitionInfo,
@@ -110,6 +114,7 @@ export const MetadataPanel = ({
     businessKey,
     name,
     version,
+    versionTag,
     versions,
     onVersionChange,
     additionalFields,

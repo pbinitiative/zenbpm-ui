@@ -12,6 +12,8 @@ export interface MetadataField {
 export interface VersionInfo {
   key: string;
   version: number;
+  /** Optional display tag for the version (e.g., from `zenbpm:versionTag`) */
+  versionTag?: string;
 }
 
 /** Definition info for instances - displayed as a link to the parent definition */

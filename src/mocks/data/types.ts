@@ -7,6 +7,8 @@ export interface MockProcessDefinition {
   bpmnProcessId: string;
   bpmnProcessName?: string;
   bpmnResourceName?: string;
+  /** Optional process version tag from `zenbpm:versionTag` */
+  versionTag?: string;
   bpmnData: string;
   createdAt: string;
 }
