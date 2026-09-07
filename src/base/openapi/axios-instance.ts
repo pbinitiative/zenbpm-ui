@@ -10,23 +10,12 @@ export const AXIOS_INSTANCE = axios.create({
   // Use custom JSON stringifier to convert string int64 values back to JSON numbers
   transformRequest: [
     (data: unknown) => {
-      if (data && typeof data === 'object' && !(data instanceof FormData)) {
+      if (data && typeof data === 'object' && !(data instanceof Blob) && !(data instanceof FormData)) {
         return stringifyWithBigInt(data);
       }
       return data;
     },
   ],
-});
-
-// Add request interceptor to fix Content-Type for FormData
-// The generated API sets Content-Type: multipart/form-data without boundary,
-// but axios needs to set this automatically when FormData is used
-AXIOS_INSTANCE.interceptors.request.use((config) => {
-  if (config.data instanceof FormData) {
-    // Delete the Content-Type header so axios sets it automatically with boundary
-    delete config.headers['Content-Type'];
-  }
-  return config;
 });
 
 // Add response interceptor to validate responses against OpenAPI schema

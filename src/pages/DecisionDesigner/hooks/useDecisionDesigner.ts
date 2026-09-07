@@ -156,7 +156,8 @@ export function useDecisionDesigner({
         throw new Error('No XML content');
       }
 
-      const result = await createDmnResourceDefinition(xml);
+      const blob = new Blob([xml], { type: 'application/xml' });
+      const result = await createDmnResourceDefinition(blob);
 
       // Fetch full definition details to get version info
       let definitionDetails: { version?: number; dmnResourceDefinitionId?: string; name?: string } | undefined;

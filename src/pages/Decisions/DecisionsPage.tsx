@@ -68,8 +68,7 @@ export const DecisionsPage = () => {
 
     setUploading(true);
     try {
-      const xml = await file.text();
-      await createDmnResourceDefinition(xml);
+      await createDmnResourceDefinition(file);
       setSnackbar({
         open: true,
         message: t('decisions:messages.uploadSuccess'),

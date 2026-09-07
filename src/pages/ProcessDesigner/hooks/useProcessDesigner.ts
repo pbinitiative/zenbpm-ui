@@ -145,7 +145,7 @@ export function useProcessDesigner({
       }
 
       const blob = new Blob([xml], { type: 'application/xml' });
-      const result = await createProcessDefinition({ resource: blob });
+      const result = await createProcessDefinition(blob);
 
       // Fetch full definition details to get version info
       let definitionDetails: { version?: number; bpmnProcessId?: string } | undefined;
