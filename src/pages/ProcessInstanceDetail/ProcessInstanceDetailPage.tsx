@@ -2,7 +2,6 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import type { EventSubscriptionState } from '@base/openapi/generated-api/schemas/eventSubscriptionState';
 import {
   Box,
   Paper,
@@ -14,6 +13,7 @@ import {
   Tab,
   Chip,
   Snackbar,
+  Tooltip,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -24,6 +24,7 @@ import {
   findFocusedEventPage,
   findFocusedJobPage,
   useInstanceData,
+  type EventSubscriptionFilterState,
   type FocusedEventType,
 } from './hooks';
 import { JobsTab, VariablesTab, IncidentsTab, HistoryTab, ChildProcessesTab, DecisionInstancesTab, EventSubscriptionsTab } from './tabs';
@@ -46,12 +47,13 @@ const TabPanel = ({ children, value, index }: TabPanelProps) => (
   </Box>
 );
 
-// Map tab name to index
-const orderEventStates = (
-  current: EventSubscriptionState,
-  supported: readonly EventSubscriptionState[]
-) => [current, ...supported.filter((state) => state !== current)];
+// Search the state filter currently shown in the tab first (its total is
+// already known), then fall back to an unfiltered search across every state.
+const eventStateSearchOrder = (
+  current: EventSubscriptionFilterState,
+): EventSubscriptionFilterState[] => (current === 'all' ? ['all'] : [current, 'all']);
 
+// Map tab name to index
 const TAB_MAP: Record<string, number> = {
   jobs: 0,
   history: 1,
@@ -289,7 +291,7 @@ export const ProcessInstanceDetailPage = () => {
     setErrorSubscriptionsPage,
     setErrorSubscriptionsPageSize,
     setErrorSubscriptionsState,
-    totalEventSubscriptionsCount,
+    activeEventSubscriptionsCount,
   } = useInstanceData(processInstanceKey, {
     onHistoryPartial: handleHistoryPartial,
   });
@@ -466,21 +468,21 @@ export const ProcessInstanceDetailPage = () => {
       processInstanceKey: owner.instance.key,
       elementInstanceKey: focusedElementInstanceKey,
       searches: [
-        ...orderEventStates(messageSubscriptionsState, ['active', 'completed', 'withdrawn'])
+        ...eventStateSearchOrder(messageSubscriptionsState)
           .map((state, index) => ({
             type: 'messages' as const,
             pageSize: messageSubscriptionsPageSize,
             totalCount: index === 0 ? owner.messageSubscriptionsTotalCount : undefined,
             state,
           })),
-        ...orderEventStates(timerSubscriptionsState, ['active', 'completed', 'withdrawn'])
+        ...eventStateSearchOrder(timerSubscriptionsState)
           .map((state, index) => ({
             type: 'timers' as const,
             pageSize: timerSubscriptionsPageSize,
             totalCount: index === 0 ? owner.timerSubscriptionsTotalCount : undefined,
             state,
           })),
-        ...orderEventStates(errorSubscriptionsState, ['active', 'withdrawn'])
+        ...eventStateSearchOrder(errorSubscriptionsState)
           .map((state, index) => ({
             type: 'errors' as const,
             pageSize: errorSubscriptionsPageSize,
@@ -784,8 +786,17 @@ export const ProcessInstanceDetailPage = () => {
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {t('processInstance:tabs.eventSubscriptions')}
-                {totalEventSubscriptionsCount > 0 && (
-                  <Chip label={totalEventSubscriptionsCount} size="small" sx={{ height: 20, fontSize: 'caption.fontSize' }} />
+                {activeEventSubscriptionsCount > 0 && (
+                  // The tab lists every state; the chip counts active subscriptions only
+                  // (same convention as the Jobs tab), so say so for sighted and AT users.
+                  <Tooltip title={t('processInstance:tabs.eventSubscriptionsActiveCountTooltip')}>
+                    <Chip
+                      label={activeEventSubscriptionsCount}
+                      aria-label={t('processInstance:tabs.eventSubscriptionsActiveCount', { count: activeEventSubscriptionsCount })}
+                      size="small"
+                      sx={{ height: 20, fontSize: 'caption.fontSize' }}
+                    />
+                  </Tooltip>
                 )}
               </Box>
             }

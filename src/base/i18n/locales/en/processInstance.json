@@ -47,7 +47,9 @@
     "variables": "Variables",
     "calledProcesses": "Called Processes",
     "decisions": "Decisions",
-    "eventSubscriptions": "Event Subscriptions"
+    "eventSubscriptions": "Event Subscriptions",
+    "eventSubscriptionsActiveCount": "{{count}} active",
+    "eventSubscriptionsActiveCountTooltip": "Active event subscriptions. The tab lists subscriptions in every state."
   },
   "filters": {
     "includeSequenceFlows": "Include flows"

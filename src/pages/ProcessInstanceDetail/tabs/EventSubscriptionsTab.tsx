@@ -17,7 +17,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import HistoryIcon from '@mui/icons-material/History';
 import { type Column, type DataTableSection } from '@components/DataTable';
 import { TableWithFilters } from '@components/TableWithFilters';
-import type { FilterConfig, FilterValues } from '@components/TableWithFilters';
+import type { FilterConfig, FilterOption, FilterValues } from '@components/TableWithFilters';
 import { SubTabs, type SubTab } from '@components/SubTabs';
 import { StateBadge } from '@components/StateBadge';
 import { MonoText } from '@components/MonoText';
@@ -27,7 +27,7 @@ import type { MessageSubscription, TimerSubscription, ErrorSubscription } from '
 import type { EventSubscriptionState } from '@base/openapi/generated-api/schemas/eventSubscriptionState';
 import { useTriggerMessageDialog } from '../modals/useTriggerMessageDialog';
 import type { ProcessInstanceNode } from '../types/tree';
-import type { FocusedEventType } from '../hooks';
+import type { EventSubscriptionFilterState, FocusedEventType } from '../hooks';
 
 // processType display order — determines section ordering after the main instance
 const PROCESS_TYPE_ORDER: Record<string, number> = {
@@ -39,23 +39,26 @@ const PROCESS_TYPE_ORDER: Record<string, number> = {
 
 interface EventSubscriptionsTabProps {
   instanceTree: ProcessInstanceNode | null;
-  messageSubscriptionsState: EventSubscriptionState;
+  /** State filter of the messages table — 'all' (the default) lists every state. */
+  messageSubscriptionsState: EventSubscriptionFilterState;
   messageSubscriptionsPage: number;
   messageSubscriptionsPageSize: number;
   setMessageSubscriptionsPage: (page: number) => void;
-  setMessageSubscriptionsState: (state: EventSubscriptionState) => void;
+  setMessageSubscriptionsState: (state: EventSubscriptionFilterState) => void;
   setMessageSubscriptionsPageSize: (size: number) => void;
   timerSubscriptionsPage: number;
   timerSubscriptionsPageSize: number;
-  timerSubscriptionsState: EventSubscriptionState;
+  /** State filter of the timers table — 'all' (the default) lists every state. */
+  timerSubscriptionsState: EventSubscriptionFilterState;
   setTimerSubscriptionsPage: (page: number) => void;
   setTimerSubscriptionsPageSize: (size: number) => void;
   errorSubscriptionsPage: number;
   errorSubscriptionsPageSize: number;
-  setTimerSubscriptionsState: (state: EventSubscriptionState) => void;
-  errorSubscriptionsState: EventSubscriptionState;
+  setTimerSubscriptionsState: (state: EventSubscriptionFilterState) => void;
+  /** State filter of the errors table — 'all' (the default) lists every state. */
+  errorSubscriptionsState: EventSubscriptionFilterState;
   setErrorSubscriptionsPage: (page: number) => void;
-  setErrorSubscriptionsState: (state: EventSubscriptionState) => void;
+  setErrorSubscriptionsState: (state: EventSubscriptionFilterState) => void;
   setErrorSubscriptionsPageSize: (size: number) => void;
   onRefetch: () => Promise<void>;
   onShowNotification: (message: string, severity: 'success' | 'error') => void;
@@ -68,6 +71,24 @@ interface EventSubscriptionsTabProps {
   autoScrollToFocusedRow?: boolean;
   onFocusedRowVisible?: () => void;
 }
+
+/**
+ * The select filter reports its built-in "All" option as an empty string;
+ * map that (and a cleared filter) to the 'all' filter state.
+ */
+const toFilterState = (value: FilterValues[string]): EventSubscriptionFilterState =>
+  typeof value === 'string' && value !== '' ? (value as EventSubscriptionState) : 'all';
+
+/** Inverse of toFilterState — the value handed to the select filter. */
+const toFilterValue = (state: EventSubscriptionFilterState): string => (state === 'all' ? '' : state);
+
+/**
+ * Render the state cell with the same badge (icon + type-specific label) the
+ * filter dropdown uses, so e.g. a timer reads "Triggered" in both places.
+ * Falls back to the generic badge for states without a dedicated option.
+ */
+const renderStateCell = (options: FilterOption[], state: string) =>
+  options.find((option) => option.value === state)?.renderContent ?? <StateBadge state={state} />;
 
 /** BFS walk — returns all nodes, root first, skipping non-root callActivity */
 function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
@@ -167,63 +188,56 @@ export const EventSubscriptionsTab = ({
     [onRefetch, onShowNotification, t],
   );
 
-  // ── Filter configs ────────────────────────────────────────────────────────
+  // ── State options & filter configs ─────────────────────────────────────────
+  // The options double as the source of the table's state badges (see
+  // renderStateCell). The select filter adds its own "All" entry, which is the
+  // default: subscriptions are listed in every state unless the user narrows.
 
-  const messageStateFilters: FilterConfig[] = useMemo(
+  const messageStateOptions: FilterOption[] = useMemo(
     () => [
-      {
-        id: 'state',
-        type: 'select',
-        label: t('processInstance:fields.state'),
-        zone: 'exposed_first_line',
-        options: [
-          { value: 'active', label: t('processInstance:eventSubscriptionStates.message.active'), renderContent: <StateBadge state="active" label={t('processInstance:eventSubscriptionStates.message.active')} /> },
-          { value: 'completed', label: t('processInstance:eventSubscriptionStates.message.completed'), renderContent: <StateBadge state="completed" label={t('processInstance:eventSubscriptionStates.message.completed')} /> },
-          { value: 'terminated', label: t('processInstance:eventSubscriptionStates.message.terminated'), renderContent: <StateBadge state="terminated" label={t('processInstance:eventSubscriptionStates.message.terminated')} /> },
-        ],
-      } as FilterConfig,
+      { value: 'active', label: t('processInstance:eventSubscriptionStates.message.active'), renderContent: <StateBadge state="active" label={t('processInstance:eventSubscriptionStates.message.active')} /> },
+      { value: 'completed', label: t('processInstance:eventSubscriptionStates.message.completed'), renderContent: <StateBadge state="completed" label={t('processInstance:eventSubscriptionStates.message.completed')} /> },
+      { value: 'terminated', label: t('processInstance:eventSubscriptionStates.message.terminated'), renderContent: <StateBadge state="terminated" label={t('processInstance:eventSubscriptionStates.message.terminated')} /> },
     ],
     [t],
+  );
+
+  const timerStateOptions: FilterOption[] = useMemo(
+    () => [
+      { value: 'active', label: t('processInstance:eventSubscriptionStates.timer.active'), renderContent: <StateBadge state="active" label={t('processInstance:eventSubscriptionStates.timer.active')} /> },
+      { value: 'completed', label: t('processInstance:eventSubscriptionStates.timer.completed'), renderContent: <StateBadge state="completed" label={t('processInstance:eventSubscriptionStates.timer.completed')} /> },
+      { value: 'withdrawn', label: t('processInstance:eventSubscriptionStates.timer.withdrawn'), renderContent: <StateBadge state="withdrawn" label={t('processInstance:eventSubscriptionStates.timer.withdrawn')} /> },
+    ],
+    [t],
+  );
+
+  const errorStateOptions: FilterOption[] = useMemo(
+    () => [
+      { value: 'active', label: t('processInstance:eventSubscriptionStates.error.active'), renderContent: <StateBadge state="active" label={t('processInstance:eventSubscriptionStates.error.active')} /> },
+      { value: 'withdrawn', label: t('processInstance:eventSubscriptionStates.error.withdrawn'), renderContent: <StateBadge state="withdrawn" label={t('processInstance:eventSubscriptionStates.error.withdrawn')} /> },
+    ],
+    [t],
+  );
+
+  const messageStateFilters: FilterConfig[] = useMemo(
+    () => [{ id: 'state', type: 'select', label: t('processInstance:fields.state'), zone: 'exposed_first_line', options: messageStateOptions } as FilterConfig],
+    [t, messageStateOptions],
   );
 
   const timerStateFilters: FilterConfig[] = useMemo(
-    () => [
-      {
-        id: 'state',
-        type: 'select',
-        label: t('processInstance:fields.state'),
-        zone: 'exposed_first_line',
-        options: [
-          { value: 'active', label: t('processInstance:eventSubscriptionStates.timer.active'), renderContent: <StateBadge state="active" label={t('processInstance:eventSubscriptionStates.timer.active')} /> },
-          { value: 'completed', label: t('processInstance:eventSubscriptionStates.timer.completed'), renderContent: <StateBadge state="completed" label={t('processInstance:eventSubscriptionStates.timer.completed')} /> },
-          { value: 'withdrawn', label: t('processInstance:eventSubscriptionStates.timer.withdrawn'), renderContent: <StateBadge state="canceled" label={t('processInstance:eventSubscriptionStates.timer.withdrawn')} /> },
-        ],
-      } as FilterConfig,
-    ],
-    [t],
+    () => [{ id: 'state', type: 'select', label: t('processInstance:fields.state'), zone: 'exposed_first_line', options: timerStateOptions } as FilterConfig],
+    [t, timerStateOptions],
   );
 
   const errorStateFilters: FilterConfig[] = useMemo(
-    () => [
-      {
-        id: 'state',
-        type: 'select',
-        label: t('processInstance:fields.state'),
-        zone: 'exposed_first_line',
-        options: [
-          { value: 'active', label: t('processInstance:eventSubscriptionStates.error.active'), renderContent: <StateBadge state="active" label={t('processInstance:eventSubscriptionStates.error.active')} /> },
-          { value: 'withdrawn', label: t('processInstance:eventSubscriptionStates.error.withdrawn'), renderContent: <StateBadge state="canceled" label={t('processInstance:eventSubscriptionStates.error.withdrawn')} /> },
-        ],
-      } as FilterConfig,
-    ],
-    [t],
+    () => [{ id: 'state', type: 'select', label: t('processInstance:fields.state'), zone: 'exposed_first_line', options: errorStateOptions } as FilterConfig],
+    [t, errorStateOptions],
   );
 
   const handleMessageFilterChange = useCallback(
     (values: FilterValues) => {
-      const state = values['state'] as EventSubscriptionState | undefined;
       onManualNavigation();
-      setMessageSubscriptionsState(state ?? 'active');
+      setMessageSubscriptionsState(toFilterState(values['state']));
       setMessageSubscriptionsPage(0);
     },
     [onManualNavigation, setMessageSubscriptionsState, setMessageSubscriptionsPage],
@@ -231,9 +245,8 @@ export const EventSubscriptionsTab = ({
 
   const handleTimerFilterChange = useCallback(
     (values: FilterValues) => {
-      const state = values['state'] as EventSubscriptionState | undefined;
       onManualNavigation();
-      setTimerSubscriptionsState(state ?? 'active');
+      setTimerSubscriptionsState(toFilterState(values['state']));
       setTimerSubscriptionsPage(0);
     },
     [onManualNavigation, setTimerSubscriptionsState, setTimerSubscriptionsPage],
@@ -241,9 +254,8 @@ export const EventSubscriptionsTab = ({
 
   const handleErrorFilterChange = useCallback(
     (values: FilterValues) => {
-      const state = values['state'] as EventSubscriptionState | undefined;
       onManualNavigation();
-      setErrorSubscriptionsState(state ?? 'active');
+      setErrorSubscriptionsState(toFilterState(values['state']));
       setErrorSubscriptionsPage(0);
     },
     [onManualNavigation, setErrorSubscriptionsState, setErrorSubscriptionsPage],
@@ -293,7 +305,7 @@ export const EventSubscriptionsTab = ({
         id: 'state',
         label: t('processInstance:fields.state'),
         width: 120,
-        render: (row) => <StateBadge state={row.state} />,
+        render: (row) => renderStateCell(messageStateOptions, row.state),
       },
       {
         id: 'actions',
@@ -323,7 +335,7 @@ export const EventSubscriptionsTab = ({
         ),
       },
     ],
-    [t, openTriggerMessageDialog, handleTriggerMessage, onElementIdClick, renderRowActions],
+    [t, openTriggerMessageDialog, handleTriggerMessage, onElementIdClick, renderRowActions, messageStateOptions],
   );
 
   const { messageFlatData, messageSections, messageTotalCount, messagePaginationTotal } = useMemo(() => {
@@ -394,7 +406,7 @@ export const EventSubscriptionsTab = ({
         id: 'state',
         label: t('processInstance:fields.state'),
         width: 120,
-        render: (row) => <StateBadge state={row.state} />,
+        render: (row) => renderStateCell(timerStateOptions, row.state),
       },
       {
         id: 'actions',
@@ -403,7 +415,7 @@ export const EventSubscriptionsTab = ({
         render: (row) => renderRowActions(row.elementInstanceKey),
       },
     ],
-    [t, onElementIdClick, renderRowActions],
+    [t, onElementIdClick, renderRowActions, timerStateOptions],
   );
 
   const { timerFlatData, timerSections, timerTotalCount, timerPaginationTotal } = useMemo(() => {
@@ -477,7 +489,7 @@ export const EventSubscriptionsTab = ({
         id: 'state',
         label: t('processInstance:fields.state'),
         width: 120,
-        render: (row) => <StateBadge state={row.state} />,
+        render: (row) => renderStateCell(errorStateOptions, row.state),
       },
       {
         id: 'actions',
@@ -486,7 +498,7 @@ export const EventSubscriptionsTab = ({
         render: (row) => renderRowActions(row.elementInstanceKey),
       },
     ],
-    [t, onElementIdClick, renderRowActions],
+    [t, onElementIdClick, renderRowActions, errorStateOptions],
   );
 
   const { errorFlatData, errorSections, errorTotalCount, errorPaginationTotal } = useMemo(() => {
@@ -536,7 +548,7 @@ export const EventSubscriptionsTab = ({
             rowKey="key"
             data-testid="message-subscriptions-table"
             filters={messageStateFilters}
-            filterValues={{ state: messageSubscriptionsState }}
+            filterValues={{ state: toFilterValue(messageSubscriptionsState) }}
             onFilterChange={handleMessageFilterChange}
             focusedRowKey={focusedElementInstanceKey}
             getRowFocusKey={(row) => row.elementInstanceKey ?? undefined}
@@ -563,7 +575,7 @@ export const EventSubscriptionsTab = ({
             rowKey="key"
             data-testid="timer-subscriptions-table"
             filters={timerStateFilters}
-            filterValues={{ state: timerSubscriptionsState }}
+            filterValues={{ state: toFilterValue(timerSubscriptionsState) }}
             onFilterChange={handleTimerFilterChange}
             focusedRowKey={focusedElementInstanceKey}
             getRowFocusKey={(row) => row.elementInstanceKey ?? undefined}
@@ -590,7 +602,7 @@ export const EventSubscriptionsTab = ({
             rowKey="key"
             data-testid="error-subscriptions-table"
             filters={errorStateFilters}
-            filterValues={{ state: errorSubscriptionsState }}
+            filterValues={{ state: toFilterValue(errorSubscriptionsState) }}
             onFilterChange={handleErrorFilterChange}
             focusedRowKey={focusedElementInstanceKey}
             getRowFocusKey={(row) => row.elementInstanceKey}

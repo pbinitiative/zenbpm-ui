@@ -1,7 +1,20 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 import { instanceKeys } from '../../fixtures/instance-keys';
 
 const { ACTIVE_INSTANCE_KEY } = instanceKeys;
+
+/**
+ * Positively assert that the state filter of a subscriptions panel has "All"
+ * selected. The closed select renders no text for the empty value, so the
+ * selection is checked on the opened dropdown's "All" option instead.
+ */
+async function expectAllStatesSelected(page: Page, panel: Locator) {
+  await panel.getByRole('combobox').first().click();
+  const allOption = page.getByRole('option', { name: /^all$/i });
+  await expect(allOption).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Escape');
+  await expect(allOption).toBeHidden();
+}
 
 test.describe('Process Instance Detail - Event Subscriptions Tab', () => {
   test.beforeEach(async ({ page }) => {
@@ -64,7 +77,7 @@ test.describe('Process Instance Detail - Event Subscriptions Tab', () => {
     await page.getByTestId('event-subscriptions-tab').getByRole('button', { name: /^timers/i }).click();
     const table = page.getByTestId('timer-subscriptions-table');
     await expect(table).toBeVisible({ timeout: 5000 });
-    await expect(table.getByText('timerBoundaryEvent')).toBeVisible();
+    await expect(table.getByText('timerBoundaryEvent').first()).toBeVisible();
   });
 
   test('should show mock error subscription data (ORDER_FAILED)', async ({ page }) => {
@@ -176,5 +189,120 @@ test.describe('Process Instance Detail - Trigger Message Dialog', () => {
 
     // Dialog should close after successful submit (MSW returns 201)
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5000 });
+  });
+});
+
+test.describe('Process Instance Detail - Event Subscription States', () => {
+  test('lists message subscriptions in every state by default', async ({ page }) => {
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=events&eventType=messages`);
+    const table = page.getByTestId('message-subscriptions-table');
+    await expect(table).toBeVisible({ timeout: 10000 });
+
+    // Active, completed and terminated subscriptions are all listed
+    await expect(table.getByText('OrderConfirmed')).toBeVisible();
+    await expect(table.getByText('OrderShipped')).toBeVisible();
+    await expect(table.getByText('OrderCancelled')).toBeVisible();
+
+    // The state filter has "All" selected rather than a preselected state
+    await expectAllStatesSelected(page, page.getByTestId('event-subscriptions-messages-panel'));
+  });
+
+  test('does not send a state filter for the table request by default', async ({ page }) => {
+    const unfilteredRequest = page.waitForRequest((request) => {
+      const url = new URL(request.url());
+      return (
+        url.pathname.endsWith('/event-subscriptions/messages') &&
+        !url.searchParams.has('state')
+      );
+    });
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=events&eventType=messages`);
+    await unfilteredRequest;
+  });
+
+  test('shows the state of every message subscription row', async ({ page }) => {
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=events&eventType=messages`);
+    const table = page.getByTestId('message-subscriptions-table');
+    await expect(table).toBeVisible({ timeout: 10000 });
+
+    await expect(table.locator('tbody [data-testid="state-badge-active"]')).toHaveCount(2);
+    await expect(table.locator('tbody [data-testid="state-badge-completed"]')).toHaveCount(1);
+    await expect(table.locator('tbody [data-testid="state-badge-terminated"]')).toHaveCount(1);
+
+    const completedRow = table.locator('tbody tr').filter({ hasText: 'OrderShipped' });
+    await expect(completedRow.getByText('Completed')).toBeVisible();
+    const terminatedRow = table.locator('tbody tr').filter({ hasText: 'OrderCancelled' });
+    await expect(terminatedRow.getByText('Terminated')).toBeVisible();
+  });
+
+  test('narrows the list to the selected state and back to all', async ({ page }) => {
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=events&eventType=messages`);
+    const table = page.getByTestId('message-subscriptions-table');
+    await expect(table.getByText('OrderShipped')).toBeVisible({ timeout: 10000 });
+    const messagesPanel = page.getByTestId('event-subscriptions-messages-panel');
+
+    await messagesPanel.getByRole('combobox').first().click();
+    await page.getByRole('option', { name: /completed/i }).click();
+    await expect(table.getByText('OrderShipped')).toBeVisible();
+    await expect(table.getByText('OrderConfirmed')).toHaveCount(0);
+    await expect(table.getByText('OrderCancelled')).toHaveCount(0);
+
+    await messagesPanel.getByRole('combobox').first().click();
+    await page.getByRole('option', { name: /^all$/i }).click();
+    await expect(table.getByText('OrderConfirmed')).toBeVisible();
+    await expect(table.getByText('OrderShipped')).toBeVisible();
+    await expect(table.getByText('OrderCancelled')).toBeVisible();
+  });
+
+  test('offers Trigger only for active message subscriptions', async ({ page }) => {
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=events&eventType=messages`);
+    const table = page.getByTestId('message-subscriptions-table');
+    await expect(table.getByText('OrderShipped')).toBeVisible({ timeout: 10000 });
+
+    const activeRow = table.locator('tbody tr').filter({ hasText: 'OrderConfirmed' });
+    await expect(activeRow.getByRole('button', { name: /trigger/i })).toBeVisible();
+
+    const completedRow = table.locator('tbody tr').filter({ hasText: 'OrderShipped' });
+    await expect(completedRow.getByRole('button', { name: /trigger/i })).toHaveCount(0);
+    const terminatedRow = table.locator('tbody tr').filter({ hasText: 'OrderCancelled' });
+    await expect(terminatedRow.getByRole('button', { name: /trigger/i })).toHaveCount(0);
+  });
+
+  test('lists timer subscriptions in every state with timer-specific labels', async ({ page }) => {
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=events&eventType=timers`);
+    const table = page.getByTestId('timer-subscriptions-table');
+    await expect(table).toBeVisible({ timeout: 10000 });
+
+    await expect(table.locator('tbody tr')).toHaveCount(3);
+    await expect(table.locator('tbody [data-testid="state-badge-active"]')).toHaveCount(1);
+    await expect(table.locator('tbody [data-testid="state-badge-completed"]')).toHaveCount(1);
+    await expect(table.locator('tbody [data-testid="state-badge-withdrawn"]')).toHaveCount(1);
+
+    // Timer states use their own wording, matching the filter options
+    await expect(table.getByText('Created')).toBeVisible();
+    await expect(table.getByText('Triggered')).toBeVisible();
+    await expect(table.getByText('Cancelled')).toBeVisible();
+  });
+
+  test('lists error subscriptions in every state', async ({ page }) => {
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=events&eventType=errors`);
+    const table = page.getByTestId('error-subscriptions-table');
+    await expect(table).toBeVisible({ timeout: 10000 });
+
+    await expect(table.getByText('ORDER_FAILED')).toBeVisible();
+    await expect(table.getByText('PAYMENT_DECLINED')).toBeVisible();
+    const withdrawnRow = table.locator('tbody tr').filter({ hasText: 'PAYMENT_DECLINED' });
+    await expect(withdrawnRow.getByText('Cancelled')).toBeVisible();
+  });
+
+  test('labels the Event Subscriptions tab badge as an active-only count', async ({ page }) => {
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=events&eventType=messages`);
+    // Mocks: 2 active messages + 1 active timer + 1 active error = 4, while
+    // 9 subscriptions exist across all states. The chip's accessible name
+    // qualifies the number so it is not mistaken for the tab's total.
+    const tab = page.getByRole('tab', { name: /event subscriptions 4 active$/i });
+    await expect(tab).toBeVisible({ timeout: 10000 });
+
+    await tab.getByText('4', { exact: true }).hover();
+    await expect(page.getByRole('tooltip')).toContainText(/active event subscriptions/i);
   });
 });

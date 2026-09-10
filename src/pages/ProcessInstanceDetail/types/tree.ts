@@ -86,35 +86,45 @@ export interface ProcessInstanceNode {
   // --- History (client-paged only; server-paginated up to HISTORY_MAX_PAGES pages) ---
   history: FlowElementHistory[];
 
-  // --- Message subscriptions (server-paginated) ---
+  // --- Message subscriptions (server-paginated, filtered by the tab's state filter) ---
   messageSubscriptions: MessageSubscription[];
+  /** Total for the tab's current state filter (all states unless the user narrows it). */
   messageSubscriptionsTotalCount: number;
 
-  // --- Timer subscriptions (server-paginated) ---
+  // --- Timer subscriptions (server-paginated, filtered by the tab's state filter) ---
   timerSubscriptions: TimerSubscription[];
+  /** Total for the tab's current state filter (all states unless the user narrows it). */
   timerSubscriptionsTotalCount: number;
 
-  // --- Error subscriptions (server-paginated) ---
+  // --- Error subscriptions (server-paginated, filtered by the tab's state filter) ---
   errorSubscriptions: ErrorSubscription[];
+  /** Total for the tab's current state filter (all states unless the user narrows it). */
   errorSubscriptionsTotalCount: number;
 
   /**
    * All active message subscriptions for this node, fetched with a large page size (size: 100,
    * state: 'active'). Used for diagram badges — independent of the tab's
+   * pagination and state filter.
    */
   allActiveMessageSubscriptions: MessageSubscription[];
+  /** Server-reported number of active message subscriptions (independent of the tab's filter). */
+  activeMessageSubscriptionsTotalCount: number;
 
   /**
    * All active timer subscriptions for this node, fetched with a large page
    * size (size: 100, state: 'active'). Used for diagram badges.
    */
   allActiveTimerSubscriptions: TimerSubscription[];
+  /** Server-reported number of active timer subscriptions (independent of the tab's filter). */
+  activeTimerSubscriptionsTotalCount: number;
 
   /**
    * All active error subscriptions for this node, fetched with a large page
    * size (size: 100, state: 'active'). Used for diagram badges.
    */
   allActiveErrorSubscriptions: ErrorSubscription[];
+  /** Server-reported number of active error subscriptions (independent of the tab's filter). */
+  activeErrorSubscriptionsTotalCount: number;
 
   // --- Children ---
   children: ProcessInstanceNode[];

@@ -378,10 +378,16 @@ test.describe('Process Instance Detail - cross-tab focus', () => {
     await eventHistoryRow.getByRole('button', { name: /row actions/i }).click();
     await page.getByRole('menuitem', { name: /view related event/i }).click();
 
-    await expect(messagesPanel.getByRole('combobox').first()).toContainText(/active/i);
+    // The related subscription is active, so it is not on the "Completed" page;
+    // the search falls back to the unfiltered view and resets the filter to "All".
     await expect(
       page.getByTestId('message-subscriptions-table').locator('tbody tr[data-focused="true"]')
     ).toHaveCount(2);
+    // The closed select renders no text for the empty value, so check the
+    // selection on the opened dropdown's "All" option.
+    await messagesPanel.getByRole('combobox').first().click();
+    await expect(page.getByRole('option', { name: /^all$/i })).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('Escape');
   });
 
   test('navigates from an Event row to its exact History row', async ({ page }) => {
