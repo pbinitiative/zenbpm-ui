@@ -718,15 +718,14 @@ export const useInstanceData = (
   // counter with completed/terminated subscriptions.
   const activeEventSubscriptionsCount = useMemo(() => {
     if (!instanceTree) return 0;
-    const queue: typeof instanceTree[] = [instanceTree];
-    let total = 0;
-    while (queue.length > 0) {
-      const node = queue.shift();
-      if (node === undefined) continue;
-      total += node.activeMessageSubscriptionsTotalCount + node.activeTimerSubscriptionsTotalCount + node.activeErrorSubscriptionsTotalCount;
-      queue.push(...node.children);
-    }
-    return total;
+    return collectAllNodes(instanceTree).reduce(
+      (total, node) =>
+        total +
+        node.activeMessageSubscriptionsTotalCount +
+        node.activeTimerSubscriptionsTotalCount +
+        node.activeErrorSubscriptionsTotalCount,
+      0,
+    );
   }, [instanceTree]);
 
   // ── Return ──────────────────────────────────────────────────────────────

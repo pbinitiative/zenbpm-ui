@@ -1,20 +1,7 @@
-import { test, expect, type Locator, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page, type Request } from '@playwright/test';
 import { instanceKeys } from '../../fixtures/instance-keys';
 
 const { ACTIVE_INSTANCE_KEY } = instanceKeys;
-
-/**
- * Positively assert that the state filter of a subscriptions panel has "All"
- * selected. The closed select renders no text for the empty value, so the
- * selection is checked on the opened dropdown's "All" option instead.
- */
-async function expectAllStatesSelected(page: Page, panel: Locator) {
-  await panel.getByRole('combobox').first().click();
-  const allOption = page.getByRole('option', { name: /^all$/i });
-  await expect(allOption).toHaveAttribute('aria-selected', 'true');
-  await page.keyboard.press('Escape');
-  await expect(allOption).toBeHidden();
-}
 
 test.describe('Process Instance Detail - Event Subscriptions Tab', () => {
   test.beforeEach(async ({ page }) => {
@@ -208,13 +195,7 @@ test.describe('Process Instance Detail - Event Subscription States', () => {
   });
 
   test('does not send a state filter for the table request by default', async ({ page }) => {
-    const unfilteredRequest = page.waitForRequest((request) => {
-      const url = new URL(request.url());
-      return (
-        url.pathname.endsWith('/event-subscriptions/messages') &&
-        !url.searchParams.has('state')
-      );
-    });
+    const unfilteredRequest = page.waitForRequest((request) => isMessageSubscriptionsRequest(request, null));
     await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=events&eventType=messages`);
     await unfilteredRequest;
   });
@@ -240,14 +221,21 @@ test.describe('Process Instance Detail - Event Subscription States', () => {
     await expect(table.getByText('OrderShipped')).toBeVisible({ timeout: 10000 });
     const messagesPanel = page.getByTestId('event-subscriptions-messages-panel');
 
+    // Narrowing happens server-side: the selected state is sent as the
+    // request's state filter rather than being applied to the "all" rows.
+    const completedRequest = page.waitForRequest((request) => isMessageSubscriptionsRequest(request, 'completed'));
     await messagesPanel.getByRole('combobox').first().click();
     await page.getByRole('option', { name: /completed/i }).click();
-    await expect(table.getByText('OrderShipped')).toBeVisible();
+    await completedRequest;
     await expect(table.getByText('OrderConfirmed')).toHaveCount(0);
     await expect(table.getByText('OrderCancelled')).toHaveCount(0);
+    await expect(table.getByText('OrderShipped')).toBeVisible();
 
+    // Going back to "All" drops the state filter from the request again
+    const unfilteredRequest = page.waitForRequest((request) => isMessageSubscriptionsRequest(request, null));
     await messagesPanel.getByRole('combobox').first().click();
     await page.getByRole('option', { name: /^all$/i }).click();
+    await unfilteredRequest;
     await expect(table.getByText('OrderConfirmed')).toBeVisible();
     await expect(table.getByText('OrderShipped')).toBeVisible();
     await expect(table.getByText('OrderCancelled')).toBeVisible();
@@ -272,7 +260,9 @@ test.describe('Process Instance Detail - Event Subscription States', () => {
     const table = page.getByTestId('timer-subscriptions-table');
     await expect(table).toBeVisible({ timeout: 10000 });
 
-    await expect(table.locator('tbody tr')).toHaveCount(3);
+    // Count state badges rather than raw rows: sectioned tables add header
+    // rows for child instances, which are not subscriptions.
+    await expect(table.locator('tbody [data-testid^="state-badge-"]')).toHaveCount(3);
     await expect(table.locator('tbody [data-testid="state-badge-active"]')).toHaveCount(1);
     await expect(table.locator('tbody [data-testid="state-badge-completed"]')).toHaveCount(1);
     await expect(table.locator('tbody [data-testid="state-badge-withdrawn"]')).toHaveCount(1);
@@ -306,3 +296,26 @@ test.describe('Process Instance Detail - Event Subscription States', () => {
     await expect(page.getByRole('tooltip')).toContainText(/active event subscriptions/i);
   });
 });
+
+/**
+ * Whether `request` lists message subscriptions with exactly the given
+ * `state` query param. `null` matches a request that sends no state filter
+ * at all, i.e. one that asks the server for every state.
+ */
+function isMessageSubscriptionsRequest(request: Request, state: string | null): boolean {
+  const url = new URL(request.url());
+  return url.pathname.endsWith('/event-subscriptions/messages') && url.searchParams.get('state') === state;
+}
+
+/**
+ * Positively assert that the state filter of a subscriptions panel has "All"
+ * selected. The closed select renders no text for the empty value, so the
+ * selection is checked on the opened dropdown's "All" option instead.
+ */
+async function expectAllStatesSelected(page: Page, panel: Locator) {
+  await panel.getByRole('combobox').first().click();
+  const allOption = page.getByRole('option', { name: /^all$/i });
+  await expect(allOption).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Escape');
+  await expect(allOption).toBeHidden();
+}

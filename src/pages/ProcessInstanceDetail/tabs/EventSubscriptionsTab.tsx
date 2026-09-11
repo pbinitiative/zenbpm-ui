@@ -116,6 +116,15 @@ function getSortedNodes(nodes: ProcessInstanceNode[]): ProcessInstanceNode[] {
   return [root, ...sorted];
 }
 
+/**
+ * The single "State" select shown above a subscriptions table. The select
+ * adds its own "All" entry, which is the default: subscriptions are listed
+ * in every state unless the user narrows.
+ */
+function stateFilter(label: string, options: FilterOption[]): FilterConfig[] {
+  return [{ id: 'state', type: 'select', label, zone: 'exposed_first_line', options }];
+}
+
 export const EventSubscriptionsTab = ({
   instanceTree,
   messageSubscriptionsPage,
@@ -190,8 +199,7 @@ export const EventSubscriptionsTab = ({
 
   // ── State options & filter configs ─────────────────────────────────────────
   // The options double as the source of the table's state badges (see
-  // renderStateCell). The select filter adds its own "All" entry, which is the
-  // default: subscriptions are listed in every state unless the user narrows.
+  // renderStateCell) and feed the "State" select built by stateFilter.
 
   const messageStateOptions: FilterOption[] = useMemo(
     () => [
@@ -219,18 +227,18 @@ export const EventSubscriptionsTab = ({
     [t],
   );
 
-  const messageStateFilters: FilterConfig[] = useMemo(
-    () => [{ id: 'state', type: 'select', label: t('processInstance:fields.state'), zone: 'exposed_first_line', options: messageStateOptions } as FilterConfig],
+  const messageStateFilters = useMemo(
+    () => stateFilter(t('processInstance:fields.state'), messageStateOptions),
     [t, messageStateOptions],
   );
 
-  const timerStateFilters: FilterConfig[] = useMemo(
-    () => [{ id: 'state', type: 'select', label: t('processInstance:fields.state'), zone: 'exposed_first_line', options: timerStateOptions } as FilterConfig],
+  const timerStateFilters = useMemo(
+    () => stateFilter(t('processInstance:fields.state'), timerStateOptions),
     [t, timerStateOptions],
   );
 
-  const errorStateFilters: FilterConfig[] = useMemo(
-    () => [{ id: 'state', type: 'select', label: t('processInstance:fields.state'), zone: 'exposed_first_line', options: errorStateOptions } as FilterConfig],
+  const errorStateFilters = useMemo(
+    () => stateFilter(t('processInstance:fields.state'), errorStateOptions),
     [t, errorStateOptions],
   );
 

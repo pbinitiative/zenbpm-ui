@@ -367,8 +367,14 @@ test.describe('Process Instance Detail - cross-tab focus', () => {
 
     await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=events&eventType=messages`);
     const messagesPanel = page.getByTestId('event-subscriptions-messages-panel');
+    // Wait for the narrowed (server-side filtered) fetch before leaving the tab
+    const completedRequest = page.waitForRequest((request) => {
+      const url = new URL(request.url());
+      return url.pathname.endsWith('/event-subscriptions/messages') && url.searchParams.get('state') === 'completed';
+    });
     await messagesPanel.getByRole('combobox').first().click();
     await page.getByRole('option', { name: /completed/i }).click();
+    await completedRequest;
 
     await page.getByRole('tab', { name: /History/i }).click();
     const eventHistoryRow = page
