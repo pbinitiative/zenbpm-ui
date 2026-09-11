@@ -1,4 +1,4 @@
-import { expect, type Page, type Response } from '@playwright/test';
+import { expect, type APIResponse, type Page, type Response } from '@playwright/test';
 import JSONBigInt from 'json-bigint';
 
 export async function deployProcess(page: Page): Promise<Response> {
@@ -25,9 +25,21 @@ export async function expectDeploymentSaved(page: Page, response: Response, xml:
   const result = JSONBigInt({ storeAsString: true }).parse(body) as { processDefinitionKey: string };
   expect(String(result.processDefinitionKey)).toMatch(/^\d+$/);
   await expect(page.getByText('Process deployed successfully', { exact: true })).toBeVisible();
-  const definition = await page.request.get(`/v1/process-definitions/${result.processDefinitionKey}`);
-  expect(definition.ok()).toBe(true);
-  const details = JSONBigInt({ storeAsString: true }).parse(await definition.text()) as { bpmnData: string; version: number };
+  const definitionUrl = `/v1/process-definitions/${result.processDefinitionKey}`;
+  let definition!: APIResponse;
+  // A follower may not see the new definition immediately after deployment.
+  await expect.poll(async () => {
+    await definition?.dispose();
+    definition = await page.request.get(definitionUrl, { timeout: 5000 });
+    return { status: definition.status(), body: await definition.text() };
+  }, {
+    message: `Wait for deployed process definition ${result.processDefinitionKey} to become readable`,
+    timeout: 10_000,
+    intervals: [1000],
+  }).not.toMatchObject({ status: 404 });
+  const definitionBody = await definition.text();
+  expect(definition.ok(), `Definition readback returned ${definition.status()}: ${definitionBody}`).toBe(true);
+  const details = JSONBigInt({ storeAsString: true }).parse(definitionBody) as { bpmnData: string; version: number };
   expect(details.version).toBe(1);
   // Readback must retain exactly what was sent from the designer.
   expect(details.bpmnData).toBe(xml);
