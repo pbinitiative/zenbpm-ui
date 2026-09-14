@@ -312,7 +312,7 @@ test.describe('Cancel end event', () => {
         const xml = await downloadBpmnXml(page);
         await expectDesign(page, xml, ELEMENT_ID);
         const response = await deployProcess(page);
-        await expectDeploymentRejected(page, response, 'no registered BaseElement with ID [Subprocess]');
+        await expectDeploymentRejected(page, response, 'failed to get process definition id: failed to unmarshal xml data: failed to resolve references: unsupported element type \'transaction\' (ids: [Subprocess]): use supported elements only');
     });
 
     async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
