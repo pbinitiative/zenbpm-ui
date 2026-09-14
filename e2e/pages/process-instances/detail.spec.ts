@@ -367,8 +367,14 @@ test.describe('Process Instance Detail - cross-tab focus', () => {
 
     await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}?tab=events&eventType=messages`);
     const messagesPanel = page.getByTestId('event-subscriptions-messages-panel');
+    // Wait for the narrowed (server-side filtered) fetch before leaving the tab
+    const completedRequest = page.waitForRequest((request) => {
+      const url = new URL(request.url());
+      return url.pathname.endsWith('/event-subscriptions/messages') && url.searchParams.get('state') === 'completed';
+    });
     await messagesPanel.getByRole('combobox').first().click();
     await page.getByRole('option', { name: /completed/i }).click();
+    await completedRequest;
 
     await page.getByRole('tab', { name: /History/i }).click();
     const eventHistoryRow = page
@@ -378,10 +384,16 @@ test.describe('Process Instance Detail - cross-tab focus', () => {
     await eventHistoryRow.getByRole('button', { name: /row actions/i }).click();
     await page.getByRole('menuitem', { name: /view related event/i }).click();
 
-    await expect(messagesPanel.getByRole('combobox').first()).toContainText(/active/i);
+    // The related subscription is active, so it is not on the "Completed" page;
+    // the search falls back to the unfiltered view and resets the filter to "All".
     await expect(
       page.getByTestId('message-subscriptions-table').locator('tbody tr[data-focused="true"]')
     ).toHaveCount(2);
+    // The closed select renders no text for the empty value, so check the
+    // selection on the opened dropdown's "All" option.
+    await messagesPanel.getByRole('combobox').first().click();
+    await expect(page.getByRole('option', { name: /^all$/i })).toHaveAttribute('aria-selected', 'true');
+    await page.keyboard.press('Escape');
   });
 
   test('navigates from an Event row to its exact History row', async ({ page }) => {

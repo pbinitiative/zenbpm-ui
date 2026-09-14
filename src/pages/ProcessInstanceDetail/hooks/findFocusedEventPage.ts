@@ -7,11 +7,22 @@ import type { EventSubscriptionState } from '@base/openapi/generated-api/schemas
 
 export type FocusedEventType = 'messages' | 'timers' | 'errors';
 
+/**
+ * State filter applied to an event-subscription table. `'all'` means no
+ * server-side state filter — subscriptions in every state are listed.
+ */
+export type EventSubscriptionFilterState = EventSubscriptionState | 'all';
+
+/** Convert a UI filter state to the optional `state` query parameter of the API. */
+export const toEventSubscriptionApiState = (
+  state: EventSubscriptionFilterState,
+): EventSubscriptionState | undefined => (state === 'all' ? undefined : state);
+
 interface EventSearchConfig {
   type: FocusedEventType;
   pageSize: number;
   totalCount?: number;
-  state: EventSubscriptionState;
+  state: EventSubscriptionFilterState;
 }
 
 interface FindFocusedEventPageOptions {
@@ -23,7 +34,7 @@ interface FindFocusedEventPageOptions {
 
 export interface FocusedEventPage {
   type: FocusedEventType;
-  state: EventSubscriptionState;
+  state: EventSubscriptionFilterState;
   page: number;
 }
 
@@ -43,13 +54,13 @@ export async function findFocusedEventPage({
   for (const search of searches) {
     if (search.pageSize <= 0) continue;
     // Unknown/zero totals still require checking the first page because counts in
-    // the instance tree only describe the state that is currently displayed.
+    // the instance tree only describe the state filter that is currently displayed.
     let totalPages = Math.max(1, Math.ceil((search.totalCount ?? 0) / search.pageSize));
 
     for (let page = 1; page <= totalPages; page++) {
       const response = await fetchers[search.type](
         processInstanceKey,
-        { state: search.state, page, size: search.pageSize },
+        { state: toEventSubscriptionApiState(search.state), page, size: search.pageSize },
         undefined,
         signal
       );

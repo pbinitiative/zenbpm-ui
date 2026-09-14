@@ -121,12 +121,15 @@ export interface FetchInstanceTreeOptions {
   historySortOrder?: GetHistorySortOrder;
   messageSubscriptionsPage?: number;
   messageSubscriptionsPageSize?: number;
+  /** Omit to list message subscriptions in every state. */
   messageSubscriptionsState?: EventSubscriptionState;
   timerSubscriptionsPage?: number;
   timerSubscriptionsPageSize?: number;
+  /** Omit to list timer subscriptions in every state. */
   timerSubscriptionsState?: EventSubscriptionState;
   errorSubscriptionsPage?: number;
   errorSubscriptionsPageSize?: number;
+  /** Omit to list error subscriptions in every state. */
   errorSubscriptionsState?: EventSubscriptionState;
   /** Pre-fetched root ProcessInstance — avoids a duplicate getProcessInstance call */
   preloadedRoot?: ProcessInstance;
@@ -173,8 +176,11 @@ function makeNode(
     errorSubscriptions: [],
     errorSubscriptionsTotalCount: 0,
     allActiveMessageSubscriptions: [],
+    activeMessageSubscriptionsTotalCount: 0,
     allActiveTimerSubscriptions: [],
+    activeTimerSubscriptionsTotalCount: 0,
     allActiveErrorSubscriptions: [],
+    activeErrorSubscriptionsTotalCount: 0,
     children: [],
     childrenTotalCount: 0,
   };
@@ -309,10 +315,13 @@ async function fetchNodeDatasets(
     | 'decisionsPage' | 'decisionsPageSize'
     | 'variablesPage' | 'variablesPageSize'
     | 'historySortBy' | 'historySortOrder'
-    | 'messageSubscriptionsPage' | 'messageSubscriptionsPageSize' | 'messageSubscriptionsState'
-    | 'timerSubscriptionsPage' | 'timerSubscriptionsPageSize' | 'timerSubscriptionsState'
-    | 'errorSubscriptionsPage' | 'errorSubscriptionsPageSize' | 'errorSubscriptionsState'
-  >> & { incidentsState?: GetIncidentsState; onHistoryPartial?: (info: { totalCount: number; loadedCount: number }) => void },
+    | 'messageSubscriptionsPage' | 'messageSubscriptionsPageSize'
+    | 'timerSubscriptionsPage' | 'timerSubscriptionsPageSize'
+    | 'errorSubscriptionsPage' | 'errorSubscriptionsPageSize'
+  >> & Pick<
+    FetchInstanceTreeOptions,
+    'incidentsState' | 'messageSubscriptionsState' | 'timerSubscriptionsState' | 'errorSubscriptionsState'
+  > & { onHistoryPartial?: (info: { totalCount: number; loadedCount: number }) => void },
 ): Promise<void> {
   if (!node.isRoot && node.instance.processType === 'callActivity') {
     return;
@@ -330,11 +339,12 @@ async function fetchNodeDatasets(
     getIncidents(key, { page: opts.incidentsPage, size: opts.incidentsPageSize, state: opts.incidentsState }),
     getIncidents(key, { state: 'unresolved' as GetIncidentsState, page: 1, size: 1 }),
     getDecisionInstances({ processInstanceKey: key, page: opts.decisionsPage, size: opts.decisionsPageSize }),
-    getProcessInstanceMessageSubscriptions(key, { state: opts.messageSubscriptionsState ?? "active", page: opts.messageSubscriptionsPage, size: opts.messageSubscriptionsPageSize }),
-    getProcessInstanceTimerSubscriptions(key, { state: opts.timerSubscriptionsState ?? "active", page: opts.timerSubscriptionsPage, size: opts.timerSubscriptionsPageSize }),
-    getProcessInstanceErrorSubscriptions(key, { state: opts.errorSubscriptionsState ?? "active", page: opts.errorSubscriptionsPage, size: opts.errorSubscriptionsPageSize }),
-    // All-active fetches (large page size, state: 'active') — used for diagram subscription badges,
-    // independent of the tab's pagination/state filter
+    // Tab datasets — an undefined `state` lists subscriptions in every state.
+    getProcessInstanceMessageSubscriptions(key, { state: opts.messageSubscriptionsState, page: opts.messageSubscriptionsPage, size: opts.messageSubscriptionsPageSize }),
+    getProcessInstanceTimerSubscriptions(key, { state: opts.timerSubscriptionsState, page: opts.timerSubscriptionsPage, size: opts.timerSubscriptionsPageSize }),
+    getProcessInstanceErrorSubscriptions(key, { state: opts.errorSubscriptionsState, page: opts.errorSubscriptionsPage, size: opts.errorSubscriptionsPageSize }),
+    // All-active fetches (large page size, state: 'active') — used for diagram subscription
+    // badges and the active-subscription tab counter, independent of the tab's pagination/state filter
     getProcessInstanceMessageSubscriptions(key, { state: 'active', page: 1, size: 100 }),
     getProcessInstanceTimerSubscriptions(key, { state: 'active', page: 1, size: 100 }),
     getProcessInstanceErrorSubscriptions(key, { state: 'active', page: 1, size: 100 }),
@@ -391,16 +401,19 @@ async function fetchNodeDatasets(
   if (allMsgSubsResult.status === 'fulfilled' && allMsgSubsResult.value) {
     const v = allMsgSubsResult.value as Awaited<ReturnType<typeof getProcessInstanceMessageSubscriptions>>;
     node.allActiveMessageSubscriptions = (v.items ?? []) as MessageSubscription[];
+    node.activeMessageSubscriptionsTotalCount = v.totalCount ?? 0;
   }
 
   if (allTimerSubsResult.status === 'fulfilled' && allTimerSubsResult.value) {
     const v = allTimerSubsResult.value as Awaited<ReturnType<typeof getProcessInstanceTimerSubscriptions>>;
     node.allActiveTimerSubscriptions = (v.items ?? []) as TimerSubscription[];
+    node.activeTimerSubscriptionsTotalCount = v.totalCount ?? 0;
   }
 
   if (allErrSubsResult.status === 'fulfilled' && allErrSubsResult.value) {
     const v = allErrSubsResult.value as Awaited<ReturnType<typeof getProcessInstanceErrorSubscriptions>>;
     node.allActiveErrorSubscriptions = (v.items ?? []) as ErrorSubscription[];
+    node.activeErrorSubscriptionsTotalCount = v.totalCount ?? 0;
   }
 
   // History: paged sequentially so we can stop early on a short final page.
@@ -468,13 +481,13 @@ export async function fetchInstanceTree(
     historySortOrder: opts.historySortOrder ?? 'asc' as GetHistorySortOrder,
     messageSubscriptionsPage: opts.messageSubscriptionsPage ?? 1,
     messageSubscriptionsPageSize: opts.messageSubscriptionsPageSize ?? MESSAGE_SUBSCRIPTIONS_PAGE_SIZE,
-    messageSubscriptionsState: opts.messageSubscriptionsState ?? 'active',
+    messageSubscriptionsState: opts.messageSubscriptionsState,
     timerSubscriptionsPage: opts.timerSubscriptionsPage ?? 1,
     timerSubscriptionsPageSize: opts.timerSubscriptionsPageSize ?? TIMER_SUBSCRIPTIONS_PAGE_SIZE,
-    timerSubscriptionsState: opts.timerSubscriptionsState ?? 'active',
+    timerSubscriptionsState: opts.timerSubscriptionsState,
     errorSubscriptionsPage: opts.errorSubscriptionsPage ?? 1,
     errorSubscriptionsPageSize: opts.errorSubscriptionsPageSize ?? ERROR_SUBSCRIPTIONS_PAGE_SIZE,
-    errorSubscriptionsState: opts.errorSubscriptionsState ?? 'active',
+    errorSubscriptionsState: opts.errorSubscriptionsState,
   };
   const terminalCache = opts.terminalNodeCache ?? new Map<string, ProcessInstanceNode>();
 
@@ -576,8 +589,11 @@ export async function fetchInstanceTree(
         node.errorSubscriptions = cached.errorSubscriptions;
         node.errorSubscriptionsTotalCount = cached.errorSubscriptionsTotalCount;
         node.allActiveMessageSubscriptions = cached.allActiveMessageSubscriptions ?? [];
+        node.activeMessageSubscriptionsTotalCount = cached.activeMessageSubscriptionsTotalCount ?? 0;
         node.allActiveTimerSubscriptions = cached.allActiveTimerSubscriptions ?? [];
+        node.activeTimerSubscriptionsTotalCount = cached.activeTimerSubscriptionsTotalCount ?? 0;
         node.allActiveErrorSubscriptions = cached.allActiveErrorSubscriptions ?? [];
+        node.activeErrorSubscriptionsTotalCount = cached.activeErrorSubscriptionsTotalCount ?? 0;
         return Promise.resolve();
       }
     }
@@ -792,12 +808,13 @@ export async function refetchNodeHistory(
 
 /**
  * Re-fetch message subscriptions for a specific node (mutates the node).
+ * An undefined `state` lists subscriptions in every state.
  */
 export async function refetchNodeMessageSubscriptions(
   node: ProcessInstanceNode,
   page: number,
   size: number,
-  state: EventSubscriptionState = 'active',
+  state?: EventSubscriptionState,
 ): Promise<ProcessInstanceNode> {
   if (!node.isRoot && node.instance.processType === 'callActivity') return node;
   try {
@@ -816,12 +833,13 @@ export async function refetchNodeMessageSubscriptions(
 
 /**
  * Re-fetch timer subscriptions for a specific node (mutates the node).
+ * An undefined `state` lists subscriptions in every state.
  */
 export async function refetchNodeTimerSubscriptions(
   node: ProcessInstanceNode,
   page: number,
   size: number,
-  state: EventSubscriptionState = 'active',
+  state?: EventSubscriptionState,
 ): Promise<ProcessInstanceNode> {
   if (!node.isRoot && node.instance.processType === 'callActivity') return node;
   try {
@@ -837,12 +855,13 @@ export async function refetchNodeTimerSubscriptions(
 
 /**
  * Re-fetch error subscriptions for a specific node (mutates the node).
+ * An undefined `state` lists subscriptions in every state.
  */
 export async function refetchNodeErrorSubscriptions(
   node: ProcessInstanceNode,
   page: number,
   size: number,
-  state: EventSubscriptionState = 'active',
+  state?: EventSubscriptionState,
 ): Promise<ProcessInstanceNode> {
   if (!node.isRoot && node.instance.processType === 'callActivity') return node;
   try {

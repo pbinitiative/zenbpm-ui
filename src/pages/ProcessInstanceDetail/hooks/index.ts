@@ -1,8 +1,8 @@
 export { useInstanceData, TERMINAL_STATES, AUTO_REFRESH_INTERVAL } from './useInstanceData';
 export type { UseInstanceDataResult, UseInstanceDataOptions } from './useInstanceData';
 export { findFocusedJobPage } from './findFocusedJobPage';
-export { findFocusedEventPage } from './findFocusedEventPage';
-export type { FocusedEventType, FocusedEventPage } from './findFocusedEventPage';
+export { findFocusedEventPage, toEventSubscriptionApiState } from './findFocusedEventPage';
+export type { FocusedEventType, FocusedEventPage, EventSubscriptionFilterState } from './findFocusedEventPage';
 export {
   fetchInstanceTree,
   MAX_TREE_DEPTH,

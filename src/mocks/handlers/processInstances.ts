@@ -15,7 +15,9 @@ import {
 } from '../data/well-known-keys';
 
 // ---------------------------------------------------------------------------
-// Static mock data for event subscriptions (showcase active instance)
+// Static mock data for event subscriptions (showcase active instance).
+// Mixed states on purpose: the Event Subscriptions tab lists every state by
+// default, so the mocks must exercise non-active rows too.
 // ---------------------------------------------------------------------------
 
 const MOCK_MESSAGE_SUBSCRIPTIONS = [
@@ -41,6 +43,28 @@ const MOCK_MESSAGE_SUBSCRIPTIONS = [
     state: 'active',
     createdAt: '2024-01-15T10:31:00Z',
   },
+  {
+    key: '4200000000000000003',
+    elementInstanceKey: `${SHOWCASE_ACTIVE_INSTANCE_KEY}008`,
+    elementId: 'messageCatchEvent',
+    processDefinitionKey: SHOWCASE_PROCESS_DEFINITION_KEY,
+    processInstanceKey: SHOWCASE_ACTIVE_INSTANCE_KEY,
+    messageName: 'OrderShipped',
+    correlationKey: 'CUST-001',
+    state: 'completed',
+    createdAt: '2024-01-14T09:00:00Z',
+  },
+  {
+    key: '4200000000000000004',
+    elementInstanceKey: `${SHOWCASE_ACTIVE_INSTANCE_KEY}009`,
+    elementId: 'messageCatchEvent',
+    processDefinitionKey: SHOWCASE_PROCESS_DEFINITION_KEY,
+    processInstanceKey: SHOWCASE_ACTIVE_INSTANCE_KEY,
+    messageName: 'OrderCancelled',
+    correlationKey: 'CUST-001',
+    state: 'terminated',
+    createdAt: '2024-01-13T08:00:00Z',
+  },
 ];
 
 const MOCK_TIMER_SUBSCRIPTIONS = [
@@ -54,6 +78,26 @@ const MOCK_TIMER_SUBSCRIPTIONS = [
     createdAt: '2024-01-15T10:30:00Z',
     dueDate: '2024-01-16T10:30:00Z',
   },
+  {
+    key: '4300000000000000002',
+    elementInstanceKey: `${SHOWCASE_ACTIVE_INSTANCE_KEY}008`,
+    elementId: 'timerBoundaryEvent',
+    processDefinitionKey: SHOWCASE_PROCESS_DEFINITION_KEY,
+    processInstanceKey: SHOWCASE_ACTIVE_INSTANCE_KEY,
+    state: 'completed',
+    createdAt: '2024-01-14T09:00:00Z',
+    dueDate: '2024-01-14T10:00:00Z',
+  },
+  {
+    key: '4300000000000000003',
+    elementInstanceKey: `${SHOWCASE_ACTIVE_INSTANCE_KEY}009`,
+    elementId: 'timerBoundaryEvent',
+    processDefinitionKey: SHOWCASE_PROCESS_DEFINITION_KEY,
+    processInstanceKey: SHOWCASE_ACTIVE_INSTANCE_KEY,
+    state: 'withdrawn',
+    createdAt: '2024-01-13T08:00:00Z',
+    dueDate: '2024-01-13T09:00:00Z',
+  },
 ];
 
 const MOCK_ERROR_SUBSCRIPTIONS = [
@@ -66,6 +110,16 @@ const MOCK_ERROR_SUBSCRIPTIONS = [
     errorCode: 'ORDER_FAILED',
     state: 'active',
     createdAt: '2024-01-15T10:30:00Z',
+  },
+  {
+    key: '4400000000000000002',
+    elementInstanceKey: `${SHOWCASE_ACTIVE_INSTANCE_KEY}008`,
+    elementId: 'errorBoundaryEvent',
+    processDefinitionKey: SHOWCASE_PROCESS_DEFINITION_KEY,
+    processInstanceKey: SHOWCASE_ACTIVE_INSTANCE_KEY,
+    errorCode: 'PAYMENT_DECLINED',
+    state: 'withdrawn',
+    createdAt: '2024-01-14T09:00:00Z',
   },
 ];
 
