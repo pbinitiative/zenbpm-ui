@@ -19,7 +19,7 @@ import {
     expectBoundaryEventXml,
 } from './boundaryEventHelpers';
 
-test.describe('Signal boundary event', () => {
+test.describe('Signal boundary event — interrupting', () => {
     test.beforeEach(async ({page}) => {
         await createBoundaryDiagram(page);
         await selectShape(page, ELEMENT_ID);
@@ -55,7 +55,7 @@ test.describe('Signal boundary event', () => {
     }
 });
 
-test.describe('Signal boundary event (non-interrupting)', () => {
+test.describe('Signal boundary event — non-interrupting', () => {
     test.beforeEach(async ({page}) => {
         await createBoundaryDiagram(page);
         await selectShape(page, ELEMENT_ID);

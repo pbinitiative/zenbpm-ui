@@ -18,7 +18,7 @@ import {
   expectBoundaryEventXml,
 } from './boundaryEventHelpers';
 
-test.describe('Conditional boundary event', () => {
+test.describe('Conditional boundary event — interrupting', () => {
   test.beforeEach(async ({ page }) => {
     await createBoundaryDiagram(page);
     await selectShape(page, ELEMENT_ID);
@@ -52,7 +52,7 @@ test.describe('Conditional boundary event', () => {
   }
 });
 
-test.describe('Conditional boundary event (non-interrupting)', () => {
+test.describe('Conditional boundary event — non-interrupting', () => {
   test.beforeEach(async ({ page }) => {
     await createBoundaryDiagram(page);
     await selectShape(page, ELEMENT_ID);
