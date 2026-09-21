@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
-import { expect, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-import { createUniqueProcessIdentity } from './processNaming';
+import { createElementProcessIdentity } from './processNaming';
 import { entry, fillEntry, openGroup, propertySnapshot } from './propertiesPanel';
 
 export async function openProcessDesigner(page: Page): Promise<void> {
@@ -26,8 +26,11 @@ export async function currentProcessId(page: Page): Promise<string> {
 /** Start with the designer's new-process screen and edit its identity through the panel. */
 export async function createProcess(page: Page): Promise<string> {
   await openProcessDesigner(page);
-  const identity = createUniqueProcessIdentity('element design', {
-    scope: 'elements', randomSuffix: randomUUID().slice(0, 8),
+  const testInfo = test.info();
+  const identity = createElementProcessIdentity({
+    randomSuffix: randomUUID().slice(0, 8),
+    specFile: testInfo.file,
+    suiteTitle: testInfo.titlePath.slice(1, -1).join(' '),
   });
   await openGroup(page, 'general');
   await fillEntry(page, 'id', identity.processId);

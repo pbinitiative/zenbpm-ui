@@ -1,3 +1,5 @@
+import { basename, dirname } from 'node:path';
+
 export const PROCESS_RUN_PREFIX_ENV = 'ZENBPM_PROCESS_RUN_PREFIX';
 
 const DEFAULT_TIME_ZONE = 'Europe/Prague';
@@ -12,6 +14,14 @@ type ProcessIdentityOptions = {
   randomSuffix?: string;
   runPrefix?: string;
   scope?: string;
+};
+
+type ElementProcessIdentityOptions = Pick<
+  ProcessIdentityOptions,
+  'randomSuffix' | 'runPrefix'
+> & {
+  specFile: string;
+  suiteTitle: string;
 };
 
 export type UniqueProcessIdentity = {
@@ -45,6 +55,59 @@ function toXmlIdSegment(value: string): string {
     .replace(/_+/g, '_');
 
   return normalized || 'process';
+}
+
+function toNameTokens(value: string): string[] {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}
+
+function elementNameFromSpec(specFile: string): string {
+  const elementDirectory = basename(dirname(specFile));
+  const specName = basename(specFile).replace(/_design\.spec\.ts$/, '');
+
+  if (specName === elementDirectory) {
+    return elementDirectory;
+  }
+
+  const directorySuffix = `_${elementDirectory}`;
+  if (specName.endsWith(directorySuffix)) {
+    return `${elementDirectory}_${specName.slice(0, -directorySuffix.length)}`;
+  }
+
+  return specName;
+}
+
+/** Build the stable, readable part of an element test's process name. */
+export function elementProcessBaseName(specFile: string, suiteTitle: string): string {
+  const elementName = elementNameFromSpec(specFile);
+  const remainingElementTokens = new Map<string, number>();
+
+  for (const token of toNameTokens(elementName)) {
+    remainingElementTokens.set(token, (remainingElementTokens.get(token) ?? 0) + 1);
+  }
+
+  const variantTokens = toNameTokens(suiteTitle)
+    .filter((token) => {
+      const remaining = remainingElementTokens.get(token) ?? 0;
+      if (remaining === 0) {
+        return true;
+      }
+
+      remainingElementTokens.set(token, remaining - 1);
+      return false;
+    })
+    .filter(
+      (token, index, tokens) =>
+        token !== 'time' || !['cycle', 'date', 'duration'].includes(tokens[index + 1]),
+    );
+
+  return [elementName, ...variantTokens, 'design'].join('_');
 }
 
 export function validateProcessRunPrefix(prefix: string): void {
@@ -112,5 +175,18 @@ export function createUniqueProcessIdentity(
     processId,
     processName: `${runPrefix}${nameParts.join('_')}`,
     runPrefix,
+  };
+}
+
+export function createElementProcessIdentity(
+  options: ElementProcessIdentityOptions,
+): UniqueProcessIdentity {
+  const baseName = elementProcessBaseName(options.specFile, options.suiteTitle);
+  const identity = createUniqueProcessIdentity(baseName, options);
+
+  return {
+    ...identity,
+    // Keep the visible name readable; uniqueness remains in the internal process id.
+    processName: `e2e_${identity.runPrefix}${baseName}`,
   };
 }
