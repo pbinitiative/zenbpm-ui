@@ -12,8 +12,8 @@ importers:
   .:
     dependencies:
       '@bpmn-io/form-js':
-        specifier: ^1.24.1
-        version: 1.24.1
+        specifier: ^2.0.0
+        version: 2.0.0
       '@bpmn-io/properties-panel':
         specifier: ^3.55.0
         version: 3.55.0
@@ -294,24 +294,21 @@ packages:
   '@bpmn-io/feelers-lint@1.0.0':
     resolution: {integrity: sha512-9McPCub8NBSD3gbAM9fu6laGVvb6U/D8Y5Ar/GGvOaAuJ6W34yP5jaV/on4MALTwmmXTDadZjO2RJJNub3JmwQ==}
 
-  '@bpmn-io/feelin@6.1.0':
-    resolution: {integrity: sha512-nqmmlHRD9tl0ZcpYTEkZdpc/rAMoYc+ct0SOg9fFIFWRaEApme3DuXC7v9AMA5g+upGCKd6cUc3t97y+unpfMw==}
+  '@bpmn-io/feelin@6.1.1':
+    resolution: {integrity: sha512-wqNYDjPvSIS6nnTuNzmUYY/oT2+hjMz60aBRgGKgXEfnrs3OxQntCgRnvHRzg3SMhFNSMUQ+qfQfLckchmSXtQ==}
     engines: {node: '>= 20.12.0'}
 
-  '@bpmn-io/form-js-carbon-styles@1.24.1':
-    resolution: {integrity: sha512-+U1U9WnQol4L3FNAuiZpWSlPWjfWu+FaBl18pFA2Mrj5QN5zj/IU6VYrrVs34vhczZsSA3oa0AnXZ3dDIGQiVg==}
+  '@bpmn-io/form-js-editor@2.0.0':
+    resolution: {integrity: sha512-UOR3f/HgkG8hxnvpLX1Ox+2Q+6nQOa3MhICynz1kcmLoY+ABawZGxEDoc/Qf8cRKRpwz1gfbJFBiuOrCTJhnHg==}
 
-  '@bpmn-io/form-js-editor@1.24.1':
-    resolution: {integrity: sha512-3EvBiGqn9rGkFr9yHStu2u3XGVUEzokhQASKa7OI/PXnsJvvykJ1wLFRL3GvlxADI/Lo3jQxUvcvJj/gYFZusw==}
+  '@bpmn-io/form-js-playground@2.0.0':
+    resolution: {integrity: sha512-jeI77GJuTnxhA5FeNgBThIBw32n2/ywDY/awaFLvF+dVxoFT5dIUAghoNjTsKEI8/KK+YRT2Siu6Qot1a/GyDA==}
 
-  '@bpmn-io/form-js-playground@1.24.1':
-    resolution: {integrity: sha512-5CaNanp5u/WRxKiqaFvjLn8jvRCdUoZDeI1dBcFzWFCwnbUD9qg88WFHQ/ljWfLRyQRLPd151MkcwU6hlQJ8TA==}
+  '@bpmn-io/form-js-viewer@2.0.0':
+    resolution: {integrity: sha512-jNfatmw5JufoC17ph8zJ0z79LOpSpwzVSjXrbErYFwUlhkvTFCeHYBIu90P4SmlkccmO7+m0E1pkI1owA00YXw==}
 
-  '@bpmn-io/form-js-viewer@1.24.1':
-    resolution: {integrity: sha512-XH4PaYg4o1oo9/yOWotvdP5cfZgUuRz63eccsLOBKSeyeXQubW3sHk5PSjKjZKUdWvjbI+7HGANHSyLawBaBBQ==}
-
-  '@bpmn-io/form-js@1.24.1':
-    resolution: {integrity: sha512-HXGd7MXAZT9+6tdjZ88iqPkvRW1XCBF7xlR+YjqQYQE2Gw/dC0sHXzv/JIT8+hBOt2mp3uBgc7edUsKneVrI2w==}
+  '@bpmn-io/form-js@2.0.0':
+    resolution: {integrity: sha512-zOVxC/6So7hc5YFdhnxt521C+groIFvpgiDWtOQPLg9GnQokqBcUdQoyDmCLsQYDtedBSDOdSqUFs+yjrCabdA==}
 
   '@bpmn-io/lang-feel@4.0.2':
     resolution: {integrity: sha512-rTPeJ77/2nYKbJXpvDmrNXy+opoIpD3Rsch0grCUZAO6xF68r41QeV8SqOdr2yZxD/4gI6YXlQhqh4rqFRDJXA==}
@@ -346,11 +343,11 @@ packages:
   '@camunda/feel-builtins@1.4.1':
     resolution: {integrity: sha512-nXIVbr8JHLzuPXSYs+VUy/4X1WiY7SlXtAqsgQ9R3mbXNNyorYUiw0YBeLXMrMCcg2yJWVSasramcTCeI9A6FQ==}
 
-  '@carbon/grid@11.60.0':
-    resolution: {integrity: sha512-xn9xJPU6CeRi/B7eOTfpS4KN3UXz5MoY3SBqDAUj3tIiR/S9GirN9GxQNP+0D8qLn+3AStwYzWGcjKTHBL9gqg==}
+  '@carbon/grid@11.62.0':
+    resolution: {integrity: sha512-6P+OcxjSbhjwBbGA+Gq22RRgEEt5ALCjtRV4NccqWlG1GZcSNp3fcgLu9IUQ6vmQlNSVCt6banp/oPUuU0GE2g==}
 
-  '@carbon/layout@11.57.0':
-    resolution: {integrity: sha512-izp/A8qkUvHA8cUfgYCZ2ROMM8D+k2f/knLdGoO4SpRp+jsyk3r3EK0P2LFjm49MdYS4LdMPrmOXb8PSauS3IQ==}
+  '@carbon/layout@11.59.0':
+    resolution: {integrity: sha512-P1ieRpHqGSfBs/mN4esH2pr4P0KPZGDb6nGeUcRiaKJkVghdiBNnVMyAUMRiYV2g7afflL3JJcrXtCKe5GrOHg==}
 
   '@codemirror/autocomplete@6.20.3':
     resolution: {integrity: sha512-tlosUqb+3BbxCxZdu4tKeRghPFC+QM7q4X5YhKV2eCmPG+1r2F3f4AaSz5sCrFqUtX4Jh20VFTKecl16MgiV9g==}
@@ -367,14 +364,20 @@ packages:
   '@codemirror/lint@6.9.7':
     resolution: {integrity: sha512-28/+iWLYxKxsvGYhSYL7zaCZqLz5+FFFDq9tVsvGv9kv8RY4fFAchJ5WX9M3YrrRlTIsECjsXPqeNgnSmNP2dg==}
 
-  '@codemirror/search@6.7.1':
-    resolution: {integrity: sha512-uMe5UO6PamJtSHrXhhHOzSX3ReWtiJrva6GnPMwSOrZtiExb5X5eExhr2OUZQVvdxPsKpY3Ro2mFbQadpPWmHA==}
+  '@codemirror/search@6.7.2':
+    resolution: {integrity: sha512-gUYkYhT2+n/+VGZ+8EzE5WFkYZUZYm1VOKDudIsNqh42uRVQJ0a6Yss9sdKT3MeOYfuL1N6AZA57oza0Oyr0LA==}
 
   '@codemirror/state@6.7.5':
     resolution: {integrity: sha512-QjLbZmY1Au3JiRrDVYFLRD0BZ3SOKS9pR3yjIkd7u27YY8TFD9/Q9fhPnLV5l1mHFSo3hHU/N31vpwEJOx4owQ==}
 
+  '@codemirror/state@6.7.6':
+    resolution: {integrity: sha512-kAz+AncRtKuIknedxT1bq4XwXv4UowhbkHU1myPrtVb/jZtImWuV5BXzv5vK6i3kYACsdiZiQKFQQ5Mq7elW8w==}
+
   '@codemirror/view@6.43.12':
     resolution: {integrity: sha512-Nv0vxQ19NAqvB/c2pFzjIzFlzzJl7jmdtNkwOwGbn0Ks9mFAzibvumz7cQem5cRsFA2cEw2fg+uHZGbcHupLQQ==}
+
+  '@codemirror/view@6.43.13':
+    resolution: {integrity: sha512-sihaFrUzAsYBQsL9J2t69y8nfMQGwcYmggAZsk+kjPbjYZMyuf2hU8tUNTZ+P+isb6XRr8JE22TZlJxBoVdH1A==}
 
   '@commander-js/extra-typings@15.0.0':
     resolution: {integrity: sha512-yeJlba62xqmkgELUsn7356MEnzLLu/fw2x4lofFqGnXh6YysRdEs2BaLeLtg1+KU0AXvMeqQvTTp+3hBEBK+EA==}
@@ -2065,8 +2068,8 @@ packages:
   dompurify@3.2.7:
     resolution: {integrity: sha512-WhL/YuveyGXJaerVlMYGWhvQswa7myDG17P7Vu65EWC05o8vfeNbvNf4d/BOvH99+ZW+LlQsc1GDKMa1vNK6dw==}
 
-  dompurify@3.4.13:
-    resolution: {integrity: sha512-2vmYIoqjze2d+kakP8S/nS5shfsl587kzwEjcGlTdiksUVgFHnFCsLYDVj/JNqJVOQZGSYBTmuycv0PodwmnMQ==}
+  dompurify@3.4.15:
+    resolution: {integrity: sha512-EUBjM+B+lkDE41iE82DDSCfkoPGfXx8IxFxPMjNzm/Uk4xDet77rTN9wqlxlVg71kK7XGuUMv6wUxJUwwv+Xyw==}
 
   dotenv@17.4.2:
     resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
@@ -2675,8 +2678,8 @@ packages:
     engines: {node: '>= 18'}
     hasBin: true
 
-  marked@18.0.9:
-    resolution: {integrity: sha512-/Sa4qiiHZxf0/FQdBBowr9q4r10krCwMvpK48FUBdXdUXScDxiQGR9zCPrFgRVR5LU3iySOiIjy09ZQvADir1w==}
+  marked@18.0.14:
+    resolution: {integrity: sha512-mBHK6FBHuBAlhgRe88w9F0O1AbwwXJUcQibUbC/QcdTbVGAD7aWza+xt3N6oT/jCZx3/OMeS+8rnuiHZcQ9s7A==}
     engines: {node: '>= 20'}
     hasBin: true
 
@@ -3617,6 +3620,13 @@ snapshots:
       '@codemirror/view': 6.43.12
       '@lezer/highlight': 1.2.3
 
+  '@bpmn-io/cm-theme@0.2.2(@codemirror/state@6.7.6)(@codemirror/view@6.43.13)':
+    dependencies:
+      '@codemirror/language': 6.12.4
+      '@codemirror/state': 6.7.6
+      '@codemirror/view': 6.43.13
+      '@lezer/highlight': 1.2.3
+
   '@bpmn-io/diagram-js-ui@0.2.4':
     dependencies:
       htm: 3.1.1
@@ -3684,39 +3694,38 @@ snapshots:
       '@codemirror/language': 6.12.4
       '@codemirror/lint': 6.9.7
 
-  '@bpmn-io/feelin@6.1.0':
+  '@bpmn-io/feelin@6.1.1':
     dependencies:
       '@bpmn-io/lezer-feel': 2.5.0
       '@lezer/common': 1.5.2
       luxon: 3.7.2
       min-dash: 5.1.0
 
-  '@bpmn-io/form-js-carbon-styles@1.24.1': {}
-
-  '@bpmn-io/form-js-editor@1.24.1':
+  '@bpmn-io/form-js-editor@2.0.0':
     dependencies:
       '@bpmn-io/draggle': 4.1.2
-      '@bpmn-io/form-js-viewer': 1.24.1
+      '@bpmn-io/form-js-viewer': 2.0.0
       '@bpmn-io/properties-panel': 3.55.0
       array-move: 4.0.0
       big.js: 7.0.1
+      diagram-js: 15.26.0
       ids: 3.0.2
       min-dash: 5.1.0
       min-dom: 5.3.0
       preact: 10.15.1
 
-  '@bpmn-io/form-js-playground@1.24.1':
+  '@bpmn-io/form-js-playground@2.0.0':
     dependencies:
-      '@bpmn-io/cm-theme': 0.2.2(@codemirror/state@6.7.5)(@codemirror/view@6.43.12)
-      '@bpmn-io/form-js-editor': 1.24.1
-      '@bpmn-io/form-js-viewer': 1.24.1
+      '@bpmn-io/cm-theme': 0.2.2(@codemirror/state@6.7.6)(@codemirror/view@6.43.13)
+      '@bpmn-io/form-js-editor': 2.0.0
+      '@bpmn-io/form-js-viewer': 2.0.0
       '@codemirror/autocomplete': 6.20.3
       '@codemirror/commands': 6.11.1
       '@codemirror/lang-json': 6.0.2
       '@codemirror/language': 6.12.4
       '@codemirror/lint': 6.9.7
-      '@codemirror/state': 6.7.5
-      '@codemirror/view': 6.43.12
+      '@codemirror/state': 6.7.6
+      '@codemirror/view': 6.43.13
       classnames: 2.5.1
       codemirror: 6.0.2
       downloadjs: 1.4.7
@@ -3724,29 +3733,29 @@ snapshots:
       mitt: 3.0.1
       preact: 10.15.1
 
-  '@bpmn-io/form-js-viewer@1.24.1':
+  '@bpmn-io/form-js-viewer@2.0.0':
     dependencies:
-      '@bpmn-io/feelin': 6.1.0
-      '@carbon/grid': 11.60.0
+      '@bpmn-io/feelin': 6.1.1
+      '@carbon/grid': 11.62.0
       big.js: 7.0.1
       classnames: 2.5.1
+      diagram-js: 15.26.0
       didi: 11.0.0
-      dompurify: 3.4.13
+      dompurify: 3.4.15
       feelers: 3.1.0
       flatpickr: 4.6.13
       ids: 3.0.2
       lodash: 4.18.1
       luxon: 3.7.2
-      marked: 18.0.9
+      marked: 18.0.14
       min-dash: 5.1.0
       preact: 10.15.1
 
-  '@bpmn-io/form-js@1.24.1':
+  '@bpmn-io/form-js@2.0.0':
     dependencies:
-      '@bpmn-io/form-js-carbon-styles': 1.24.1
-      '@bpmn-io/form-js-editor': 1.24.1
-      '@bpmn-io/form-js-playground': 1.24.1
-      '@bpmn-io/form-js-viewer': 1.24.1
+      '@bpmn-io/form-js-editor': 2.0.0
+      '@bpmn-io/form-js-playground': 2.0.0
+      '@bpmn-io/form-js-viewer': 2.0.0
 
   '@bpmn-io/lang-feel@4.0.2':
     dependencies:
@@ -3814,12 +3823,12 @@ snapshots:
 
   '@camunda/feel-builtins@1.4.1': {}
 
-  '@carbon/grid@11.60.0':
+  '@carbon/grid@11.62.0':
     dependencies:
-      '@carbon/layout': 11.57.0
+      '@carbon/layout': 11.59.0
       '@ibm/telemetry-js': 1.11.0
 
-  '@carbon/layout@11.57.0':
+  '@carbon/layout@11.59.0':
     dependencies:
       '@ibm/telemetry-js': 1.11.0
 
@@ -3857,19 +3866,30 @@ snapshots:
       '@codemirror/view': 6.43.12
       crelt: 1.0.7
 
-  '@codemirror/search@6.7.1':
+  '@codemirror/search@6.7.2':
     dependencies:
-      '@codemirror/state': 6.7.5
-      '@codemirror/view': 6.43.12
+      '@codemirror/state': 6.7.6
+      '@codemirror/view': 6.43.13
       crelt: 1.0.7
 
   '@codemirror/state@6.7.5':
     dependencies:
       '@marijn/find-cluster-break': 1.0.4
 
+  '@codemirror/state@6.7.6':
+    dependencies:
+      '@marijn/find-cluster-break': 1.0.4
+
   '@codemirror/view@6.43.12':
     dependencies:
       '@codemirror/state': 6.7.5
+      crelt: 1.0.7
+      style-mod: 4.1.4
+      w3c-keyname: 2.2.8
+
+  '@codemirror/view@6.43.13':
+    dependencies:
+      '@codemirror/state': 6.7.6
       crelt: 1.0.7
       style-mod: 4.1.4
       w3c-keyname: 2.2.8
@@ -5308,9 +5328,9 @@ snapshots:
       '@codemirror/commands': 6.11.1
       '@codemirror/language': 6.12.4
       '@codemirror/lint': 6.9.7
-      '@codemirror/search': 6.7.1
-      '@codemirror/state': 6.7.5
-      '@codemirror/view': 6.43.12
+      '@codemirror/search': 6.7.2
+      '@codemirror/state': 6.7.6
+      '@codemirror/view': 6.43.13
 
   color-convert@2.0.1:
     dependencies:
@@ -5514,7 +5534,7 @@ snapshots:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
-  dompurify@3.4.13:
+  dompurify@3.4.15:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
@@ -5724,7 +5744,7 @@ snapshots:
 
   feelers@3.1.0:
     dependencies:
-      '@bpmn-io/feelin': 6.1.0
+      '@bpmn-io/feelin': 6.1.1
       '@bpmn-io/lezer-feelers': 1.0.0
 
   figures@6.1.0:
@@ -6105,7 +6125,7 @@ snapshots:
 
   marked@14.0.0: {}
 
-  marked@18.0.9: {}
+  marked@18.0.14: {}
 
   math-intrinsics@1.1.0: {}
 
