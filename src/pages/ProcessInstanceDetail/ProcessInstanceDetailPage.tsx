@@ -853,6 +853,7 @@ export const ProcessInstanceDetailPage = () => {
               onRefetch={refetchAll}
               onShowNotification={showNotification}
               onElementIdClick={handleElementIdClick}
+              onNavigateToJob={(key) => handleFocusNavigation('jobs', key)}
             />
           </TabPanel>
 

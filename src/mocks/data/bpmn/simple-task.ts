@@ -2,7 +2,16 @@
 // BPMN Flow: StartEvent_1 -> id (serviceTask "Test") -> Event_1j4mcqg (EndEvent)
 import type { MockProcessDefinition, MockProcessInstance, MockIncident } from '../types';
 import { hoursAgo, daysAgo, addMinutes } from '../types';
-import { SIMPLE_TASK_ACTIVE_INSTANCE_KEY, SIMPLE_TASK_FALSY_FORM_INSTANCE_KEY } from '../well-known-keys';
+import {
+  SIMPLE_TASK_ACTIVE_INSTANCE_KEY,
+  SIMPLE_TASK_FALSY_FORM_INSTANCE_KEY,
+  SIMPLE_TASK_BACKOFF_INSTANCE_KEY,
+  SIMPLE_TASK_BACKOFF_JOB_KEY,
+  SIMPLE_TASK_FAILED_INSTANCE_KEY,
+  SIMPLE_TASK_FAILED_JOB_KEY,
+  SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY,
+  SIMPLE_TASK_FAILED_JOB_EARLIER_INCIDENT_KEY,
+} from '../well-known-keys';
 import bpmnData from './simple_task.bpmn?raw';
 
 export const definition: MockProcessDefinition = {
@@ -141,7 +150,7 @@ export const instances: MockProcessInstance[] = [
   ),
   // Partition 4
   createInstance(
-    '3100000000000000036',
+    SIMPLE_TASK_BACKOFF_INSTANCE_KEY,
     hoursAgo(1),
     'active',
     { customerId: 'NEW-301', customerName: 'Acme Corporation' },
@@ -169,7 +178,7 @@ export const instances: MockProcessInstance[] = [
     4
   ),
   createInstance(
-    '3100000000000000038',
+    SIMPLE_TASK_FAILED_INSTANCE_KEY,
     daysAgo(2),
     'failed',
     { customerId: 'NEW-305', customerName: 'Epsilon Tech', errorMessage: 'Connection timeout' },
@@ -212,10 +221,10 @@ Caused by: jdk.nashorn.internal.runtime.ECMAException: ReferenceError: "customer
     executionToken: 'token-223456',
   },
   {
-    key: '3097302186542891012',
-    elementInstanceKey: '2097302399374461019002',
+    key: SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY,
+    elementInstanceKey: `${SIMPLE_TASK_FAILED_INSTANCE_KEY}002`,
     elementId: 'id',
-    processInstanceKey: '3100000000000000038',
+    processInstanceKey: SIMPLE_TASK_FAILED_INSTANCE_KEY,
     processDefinitionKey: '3000000000000000046',
     message: `org.springframework.dao.DataAccessResourceFailureException: Unable to acquire JDBC Connection; nested exception is org.hibernate.exception.JDBCConnectionException: Unable to acquire JDBC Connection
 \tat org.springframework.orm.jpa.vendor.HibernateJpaDialect.convertHibernateAccessException(HibernateJpaDialect.java:277)
@@ -244,8 +253,24 @@ Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection i
 \tat com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:696)
 \tat com.zaxxer.hikari.pool.HikariPool.getConnection(HikariPool.java:197)
 \t... 6 more`,
-    createdAt: daysAgo(2),
+    // raised by the failure which exhausted the job's current series below
+    createdAt: addMinutes(daysAgo(2), 5),
     executionToken: 'token-223457',
+    jobKey: SIMPLE_TASK_FAILED_JOB_KEY,
+  },
+  {
+    // The job exhausted an earlier series of attempts too; resolving that
+    // incident started the current series.
+    key: SIMPLE_TASK_FAILED_JOB_EARLIER_INCIDENT_KEY,
+    elementInstanceKey: `${SIMPLE_TASK_FAILED_INSTANCE_KEY}002`,
+    elementId: 'id',
+    processInstanceKey: SIMPLE_TASK_FAILED_INSTANCE_KEY,
+    processDefinitionKey: '3000000000000000046',
+    message: `Failed to connect to external CRM system: Connection refused (job ${SIMPLE_TASK_FAILED_JOB_KEY}: 3 attempts, retries exhausted)`,
+    createdAt: addMinutes(daysAgo(3), 5),
+    resolvedAt: addMinutes(daysAgo(3), 30),
+    executionToken: 'token-223457',
+    jobKey: SIMPLE_TASK_FAILED_JOB_KEY,
   },
 ];
 
@@ -312,17 +337,23 @@ export const jobs = [
     retries: 3,
   },
   {
-    key: '5000000000000000023',
+    key: SIMPLE_TASK_BACKOFF_JOB_KEY,
     elementId: 'id',
     elementName: 'Test',
     type: 'TestType',
     elementType: 'SERVICE_TASK',
-    processInstanceKey: '3100000000000000036',
+    processInstanceKey: SIMPLE_TASK_BACKOFF_INSTANCE_KEY,
     processDefinitionKey: '3000000000000000046',
     state: 'active' as const,
     createdAt: addMinutes(hoursAgo(1), 1),
     inputVariables: { customerId: 'NEW-301', customerName: 'Acme Corporation' },
-    retries: 3,
+    // Failed once and waits out the first backoff of its policy.
+    definitionRetries: 3,
+    retries: 2,
+    attempts: 1,
+    retryAt: addMinutes(new Date().toISOString(), 30),
+    lastFailureMessage: 'java.net.ConnectException: payment service unavailable',
+    retryBackoff: 'PT30M,PT1H',
   },
   {
     key: '5000000000000000024',
@@ -338,17 +369,90 @@ export const jobs = [
     retries: 3,
   },
   {
-    key: '5000000000000000025',
+    key: SIMPLE_TASK_FAILED_JOB_KEY,
+    elementInstanceKey: `${SIMPLE_TASK_FAILED_INSTANCE_KEY}002`,
     elementId: 'id',
     elementName: 'Test',
     type: 'TestType',
     elementType: 'SERVICE_TASK',
-    processInstanceKey: '3100000000000000038',
+    processInstanceKey: SIMPLE_TASK_FAILED_INSTANCE_KEY,
     processDefinitionKey: '3000000000000000046',
     state: 'failed' as const,
     createdAt: addMinutes(daysAgo(2), 1),
     inputVariables: { customerId: 'NEW-305', customerName: 'Epsilon Tech' },
+    // Exhausted three attempts; the last failure raised the incident above.
+    definitionRetries: 3,
     retries: 0,
-    errorMessage: 'Failed to connect to external CRM system: Connection timeout after 30s',
+    attempts: 3,
+    lastFailureMessage: 'Failed to connect to external CRM system: Connection timeout after 30s',
+    retryBackoff: 'PT10S,PT1M',
+  },
+];
+
+// Failures without an error code the jobs above reported. The failed job has
+// two series: its attempts restart at 1 after the earlier incident's resolution.
+export const jobFailures = [
+  {
+    key: '5200000000000000005',
+    jobKey: SIMPLE_TASK_FAILED_JOB_KEY,
+    processInstanceKey: SIMPLE_TASK_FAILED_INSTANCE_KEY,
+    attempt: 1,
+    failedAt: addMinutes(daysAgo(3), 1),
+    retryAt: addMinutes(daysAgo(3), 1),
+    message: 'Failed to connect to external CRM system: Connection refused',
+  },
+  {
+    key: '5200000000000000006',
+    jobKey: SIMPLE_TASK_FAILED_JOB_KEY,
+    processInstanceKey: SIMPLE_TASK_FAILED_INSTANCE_KEY,
+    attempt: 2,
+    failedAt: addMinutes(daysAgo(3), 3),
+    retryAt: addMinutes(daysAgo(3), 4),
+    message: 'Failed to connect to external CRM system: Connection refused',
+  },
+  {
+    key: '5200000000000000007',
+    jobKey: SIMPLE_TASK_FAILED_JOB_KEY,
+    processInstanceKey: SIMPLE_TASK_FAILED_INSTANCE_KEY,
+    attempt: 3,
+    failedAt: addMinutes(daysAgo(3), 5),
+    message: 'Failed to connect to external CRM system: Connection refused',
+    incidentKey: SIMPLE_TASK_FAILED_JOB_EARLIER_INCIDENT_KEY,
+  },
+  {
+    key: '5200000000000000001',
+    jobKey: SIMPLE_TASK_BACKOFF_JOB_KEY,
+    processInstanceKey: SIMPLE_TASK_BACKOFF_INSTANCE_KEY,
+    attempt: 1,
+    failedAt: new Date().toISOString(),
+    retryAt: addMinutes(new Date().toISOString(), 30),
+    message: 'java.net.ConnectException: payment service unavailable',
+  },
+  {
+    key: '5200000000000000002',
+    jobKey: SIMPLE_TASK_FAILED_JOB_KEY,
+    processInstanceKey: SIMPLE_TASK_FAILED_INSTANCE_KEY,
+    attempt: 1,
+    failedAt: addMinutes(daysAgo(2), 2),
+    retryAt: addMinutes(daysAgo(2), 2),
+    message: 'Failed to connect to external CRM system: Connection timeout after 30s',
+  },
+  {
+    key: '5200000000000000003',
+    jobKey: SIMPLE_TASK_FAILED_JOB_KEY,
+    processInstanceKey: SIMPLE_TASK_FAILED_INSTANCE_KEY,
+    attempt: 2,
+    failedAt: addMinutes(daysAgo(2), 3),
+    retryAt: addMinutes(daysAgo(2), 4),
+    message: 'Failed to connect to external CRM system: Connection timeout after 30s',
+  },
+  {
+    key: '5200000000000000004',
+    jobKey: SIMPLE_TASK_FAILED_JOB_KEY,
+    processInstanceKey: SIMPLE_TASK_FAILED_INSTANCE_KEY,
+    attempt: 3,
+    failedAt: addMinutes(daysAgo(2), 5),
+    message: 'Failed to connect to external CRM system: Connection timeout after 30s',
+    incidentKey: SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY,
   },
 ];

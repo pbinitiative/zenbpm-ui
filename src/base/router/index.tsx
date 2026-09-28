@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { MainLayout } from '@components/layouts/MainLayout';
+import { ModalsProvider } from '@components/Modals';
 import { AuthGuard } from '@base/auth/AuthGuard';
 import { AuthCallbackPage } from '@pages/AuthCallback/AuthCallbackPage';
 import { HomePage } from '@pages/Home/HomePage';
@@ -22,9 +23,12 @@ export const router = createBrowserRouter([
   },
   {
     path: '/',
+    // Modals render inside the router so that they can link to other pages.
     element: (
       <AuthGuard>
-        <MainLayout />
+        <ModalsProvider>
+          <MainLayout />
+        </ModalsProvider>
       </AuthGuard>
     ),
     children: [

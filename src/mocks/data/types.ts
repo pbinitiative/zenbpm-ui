@@ -32,6 +32,7 @@ export interface MockProcessInstance {
   bpmnProcessId: string;
   createdAt: string;
   state: 'active' | 'completed' | 'terminated' | 'failed';
+  /** Process type for multi-instance / call-activity / subprocess differentiation */
   processType: 'default' | 'multiInstance' | 'subprocess' | 'callActivity';
   variables: Record<string, unknown>;
   activeElementInstances: Array<{
@@ -42,8 +43,6 @@ export interface MockProcessInstance {
   /** History of all element instances that have been executed (optional for backward compatibility) */
   history?: MockElementInstance[];
   partition: number;
-  /** Process type for multi-instance / call-activity / subprocess differentiation */
-  processType?: 'default' | 'multiInstance' | 'subprocess' | 'callActivity';
   /** Key of the parent process instance (only set for child processes) */
   parentProcessInstanceKey?: string;
 }
@@ -60,6 +59,8 @@ export interface MockIncident {
   createdAt: string;
   resolvedAt?: string;
   executionToken: string;
+  /** The job the incident was created for; absent for incidents without a job. */
+  jobKey?: string;
 }
 
 // Helper to generate dates in the past

@@ -34,6 +34,8 @@ interface IncidentsTabProps {
   onShowNotification?: (message: string, severity: 'success' | 'error') => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
   onElementIdClick?: (elementId: string) => void;
+  /** Opens the Jobs tab focused on the element instance whose job raised an incident. */
+  onNavigateToJob?: (elementInstanceKey: string) => void;
 }
 
 /** BFS walk — returns all nodes, root first */
@@ -60,6 +62,7 @@ export const IncidentsTab = ({
   onRefetch,
   onShowNotification,
   onElementIdClick,
+  onNavigateToJob,
 }: IncidentsTabProps) => {
   const { t } = useTranslation([ns.common, ns.incidents, ns.processes, ns.processInstance]);
 
@@ -77,14 +80,27 @@ export const IncidentsTab = ({
     }
   }, [t, onShowNotification, onRefetch]);
 
+  // The job of an incident shares its element instance: the engine raises a
+  // job's incident on the job's own token. Only incidents carrying a `jobKey`
+  // were raised by a job, so only they link to one.
+  const handleViewJob = useMemo(
+    () => onNavigateToJob
+      ? (incident: Incident) => {
+          if (incident.jobKey) onNavigateToJob(incident.elementInstanceKey);
+        }
+      : undefined,
+    [onNavigateToJob]
+  );
+
   const handleViewDetails = useCallback((incident: Incident) => {
     openIncidentDetail({
       incident,
       onResolve: incident.resolvedAt ? undefined : (incidentKey) => {
         void handleResolveIncident(incidentKey);
       },
+      onViewJob: handleViewJob,
     });
-  }, [openIncidentDetail, handleResolveIncident]);
+  }, [openIncidentDetail, handleResolveIncident, handleViewJob]);
 
   const handleMessageClick = useCallback((message: string) => {
     openStackTrace({ message });
@@ -97,8 +113,9 @@ export const IncidentsTab = ({
         onResolve: (incidentKey) => void handleResolveIncident(incidentKey),
         onMessageClick: handleMessageClick,
         onElementIdClick,
+        onViewJob: handleViewJob,
       }),
-    [t, handleViewDetails, handleResolveIncident, handleMessageClick, onElementIdClick]
+    [t, handleViewDetails, handleResolveIncident, handleMessageClick, onElementIdClick, handleViewJob]
   );
 
   // Build sections from the server-fetched data — no client-side slicing or filtering.

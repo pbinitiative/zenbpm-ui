@@ -7,7 +7,8 @@
     "processInstance": "Process Instance",
     "state": "State",
     "createdAt": "Created At",
-    "resolvedAt": "Resolved At"
+    "resolvedAt": "Resolved At",
+    "job": "Job"
   },
   "states": {
     "resolved": "Resolved",
@@ -16,7 +17,8 @@
   "actions": {
     "resolve": "Resolve",
     "viewDetails": "View Details",
-    "viewStackTrace": "Click to view full error"
+    "viewStackTrace": "Click to view full error",
+    "viewJob": "View the job which raised this incident"
   },
   "filters": {
     "enterKey": "Enter key..."

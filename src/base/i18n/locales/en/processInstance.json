@@ -26,7 +26,7 @@
     "currentAssignee": "Current Assignee",
     "candidateGroups": "Candidate Groups",
     "retries": "Retries",
-    "currentRetries": "Current Retries",
+    "currentRetries": "Retries left",
     "activityInputOutput": "Activity input/output",
     "activityInputOutputSubtitle": "process point of view variables",
     "jobInputOutput": "Job input/output",
@@ -38,7 +38,13 @@
     "messageName": "Message Name",
     "correlationKey": "Correlation Key",
     "dueDate": "Due Date",
-    "errorCode": "Error Code"
+    "errorCode": "Error Code",
+    "attempts": "Failed attempts",
+    "failedAttempts": "{{count}} failed",
+    "retryAt": "Handed out again at",
+    "retryingAt": "Retrying at {{time}}",
+    "retryBackoff": "Backoff policy",
+    "lastFailureMessage": "Last failure"
   },
   "tabs": {
     "jobs": "Jobs",
@@ -90,14 +96,15 @@
     "rowActions": "Row actions",
     "viewRelatedJob": "View related job",
     "viewRelatedEvent": "View related event",
-    "viewInHistory": "View in history"
+    "viewInHistory": "View in history",
+    "viewFailures": "Failure history"
   },
   "messages": {
     "jobCompleted": "Job completed successfully",
     "jobCompleteFailed": "Failed to complete job",
     "jobAssigned": "Job assigned successfully",
     "jobAssignFailed": "Failed to assign job",
-    "jobRetried": "Job retry initiated successfully",
+    "jobRetried": "Job handed back to its workers",
     "jobRetryFailed": "Failed to retry job",
     "retriesUpdated": "Retries updated successfully",
     "retriesUpdateFailed": "Failed to update retries",
@@ -120,7 +127,10 @@
     "relatedEventNotFound": "No related event subscription was found",
     "relatedEventSearchFailed": "Failed to find the related event subscription",
     "historyExtremelyLarge": "History is extremely large: displaying {{loaded}} of {{total}} entries. Some data may be missing.",
-    "historyExtremelyLargeMultiple": "History is extremely large across {{instances}} process instances: displaying {{loaded}} of {{total}} entries in total. Some data may be missing."
+    "historyExtremelyLargeMultiple": "History is extremely large across {{instances}} process instances: displaying {{loaded}} of {{total}} entries in total. Some data may be missing.",
+    "jobIncidentNotFound": "The job has no open incident. It may have been resolved meanwhile.",
+    "retriesSetButResolveFailed": "The retries were set, but resolving the incident failed: {{reason}}. Resolve it in the Incidents tab to hand the job back to its workers.",
+    "jobRetriedAt": "Job handed back to its workers, not before {{time}}"
   },
   "dialogs": {
     "completeJob": {
@@ -143,23 +153,56 @@
     },
     "retryJob": {
       "title": "Retry Failed Job",
-      "description": "Retry this failed job with updated retry count and optional variable modifications.",
-      "retries": "Number of Retries",
-      "retriesHelp": "How many times to retry this job",
-      "variables": "Variables (JSON)",
-      "variablesHelp": "Optionally modify variables before retrying"
+      "description": "Resolves the incident of this job so that its workers receive it again. Setting the retries alone would leave the job failed.",
+      "retriesSource": "Retries",
+      "fromDefinition": "Resolve the incident only",
+      "custom": "Set the retries, then resolve the incident",
+      "fromDefinitionHint": "Resolving the incident restores the retries of the task definition and hands the job out at once. Retries set for this job since it failed are kept instead, together with the moment chosen for its next delivery.",
+      "saved": "{{retries}} retries were saved for this job, but its incident is still open. Retry resolves the incident and keeps these retries.",
+      "savedWithRetryAt": "{{retries}} retries were saved for this job, with its next delivery not before {{time}}, but its incident is still open. Retry resolves the incident and keeps both."
     },
     "updateRetries": {
       "title": "Update Retries",
-      "description": "Change the remaining retry count for this job.",
-      "newRetries": "New Retry Count"
+      "description": "Sets how many attempts this job has left and when it is handed out to a worker next.",
+      "newRetries": "Retries left from now on",
+      "newRetriesHelp": "The failure which leaves none creates an incident. The engine refuses more than jobs.maxRetries.",
+      "retriesInvalid": "Enter a whole number of at least 1",
+      "defaultBackoff": "Engine default (jobs.defaultRetryBackoff)",
+      "schedule": "Hand the job out",
+      "scheduleNow": "At once",
+      "scheduleNowCutsBackoff": "At once, cutting the current backoff short",
+      "scheduleKeep": "When the current backoff ends ({{time}})",
+      "scheduleDelay": "After a delay",
+      "delay": "Delay",
+      "delayUnit": "Delay unit",
+      "delayInvalid": "Enter a whole number of at least 1",
+      "units": {
+        "seconds": "Seconds",
+        "minutes": "Minutes",
+        "hours": "Hours"
+      },
+      "retriesTooLarge": "Enter at most {{max}}; the engine refuses more than jobs.maxRetries",
+      "delayTooLong": "The delay is too long"
     },
     "failJob": {
       "title": "Fail Job",
       "errorCode": "Error Code",
       "variables": "Variables",
       "errorCodePlaceholder": "e.g. ORDER_FAILED",
-      "variablesPlaceholder": "e.g. {\"reason\": \"timeout\"}"
+      "variablesPlaceholder": "e.g. {\"reason\": \"timeout\"}",
+      "message": "Message",
+      "messagePlaceholder": "e.g. payment service unavailable",
+      "messageHelp": "Why the job failed. Kept as the job's last failure and, once no retries remain, part of the incident message.",
+      "outcomeBpmnError": "With an error code the failure throws a BPMN error: a matching error event takes over, otherwise the job fails with an incident. No retry is spent.",
+      "outcomeRetry": "Without an error code the failure spends one attempt and leaves {{retries}} retries. The job is handed out again after its backoff; if a worker received it over the job stream, not before that worker's lock lapses, as the UI cannot release it. The variables are dropped.",
+      "outcomeIncident": "Without an error code this failure leaves no retries: the job fails with an incident and keeps the variables as its output.",
+      "retries": "Retries left after this failure",
+      "retriesHelp": "Optional; one less than now when empty. The engine caps it at jobs.maxRetries.",
+      "retriesInvalid": "Enter a whole number of at least 0",
+      "retryBackoff": "Backoff",
+      "retryBackoffPlaceholder": "e.g. PT10S",
+      "retryBackoffHelp": "Optional ISO-8601 duration overriding the task definition's backoff.",
+      "retryBackoffInvalid": "Enter an ISO-8601 duration in weeks, days, hours, minutes or seconds, such as PT10S or P1D"
     },
     "addVariable": {
       "title": "Add Variable",
@@ -200,6 +243,20 @@
       "variables": "Variables (JSON)",
       "send": "Send Message",
       "invalidJson": "Invalid JSON \u2014 please check your input"
+    },
+    "jobFailures": {
+      "title": "Failure History",
+      "description": "Failures without an error code reported for this job, newest first. Failures with an error code are BPMN errors and are not listed.",
+      "attempt": "Attempt",
+      "failedAt": "Failed At",
+      "message": "Message",
+      "noMessage": "No message",
+      "outcome": "Outcome",
+      "incidentCreated": "Retries exhausted, incident created",
+      "retriedAt": "Backoff until {{time}}",
+      "retriedAtOnce": "No backoff",
+      "loadFailed": "Failed to load the failure history",
+      "refresh": "Refresh"
     }
   },
   "eventSubscriptions": {

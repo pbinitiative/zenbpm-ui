@@ -10,21 +10,40 @@ import {
   TextField,
   Box,
   Alert,
+  Typography,
 } from '@mui/material';
 import { JsonEditor } from '@components/JsonEditor';
+import { parseIsoBackoff } from '@base/utils/isoDuration';
 import type { Job } from '../types';
+import { MAX_INT32 } from '../utils';
+
+export interface FailJobRequest {
+  errorCode?: string;
+  message?: string;
+  variables?: Record<string, unknown>;
+  /** Retries left after this failure; absent means one less than now. */
+  retries?: number;
+  /** ISO-8601 backoff overriding the task definition's policy for this failure. */
+  retryBackoff?: string;
+}
+
+/** A whole number from 0 to the `int32` maximum, or undefined for anything else. */
+const parseRetriesLeft = (value: string): number | undefined => {
+  if (!/^\d+$/.test(value.trim())) return undefined;
+  const parsed = Number(value.trim());
+  return Number.isSafeInteger(parsed) && parsed <= MAX_INT32 ? parsed : undefined;
+};
 
 export interface FailJobDialogProps {
   open: boolean;
   job: Job;
   onClose: () => void;
   /**
-   * Submit handler. Receives the job key plus an `errorCode` and `variables`.
-   * Both `errorCode` and `variables` are optional — empty/whitespace `errorCode`
-   * is normalized to `undefined` and an empty `{}` variables object is treated
-   * as "no variables".
+   * Submit handler. Every field of the request is optional: an empty or
+   * whitespace `errorCode` or `message` is left out, and an empty `{}`
+   * variables object is treated as "no variables".
    */
-  onFail: (jobKey: string, errorCode: string | undefined, variables: Record<string, unknown> | undefined) => Promise<void>;
+  onFail: (jobKey: string, request: FailJobRequest) => Promise<void>;
 }
 
 export const FailJobDialog = ({
@@ -35,6 +54,9 @@ export const FailJobDialog = ({
 }: FailJobDialogProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance]);
   const [errorCode, setErrorCode] = useState('');
+  const [message, setMessage] = useState('');
+  const [retriesInput, setRetriesInput] = useState('');
+  const [backoffInput, setBackoffInput] = useState('');
   const [variables, setVariables] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -60,8 +82,15 @@ export const FailJobDialog = ({
     validateJson(value);
   }, [validateJson]);
 
+  // The engine ignores retries and backoff of a BPMN error, so they are
+  // offered, validated and sent only for a failure without an error code.
+  const isBpmnError = errorCode.trim() !== '';
+  const retriesLeft = retriesInput.trim() === '' ? undefined : parseRetriesLeft(retriesInput);
+  const retriesInvalid = !isBpmnError && retriesInput.trim() !== '' && retriesLeft === undefined;
+  const backoffInvalid = !isBpmnError && backoffInput.trim() !== '' && parseIsoBackoff(backoffInput) === undefined;
+
   const handleFail = useCallback(async () => {
-    if (!validateJson(variables)) return;
+    if (!validateJson(variables) || retriesInvalid || backoffInvalid) return;
 
     setLoading(true);
     try {
@@ -72,23 +101,43 @@ export const FailJobDialog = ({
         // Treat an empty object as "no variables" so we don't send `variables: {}` over the wire.
         parsedVariables = Object.keys(parsed).length > 0 ? parsed : undefined;
       }
-      await onFail(
-        job.key,
-        trimmedCode === '' ? undefined : trimmedCode,
-        parsedVariables
-      );
+      const trimmedMessage = message.trim();
+      const trimmedBackoff = backoffInput.trim();
+      await onFail(job.key, {
+        errorCode: trimmedCode === '' ? undefined : trimmedCode,
+        message: trimmedMessage === '' ? undefined : trimmedMessage,
+        variables: parsedVariables,
+        retries: trimmedCode === '' ? retriesLeft : undefined,
+        retryBackoff: trimmedCode === '' && trimmedBackoff !== '' ? trimmedBackoff : undefined,
+      });
     } finally {
       setLoading(false);
     }
-  }, [errorCode, job.key, onFail, validateJson, variables]);
+  }, [
+    errorCode, message, job.key, onFail, validateJson, variables,
+    retriesInvalid, backoffInvalid, retriesLeft, backoffInput,
+  ]);
+
+  // Without an error code the engine spends one attempt and leaves the retries
+  // the request names, else one less than now; only the failure which leaves
+  // none fails the job with an incident. With one it throws a BPMN error.
+  const remaining = retriesLeft ?? Math.max((job.retries ?? 1) - 1, 0);
+  const outcome = isBpmnError
+    ? t('processInstance:dialogs.failJob.outcomeBpmnError')
+    : remaining === 0
+      ? t('processInstance:dialogs.failJob.outcomeIncident')
+      : t('processInstance:dialogs.failJob.outcomeRetry', { retries: remaining });
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{t('processInstance:dialogs.failJob.title')}</DialogTitle>
       <DialogContent>
-        {job.errorMessage && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {job.errorMessage}
+        {job.lastFailureMessage && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <Typography variant="caption" component="div" sx={{ fontWeight: 600 }}>
+              {t('processInstance:fields.lastFailureMessage')}
+            </Typography>
+            {job.lastFailureMessage}
           </Alert>
         )}
 
@@ -103,6 +152,52 @@ export const FailJobDialog = ({
             size="small"
           />
 
+          <TextField
+            label={t('processInstance:dialogs.failJob.message')}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder={t('processInstance:dialogs.failJob.messagePlaceholder')}
+            helperText={t('processInstance:dialogs.failJob.messageHelp')}
+            fullWidth
+            multiline
+            minRows={2}
+            size="small"
+          />
+
+          {!isBpmnError && (
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label={t('processInstance:dialogs.failJob.retries')}
+                type="number"
+                value={retriesInput}
+                onChange={(e) => setRetriesInput(e.target.value)}
+                error={retriesInvalid}
+                helperText={
+                  retriesInvalid
+                    ? t('processInstance:dialogs.failJob.retriesInvalid')
+                    : t('processInstance:dialogs.failJob.retriesHelp')
+                }
+                slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                fullWidth
+                size="small"
+              />
+              <TextField
+                label={t('processInstance:dialogs.failJob.retryBackoff')}
+                value={backoffInput}
+                onChange={(e) => setBackoffInput(e.target.value)}
+                error={backoffInvalid}
+                placeholder={t('processInstance:dialogs.failJob.retryBackoffPlaceholder')}
+                helperText={
+                  backoffInvalid
+                    ? t('processInstance:dialogs.failJob.retryBackoffInvalid')
+                    : t('processInstance:dialogs.failJob.retryBackoffHelp')
+                }
+                fullWidth
+                size="small"
+              />
+            </Box>
+          )}
+
           <JsonEditor
             label={t('processInstance:dialogs.failJob.variables')}
             value={variables}
@@ -113,6 +208,10 @@ export const FailJobDialog = ({
             height={160}
             showPrettify={false}
           />
+
+          <Alert severity="info" data-testid="fail-job-outcome">
+            {outcome}
+          </Alert>
         </Box>
       </DialogContent>
       <DialogActions>
@@ -123,7 +222,7 @@ export const FailJobDialog = ({
           onClick={handleFail}
           variant="contained"
           color="error"
-          disabled={!!jsonError || loading}
+          disabled={!!jsonError || loading || retriesInvalid || backoffInvalid}
         >
           {t('processInstance:actions.fail')}
         </Button>

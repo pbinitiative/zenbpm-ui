@@ -37,6 +37,15 @@ export const USER_TASK_CLASSIFICATION_CHILD_USER_TASK_INSTANCE_KEY = '3100000000
 export const SIMPLE_TASK_ACTIVE_INSTANCE_KEY = '3100000000000000017';
 // Second active simple-task instance — used to verify falsy ZEN_FORM retains the generic completion dialog.
 export const SIMPLE_TASK_FALSY_FORM_INSTANCE_KEY = '3100000000000000025';
+// Simple-task instance whose service job failed once and waits out a retry backoff.
+export const SIMPLE_TASK_BACKOFF_INSTANCE_KEY = '3100000000000000036';
+export const SIMPLE_TASK_BACKOFF_JOB_KEY = '5000000000000000023';
+// Failed simple-task instance whose service job exhausted its retries and raised an incident.
+export const SIMPLE_TASK_FAILED_INSTANCE_KEY = '3100000000000000038';
+export const SIMPLE_TASK_FAILED_JOB_KEY = '5000000000000000025';
+export const SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY = '3097302186542891012';
+// Resolved incident of an earlier series of attempts of the same job.
+export const SIMPLE_TASK_FAILED_JOB_EARLIER_INCIDENT_KEY = '3097302186542891013';
 
 // Process instance keys — multi-instance sectioned pagination test
 // Parent has 2 multiInstance children, each with 8 history entries (> default pageSize of 5).

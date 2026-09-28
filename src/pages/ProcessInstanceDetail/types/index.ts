@@ -34,8 +34,6 @@ export interface Job extends Omit<ApiJob, 'state'> {
   candidateGroups?: string[];
   /** When the job was completed */
   completedAt?: string;
-  /** Error message if job failed */
-  errorMessage?: string;
   /** Input variables provided to the job at creation/activation time */
   inputVariables: Record<string, unknown>;
   /** Output variables set on job completion or failure */

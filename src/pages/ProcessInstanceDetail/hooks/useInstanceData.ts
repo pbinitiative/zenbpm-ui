@@ -278,6 +278,8 @@ export const useInstanceData = (
   // before the first finishes, doubling the load and causing state flicker.
   const activeFetchRef = useRef<{ id: number; processInstanceKey: string } | null>(null);
   const nextFetchIdRef = useRef(0);
+  // Settles when the running fetch ends, so that `refetchAll` can wait for it.
+  const activeFetchDoneRef = useRef<Promise<void>>(Promise.resolve());
   // Monotonic generation counter for fetchSubprocessStats invocations — distinguishes same-instance re-fetches (which the processInstanceKey check can't).
   const subprocessStatsFetchIdRef = useRef(0);
 
@@ -346,6 +348,10 @@ export const useInstanceData = (
     const fetchId = nextFetchIdRef.current + 1;
     nextFetchIdRef.current = fetchId;
     activeFetchRef.current = { id: fetchId, processInstanceKey };
+    let markDone = () => {};
+    activeFetchDoneRef.current = new Promise<void>((resolve) => {
+      markDone = resolve;
+    });
 
     const isCurrentFetch = () => activeFetchRef.current?.id === fetchId;
 
@@ -430,12 +436,30 @@ export const useInstanceData = (
       if (isCurrentFetch()) {
         activeFetchRef.current = null;
       }
+      markDone();
     }
     // The pagination/history/tree/onHistoryPartial refs read inside this callback are
     // all stable (created via useLatestRef). Tracking each one in the deps array would
     // be runtime-identical but visually noisy; suppress the rule instead.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [processInstanceKey, fetchSubprocessStats]);
+
+  // Refetch after a change the caller made, typically a job action. A fetch
+  // already running may have read the state before that change, and
+  // `fetchAll` would drop the request while it runs: wait for such a fetch,
+  // then fetch again unless one started after the request meanwhile.
+  const refetchAll = useCallback(async () => {
+    if (!processInstanceKey) return;
+    const lastFetchBeforeRequest = nextFetchIdRef.current;
+    for (;;) {
+      const active = activeFetchRef.current;
+      if (active?.processInstanceKey !== processInstanceKey) break;
+      await activeFetchDoneRef.current;
+      if (active.id > lastFetchBeforeRequest) return;
+    }
+    if (nextFetchIdRef.current > lastFetchBeforeRequest) return;
+    await fetchAll();
+  }, [processInstanceKey, fetchAll]);
 
   // ── Initial data fetch ────────────────────────────────────────────────────
   useEffect(() => {
@@ -788,6 +812,6 @@ export const useInstanceData = (
 
     activeEventSubscriptionsCount,
 
-    refetchAll: fetchAll,
+    refetchAll,
   };
 };

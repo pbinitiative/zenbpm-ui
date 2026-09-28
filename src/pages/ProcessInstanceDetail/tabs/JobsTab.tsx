@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { ns } from '@base/i18n';
 import {
   Box,
@@ -20,24 +21,40 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
 import HistoryIcon from '@mui/icons-material/History';
+import ReplayIcon from '@mui/icons-material/Replay';
+import ListAltIcon from '@mui/icons-material/ListAlt';
 import { DataTable, type Column, type SortOrder, type DataTableSection } from '@components/DataTable';
 import { StateBadge } from '@components/StateBadge';
 import { type Job, type JobState } from '../types';
 import { useCompleteJobDialog } from '../modals/useCompleteJobDialog';
 import { useAssignJobDialog } from '../modals/useAssignJobDialog';
-import { useUpdateRetriesDialog } from '@pages/ProcessInstanceDetail/modals/useUpdateRetriesDialog.ts';
+import { useUpdateRetriesDialog } from '../modals/useUpdateRetriesDialog';
+import { useJobFailuresDialog } from '../modals/useJobFailuresDialog';
 import { useFailJobDialog } from '../modals/useFailJobDialog';
+import type { FailJobRequest } from '../modals/FailJobDialog';
 import { useInputOutputDialog } from '@components/InputOutputDialog';
-import { assignJob, completeJob, customInstance, failJob } from '@base/openapi';
+import {
+  assignJob,
+  completeJob,
+  failJob,
+  getGetJobFailuresQueryKey,
+  resolveIncident,
+  updateJobRetries,
+  type FailJobBody,
+} from '@base/openapi';
 import { MonoText } from "@components/MonoText";
 import { formatDate } from "@components/DiagramDetailLayout/utils";
 import { VariablesBadgeCell } from '../components/VariablesBadgeCell';
 import type { ProcessInstanceNode } from '../types/tree';
-
-// updateJobRetries is not in generated API, use direct axios call
-const updateJobRetries = async (jobKey: string, retries: number): Promise<void> => {
-  await customInstance({ url: `/jobs/${jobKey}/retries`, method: 'POST', data: { retries } });
-};
+import {
+  RetriesSavedButIncidentOpenError,
+  apiErrorMessage,
+  findOpenIncidentOfJob,
+  formatDateTimeWithSeconds,
+  isWaitingOutBackoff,
+  type JobRetriesRequest,
+  type UpdateJobRetriesRequest,
+} from '../utils';
 
 // processType display order — determines section ordering after the main instance
 const PROCESS_TYPE_ORDER: Record<string, number> = {
@@ -95,6 +112,7 @@ export const JobsTab = ({
   findingFocusedJob = false,
 }: JobsTabProps) => {
   const { t } = useTranslation([ns.common, ns.processInstance, ns.processes]);
+  const queryClient = useQueryClient();
 
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -102,6 +120,7 @@ export const JobsTab = ({
   const { openCompleteJobDialog } = useCompleteJobDialog();
   const { openAssignJobDialog } = useAssignJobDialog();
   const { openUpdateRetriesDialog } = useUpdateRetriesDialog();
+  const { openJobFailuresDialog } = useJobFailuresDialog();
   const { openFailJobDialog } = useFailJobDialog();
   const { openInputOutputDialog } = useInputOutputDialog();
 
@@ -159,33 +178,77 @@ export const JobsTab = ({
     }
   }, [onRefetch, onShowNotification, t]);
 
-  const handleUpdateRetries = useCallback(async (jobKey: string, retries: number) => {
-    try {
-      await updateJobRetries(jobKey, retries);
-      onShowNotification(t('processInstance:messages.retriesUpdated'), 'success');
+  // Errors propagate to the dialog, which stays open and shows the engine's reason.
+  const handleUpdateRetries = useCallback(async (job: Job, request: UpdateJobRetriesRequest) => {
+    await updateJobRetries(job.key, request);
+    onShowNotification(t('processInstance:messages.retriesUpdated'), 'success');
+    await onRefetch();
+  }, [onRefetch, onShowNotification, t]);
+
+  // Setting the retries of a failed job leaves it failed until its incident is
+  // resolved. The resolution keeps retries set since the job failed, here or
+  // elsewhere, together with their `retryAt`; without any it restores the
+  // retries of the task definition and hands the job out at once.
+  const handleRetryFailedJob = useCallback(async (job: Job, request: JobRetriesRequest) => {
+    const incident = await findOpenIncidentOfJob(job);
+    if (!incident) {
       await onRefetch();
-    } catch {
-      onShowNotification(t('processInstance:messages.retriesUpdateFailed'), 'error');
+      throw new Error(t('processInstance:messages.jobIncidentNotFound'));
     }
+    if (request.retries !== undefined) {
+      await updateJobRetries(job.key, { retries: request.retries, retryAt: request.retryAt });
+    }
+    try {
+      await resolveIncident(incident.key);
+    } catch (err) {
+      await onRefetch();
+      if (request.retries === undefined) throw err;
+      throw new RetriesSavedButIncidentOpenError(
+        t('processInstance:messages.retriesSetButResolveFailed', {
+          reason: apiErrorMessage(err) ?? t('processInstance:messages.incidentResolveFailed'),
+        }),
+        request,
+        { cause: err }
+      );
+    }
+    onShowNotification(
+      request.retryAt
+        ? t('processInstance:messages.jobRetriedAt', { time: formatDateTimeWithSeconds(request.retryAt) })
+        : t('processInstance:messages.jobRetried'),
+      'success'
+    );
+    await onRefetch();
   }, [onRefetch, onShowNotification, t]);
 
   const handleFailJob = useCallback(async (
     jobKey: string,
-    errorCode: string | undefined,
-    variables: Record<string, unknown> | undefined,
+    request: FailJobRequest,
     jobType: string
   ) => {
     try {
-      // Only include keys the API actually accepts. An empty `errorCode` or empty
-      // `variables` object should not be sent over the wire at all.
-      const body: { errorCode?: string; variables?: Record<string, unknown> } = {};
-      if (errorCode !== undefined && errorCode !== '') {
-        body.errorCode = errorCode;
+      // Only include keys the API actually accepts. An empty `errorCode`, `message`
+      // or `variables` object should not be sent over the wire at all.
+      const body: FailJobBody = {};
+      if (request.errorCode !== undefined && request.errorCode !== '') {
+        body.errorCode = request.errorCode;
       }
-      if (variables !== undefined && Object.keys(variables).length > 0) {
-        body.variables = variables;
+      if (request.message !== undefined && request.message !== '') {
+        body.message = request.message;
+      }
+      if (request.variables !== undefined && Object.keys(request.variables).length > 0) {
+        body.variables = request.variables;
+      }
+      if (request.retries !== undefined) {
+        body.retries = request.retries;
+      }
+      if (request.retryBackoff !== undefined) {
+        body.retryBackoff = request.retryBackoff;
       }
       await failJob(jobKey, body);
+      // A failure without an error code adds to the job's failure history.
+      // The history dialog reads afresh on every open anyway; this reaches a
+      // history query still mounted when the failure is sent.
+      void queryClient.invalidateQueries({ queryKey: getGetJobFailuresQueryKey(jobKey) });
       onShowNotification(
         t('processInstance:messages.jobFailed') + ` (${jobType})`,
         'success'
@@ -197,7 +260,7 @@ export const JobsTab = ({
         'error'
       );
     }
-  }, [onRefetch, onShowNotification, t]);
+  }, [onRefetch, onShowNotification, queryClient, t]);
 
   const columns: Column<Job>[] = useMemo(
     () => [
@@ -288,22 +351,44 @@ export const JobsTab = ({
         id: 'state',
         label: t('processInstance:fields.state'),
         sortable: true,
-        width: 110,
+        width: 150,
         render: (row) => (
-          <StateBadge
-            state={row.state}
-            label={t(`processInstance:jobStates.${row.state}`)}
-          />
+          <Box>
+            <StateBadge
+              state={row.state}
+              label={t(`processInstance:jobStates.${row.state}`)}
+            />
+            {row.retryAt && isWaitingOutBackoff(row) && (
+              <Typography
+                variant="caption"
+                color="warning.main"
+                display="block"
+                data-testid="job-retry-at"
+                sx={{ mt: 0.5 }}
+              >
+                {t('processInstance:fields.retryingAt', { time: formatDateTimeWithSeconds(row.retryAt) })}
+              </Typography>
+            )}
+          </Box>
         ),
       },
       {
         id: 'retries',
         label: t('processInstance:fields.retries'),
-        width: 80,
+        width: 110,
         render: (row) => (
-          <Typography variant="body2" color={row.retries === 0 ? 'error.main' : 'text.primary'}>
-            {row.retries ?? '-'}
-          </Typography>
+          <Tooltip title={row.lastFailureMessage ?? ''}>
+            <Box data-testid="job-retries-cell">
+              <Typography variant="body2" color={row.retries === 0 ? 'error.main' : 'text.primary'}>
+                {row.retries ?? '-'}
+              </Typography>
+              {(row.attempts ?? 0) > 0 && (
+                <Typography variant="caption" color="text.secondary" display="block">
+                  {t('processInstance:fields.failedAttempts', { count: row.attempts })}
+                </Typography>
+              )}
+            </Box>
+          </Tooltip>
         ),
       },
       {
@@ -454,10 +539,22 @@ export const JobsTab = ({
             <ListItemText>{t('processInstance:actions.assign')}</ListItemText>
           </MenuItem>
         )}
-        {menuJob && (isJobActive(menuJob.state) || userTaskJobKeys.has(menuJob.key)) && (
-          <MenuItem onClick={() => { openUpdateRetriesDialog({ job: menuJob, onUpdate: handleUpdateRetries }); handleMenuClose(); }}>
+        {menuJob?.state === 'failed' && (
+          <MenuItem onClick={() => { openUpdateRetriesDialog({ job: menuJob, mode: 'retry', onSubmit: handleRetryFailedJob }); handleMenuClose(); }}>
+            <ListItemIcon><ReplayIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{t('processInstance:actions.retry')}</ListItemText>
+          </MenuItem>
+        )}
+        {menuJob && isJobActive(menuJob.state) && (
+          <MenuItem onClick={() => { openUpdateRetriesDialog({ job: menuJob, mode: 'update', onSubmit: handleUpdateRetries }); handleMenuClose(); }}>
             <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
             <ListItemText>{t('processInstance:actions.updateRetries')}</ListItemText>
+          </MenuItem>
+        )}
+        {menuJob && (
+          <MenuItem onClick={() => { openJobFailuresDialog({ job: menuJob }); handleMenuClose(); }}>
+            <ListItemIcon><ListAltIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{t('processInstance:actions.viewFailures')}</ListItemText>
           </MenuItem>
         )}
         {menuJob && isJobActive(menuJob.state) && (
@@ -469,8 +566,7 @@ export const JobsTab = ({
               const jobType = menuJob.type;
               openFailJobDialog({
                 job: menuJob,
-                onFail: (jobKey, errorCode, variables) =>
-                  handleFailJob(jobKey, errorCode, variables, jobType),
+                onFail: (jobKey, request) => handleFailJob(jobKey, request, jobType),
               });
             }
             handleMenuClose();
