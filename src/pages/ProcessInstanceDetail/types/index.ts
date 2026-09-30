@@ -67,5 +67,11 @@ export interface Variable {
   scope?: 'process' | 'local';
 }
 
+/** How a notification of the process instance page is shown. */
+export interface NotificationOptions {
+  /** Keep the message until the operator closes it, for a reason they have to read and act on. */
+  persist?: boolean;
+}
+
 // Tree types
 export type { ProcessInstanceNode, NodePagination, TreeDatasetPagination } from './tree';

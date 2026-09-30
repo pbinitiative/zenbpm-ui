@@ -2,7 +2,12 @@
 import { http, HttpResponse } from 'msw';
 import { jobs, findJobByKey, getJobFailuresByJobKey } from '../data/jobs';
 import { parseIsoBackoff } from '@base/utils/isoDuration';
-import { failMockJobWithoutErrorCode, updateMockJobRetries } from '../data/jobRetries';
+import {
+  engineStateName,
+  failMockJobWithoutErrorCode,
+  leaderCallFailure,
+  updateMockJobRetries,
+} from '../data/jobRetries';
 import type { MockJob } from '../data/jobs';
 import { withValidation } from '../validation';
 
@@ -39,8 +44,8 @@ export const jobHandlers = [
     `${BASE_URL}/jobs`,
     withValidation(({ request }) => {
       const url = new URL(request.url);
-      const page = parseInt(url.searchParams.get('page') || '1', 10);
-      const size = parseInt(url.searchParams.get('size') || '10', 10);
+      const page = Number.parseInt(url.searchParams.get('page') || '1', 10);
+      const size = Number.parseInt(url.searchParams.get('size') || '10', 10);
       const jobType = url.searchParams.get('jobType');
       const state = url.searchParams.get('state') as MockJob['state'] | null;
 
@@ -173,7 +178,10 @@ export const jobHandlers = [
       const retries = typeof body.retries === 'number' ? body.retries : undefined;
       if (retries !== undefined && retries < 0) {
         return HttpResponse.json(
-          { code: 'BAD_REQUEST', message: `retries must not be negative, got ${retries}` },
+          {
+            code: 'BAD_REQUEST',
+            message: 'request body has an error: doesn\'t match schema: Error at "/retries": number must be at least 0',
+          },
           { status: 400 }
         );
       }
@@ -191,7 +199,11 @@ export const jobHandlers = [
         return HttpResponse.json(
           {
             code: 'CONFLICT',
-            message: `job ${String(jobKey)} no longer waits for a worker or an operator`,
+            message: leaderCallFailure(
+              `fail job ${String(jobKey)}`,
+              `failed to fail job ${String(jobKey)}: job no longer waits for a worker or an operator: ` +
+                `job ${String(jobKey)} is already ${job.state}`
+            ),
           },
           { status: 409 }
         );
@@ -223,9 +235,13 @@ export const jobHandlers = [
       const { jobKey } = params;
       const body = (await request.json()) as { retries?: unknown; retryAt?: unknown };
 
+      const call = `update retries of job ${String(jobKey)}`;
       const job = findJobByKey(jobKey as string);
       if (!job) {
-        return jobNotFound(jobKey);
+        return HttpResponse.json(
+          { code: 'NOT_FOUND', message: leaderCallFailure(call, `job ${String(jobKey)} not found`) },
+          { status: 404 }
+        );
       }
 
       const retries = body.retries;
@@ -233,7 +249,10 @@ export const jobHandlers = [
         return HttpResponse.json(
           {
             code: 'BAD_REQUEST',
-            message: `retries of job ${String(jobKey)} must be between 1 and ${MAX_RETRIES} (jobs.maxRetries), got ${String(retries)}`,
+            message: leaderCallFailure(
+              call,
+              `retries of job ${String(jobKey)} must be between 1 and ${MAX_RETRIES} (jobs.maxRetries), got ${String(retries)}`
+            ),
           },
           { status: 400 }
         );
@@ -242,7 +261,10 @@ export const jobHandlers = [
         return HttpResponse.json(
           {
             code: 'BAD_REQUEST',
-            message: `retryAt of job ${String(jobKey)} must not be later than 24h0m0s from now (jobs.maxRetryBackoff), got ${body.retryAt}`,
+            message: leaderCallFailure(
+              call,
+              `retryAt of job ${String(jobKey)} must not be later than 24h0m0s from now (jobs.maxRetryBackoff), got ${body.retryAt}`
+            ),
           },
           { status: 400 }
         );
@@ -251,7 +273,11 @@ export const jobHandlers = [
         return HttpResponse.json(
           {
             code: 'CONFLICT',
-            message: `cannot update the retries of job ${String(jobKey)} in state ${job.state}`,
+            message: leaderCallFailure(
+              call,
+              `failed to update retries of job ${String(jobKey)}: job no longer waits for a worker or an operator: ` +
+                `cannot update the retries of job ${String(jobKey)} in state ${engineStateName(job.state)}`
+            ),
           },
           { status: 409 }
         );
@@ -268,8 +294,8 @@ export const jobHandlers = [
     withValidation(({ params, request }) => {
       const { jobKey } = params;
       const url = new URL(request.url);
-      const page = parseInt(url.searchParams.get('page') || '1', 10);
-      const size = parseInt(url.searchParams.get('size') || '10', 10);
+      const page = Number.parseInt(url.searchParams.get('page') || '1', 10);
+      const size = Number.parseInt(url.searchParams.get('size') || '10', 10);
 
       if (!findJobByKey(jobKey as string)) {
         return jobNotFound(jobKey);

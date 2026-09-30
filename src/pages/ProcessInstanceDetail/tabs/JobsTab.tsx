@@ -25,7 +25,7 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import { DataTable, type Column, type SortOrder, type DataTableSection } from '@components/DataTable';
 import { StateBadge } from '@components/StateBadge';
-import { type Job, type JobState } from '../types';
+import { type Job, type JobState, type NotificationOptions } from '../types';
 import { useCompleteJobDialog } from '../modals/useCompleteJobDialog';
 import { useAssignJobDialog } from '../modals/useAssignJobDialog';
 import { useUpdateRetriesDialog } from '../modals/useUpdateRetriesDialog';
@@ -47,10 +47,13 @@ import { formatDate } from "@components/DiagramDetailLayout/utils";
 import { VariablesBadgeCell } from '../components/VariablesBadgeCell';
 import type { ProcessInstanceNode } from '../types/tree';
 import {
+  DefinitionRetriesNotEvaluableError,
   RetriesSavedButIncidentOpenError,
   apiErrorMessage,
   findOpenIncidentOfJob,
   formatDateTimeWithSeconds,
+  isIncidentOpen,
+  isResolutionRefused,
   isWaitingOutBackoff,
   type JobRetriesRequest,
   type UpdateJobRetriesRequest,
@@ -72,7 +75,11 @@ interface JobsTabProps {
   setJobsPageSize: (size: number) => void;
   onManualNavigation: () => void;
   onRefetch: () => Promise<void>;
-  onShowNotification: (message: string, severity: 'success' | 'error') => void;
+  onShowNotification: (
+    message: string,
+    severity: 'success' | 'error' | 'warning',
+    options?: NotificationOptions
+  ) => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
   onElementIdClick?: (elementId: string) => void;
   onNavigateToHistory?: (elementInstanceKey: string) => void;
@@ -202,6 +209,32 @@ export const JobsTab = ({
       await resolveIncident(incident.key);
     } catch (err) {
       await onRefetch();
+      // Any error but a refusal may follow a resolution which succeeded: the
+      // engine saved it, then continuing the instance failed, or the answer of
+      // the partition's leader was lost. The job is back with its workers
+      // then, and only the error is left to report. When the check fails too,
+      // the incident counts as open, which a second Retry clears up.
+      if (!isResolutionRefused(err)) {
+        const stillOpen = await isIncidentOpen(job.processInstanceKey, incident.key).catch(() => true);
+        if (!stillOpen) {
+          onShowNotification(
+            t('processInstance:messages.jobRetriedButEngineReportedError', {
+              reason: apiErrorMessage(err) ?? t('processInstance:messages.incidentResolveFailed'),
+            }),
+            'warning',
+            { persist: true }
+          );
+          return;
+        }
+      }
+      if (request.retries === undefined && isResolutionRefused(err)) {
+        throw new DefinitionRetriesNotEvaluableError(
+          t('processInstance:dialogs.retryJob.definitionRetriesNotEvaluable', {
+            reason: apiErrorMessage(err) ?? t('processInstance:messages.incidentResolveFailed'),
+          }),
+          { cause: err }
+        );
+      }
       if (request.retries === undefined) throw err;
       throw new RetriesSavedButIncidentOpenError(
         t('processInstance:messages.retriesSetButResolveFailed', {
@@ -244,6 +277,10 @@ export const JobsTab = ({
       if (request.retryBackoff !== undefined) {
         body.retryBackoff = request.retryBackoff;
       }
+      // No `attempt`: an operator failing a job means a new failure. The job
+      // shown may be seconds old, and an attempt a worker failed meanwhile
+      // would be answered as recorded, so the operator's failure would change
+      // nothing.
       await failJob(jobKey, body);
       // A failure without an error code adds to the job's failure history.
       // The history dialog reads afresh on every open anyway; this reaches a

@@ -35,12 +35,21 @@ const elementInstanceKeyOf = (job: MockJob): string =>
 const isAhead = (timestamp: string | undefined, now: number): boolean =>
   timestamp !== undefined && Date.parse(timestamp) > now;
 
+/**
+ * The message of a request the engine refused after passing it on to the
+ * leader of the partition: a line naming the call, then the reason.
+ */
+export const leaderCallFailure = (call: string, reason: string): string => `client call to ${call} failed\n${reason}`;
+
+/** The name the engine gives a job state in its messages, e.g. `ActivityStateCompleted`. */
+export const engineStateName = (state: string): string => `ActivityState${state.charAt(0).toUpperCase()}${state.slice(1)}`;
+
 /** Sets the remaining retries of an active or failed job and when it is handed out next. */
 export const updateMockJobRetries = (job: MockJob, retries: number, retryAt: string | undefined): void => {
   const now = Date.now();
   job.retries = retries;
   job.retryAt = isAhead(retryAt, now) ? retryAt : undefined;
-  job.retriesUpdatedAt = new Date(now).toISOString();
+  job.retriesSetByOperator = true;
 };
 
 /**
@@ -72,7 +81,7 @@ export const failMockJobWithoutErrorCode = (
   if (remaining === 0) {
     job.retryAt = undefined;
     job.state = 'failed';
-    job.retriesUpdatedAt = undefined;
+    job.retriesSetByOperator = false;
     if (variables !== undefined) job.outputVariables = variables;
     const attempts = job.attempts === 1 ? '1 attempt' : `${job.attempts} attempts`;
     const incident: MockIncident = {
@@ -99,6 +108,23 @@ export const failMockJobWithoutErrorCode = (
 };
 
 /**
+ * The engine's refusal to resolve an incident whose resolution would evaluate
+ * the retries of the task definition, as it does when they no longer evaluate.
+ * Retries an operator set since the job failed are kept instead of evaluated,
+ * so they lift the refusal. Undefined when the resolution evaluates nothing.
+ */
+export const definitionRetriesNotEvaluable = (job: MockJob | undefined): string | undefined => {
+  if (job?.state !== 'failed' || job.retriesSetByOperator) return undefined;
+  return leaderCallFailure(
+    'resolve incident',
+    `incident cannot be resolved as things stand: the retries of job ${job.key} no longer evaluate ` +
+      '(retries expression "=attemptsAllowed + 1": evaluated to <nil> (<nil>), which is not an integer); ' +
+      `correct the variables they read, or set the job's retries (POST /v1/jobs/${job.key}/retries), ` +
+      'then resolve the incident again'
+  );
+};
+
+/**
  * Resolves an incident. The failed job which raised it becomes active again
  * with a new series of attempts: retries set since it failed are kept with a
  * `retryAt` still ahead, otherwise the task definition's retries apply and the
@@ -109,8 +135,8 @@ export const resolveMockIncident = (incident: MockIncident, job: MockJob | undef
   incident.resolvedAt = new Date(now).toISOString();
   if (job?.state === 'failed') {
     job.attempts = 0;
-    if (job.retriesUpdatedAt !== undefined) {
-      job.retriesUpdatedAt = undefined;
+    if (job.retriesSetByOperator) {
+      job.retriesSetByOperator = false;
       if (!isAhead(job.retryAt, now)) job.retryAt = undefined;
     } else {
       job.retryAt = undefined;

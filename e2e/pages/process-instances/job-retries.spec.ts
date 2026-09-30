@@ -204,6 +204,45 @@ test.describe('Process Instance Jobs - Retries', () => {
     await expectJobRow(page, SIMPLE_TASK_FAILED_JOB_KEY, { state: 'Active', retries: '9', waiting: true });
   });
 
+  test('hands the job back and reports the error which followed a resolution that succeeded', async ({ page }) => {
+    await openJobsTab(page, SIMPLE_TASK_FAILED_INSTANCE_KEY, 'resolutionSavedThenInstanceFails');
+    const dialog = await openDialogFromMenu(page, SIMPLE_TASK_FAILED_JOB_KEY, /^retry$/i);
+
+    const resolve = waitForResolve(page, SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY);
+    await dialog.getByRole('button', { name: 'Retry' }).click();
+    await resolve;
+
+    await expect(dialog).not.toBeVisible();
+    const warning = page.getByRole('alert').filter({ hasText: 'Job handed back to its workers: its incident is resolved' });
+    await expect(warning).toContainText(
+      `failed to resolve incident ${SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY}: failed to continue process instance`
+    );
+    await expect(warning).not.toContainText('client call to');
+    await expectJobRow(page, SIMPLE_TASK_FAILED_JOB_KEY, { state: 'Active', retries: '3', waiting: false });
+  });
+
+  test('does not claim the incident stayed open when an error followed the resolution of set retries', async ({ page }) => {
+    const order: string[] = [];
+    page.on('request', (request) => {
+      if (request.method() !== 'POST') return;
+      if (request.url().includes(`/jobs/${SIMPLE_TASK_FAILED_JOB_KEY}/retries`)) order.push('retries');
+      if (request.url().includes(`/incidents/${SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY}/resolve`)) order.push('resolve');
+    });
+    await openJobsTab(page, SIMPLE_TASK_FAILED_INSTANCE_KEY, 'resolutionSavedThenInstanceFails');
+    const dialog = await openDialogFromMenu(page, SIMPLE_TASK_FAILED_JOB_KEY, /^retry$/i);
+    await dialog.getByRole('radio', { name: /set the retries, then resolve the incident/i }).check();
+    await dialog.getByLabel('Retries left from now on').fill('7');
+    await chooseDelay(page, dialog, '10', 'Minutes');
+
+    await dialog.getByRole('button', { name: 'Retry' }).click();
+
+    await expect(dialog).not.toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: 'Job handed back to its workers: its incident is resolved' })).toBeVisible();
+    await expect(page.getByText('The retries were set, but resolving the incident failed')).toHaveCount(0);
+    expect(order).toEqual(['retries', 'resolve']);
+    await expectJobRow(page, SIMPLE_TASK_FAILED_JOB_KEY, { state: 'Active', retries: '7', waiting: true });
+  });
+
   test('keeps retries saved before when a reopened dialog only resolves the incident', async ({ page }) => {
     await openJobsTab(page, SIMPLE_TASK_FAILED_INSTANCE_KEY, 'resolveIncidentFailsOnce');
     let dialog = await openDialogFromMenu(page, SIMPLE_TASK_FAILED_JOB_KEY, /^retry$/i);
@@ -411,6 +450,121 @@ test.describe('Process Instance Jobs - Retries', () => {
     await expect(history.getByTestId('job-failures-table').locator('tbody tr')).toHaveCount(1);
   });
 
+  test('offers retries of its own when the retries of the task definition no longer evaluate', async ({ page }) => {
+    const order: string[] = [];
+    page.on('request', (request) => {
+      if (request.method() !== 'POST') return;
+      if (request.url().includes(`/jobs/${SIMPLE_TASK_FAILED_JOB_KEY}/retries`)) order.push('retries');
+      if (request.url().includes(`/incidents/${SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY}/resolve`)) order.push('resolve');
+    });
+    await openJobsTab(page, SIMPLE_TASK_FAILED_INSTANCE_KEY, 'definitionRetriesNotEvaluable');
+    const dialog = await openDialogFromMenu(page, SIMPLE_TASK_FAILED_JOB_KEY, /^retry$/i);
+    await expect(dialog.getByRole('radio', { name: /resolve the incident only/i })).toBeChecked();
+
+    await dialog.getByRole('button', { name: 'Retry' }).click();
+
+    const error = dialog.getByTestId('job-retries-error');
+    await expect(error).toContainText('the retries of the task definition no longer evaluate for this job');
+    await expect(error).toContainText('Set the retries above, then retry');
+    await expect(error).toContainText(`set the job's retries (POST /v1/jobs/${SIMPLE_TASK_FAILED_JOB_KEY}/retries)`);
+    // the line naming the engine's transport is left out
+    await expect(error).not.toContainText('client call to');
+    // the dialog turns to the way out: retries of the operator's own
+    await expect(dialog.getByRole('radio', { name: /set the retries, then resolve the incident/i })).toBeChecked();
+    await expect(dialog.getByLabel('Retries left from now on')).toBeVisible();
+    await expectJobRow(page, SIMPLE_TASK_FAILED_JOB_KEY, { state: 'Failed', retries: '0', waiting: false });
+
+    await dialog.getByLabel('Retries left from now on').fill('4');
+    await dialog.getByRole('button', { name: 'Retry' }).click();
+
+    await expect(dialog).not.toBeVisible();
+    expect(order).toEqual(['resolve', 'retries', 'resolve']);
+    await expectJobRow(page, SIMPLE_TASK_FAILED_JOB_KEY, { state: 'Active', retries: '4', waiting: false });
+  });
+
+  test('offers retries of its own again when saved retries were used up before the refused resolution', async ({ page }) => {
+    await openJobsTab(page, SIMPLE_TASK_FAILED_INSTANCE_KEY, 'resolveIncidentFailsOnce,definitionRetriesNotEvaluable');
+    const dialog = await openDialogFromMenu(page, SIMPLE_TASK_FAILED_JOB_KEY, /^retry$/i);
+    await dialog.getByRole('radio', { name: /set the retries, then resolve the incident/i }).check();
+    await dialog.getByLabel('Retries left from now on').fill('2');
+    await dialog.getByRole('button', { name: 'Retry' }).click();
+    await expect(dialog.getByTestId('job-retries-saved')).toBeVisible();
+    // Meanwhile somebody else resolves the incident, which keeps the saved
+    // retries, and the job uses them up: a new incident, and the retries of
+    // the task definition apply again.
+    await page.evaluate(
+      async ({ incidentKey, jobKey }) => {
+        await fetch(`/v1/incidents/${incidentKey}/resolve`, { method: 'POST' });
+        await fetch(`/v1/jobs/${jobKey}/fail`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'payment service down again', retries: 0 }),
+        });
+      },
+      { incidentKey: SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY, jobKey: SIMPLE_TASK_FAILED_JOB_KEY }
+    );
+
+    await dialog.getByRole('button', { name: 'Retry' }).click();
+
+    await expect(dialog.getByTestId('job-retries-error')).toContainText('no longer evaluate for this job');
+    // the saved retries are gone, so the dialog offers to set them again
+    await expect(dialog.getByTestId('job-retries-saved')).toHaveCount(0);
+    await expect(dialog.getByRole('radio', { name: /set the retries, then resolve the incident/i })).toBeChecked();
+    await dialog.getByLabel('Retries left from now on').fill('4');
+    await dialog.getByRole('button', { name: 'Retry' }).click();
+
+    await expect(dialog).not.toBeVisible();
+    await expectJobRow(page, SIMPLE_TASK_FAILED_JOB_KEY, { state: 'Active', retries: '4', waiting: false });
+  });
+
+  test('tells why the engine refused to resolve an incident in the Incidents tab and leaves it open', async ({ page }) => {
+    await page.clock.install();
+    const row = await openIncidentRow(page, 'definitionRetriesNotEvaluable');
+
+    const resolve = waitForResolve(page, SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY);
+    await row.getByRole('button', { name: 'Resolve' }).click();
+    await resolve;
+
+    const refusal = page.getByRole('alert').filter({ hasText: 'The incident was not resolved' });
+    await expect(refusal).toContainText(`the retries of job ${SIMPLE_TASK_FAILED_JOB_KEY} no longer evaluate`);
+    await expect(refusal).toContainText('open the job in the Jobs tab and retry it with retries of your own');
+    await expect(refusal).not.toContainText('client call to');
+    await expect(row.getByRole('button', { name: 'Resolve' })).toBeVisible();
+    // the reason is long: it stays well beyond the usual few seconds, and a
+    // click elsewhere does not close it either
+    await page.clock.fastForward(60_000);
+    await page.getByTestId('incidents-tab').click({ position: { x: 5, y: 5 } });
+    // past the exit transition a closing message would still be in
+    await page.clock.runFor(1_000);
+    await expect(refusal).toBeVisible();
+    await refusal.getByRole('button', { name: 'Close' }).click();
+    await expect(refusal).toHaveCount(0);
+  });
+
+  test('tells why an incident is still open after its resolution failed', async ({ page }) => {
+    const row = await openIncidentRow(page, 'resolveIncidentFailsOnce');
+
+    await row.getByRole('button', { name: 'Resolve' }).click();
+
+    const failure = page.getByRole('alert').filter({ hasText: 'The incident is still open' });
+    await expect(failure).toContainText(
+      `failed to resolve incident ${SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY}: failed to complete incident with key`
+    );
+    await expect(row.getByRole('button', { name: 'Resolve' })).toBeVisible();
+  });
+
+  test('stays silent about an error which followed a resolution that succeeded', async ({ page }) => {
+    const row = await openIncidentRow(page, 'resolutionSavedThenInstanceFails');
+
+    const resolve = waitForResolve(page, SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY);
+    await row.getByRole('button', { name: 'Resolve' }).click();
+    await resolve;
+
+    await expect(row).toContainText('Resolved');
+    await expect(row.getByRole('button', { name: 'Resolve' })).toHaveCount(0);
+    await expect(page.getByRole('alert')).toHaveCount(0);
+  });
+
   test('tells that the incident was resolved meanwhile instead of retrying', async ({ page }) => {
     await openJobsTab(page, SIMPLE_TASK_FAILED_INSTANCE_KEY);
     const dialog = await openDialogFromMenu(page, SIMPLE_TASK_FAILED_JOB_KEY, /^retry$/i);
@@ -572,6 +726,13 @@ async function expectJobRow(
   await expect(row.locator('td').filter({ hasText: new RegExp(`^${expected.state}`) })).toHaveCount(1);
   await expect(row.getByTestId('job-retries-cell').locator('p').first()).toHaveText(expected.retries);
   await expect(row.getByTestId('job-retry-at')).toHaveCount(expected.waiting ? 1 : 0);
+}
+
+async function openIncidentRow(page: Page, scenario: string) {
+  await page.goto(`/process-instances/${SIMPLE_TASK_FAILED_INSTANCE_KEY}?tab=incidents&jobRetriesScenario=${scenario}`);
+  const incidents = page.getByTestId('incidents-tab');
+  await expect(incidents).toBeVisible({ timeout: 10000 });
+  return incidents.locator('tbody tr').filter({ hasText: SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY });
 }
 
 function waitForResolve(page: Page, incidentKey: string) {

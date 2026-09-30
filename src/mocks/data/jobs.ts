@@ -49,8 +49,8 @@ export interface MockJob {
   retryBackoff?: string;
   /** Retries of the task definition, restored when an incident of the job is resolved; the engine default is 1. */
   definitionRetries?: number;
-  /** When an operator last set the retries; a resolution keeps them only while this is set. */
-  retriesUpdatedAt?: string;
+  /** Set while the retries are an operator's; a resolution keeps them instead of the definition's. */
+  retriesSetByOperator?: boolean;
   /** Output of the failure which exhausted the retries. */
   outputVariables?: Record<string, unknown>;
 }

@@ -25,7 +25,9 @@
   },
   "messages": {
     "resolved": "Incident resolved successfully",
-    "resolveFailed": "Failed to resolve incident"
+    "resolveFailed": "Failed to resolve incident",
+    "resolveRefused": "The incident was not resolved: {{reason}}. For the incident of a job, open the job in the Jobs tab and retry it with retries of your own.",
+    "resolveFailedWithReason": "The incident is still open. The engine said: {{reason}}"
   },
   "detail": {
     "title": "Incident Details"

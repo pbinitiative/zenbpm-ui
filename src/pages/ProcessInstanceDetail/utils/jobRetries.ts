@@ -36,6 +36,30 @@ export class RetriesSavedButIncidentOpenError extends Error {
   }
 }
 
+/**
+ * Thrown when resolving the incident of a failed job, without setting its
+ * retries first, was refused because the retries of the task definition no
+ * longer evaluate for it. Nothing changed; setting the job's retries is the
+ * way out, as a resolution keeps retries set since the job failed instead of
+ * evaluating the definition's.
+ */
+export class DefinitionRetriesNotEvaluableError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'DefinitionRetriesNotEvaluableError';
+  }
+}
+
+/**
+ * True when the engine refused to resolve an incident as things stand (`409`):
+ * the retries of the task definition no longer evaluate for the job the
+ * resolution would hand out again. Nothing was changed, unlike after other
+ * errors, which may follow a resolution that succeeded and raised a new incident.
+ */
+export function isResolutionRefused(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 409;
+}
+
 /** A whole number from 1 to `max`, or undefined for anything else. */
 export function parsePositiveInteger(value: string, max: number = Number.MAX_SAFE_INTEGER): number | undefined {
   const trimmed = value.trim();
@@ -79,16 +103,50 @@ export function formatDateTimeWithSeconds(dateString: string): string {
 }
 
 /**
+ * The first line the engine puts in front of the reason when a request passed
+ * on to the leader of a partition fails, e.g. `client call to fail job 42
+ * failed`. It names the transport, not what the operator has to change.
+ */
+const TRANSPORT_PREFIX = /^client call to [^\n]* failed\n/;
+
+/**
  * The message of a refused API request. The engine names the exact limit or
  * state in it (for example `jobs.maxRetries`), which a generic text would hide.
+ * The line naming the transport is left out.
  */
 export function apiErrorMessage(error: unknown): string | undefined {
   if (axios.isAxiosError(error)) {
     const data = error.response?.data as { message?: unknown } | undefined;
-    if (typeof data?.message === 'string' && data.message !== '') return data.message;
+    if (typeof data?.message === 'string') {
+      const message = data.message.replace(TRANSPORT_PREFIX, '');
+      if (message !== '') return message;
+    }
   }
   if (error instanceof Error && error.message !== '') return error.message;
   return undefined;
+}
+
+/**
+ * Pages through the unresolved incidents of a process instance until `pick`
+ * chooses one from a page.
+ */
+async function findOpenIncident(
+  processInstanceKey: string,
+  pick: (page: Incident[]) => Incident | undefined
+): Promise<Incident | undefined> {
+  for (let page = 1; ; page++) {
+    const result = await getIncidents(processInstanceKey, {
+      state: GetIncidentsState.unresolved,
+      page,
+      size: INCIDENT_LOOKUP_PAGE_SIZE,
+    });
+    const items = result.items ?? [];
+    const incident = pick(items);
+    if (incident) return incident;
+    if (items.length < INCIDENT_LOOKUP_PAGE_SIZE || page * INCIDENT_LOOKUP_PAGE_SIZE >= (result.totalCount ?? 0)) {
+      return undefined;
+    }
+  }
 }
 
 /**
@@ -96,20 +154,19 @@ export function apiErrorMessage(error: unknown): string | undefined {
  * engine carry the job's key; an incident created before they did is matched
  * by its element instance instead.
  */
-export async function findOpenIncidentOfJob(job: Job): Promise<Incident | undefined> {
-  for (let page = 1; ; page++) {
-    const result = await getIncidents(job.processInstanceKey, {
-      state: GetIncidentsState.unresolved,
-      page,
-      size: INCIDENT_LOOKUP_PAGE_SIZE,
-    });
-    const items = result.items ?? [];
-    const incident =
+export function findOpenIncidentOfJob(job: Job): Promise<Incident | undefined> {
+  return findOpenIncident(
+    job.processInstanceKey,
+    (items) =>
       items.find((candidate) => candidate.jobKey === job.key) ??
-      items.find((candidate) => !candidate.jobKey && candidate.elementInstanceKey === job.elementInstanceKey);
-    if (incident) return incident;
-    if (items.length < INCIDENT_LOOKUP_PAGE_SIZE || page * INCIDENT_LOOKUP_PAGE_SIZE >= (result.totalCount ?? 0)) {
-      return undefined;
-    }
-  }
+      items.find((candidate) => !candidate.jobKey && candidate.elementInstanceKey === job.elementInstanceKey)
+  );
+}
+
+/** True while the incident is unresolved. */
+export async function isIncidentOpen(processInstanceKey: string, incidentKey: string): Promise<boolean> {
+  const incident = await findOpenIncident(processInstanceKey, (items) =>
+    items.find((candidate) => candidate.key === incidentKey)
+  );
+  return incident !== undefined;
 }

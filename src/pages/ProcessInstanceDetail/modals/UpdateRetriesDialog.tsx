@@ -22,6 +22,7 @@ import {
 import type { Job } from '../types';
 import {
   MAX_INT32,
+  DefinitionRetriesNotEvaluableError,
   RetriesSavedButIncidentOpenError,
   apiErrorMessage,
   formatDateTimeWithSeconds,
@@ -86,7 +87,7 @@ export const UpdateRetriesDialog = (props: UpdateRetriesDialogProps) => {
 
   const [retriesSource, setRetriesSource] = useState<RetriesSource>(mode === 'retry' ? 'definition' : 'custom');
   const [retriesInput, setRetriesInput] = useState(String(mode === 'update' ? Math.max(job.retries ?? 1, 1) : 1));
-  const [chosenSchedule, setSchedule] = useState<Schedule>(waitingOutBackoff ? 'keep' : 'now');
+  const [chosenSchedule, setChosenSchedule] = useState<Schedule>(waitingOutBackoff ? 'keep' : 'now');
   const schedule = chosenSchedule === 'keep' && !waitingOutBackoff ? 'now' : chosenSchedule;
   const [delayInput, setDelayInput] = useState('10');
   const [delayUnit, setDelayUnit] = useState<DelayUnit>('minutes');
@@ -146,6 +147,14 @@ export const UpdateRetriesDialog = (props: UpdateRetriesDialogProps) => {
       }
     } catch (err) {
       if (err instanceof RetriesSavedButIncidentOpenError) setSaved(err.saved);
+      // The way out the engine names: retries of the operator's own, which the
+      // resolution keeps instead of evaluating the definition's. Retries this
+      // dialog saved before are gone then, or they would have been kept, so
+      // the dialog offers to set them again.
+      if (err instanceof DefinitionRetriesNotEvaluableError) {
+        setSaved(undefined);
+        setRetriesSource('custom');
+      }
       setError(
         apiErrorMessage(err) ??
           (mode === 'retry'
@@ -253,7 +262,7 @@ export const UpdateRetriesDialog = (props: UpdateRetriesDialogProps) => {
           {setsRetries ? (
             <FormControl>
               <FormLabel>{t('processInstance:dialogs.updateRetries.schedule')}</FormLabel>
-              <RadioGroup value={schedule} onChange={(e) => setSchedule(e.target.value as Schedule)}>
+              <RadioGroup value={schedule} onChange={(e) => setChosenSchedule(e.target.value as Schedule)}>
                 <FormControlLabel
                   value="now"
                   control={<Radio size="small" />}
