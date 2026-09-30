@@ -85,6 +85,21 @@ test.describe('Process Instance History - Duration Column', () => {
     expect(oneHourCells).toHaveLength(1);
   });
 
+  test('should render `1ms` for immediately completed routing elements', async ({ page }) => {
+    const historyTable = page.getByTestId('history-table');
+
+    for (const elementId of [
+      'StartEvent_1',
+      'Gateway_01wr5g0',
+      'Gateway_1dkelqq',
+      'Event_196zxhe',
+    ]) {
+      const routingElementRow = historyTable.locator('tbody tr').filter({ hasText: elementId });
+      await expect(routingElementRow).toHaveCount(1);
+      await expect(routingElementRow.locator('td:nth-child(6)')).toHaveText('1ms');
+    }
+  });
+
   test('should use the compact `<unit><value> <unit><value>...` format', async ({ page }) => {
     // The formatter must use the documented unit suffixes: d, h, m, s, ms.
     // We assert that the Duration column never contains a colon, comma, slash,
@@ -130,10 +145,10 @@ test.describe('Process Instance History - Duration Column (active instance)', ()
     await expect(durationCell).toHaveText('-');
   });
 
-  test('should still render a duration for the completed StartEvent in the active instance', async ({ page }) => {
-    // Even in an active instance, the StartEvent has already completed.
-    // The Duration cell for StartEvent_1 must therefore be a non-empty
-    // duration (typically `1m` based on the mock's addMinutes offset).
+  test('should render `1ms` for an immediately completed StartEvent', async ({ page }) => {
+    // Even in an active instance, the StartEvent has already completed. It is
+    // created and completed at the same timestamp, so its zero duration must
+    // be distinguishable from the `-` used for the still-active task.
     await page.goto(`/process-instances/${instanceKey}`);
     await expect(page.getByText('Instance Details')).toBeVisible({ timeout: 10000 });
     await page.getByRole('tab', { name: /History/i }).click();
@@ -144,9 +159,21 @@ test.describe('Process Instance History - Duration Column (active instance)', ()
     await expect(startRow).toHaveCount(1);
 
     const durationCell = startRow.locator('td:nth-child(6)');
-    const text = (await durationCell.innerText()).trim();
-    expect(text).not.toBe('-');
-    expect(text).not.toBe('');
+    await expect(durationCell).toHaveText('1ms');
+  });
+
+  test('should render `-` for a zero-duration element that is not instantaneous', async ({ page }) => {
+    await page.goto(`/process-instances/${instanceKey}`);
+    await expect(page.getByText('Instance Details')).toBeVisible({ timeout: 10000 });
+    await page.getByRole('tab', { name: /History/i }).click();
+    await expect(page.getByTestId('history-table')).toBeVisible({ timeout: 10000 });
+
+    const historyTable = page.getByTestId('history-table');
+    const eventRow = historyTable.locator('tbody tr').filter({ hasText: 'messageCatchEvent' });
+    await expect(eventRow).toHaveCount(1);
+
+    const durationCell = eventRow.locator('td:nth-child(6)');
+    await expect(durationCell).toHaveText('-');
   });
 });
 

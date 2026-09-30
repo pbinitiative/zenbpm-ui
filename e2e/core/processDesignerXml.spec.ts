@@ -26,7 +26,7 @@ test('preserves XML comments when returning to XML mode without diagram edits', 
   });
 
   await page.getByRole('button', { name: 'Diagram', exact: true }).click();
-  await expect(page.getByTitle('Activate hand tool', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Activate hand tool', exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'XML', exact: true }).click();
   await expect(page.locator('.monaco-editor')).toContainText('Keep this comment when viewing XML');

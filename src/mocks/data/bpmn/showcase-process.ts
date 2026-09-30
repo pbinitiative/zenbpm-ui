@@ -57,14 +57,15 @@ const createInstance = (
   stoppedAt: StoppedAt = 'task-a',
   isHighValue = false // Determines if it goes through task-b (price > 50000)
 ): MockProcessInstance => {
-  const startCompletedAt = addMinutes(createdAt, 1);
+  // Start events complete immediately, so their duration is exactly 0 ms.
+  const startCompletedAt = createdAt;
   const taskACompletedAt = stoppedAt !== 'task-a' ? addMinutes(createdAt, 30) : undefined;
-  const gatewayCompletedAt = taskACompletedAt ? addMinutes(taskACompletedAt, 1) : undefined;
+  const gatewayCompletedAt = taskACompletedAt;
   const taskBCompletedAt = stoppedAt === 'completed' && isHighValue ? addMinutes(gatewayCompletedAt!, 60) : undefined;
   const joinGatewayCompletedAt = stoppedAt === 'completed'
-    ? (isHighValue ? addMinutes(taskBCompletedAt!, 1) : addMinutes(gatewayCompletedAt!, 1))
+    ? (isHighValue ? taskBCompletedAt! : gatewayCompletedAt!)
     : undefined;
-  const endCompletedAt = joinGatewayCompletedAt ? addMinutes(joinGatewayCompletedAt, 1) : undefined;
+  const endCompletedAt = joinGatewayCompletedAt;
 
   // Process-state snapshots downstream elements read from.
   const afterTaskA = { ...variables, baseApproved: true };

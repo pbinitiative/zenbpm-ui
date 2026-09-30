@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import {
   expectAppShell,
   expectDesignerActions,
-  expectVisibleTitles,
+  expectVisibleButtons,
 } from '../supports/appAssertions.ts';
 
 test('process designer shows the BPMN canvas, properties and editor actions', async ({ page }) => {
@@ -20,7 +20,7 @@ test('process designer shows the BPMN canvas, properties and editor actions', as
     await expect(editor.getByText(value, { exact: true })).toBeVisible();
   }
 
-  await expectVisibleTitles(page, [
+  await expectVisibleButtons(page, [
     'Activate hand tool',
     'Activate lasso tool',
     'Activate create/remove space tool',
