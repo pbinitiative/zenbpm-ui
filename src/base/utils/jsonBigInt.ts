@@ -20,6 +20,11 @@ const JSONBigStringify = JSONBigInt({ useNativeBigInt: true });
 
 /**
  * Fields that contain int64 keys and should be serialized as JSON numbers.
+ *
+ * `deliveryToken` is an int64 but no key: a small counter, which responses
+ * carry as a JSON number although the generated type says `string`. It is
+ * listed so that a token sent back as a string reaches the engine as a
+ * number; the engine refuses a string with 400.
  */
 const INT64_KEY_FIELDS = new Set([
   'key',
@@ -31,6 +36,7 @@ const INT64_KEY_FIELDS = new Set([
   'decisionRequirementsKey',
   'jobKey',
   'incidentKey',
+  'deliveryToken',
 ]);
 
 /**

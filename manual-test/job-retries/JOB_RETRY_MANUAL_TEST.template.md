@@ -28,11 +28,13 @@ create fresh instances.
    it**, or you won't see this data.
 
    **A data directory from before the latest engine changes must be deleted.** The job retries
-   migration was changed in place (the column `retries_updated_at` became
-   `retries_set_by_operator`) and is not applied a second time. The engine still starts on such a
-   directory, but every job read answers `500` naming `retries_set_by_operator`, the Jobs tab
-   stays empty, and the seeding script stops with a message saying so. Stop the engine, delete
-   `zenbpm/zen_bpm_node_data`, start the engine and seed again.
+   migration `0017_job_retries` was changed in place several times while the feature was under
+   review, and is not applied a second time. A data directory created by an earlier build lacks
+   columns the engine now reads: most recently `delivery_token` and `failed_delivery_token`, before
+   that `retries_set_by_operator`. The engine still starts on such a directory, but every job read
+   answers `500` ending in `no such column: j.delivery_token` (or another missing column), the Jobs
+   tab stays empty, and the seeding script stops with a message naming the column. Stop the
+   engine, delete `zenbpm/zen_bpm_node_data`, start the engine and seed again.
 2. **No workers.** Make sure no job worker is connected for the `demo-*` job types, or it will
    take the jobs away from the scenarios.
 3. **UI.** Start it in live mode:
@@ -107,7 +109,7 @@ shown in the dialog; the failure history.
 
 **What is tested:** the Fail job outcome note (retry spent, incident, BPMN error, stream lock);
 the new optional `retries`/`retryBackoff` fields and their validation; a fresh failure history
-after a failure; a failure sent from the UI names no `attempt`.
+after a failure; a failure sent from the UI names no `deliveryToken`.
 
 1. Open A2. ⋮ → **Fail job**. The dialog shows:
    - The last failure (yellow box).
@@ -127,9 +129,11 @@ after a failure; a failure sent from the UI names no `attempt`.
    - The toast says `Job failed (demo-charge-card)`.
    - The body of the `POST …/fail` request is
      `{"message":"second failure from the UI","retries":4,"retryBackoff":"PT10M"}`, with **no
-     `attempt`**. The engine records a failure naming an attempt only once, and the job shown in
-     the table may be seconds old: had a worker failed that attempt meanwhile, the operator's
-     failure would be answered as recorded and change nothing. Without `attempt` it always counts.
+     `deliveryToken`**. The engine records one failure per delivery, and the job shown in the
+     table may be seconds old: had a worker failed that delivery meanwhile, the operator's failure
+     would be answered as recorded, and had the job been handed out again, it would be refused
+     with `409`; either way it would change nothing. A2's job was never handed out, so its token
+     is `0`, which the engine refuses with `400`. Without `deliveryToken` it always counts.
    - The row shows retries `4`, `2 FAILED`, and "Retrying at" about 10 minutes from now.
    - ⋮ → **Failure history** immediately shows 2 rows, newest first: `second failure from the UI`,
      "Backoff until …". It is not the stale single row cached from the first opening.

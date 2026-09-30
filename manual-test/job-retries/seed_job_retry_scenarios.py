@@ -77,6 +77,22 @@ def call(method, path, body=None, raw=None, expect=(200, 201, 204)):
     return json.loads(text) if text.strip() else None
 
 
+def wait_until_partition_serves():
+    # An engine started a moment ago answers the jobs read with no partition at all, then with
+    # CLUSTER_ERROR, and only then from its partition; until then a deployment answers 500.
+    deadline = time.time() + 30
+    while True:
+        try:
+            if call("GET", "/jobs?page=1&size=1")["partitions"]:
+                return
+        except RuntimeError as error:
+            if "CLUSTER_ERROR" not in str(error):
+                raise
+        if time.time() > deadline:
+            raise RuntimeError("no partition serves jobs after 30 s")
+        time.sleep(0.5)
+
+
 def deploy(xml):
     # an engine started a moment ago answers before its partition is ready
     deadline = time.time() + 30
@@ -492,14 +508,17 @@ def main():
     out_dir = pathlib.Path(args.out_dir).expanduser().resolve() if args.out_dir else template_path.parent
     out_dir.mkdir(parents=True, exist_ok=True)
     try:
-        call("GET", "/jobs?page=1&size=1")
+        wait_until_partition_serves()
     except (OSError, RuntimeError) as error:
-        if "retries_set_by_operator" in str(error):
-            # the job retries migration was changed in place while the feature was under review
-            sys.exit(f"The engine at {ENGINE} runs on a data directory created before the job retries "
-                     "migration got its column `retries_set_by_operator`, so it cannot read jobs. Stop the "
-                     "engine, delete its data directory (`zen_bpm_node_data`), start it again, then rerun "
-                     "this script.")
+        # The job retries migration was changed in place several times while the feature was under
+        # review and is not applied a second time. Match the SQLite error, not a column name: the
+        # engine's message quotes the whole SELECT, so it names every column, missing or not.
+        missing = re.search(r"no such column: (?:\w+\.)?(\w+)", str(error))
+        if missing:
+            sys.exit(f"The engine at {ENGINE} runs on a data directory created by an earlier build of the "
+                     f"job retries migration, which lacks the column `{missing.group(1)}`, so it cannot read "
+                     "jobs. Stop the engine, delete its data directory (`zen_bpm_node_data`), start it "
+                     "again, then rerun this script.")
         sys.exit(f"The engine at {ENGINE} does not answer ({error}). Start it first.")
     seeded, times = seed()
     ui = args.ui.rstrip("/")

@@ -277,10 +277,12 @@ export const JobsTab = ({
       if (request.retryBackoff !== undefined) {
         body.retryBackoff = request.retryBackoff;
       }
-      // No `attempt`: an operator failing a job means a new failure. The job
-      // shown may be seconds old, and an attempt a worker failed meanwhile
-      // would be answered as recorded, so the operator's failure would change
-      // nothing.
+      // No `deliveryToken`: an operator failing a job means a new failure. The
+      // job shown may be seconds old: had a worker failed that delivery
+      // meanwhile, the failure would be answered as recorded, and had the job
+      // been handed out again, it would be refused with 409. Either way the
+      // operator's failure would change nothing. A job never handed out has
+      // token 0, which the engine refuses with 400.
       await failJob(jobKey, body);
       // A failure without an error code adds to the job's failure history.
       // The history dialog reads afresh on every open anyway; this reaches a
