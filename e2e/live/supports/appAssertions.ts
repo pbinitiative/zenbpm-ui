@@ -119,8 +119,8 @@ export async function expectDesignerActions(page: Page): Promise<void> {
   }
 }
 
-export async function expectVisibleTitles(page: Page, titles: readonly string[]): Promise<void> {
-  for (const title of titles) {
-    await expect(page.getByTitle(title, { exact: true })).toBeVisible();
+export async function expectVisibleButtons(page: Page, names: readonly string[]): Promise<void> {
+  for (const name of names) {
+    await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
   }
 }
