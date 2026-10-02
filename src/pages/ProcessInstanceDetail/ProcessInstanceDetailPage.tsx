@@ -275,9 +275,6 @@ export const ProcessInstanceDetailPage = () => {
     variablesPageSize,
     setVariablesPage,
     setVariablesPageSize,
-    historySortBy,
-    historySortOrder,
-    setHistorySort,
     messageSubscriptionsPage,
     messageSubscriptionsPageSize,
     messageSubscriptionsState,
@@ -833,9 +830,6 @@ export const ProcessInstanceDetailPage = () => {
           <TabPanel value={activeTab} index={1}>
             <HistoryTab
               instanceTree={instanceTree}
-              historySortBy={historySortBy}
-              historySortOrder={historySortOrder}
-              onSortChange={setHistorySort}
               onElementIdClick={handleElementIdClick}
               onNavigateToJobs={(key) => handleFocusNavigation('jobs', key)}
               onNavigateToEvents={handleEventFocusNavigation}

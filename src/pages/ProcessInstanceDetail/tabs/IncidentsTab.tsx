@@ -12,15 +12,13 @@ import { resolveIncident } from '@base/openapi';
 import type { GetIncidentsState } from '@base/openapi/generated-api/schemas/getIncidentsState';
 import type { NotificationOptions } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
-import { apiErrorMessage, isIncidentOpen, isResolutionRefused } from '../utils';
-
-// processType display order — determines section ordering after the main instance
-const PROCESS_TYPE_ORDER: Record<string, number> = {
-  default: 0,
-  callActivity: 1,
-  subprocess: 2,
-  multiInstance: 3,
-};
+import {
+  apiErrorMessage,
+  collectNodes,
+  compareByProcessType,
+  isIncidentOpen,
+  isResolutionRefused,
+} from '../utils';
 
 export type IncidentsTabState = GetIncidentsState | 'all';
 
@@ -38,19 +36,6 @@ interface IncidentsTabProps {
   onElementIdClick?: (elementId: string) => void;
   /** Opens the Jobs tab focused on the element instance whose job raised an incident. */
   onNavigateToJob?: (elementInstanceKey: string) => void;
-}
-
-/** BFS walk — returns all nodes, root first */
-function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
-  const result: ProcessInstanceNode[] = [];
-  const queue: ProcessInstanceNode[] = [root];
-  while (queue.length > 0) {
-    const node = queue.shift();
-    if (node === undefined) continue;
-    result.push(node);
-    queue.push(...node.children);
-  }
-  return result;
 }
 
 export const IncidentsTab = ({
@@ -154,14 +139,7 @@ export const IncidentsTab = ({
 
     const nodes = collectNodes(instanceTree);
     const rootNode = nodes[0];
-    const childNodes = nodes.slice(1).sort((a, b) => {
-      const typeA = a.instance.processType ?? '';
-      const typeB = b.instance.processType ?? '';
-      const orderA = PROCESS_TYPE_ORDER[typeA] ?? 99;
-      const orderB = PROCESS_TYPE_ORDER[typeB] ?? 99;
-      if (orderA !== orderB) return orderA - orderB;
-      return a.instance.key.localeCompare(b.instance.key);
-    });
+    const childNodes = nodes.slice(1).sort(compareByProcessType);
     const orderedNodes = [rootNode, ...childNodes];
 
     const hasChildWithIncidents = childNodes.some(

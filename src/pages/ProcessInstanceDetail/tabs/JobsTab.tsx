@@ -50,6 +50,8 @@ import {
   DefinitionRetriesNotEvaluableError,
   RetriesSavedButIncidentOpenError,
   apiErrorMessage,
+  collectNodes,
+  compareByProcessType,
   findOpenIncidentOfJob,
   formatDateTimeWithSeconds,
   isIncidentOpen,
@@ -58,14 +60,6 @@ import {
   type JobRetriesRequest,
   type UpdateJobRetriesRequest,
 } from '../utils';
-
-// processType display order — determines section ordering after the main instance
-const PROCESS_TYPE_ORDER: Record<string, number> = {
-  default: 0,
-  callActivity: 1,
-  subprocess: 2,
-  multiInstance: 3,
-};
 
 interface JobsTabProps {
   instanceTree: ProcessInstanceNode | null;
@@ -87,19 +81,6 @@ interface JobsTabProps {
   autoScrollToFocusedRow?: boolean;
   onFocusedRowVisible?: () => void;
   findingFocusedJob?: boolean;
-}
-
-/** Walk the tree BFS and collect all nodes (root first) */
-function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
-  const result: ProcessInstanceNode[] = [];
-  const queue: ProcessInstanceNode[] = [root];
-  while (queue.length > 0) {
-    const node = queue.shift();
-    if (node === undefined) continue;
-    result.push(node);
-    queue.push(...node.children);
-  }
-  return result;
 }
 
 export const JobsTab = ({
@@ -482,12 +463,7 @@ export const JobsTab = ({
 
     const nodes = collectNodes(instanceTree);
     const rootNode = nodes[0];
-    const childNodes = nodes.slice(1).sort((a, b) => {
-      const orderA = PROCESS_TYPE_ORDER[a.instance.processType ?? ''] ?? 99;
-      const orderB = PROCESS_TYPE_ORDER[b.instance.processType ?? ''] ?? 99;
-      if (orderA !== orderB) return orderA - orderB;
-      return a.instance.key.localeCompare(b.instance.key);
-    });
+    const childNodes = nodes.slice(1).sort(compareByProcessType);
     const orderedNodes = [rootNode, ...childNodes];
 
     const hasChildWithJobs = childNodes.some((n) => n.jobs.length > 0 || n.jobsTotalCount > 0);

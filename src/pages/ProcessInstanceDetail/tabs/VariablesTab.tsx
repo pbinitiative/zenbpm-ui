@@ -18,6 +18,7 @@ import { useEditVariableDialog } from '../modals/useEditVariableDialog';
 import { updateProcessInstanceVariables, deleteProcessInstanceVariable } from '@base/openapi';
 import { useConfirmDialog } from '@components/ConfirmDialog';
 import type { ProcessInstanceNode } from '../types/tree';
+import { collectNodes, compareByProcessType } from '../utils';
 
 // Helper to safely stringify any value for display
 const stringify = (val: unknown): string => {
@@ -28,14 +29,6 @@ const stringify = (val: unknown): string => {
   if (typeof val === 'symbol') return val.toString();
   if (typeof val === 'function') return '[Function]';
   return '';
-};
-
-// processType display order — determines section ordering after the main instance
-const PROCESS_TYPE_ORDER: Record<string, number> = {
-  default: 0,
-  callActivity: 1,
-  subprocess: 2,
-  multiInstance: 3,
 };
 
 interface Variable {
@@ -62,19 +55,6 @@ interface VariablesTabProps {
 
 // Translation function type - avoids strict i18n namespace key inference in inline renders
 type T = (key: string, opts?: Record<string, unknown>) => string;
-
-/** BFS walk — returns all nodes, root first */
-function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
-  const result: ProcessInstanceNode[] = [];
-  const queue: ProcessInstanceNode[] = [root];
-  while (queue.length > 0) {
-    const node = queue.shift();
-    if (node === undefined) continue;
-    result.push(node);
-    queue.push(...node.children);
-  }
-  return result;
-}
 
 export const VariablesTab = ({
   instanceTree,
@@ -119,12 +99,7 @@ export const VariablesTab = ({
 
     const nodes = collectNodes(instanceTree);
     const rootNode = nodes[0];
-    const childNodes = nodes.slice(1).sort((a, b) => {
-      const orderA = PROCESS_TYPE_ORDER[a.instance.processType ?? ''] ?? 99;
-      const orderB = PROCESS_TYPE_ORDER[b.instance.processType ?? ''] ?? 99;
-      if (orderA !== orderB) return orderA - orderB;
-      return a.instance.key.localeCompare(b.instance.key);
-    });
+    const childNodes = nodes.slice(1).sort(compareByProcessType);
 
     const displaySubProcessVariablesAsReadOnly =
       import.meta.env.VITE_DISPLAY_SUBPROCESS_VARIABLES_AS_READONLY === 'true';

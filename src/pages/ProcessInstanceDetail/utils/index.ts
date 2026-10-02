@@ -13,3 +13,4 @@ export {
   type JobRetriesRequest,
   type UpdateJobRetriesRequest,
 } from './jobRetries';
+export { collectNodes, compareByProcessType } from './instanceTree';

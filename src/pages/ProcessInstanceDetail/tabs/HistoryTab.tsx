@@ -10,7 +10,6 @@ import {
   FormControlLabel,
   Menu,
   MenuItem,
-  Typography,
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
@@ -24,26 +23,14 @@ import {
 import { StateBadge } from '@components/StateBadge';
 import type { FlowElementHistory } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
+import { collectNodes, compareByProcessType } from '../utils';
 import { formatDate, formatDuration } from '@/components/DiagramDetailLayout/utils';
 import { useInputOutputDialog } from '@components/InputOutputDialog';
 import { VariablesBadgeCell } from '../components/VariablesBadgeCell';
-import type { GetHistorySortBy } from '@base/openapi/generated-api/schemas/getHistorySortBy';
-import type { GetHistorySortOrder } from '@base/openapi/generated-api/schemas/getHistorySortOrder';
 import { MonoText } from '@/components/MonoText';
-
-// processType display order — determines section ordering after the main instance
-const PROCESS_TYPE_ORDER: Record<string, number> = {
-  default: 0,
-  callActivity: 1,
-  subprocess: 2,
-  multiInstance: 3,
-};
 
 interface HistoryTabProps {
   instanceTree: ProcessInstanceNode | null;
-  historySortBy: GetHistorySortBy;
-  historySortOrder: GetHistorySortOrder;
-  onSortChange: (sortBy: GetHistorySortBy, sortOrder: GetHistorySortOrder) => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
   onElementIdClick?: (elementId: string) => void;
   onNavigateToJobs?: (elementInstanceKey: string) => void;
@@ -77,19 +64,6 @@ const canLinkToJob = (row: FlowElementHistory) =>
   JOB_ELEMENT_TYPES.has(normalizeElementType(row.elementType));
 const canLinkToEvent = (row: FlowElementHistory) =>
   EVENT_ELEMENT_TYPES.has(normalizeElementType(row.elementType));
-
-/** BFS walk — returns all nodes, root first */
-function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
-  const result: ProcessInstanceNode[] = [];
-  const queue: ProcessInstanceNode[] = [root];
-  while (queue.length > 0) {
-    const node = queue.shift();
-    if (node === undefined) continue;
-    result.push(node);
-    queue.push(...node.children);
-  }
-  return result;
-}
 
 export const HistoryTab = ({
   instanceTree,
@@ -135,14 +109,7 @@ export const HistoryTab = ({
 
     const nodes = collectNodes(instanceTree);
     const rootNode = nodes[0];
-    const childNodes = nodes.slice(1).sort((a, b) => {
-      const typeA = a.instance.processType ?? '';
-      const typeB = b.instance.processType ?? '';
-      const orderA = PROCESS_TYPE_ORDER[typeA] ?? 99;
-      const orderB = PROCESS_TYPE_ORDER[typeB] ?? 99;
-      if (orderA !== orderB) return orderA - orderB;
-      return a.instance.key.localeCompare(b.instance.key);
-    });
+    const childNodes = nodes.slice(1).sort(compareByProcessType);
 
     const hasChildWithHistory = childNodes.some((n) => n.history.length > 0);
 
