@@ -34,8 +34,6 @@ export interface Job extends Omit<ApiJob, 'state'> {
   candidateGroups?: string[];
   /** When the job was completed */
   completedAt?: string;
-  /** Error message if job failed */
-  errorMessage?: string;
   /** Input variables provided to the job at creation/activation time */
   inputVariables: Record<string, unknown>;
   /** Output variables set on job completion or failure */
@@ -67,6 +65,12 @@ export interface Variable {
   name: string;
   value: unknown;
   scope?: 'process' | 'local';
+}
+
+/** How a notification of the process instance page is shown. */
+export interface NotificationOptions {
+  /** Keep the message until the operator closes it, for a reason they have to read and act on. */
+  persist?: boolean;
 }
 
 // Tree types

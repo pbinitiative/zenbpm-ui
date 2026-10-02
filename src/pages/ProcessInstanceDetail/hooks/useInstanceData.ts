@@ -9,6 +9,7 @@ import { transformStatisticsToElementStatistics } from '@components/BpmnDiagram'
 import type { ElementStatistics } from '@components/BpmnDiagram';
 import type { ProcessDefinition, ProcessInstance } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
+import { collectNodes } from '../utils';
 import {
   fetchInstanceTree,
   refetchNodeJobs as doRefetchNodeJobs,
@@ -142,19 +143,6 @@ export interface UseInstanceDataResult {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** BFS-collect all nodes from a tree */
-function collectAllNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
-  const result: ProcessInstanceNode[] = [];
-  const queue: ProcessInstanceNode[] = [root];
-  while (queue.length > 0) {
-    const node = queue.shift();
-    if (node === undefined) continue;
-    result.push(node);
-    queue.push(...node.children);
-  }
-  return result;
-}
-
 /**
  * Project direct incidents from called processes onto the elements that lead
  * to them in the currently displayed parent diagram. Child list responses
@@ -166,7 +154,7 @@ function projectCalledProcessIncidents(
   if (!root) return undefined;
 
   const projected: ElementStatistics = {};
-  for (const node of collectAllNodes(root)) {
+  for (const node of collectNodes(root)) {
     if (node.isRoot || node.instance.processType !== 'callActivity') continue;
 
     const incidentCount = node.instance.incidentCount ?? 0;
@@ -278,6 +266,8 @@ export const useInstanceData = (
   // before the first finishes, doubling the load and causing state flicker.
   const activeFetchRef = useRef<{ id: number; processInstanceKey: string } | null>(null);
   const nextFetchIdRef = useRef(0);
+  // Settles when the running fetch ends, so that `refetchAll` can wait for it.
+  const activeFetchDoneRef = useRef<Promise<void>>(Promise.resolve());
   // Monotonic generation counter for fetchSubprocessStats invocations — distinguishes same-instance re-fetches (which the processInstanceKey check can't).
   const subprocessStatsFetchIdRef = useRef(0);
 
@@ -297,7 +287,7 @@ export const useInstanceData = (
         subprocessStatsFetchIdRef.current !== generation ||
         processInstanceKeyRef.current !== instanceKey;
 
-      const subprocessNodes = collectAllNodes(root).filter(
+      const subprocessNodes = collectNodes(root).filter(
         (n) => !n.isRoot && n.instance.processType === 'subprocess',
       );
 
@@ -341,13 +331,25 @@ export const useInstanceData = (
   // ── Core fetch: build / rebuild the whole tree ────────────────────────────
   const fetchAll = useCallback(async () => {
     if (!processInstanceKey) return;
+    // A callback of an instance the user navigated away from, such as the
+    // refetch after a job action whose answer arrived late, must not start:
+    // it would take the running fetch of the current instance over and show
+    // the previous instance's tree in its place.
+    if (processInstanceKeyRef.current !== processInstanceKey) return;
     if (activeFetchRef.current?.processInstanceKey === processInstanceKey) return;
 
     const fetchId = nextFetchIdRef.current + 1;
     nextFetchIdRef.current = fetchId;
     activeFetchRef.current = { id: fetchId, processInstanceKey };
+    let markDone = () => {};
+    activeFetchDoneRef.current = new Promise<void>((resolve) => {
+      markDone = resolve;
+    });
 
-    const isCurrentFetch = () => activeFetchRef.current?.id === fetchId;
+    const holdsFetchSlot = () => activeFetchRef.current?.id === fetchId;
+    // A fetch which started before a navigation is no longer current once the
+    // key changed, even before the new instance's own fetch takes over.
+    const isCurrentFetch = () => holdsFetchSlot() && processInstanceKeyRef.current === processInstanceKey;
 
     try {
       const rootInstance = (await getProcessInstance(processInstanceKey)) as unknown as ProcessInstance;
@@ -379,7 +381,7 @@ export const useInstanceData = (
       // Build terminal-node cache to skip re-fetching immutable data on refresh.
       const terminalNodeCache = new Map<string, ProcessInstanceNode>();
       if (instanceTreeRef.current) {
-        for (const node of collectAllNodes(instanceTreeRef.current)) {
+        for (const node of collectNodes(instanceTreeRef.current)) {
           if (TERMINAL_STATES.includes(node.instance.state)) {
             terminalNodeCache.set(node.instance.key, node);
           }
@@ -427,15 +429,35 @@ export const useInstanceData = (
         setError(err instanceof Error ? err.message : 'Failed to load process instance');
       }
     } finally {
-      if (isCurrentFetch()) {
+      // released whatever the key is now: a slot kept after a navigation would
+      // refuse every later fetch of this instance and spin `refetchAll`
+      if (holdsFetchSlot()) {
         activeFetchRef.current = null;
       }
+      markDone();
     }
     // The pagination/history/tree/onHistoryPartial refs read inside this callback are
     // all stable (created via useLatestRef). Tracking each one in the deps array would
     // be runtime-identical but visually noisy; suppress the rule instead.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [processInstanceKey, fetchSubprocessStats]);
+
+  // Refetch after a change the caller made, typically a job action. A fetch
+  // already running may have read the state before that change, and
+  // `fetchAll` would drop the request while it runs: wait for such a fetch,
+  // then fetch again unless one started after the request meanwhile.
+  const refetchAll = useCallback(async () => {
+    if (!processInstanceKey) return;
+    const lastFetchBeforeRequest = nextFetchIdRef.current;
+    for (;;) {
+      const active = activeFetchRef.current;
+      if (active?.processInstanceKey !== processInstanceKey) break;
+      await activeFetchDoneRef.current;
+      if (active.id > lastFetchBeforeRequest) return;
+    }
+    if (nextFetchIdRef.current > lastFetchBeforeRequest) return;
+    await fetchAll();
+  }, [processInstanceKey, fetchAll]);
 
   // ── Initial data fetch ────────────────────────────────────────────────────
   useEffect(() => {
@@ -583,7 +605,7 @@ export const useInstanceData = (
     if (!initialLoadDoneRef.current) return;
     const tree = instanceTreeRef.current;
     if (!tree) return;
-    const nodes = collectAllNodes(tree);
+    const nodes = collectNodes(tree);
     void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeJobs(node, jobsPage + 1, jobsPageSize))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
     // instanceTreeRef is a stable ref (created via useLatestRef).
@@ -593,7 +615,7 @@ export const useInstanceData = (
     if (!initialLoadDoneRef.current) return;
     const tree = instanceTreeRef.current;
     if (!tree) return;
-    const nodes = collectAllNodes(tree);
+    const nodes = collectNodes(tree);
     void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeIncidents(node, incidentsPage + 1, incidentsPageSize, incidentsState === 'all' ? undefined : incidentsState))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
     // instanceTreeRef is a stable ref (created via useLatestRef).
@@ -603,7 +625,7 @@ export const useInstanceData = (
     if (!initialLoadDoneRef.current) return;
     const tree = instanceTreeRef.current;
     if (!tree) return;
-    const nodes = collectAllNodes(tree);
+    const nodes = collectNodes(tree);
     void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeDecisions(node, decisionsPage + 1, decisionsPageSize))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
     // instanceTreeRef is a stable ref (created via useLatestRef).
@@ -613,7 +635,7 @@ export const useInstanceData = (
     if (!initialLoadDoneRef.current) return;
     const tree = instanceTreeRef.current;
     if (!tree) return;
-    const nodes = collectAllNodes(tree);
+    const nodes = collectNodes(tree);
     nodes.forEach((node) => doRefetchNodeVariables(node, variablesPage + 1, variablesPageSize));
     setInstanceTree((prev) => (prev ? { ...prev } : prev));
     // instanceTreeRef is a stable ref (created via useLatestRef).
@@ -628,7 +650,7 @@ export const useInstanceData = (
     if (!initialLoadDoneRef.current) return;
     const tree = instanceTreeRef.current;
     if (!tree) return;
-    const nodes = collectAllNodes(tree);
+    const nodes = collectNodes(tree);
     // Capture the current generation. Cleanup runs before the next effect
     // and bumps the ref, so any in-flight request whose response arrives
     // later can compare against `historySortGenerationRef.current` and
@@ -683,7 +705,7 @@ export const useInstanceData = (
     if (!initialLoadDoneRef.current) return;
     const tree = instanceTreeRef.current;
     if (!tree) return;
-    const nodes = collectAllNodes(tree);
+    const nodes = collectNodes(tree);
     void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeMessageSubscriptions(node, messageSubscriptionsPage + 1, messageSubscriptionsPageSize, toEventSubscriptionApiState(messageSubscriptionsState)))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)))
       .catch((err: unknown) => console.error('Failed to paginate message subscriptions:', err));
@@ -694,7 +716,7 @@ export const useInstanceData = (
     if (!initialLoadDoneRef.current) return;
     const tree = instanceTreeRef.current;
     if (!tree) return;
-    const nodes = collectAllNodes(tree);
+    const nodes = collectNodes(tree);
     void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeTimerSubscriptions(node, timerSubscriptionsPage + 1, timerSubscriptionsPageSize, toEventSubscriptionApiState(timerSubscriptionsState)))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)))
       .catch((err: unknown) => console.error('Failed to paginate timer subscriptions:', err));
@@ -705,7 +727,7 @@ export const useInstanceData = (
     if (!initialLoadDoneRef.current) return;
     const tree = instanceTreeRef.current;
     if (!tree) return;
-    const nodes = collectAllNodes(tree);
+    const nodes = collectNodes(tree);
     void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeErrorSubscriptions(node, errorSubscriptionsPage + 1, errorSubscriptionsPageSize, toEventSubscriptionApiState(errorSubscriptionsState)))
       .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)))
       .catch((err: unknown) => console.error('Failed to paginate error subscriptions:', err));
@@ -718,7 +740,7 @@ export const useInstanceData = (
   // counter with completed/terminated subscriptions.
   const activeEventSubscriptionsCount = useMemo(() => {
     if (!instanceTree) return 0;
-    return collectAllNodes(instanceTree).reduce(
+    return collectNodes(instanceTree).reduce(
       (total, node) =>
         total +
         node.activeMessageSubscriptionsTotalCount +
@@ -788,6 +810,6 @@ export const useInstanceData = (
 
     activeEventSubscriptionsCount,
 
-    refetchAll: fetchAll,
+    refetchAll,
   };
 };

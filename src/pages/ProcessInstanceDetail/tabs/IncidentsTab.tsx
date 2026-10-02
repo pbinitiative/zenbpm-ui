@@ -10,15 +10,15 @@ import { getIncidentColumns } from '@components/IncidentsTable/table/columns';
 import type { Incident } from '@components/IncidentsTable';
 import { resolveIncident } from '@base/openapi';
 import type { GetIncidentsState } from '@base/openapi/generated-api/schemas/getIncidentsState';
+import type { NotificationOptions } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
-
-// processType display order — determines section ordering after the main instance
-const PROCESS_TYPE_ORDER: Record<string, number> = {
-  default: 0,
-  callActivity: 1,
-  subprocess: 2,
-  multiInstance: 3,
-};
+import {
+  apiErrorMessage,
+  collectNodes,
+  compareByProcessType,
+  isIncidentOpen,
+  isResolutionRefused,
+} from '../utils';
 
 export type IncidentsTabState = GetIncidentsState | 'all';
 
@@ -31,22 +31,15 @@ interface IncidentsTabProps {
   setIncidentsPageSize: (size: number) => void;
   setIncidentsState: (state: IncidentsTabState) => void;
   onRefetch?: () => Promise<void>;
-  onShowNotification?: (message: string, severity: 'success' | 'error') => void;
+  onShowNotification?: (
+    message: string,
+    severity: 'success' | 'error' | 'warning',
+    options?: NotificationOptions
+  ) => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
   onElementIdClick?: (elementId: string) => void;
-}
-
-/** BFS walk — returns all nodes, root first */
-function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
-  const result: ProcessInstanceNode[] = [];
-  const queue: ProcessInstanceNode[] = [root];
-  while (queue.length > 0) {
-    const node = queue.shift();
-    if (node === undefined) continue;
-    result.push(node);
-    queue.push(...node.children);
-  }
-  return result;
+  /** Opens the Jobs tab focused on the element instance whose job raised an incident. */
+  onNavigateToJob?: (elementInstanceKey: string) => void;
 }
 
 export const IncidentsTab = ({
@@ -60,22 +53,69 @@ export const IncidentsTab = ({
   onRefetch,
   onShowNotification,
   onElementIdClick,
+  onNavigateToJob,
 }: IncidentsTabProps) => {
   const { t } = useTranslation([ns.common, ns.incidents, ns.processes, ns.processInstance]);
 
   const { openIncidentDetail } = useIncidentDetailModal();
   const { openStackTrace } = useStackTraceModal();
 
+  // The process instance of every incident shown: incidents are read by instance.
+  const processInstanceKeyOfIncident = useMemo(() => {
+    const keys = new Map<string, string>();
+    if (!instanceTree) return keys;
+    for (const node of collectNodes(instanceTree)) {
+      for (const incident of node.incidents) keys.set(incident.key, incident.processInstanceKey);
+    }
+    return keys;
+  }, [instanceTree]);
+
+  // The reason of an error stays until it is closed: it is long, and names
+  // what the operator has to change before resolving again.
   const handleResolveIncident = useCallback(async (incidentKey: string) => {
     try {
       await resolveIncident(incidentKey);
       onShowNotification?.(t('incidents:messages.resolved'), 'success');
-    } catch {
-      // Silently continue — resolve may have succeeded with a new incident created
+    } catch (err) {
+      const reason = apiErrorMessage(err) ?? t('incidents:messages.resolveFailed');
+      if (isResolutionRefused(err)) {
+        // A refusal changed nothing. Either somebody else resolved the
+        // incident meanwhile, which is what the operator wanted, or the
+        // operator has to act on its reason.
+        const state = await incidentStateAfterFailedResolution(processInstanceKeyOfIncident.get(incidentKey), incidentKey);
+        if (state === 'resolved') {
+          onShowNotification?.(t('incidents:messages.alreadyResolved'), 'success');
+          return;
+        }
+        onShowNotification?.(t('incidents:messages.resolveRefused', { reason }), 'error', { persist: true });
+        return;
+      }
+      // Any other error may follow a resolution which succeeded and then
+      // raised a new incident, which the refetch shows. An incident still
+      // open was not resolved at all. When the check fails too, as in an
+      // outage, nothing tells the two apart, so the operator hears that.
+      const state = await incidentStateAfterFailedResolution(processInstanceKeyOfIncident.get(incidentKey), incidentKey);
+      if (state === 'open') {
+        onShowNotification?.(t('incidents:messages.resolveFailedWithReason', { reason }), 'error', { persist: true });
+      } else if (state === 'unknown') {
+        onShowNotification?.(t('incidents:messages.resolveOutcomeUnknown', { reason }), 'error', { persist: true });
+      }
     } finally {
       await onRefetch?.();
     }
-  }, [t, onShowNotification, onRefetch]);
+  }, [t, onShowNotification, onRefetch, processInstanceKeyOfIncident]);
+
+  // The job of an incident shares its element instance: the engine raises a
+  // job's incident on the job's own token. Only incidents carrying a `jobKey`
+  // were raised by a job, so only they link to one.
+  const handleViewJob = useMemo(
+    () => onNavigateToJob
+      ? (incident: Incident) => {
+          if (incident.jobKey) onNavigateToJob(incident.elementInstanceKey);
+        }
+      : undefined,
+    [onNavigateToJob]
+  );
 
   const handleViewDetails = useCallback((incident: Incident) => {
     openIncidentDetail({
@@ -83,8 +123,9 @@ export const IncidentsTab = ({
       onResolve: incident.resolvedAt ? undefined : (incidentKey) => {
         void handleResolveIncident(incidentKey);
       },
+      onViewJob: handleViewJob,
     });
-  }, [openIncidentDetail, handleResolveIncident]);
+  }, [openIncidentDetail, handleResolveIncident, handleViewJob]);
 
   const handleMessageClick = useCallback((message: string) => {
     openStackTrace({ message });
@@ -97,8 +138,9 @@ export const IncidentsTab = ({
         onResolve: (incidentKey) => void handleResolveIncident(incidentKey),
         onMessageClick: handleMessageClick,
         onElementIdClick,
+        onViewJob: handleViewJob,
       }),
-    [t, handleViewDetails, handleResolveIncident, handleMessageClick, onElementIdClick]
+    [t, handleViewDetails, handleResolveIncident, handleMessageClick, onElementIdClick, handleViewJob]
   );
 
   // Build sections from the server-fetched data — no client-side slicing or filtering.
@@ -108,14 +150,7 @@ export const IncidentsTab = ({
 
     const nodes = collectNodes(instanceTree);
     const rootNode = nodes[0];
-    const childNodes = nodes.slice(1).sort((a, b) => {
-      const typeA = a.instance.processType ?? '';
-      const typeB = b.instance.processType ?? '';
-      const orderA = PROCESS_TYPE_ORDER[typeA] ?? 99;
-      const orderB = PROCESS_TYPE_ORDER[typeB] ?? 99;
-      if (orderA !== orderB) return orderA - orderB;
-      return a.instance.key.localeCompare(b.instance.key);
-    });
+    const childNodes = nodes.slice(1).sort(compareByProcessType);
     const orderedNodes = [rootNode, ...childNodes];
 
     const hasChildWithIncidents = childNodes.some(
@@ -213,3 +248,19 @@ export const IncidentsTab = ({
     </Box>
   );
 };
+
+/**
+ * Whether the incident is still unresolved after its resolution failed:
+ * `unknown` when the incident's instance is not known or the check fails.
+ */
+async function incidentStateAfterFailedResolution(
+  processInstanceKey: string | undefined,
+  incidentKey: string
+): Promise<'open' | 'resolved' | 'unknown'> {
+  if (processInstanceKey === undefined) return 'unknown';
+  try {
+    return (await isIncidentOpen(processInstanceKey, incidentKey)) ? 'open' : 'resolved';
+  } catch {
+    return 'unknown';
+  }
+}

@@ -98,12 +98,12 @@ export const CompleteJobDialog = ({
             height={180}
           />
 
-          {job.errorMessage && (
-            <Alert severity="error" sx={{ mt: 2 }}>
+          {job.lastFailureMessage && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
               <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                {t('processInstance:fields.errorMessage')}
+                {t('processInstance:fields.lastFailureMessage')}
               </Typography>
-              <Typography variant="body2">{job.errorMessage}</Typography>
+              <Typography variant="body2">{job.lastFailureMessage}</Typography>
             </Alert>
           )}
         </Box>

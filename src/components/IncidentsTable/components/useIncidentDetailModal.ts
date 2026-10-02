@@ -18,6 +18,12 @@ export function useIncidentDetailModal() {
           props.onResolve?.(incidentKey);
           closeModal();
         },
+        onViewJob: props.onViewJob
+          ? (incident) => {
+              props.onViewJob?.(incident);
+              closeModal();
+            }
+          : undefined,
       });
     },
     [openModal, closeModal]

@@ -40,7 +40,30 @@ export interface MockJob {
   dueDate?: string;
   followUpDate?: string;
   retries?: number;
-  errorMessage?: string;
+  /** Failures without an error code since the job was created or its last incident was resolved. */
+  attempts?: number;
+  /** Before this moment an active job waits out a retry backoff. */
+  retryAt?: string;
+  lastFailureMessage?: string;
+  /** Backoff policy of the task definition, e.g. `PT10S,PT1M`. */
+  retryBackoff?: string;
+  /** Retries of the task definition, restored when an incident of the job is resolved; the engine default is 1. */
+  definitionRetries?: number;
+  /** Set while the retries are an operator's; a resolution keeps them instead of the definition's. */
+  retriesSetByOperator?: boolean;
+  /** Output of the failure which exhausted the retries. */
+  outputVariables?: Record<string, unknown>;
+}
+
+export interface MockJobFailure {
+  key: string;
+  jobKey: string;
+  processInstanceKey: string;
+  attempt: number;
+  failedAt: string;
+  retryAt?: string;
+  message: string;
+  incidentKey?: string;
 }
 
 // Helper to generate dates
@@ -154,8 +177,8 @@ const legacyJobs: MockJob[] = [
       customerId: 'NEW-001',
       customerName: 'Tech Corp Inc.',
     },
+    // Failed before the engine recorded attempts; its instance is not part of the mocks.
     retries: 0,
-    errorMessage: 'Failed to connect to external CRM system: Connection timeout after 30s. The remote server at crm.example.com:443 is not responding.',
   },
 
   // Order Processing jobs
@@ -207,6 +230,27 @@ export const jobs: MockJob[] = [
   ...(userTasksWithAssignments.jobs as MockJob[]),
   ...(userTaskClassificationTree.jobs as MockJob[]),
 ];
+
+// Failures without an error code reported for the jobs above, newest first per job
+export const jobFailures: MockJobFailure[] = [
+  ...(simpleTask.jobFailures as MockJobFailure[]),
+  ...(showcaseProcess.jobFailures as MockJobFailure[]),
+];
+
+// Helper to get the failures of a job, newest first. The engine orders by
+// `failed_at DESC, key DESC`; the attempt restarts with every series, so it
+// does not order failures across series.
+export const getJobFailuresByJobKey = (jobKey: string): MockJobFailure[] => {
+  return jobFailures
+    .filter((failure) => failure.jobKey === jobKey)
+    .sort((a, b) => {
+      const byTime = Date.parse(b.failedAt) - Date.parse(a.failedAt);
+      if (byTime !== 0) return byTime;
+      const aKey = BigInt(a.key);
+      const bKey = BigInt(b.key);
+      return aKey === bKey ? 0 : aKey < bKey ? 1 : -1;
+    });
+};
 
 // Helper to get jobs by process instance key
 export const getJobsByProcessInstanceKey = (processInstanceKey: string): MockJob[] => {
