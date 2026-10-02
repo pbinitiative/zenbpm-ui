@@ -429,7 +429,7 @@ def seed():
     # H: a failed job whose retries are a FEEL expression which no longer evaluates: the
     # variable it reads was a number when the job was created and is a text now, so the
     # engine refuses to resolve the incident (409) until the variable is corrected or the
-    # job's retries are set.
+    # resolution gives the job retries of its own.
     for scenario_id, purpose in (("H1", "refused resolution, retry dialog"), ("H2", "refused resolution, incidents tab")):
         instance = start(retries_expression, {"scenario": f"{scenario_id} {purpose}", "attemptsAllowed": 0})
         fail_until_incident(instance, "charge-card", 1, "Card service answered 503")

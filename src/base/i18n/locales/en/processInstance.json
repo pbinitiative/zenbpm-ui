@@ -129,9 +129,10 @@
     "historyExtremelyLarge": "History is extremely large: displaying {{loaded}} of {{total}} entries. Some data may be missing.",
     "historyExtremelyLargeMultiple": "History is extremely large across {{instances}} process instances: displaying {{loaded}} of {{total}} entries in total. Some data may be missing.",
     "jobIncidentNotFound": "The job has no open incident. It may have been resolved meanwhile.",
-    "retriesSetButResolveFailed": "The retries were set, but resolving the incident failed: {{reason}}. Resolve it in the Incidents tab to hand the job back to its workers.",
     "jobRetriedAt": "Job handed back to its workers, not before {{time}}",
-    "jobRetriedButEngineReportedError": "Job handed back to its workers: its incident is resolved. The engine reported an error afterwards, which may have raised another incident in this instance: {{reason}}"
+    "jobRetriedButEngineReportedError": "Job handed back to its workers: its incident is resolved. The engine reported an error afterwards, which may have raised another incident in this instance: {{reason}}",
+    "jobResolvedMeanwhile": "Job handed back to its workers: somebody else resolved its incident meanwhile.",
+    "jobResolvedMeanwhileWithoutRetries": "Somebody else resolved the incident of this job meanwhile, so the job is back with its workers, but without the retries chosen here. Its row shows the retries it has now; use Update Retries to change them. The engine said: {{reason}}"
   },
   "dialogs": {
     "completeJob": {
@@ -157,11 +158,9 @@
       "description": "Resolves the incident of this job so that its workers receive it again. Setting the retries alone would leave the job failed.",
       "retriesSource": "Retries",
       "fromDefinition": "Resolve the incident only",
-      "custom": "Set the retries, then resolve the incident",
+      "custom": "Resolve the incident with new retries",
       "fromDefinitionHint": "Resolving the incident restores the retries of the task definition and hands the job out at once. Retries set for this job since it failed are kept instead, together with the moment chosen for its next delivery.",
-      "saved": "{{retries}} retries were saved for this job, but its incident is still open. Retry resolves the incident and keeps these retries.",
-      "savedWithRetryAt": "{{retries}} retries were saved for this job, with its next delivery not before {{time}}, but its incident is still open. Retry resolves the incident and keeps both.",
-      "definitionRetriesNotEvaluable": "The incident was not resolved: the retries of the task definition no longer evaluate for this job. Set the retries above, then retry; the resolution keeps them. The engine said: {{reason}}"
+      "definitionRetriesNotEvaluable": "The incident was not resolved: the retries of the task definition no longer evaluate for this job. Set new retries above and retry; the resolution then uses them instead. The engine said: {{reason}}"
     },
     "updateRetries": {
       "title": "Update Retries",

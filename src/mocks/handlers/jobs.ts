@@ -3,9 +3,11 @@ import { http, HttpResponse } from 'msw';
 import { jobs, findJobByKey, getJobFailuresByJobKey } from '../data/jobs';
 import { parseIsoBackoff } from '@base/utils/isoDuration';
 import {
+  MAX_RETRIES,
   engineStateName,
   failMockJobWithoutErrorCode,
   leaderCallFailure,
+  operatorRetriesRefusal,
   updateMockJobRetries,
 } from '../data/jobRetries';
 import type { MockJob } from '../data/jobs';
@@ -13,10 +15,6 @@ import { withValidation } from '../validation';
 import { hasScenario } from './scenarios';
 
 const BASE_URL = '/v1';
-
-// Engine defaults of jobs.maxRetries and jobs.maxRetryBackoff
-const MAX_RETRIES = 100;
-const MAX_RETRY_BACKOFF_MS = 24 * 60 * 60 * 1000;
 
 // Legacy fixtures use the UI-only waiting states next to the engine's `active`.
 const WAITING_STATES = new Set(['active', 'activatable', 'activated']);
@@ -237,31 +235,11 @@ export const jobHandlers = [
         );
       }
 
-      const retries = body.retries;
-      if (typeof retries !== 'number' || !Number.isInteger(retries) || retries < 1 || retries > MAX_RETRIES) {
-        return HttpResponse.json(
-          {
-            code: 'BAD_REQUEST',
-            message: leaderCallFailure(
-              call,
-              `retries of job ${String(jobKey)} must be between 1 and ${MAX_RETRIES} (jobs.maxRetries), got ${String(retries)}`
-            ),
-          },
-          { status: 400 }
-        );
+      const refusal = operatorRetriesRefusal(job.key, body.retries, body.retryAt);
+      if (refusal !== undefined) {
+        return HttpResponse.json({ code: 'BAD_REQUEST', message: leaderCallFailure(call, refusal) }, { status: 400 });
       }
-      if (typeof body.retryAt === 'string' && Date.parse(body.retryAt) > Date.now() + MAX_RETRY_BACKOFF_MS) {
-        return HttpResponse.json(
-          {
-            code: 'BAD_REQUEST',
-            message: leaderCallFailure(
-              call,
-              `retryAt of job ${String(jobKey)} must not be later than 24h0m0s from now (jobs.maxRetryBackoff), got ${body.retryAt}`
-            ),
-          },
-          { status: 400 }
-        );
-      }
+      const retries = body.retries as number;
       if (job.state !== 'active' && job.state !== 'failed') {
         return HttpResponse.json(
           {

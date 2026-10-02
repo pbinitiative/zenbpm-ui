@@ -23,7 +23,6 @@ import type { Job } from '../types';
 import {
   MAX_INT32,
   DefinitionRetriesNotEvaluableError,
-  RetriesSavedButIncidentOpenError,
   apiErrorMessage,
   formatDateTimeWithSeconds,
   isWaitingOutBackoff,
@@ -35,8 +34,8 @@ import {
 
 /**
  * `update` sets the retries of an active job. `retry` hands a failed job back
- * to its workers: it optionally sets the retries and then resolves the job's
- * incident, because setting retries alone leaves a failed job failed.
+ * to its workers by resolving the job's incident, optionally with retries the
+ * resolution sets, because setting retries alone leaves a failed job failed.
  */
 export type JobRetriesDialogMode = 'update' | 'retry';
 
@@ -93,14 +92,11 @@ export const UpdateRetriesDialog = (props: UpdateRetriesDialogProps) => {
   const [delayUnit, setDelayUnit] = useState<DelayUnit>('minutes');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Retries this dialog saved for a failed job whose incident then stayed
-  // open: submitting again only resolves the incident, which keeps them.
-  const [saved, setSaved] = useState<JobRetriesRequest | undefined>(undefined);
 
   // Retries set by the operator are the only way to choose when the job is
   // handed out; resolving the incident alone hands it out at once, unless
   // retries set since the job failed say otherwise.
-  const setsRetries = saved === undefined && (mode === 'update' || retriesSource === 'custom');
+  const setsRetries = mode === 'update' || retriesSource === 'custom';
   const retries = parsePositiveInteger(retriesInput, MAX_INT32);
   const delay = parsePositiveInteger(delayInput);
   const delayMs = delay === undefined ? undefined : delay * DELAY_UNIT_MS[delayUnit];
@@ -146,15 +142,9 @@ export const UpdateRetriesDialog = (props: UpdateRetriesDialogProps) => {
         await props.onSubmit(job, request);
       }
     } catch (err) {
-      if (err instanceof RetriesSavedButIncidentOpenError) setSaved(err.saved);
-      // The way out the engine names: retries of the operator's own, which the
-      // resolution keeps instead of evaluating the definition's. Retries this
-      // dialog saved before are gone then, or they would have been kept, so
-      // the dialog offers to set them again.
-      if (err instanceof DefinitionRetriesNotEvaluableError) {
-        setSaved(undefined);
-        setRetriesSource('custom');
-      }
+      // The way out the engine names: retries of the operator's own, given
+      // with the resolution, which then does not evaluate the definition's.
+      if (err instanceof DefinitionRetriesNotEvaluableError) setRetriesSource('custom');
       setError(
         apiErrorMessage(err) ??
           (mode === 'retry'
@@ -185,11 +175,7 @@ export const UpdateRetriesDialog = (props: UpdateRetriesDialogProps) => {
             sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}
             data-testid="job-retries-summary"
           >
-            {/* retries saved by this dialog replace the ones the failed job was opened with */}
-            <SummaryItem
-              label={t('processInstance:fields.currentRetries')}
-              value={String(saved?.retries ?? job.retries ?? '-')}
-            />
+            <SummaryItem label={t('processInstance:fields.currentRetries')} value={String(job.retries ?? '-')} />
             <SummaryItem label={t('processInstance:fields.attempts')} value={String(job.attempts ?? 0)} />
             <SummaryItem
               label={t('processInstance:fields.retryBackoff')}
@@ -212,18 +198,7 @@ export const UpdateRetriesDialog = (props: UpdateRetriesDialogProps) => {
             </Alert>
           )}
 
-          {saved !== undefined && (
-            <Alert severity="info" data-testid="job-retries-saved">
-              {saved.retryAt
-                ? t('processInstance:dialogs.retryJob.savedWithRetryAt', {
-                    retries: saved.retries,
-                    time: formatDateTimeWithSeconds(saved.retryAt),
-                  })
-                : t('processInstance:dialogs.retryJob.saved', { retries: saved.retries })}
-            </Alert>
-          )}
-
-          {mode === 'retry' && saved === undefined && (
+          {mode === 'retry' && (
             <FormControl>
               <FormLabel>{t('processInstance:dialogs.retryJob.retriesSource')}</FormLabel>
               <RadioGroup
@@ -314,7 +289,7 @@ export const UpdateRetriesDialog = (props: UpdateRetriesDialogProps) => {
                 </Box>
               )}
             </FormControl>
-          ) : saved === undefined && (
+          ) : (
             <Typography variant="body2" color="text.secondary" data-testid="job-retries-resolve-only-hint">
               {t('processInstance:dialogs.retryJob.fromDefinitionHint')}
             </Typography>

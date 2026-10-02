@@ -31,7 +31,11 @@ interface IncidentsTabProps {
   setIncidentsPageSize: (size: number) => void;
   setIncidentsState: (state: IncidentsTabState) => void;
   onRefetch?: () => Promise<void>;
-  onShowNotification?: (message: string, severity: 'success' | 'error', options?: NotificationOptions) => void;
+  onShowNotification?: (
+    message: string,
+    severity: 'success' | 'error' | 'warning',
+    options?: NotificationOptions
+  ) => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
   onElementIdClick?: (elementId: string) => void;
   /** Opens the Jobs tab focused on the element instance whose job raised an incident. */
@@ -75,7 +79,14 @@ export const IncidentsTab = ({
     } catch (err) {
       const reason = apiErrorMessage(err) ?? t('incidents:messages.resolveFailed');
       if (isResolutionRefused(err)) {
-        // a refusal changed nothing, and the operator has to act on its reason
+        // A refusal changed nothing. Either somebody else resolved the
+        // incident meanwhile, which is what the operator wanted, or the
+        // operator has to act on its reason.
+        const state = await incidentStateAfterFailedResolution(processInstanceKeyOfIncident.get(incidentKey), incidentKey);
+        if (state === 'resolved') {
+          onShowNotification?.(t('incidents:messages.alreadyResolved'), 'success');
+          return;
+        }
         onShowNotification?.(t('incidents:messages.resolveRefused', { reason }), 'error', { persist: true });
         return;
       }

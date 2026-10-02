@@ -187,13 +187,16 @@ from the table and from the detail modal.
 
 ### B2: Retry with your own retries and a delay
 
-**What is tested:** set retries, then resolve, in one action; the delay kept through the
-resolution; the toast naming the time.
+**What is tested:** new retries and the resolution sent in **one** request; the delay kept through
+the resolution; the toast naming the time.
 
-1. Open B2. ⋮ → **Retry** → **Set the retries, then resolve the incident**.
+1. Open B2. Open the browser's DevTools on the **Network** tab. ⋮ → **Retry** → **Resolve the
+   incident with new retries**.
 2. Retries left `5`, **After a delay** `10` Minutes → **Retry**.
 3. The toast says "Job handed back to its workers, not before <time>". The row is `Active`, retries
    `5`, "Retrying at" about 10 minutes ahead. The incident is `Resolved`.
+4. In the Network tab there is exactly one `POST …/incidents/…/resolve`, whose payload is
+   `{"retries":5,"retryAt":"…"}`, and **no** `POST …/jobs/…/retries`.
 
 ### B3: retries set after the failure are kept
 
@@ -219,13 +222,15 @@ longer promises "restore the definition" in that case.
 
 ### B5: retries refused by the engine
 
-**What is tested:** in retry mode too, the engine's refusal is shown and nothing is resolved.
+**What is tested:** in retry mode too, the engine's refusal of the retries is shown, and the
+resolution which carried them changed nothing.
 
-1. Open B5. ⋮ → **Retry** → **Set the retries, then resolve the incident** → Retries `150` → **Retry**.
+1. Open B5. ⋮ → **Retry** → **Resolve the incident with new retries** → Retries `150` → **Retry**.
 2. A red box shows the engine's message, ending in
-   `retries of job … must be between 1 and 100 (jobs.maxRetries), got 150`. The Incidents tab still
-   lists the incident as **Unresolved**.
-3. Change to `3` → **Retry**. The job is handed back.
+   `retries of job … must be between 1 and 100 (jobs.maxRetries), got 150`. The row behind the
+   dialog is still `Failed` with retries `0`, and the Incidents tab still lists the incident as
+   **Unresolved**.
+3. Change to `3` → **Retry**. The job is handed back with retries `3`.
 
 ### B6: two series of attempts
 
@@ -313,16 +318,16 @@ expression cannot add to.
 2. ⋮ → **Retry**. **Resolve the incident only** is selected → **Retry**.
 3. The dialog stays open:
    - A red box says "The incident was not resolved: the retries of the task definition no longer
-     evaluate for this job. Set the retries above, then retry; the resolution keeps them. The
-     engine said: incident cannot be resolved as things stand: …", followed by the engine's reason,
-     which names the expression `=attemptsAllowed + 1` and the endpoint `POST /v1/jobs/…/retries`.
-     There is no "client call to resolve incident failed" in it.
-   - The choice has moved to **Set the retries, then resolve the incident**, and the fields
+     evaluate for this job. Set new retries above and retry; the resolution then uses them instead.
+     The engine said: incident cannot be resolved as things stand: …", followed by the engine's
+     reason, which names the expression `=attemptsAllowed + 1` and the way out: `"retries" in the
+     body of POST /v1/incidents/…/resolve`. There is no "client call to resolve incident failed" in it.
+   - The choice has moved to **Resolve the incident with new retries**, and the fields
      *Retries left from now on* and *Hand the job out* are shown.
    - Behind the dialog nothing changed: the row is still `Failed` with retries `0`, and the
      Incidents tab would still list the incident as **Unresolved**.
 4. Set **Retries left from now on** to `4` → **Retry**. The toast says "Job handed back to its
-   workers". The row is `Active` with retries `4`; the incident is `Resolved`. The resolution kept
+   workers". The row is `Active` with retries `4`; the incident is `Resolved`. The resolution used
    the operator's retries instead of evaluating the expression, which still does not evaluate.
 
 ### H2: retries which no longer evaluate (Incidents tab, Variables tab)
@@ -353,12 +358,14 @@ reads is the other way out.
 These need a failure injected into the API and are covered by the mocked Playwright suite
 instead (`pnpm test:e2e -- e2e/pages/process-instances/job-retries.spec.ts`):
 
-- **Partial success:** retries saved, but resolving the incident failed. The dialog then shows
-  the saved retries and only resolves on the next click. You can see it in mock mode: run
-  `VITE_E2E_TEST=true pnpm dev` (the scenario parameter is ignored without that variable), open
+- **A resolution with new retries which the engine could not save:** nothing changed, neither the
+  retries nor the incident, and the dialog keeps the operator's choice for a second try. You can see
+  it in mock mode: run `VITE_E2E_TEST=true pnpm dev` (the scenario parameter is ignored without that
+  variable), open
   `http://localhost:3000/process-instances/3100000000000000038?jobRetriesScenario=resolveIncidentFailsOnce`,
-  then ⋮ → **Retry** → **Set the retries, then resolve the incident** → **Retry**. The first
-  resolution fails on purpose.
+  then ⋮ → **Retry** → **Resolve the incident with new retries** → Retries `9` → **Retry**. The first
+  resolution fails on purpose: a red box names the engine's error, the row is still `Failed` with
+  retries `0`, and the field still reads `9`. **Retry** again: the job is `Active` with retries `9`.
 - **Incident lookup beyond 100** unresolved incidents of one instance.
 - The refused resolution of H1 and H2 has a mock scenario as well, for a run without an engine.
   Start the UI the same way and open
@@ -381,15 +388,24 @@ instead (`pnpm test:e2e -- e2e/pages/process-instances/job-retries.spec.ts`):
     back to its workers: its incident is resolved. The engine reported an error afterwards, which may
     have raised another incident in this instance: failed to resolve incident … failed to continue
     process instance …". It stays until you close it. The row is `Active` with retries `3`.
-  - Reload the page and do it again with **Set the retries, then resolve the incident**, Retries `7`,
-    **After a delay** `10` Minutes. Same toast; the dialog does **not** say "The retries were set, but
-    resolving the incident failed". The row is `Active` with retries `7` and "Retrying at" ahead.
+  - Reload the page and do it again with **Resolve the incident with new retries**, Retries `7`,
+    **After a delay** `10` Minutes. Same toast, and the dialog closes. The row is `Active` with
+    retries `7` and "Retrying at" ahead: the retries were saved with the resolution.
 
   Against a live engine this happens when continuing the instance fails after the resolution was
   saved, or when the answer of the partition's leader is lost, neither of which can be seeded.
-- **A refused resolution after saved retries were used up** (the Retry dialog offers the retries
-  field again) needs the incident resolved and the job exhausted between two clicks of one dialog;
-  the Playwright suite covers it.
+- **The incident resolved by somebody else between the dialog's lookup and its request.** The
+  engine answers `409` "incident already resolved". In the same mock mode, open
+  `http://localhost:3000/process-instances/3100000000000000038?jobRetriesScenario=incidentResolvedMeanwhile`:
+  - ⋮ → **Retry** → **Resolve the incident with new retries** → Retries `7` → **Retry**. The dialog
+    closes, and a yellow toast says "Somebody else resolved the incident of this job meanwhile, so the
+    job is back with its workers, but without the retries chosen here. … The engine said: incident
+    already resolved: incident … was resolved at …". It stays until you close it. The row is `Active`
+    with retries `3`, not `7`.
+  - Reload, and do it again with **Resolve the incident only**: a green toast says "Job handed back to
+    its workers: somebody else resolved its incident meanwhile."
+  - Append `&tab=incidents` and click **Resolve**: a green toast says "The incident had already been
+    resolved meanwhile.", and no red one appears.
 - **A failure history that fails to load.**
 
 ## Re-seeding

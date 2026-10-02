@@ -48,13 +48,13 @@ import { VariablesBadgeCell } from '../components/VariablesBadgeCell';
 import type { ProcessInstanceNode } from '../types/tree';
 import {
   DefinitionRetriesNotEvaluableError,
-  RetriesSavedButIncidentOpenError,
   apiErrorMessage,
   collectNodes,
   compareByProcessType,
   findOpenIncidentOfJob,
   formatDateTimeWithSeconds,
   isIncidentOpen,
+  isBadRequest,
   isResolutionRefused,
   isWaitingOutBackoff,
   type JobRetriesRequest,
@@ -173,38 +173,48 @@ export const JobsTab = ({
     await onRefetch();
   }, [onRefetch, onShowNotification, t]);
 
-  // Setting the retries of a failed job leaves it failed until its incident is
-  // resolved. The resolution keeps retries set since the job failed, here or
-  // elsewhere, together with their `retryAt`; without any it restores the
-  // retries of the task definition and hands the job out at once.
+  // A failed job goes back to its workers once its incident is resolved. The
+  // retries the operator chose travel with the resolution, which sets them in
+  // the same transaction: either both happen or neither does. Without any, the
+  // resolution keeps retries set since the job failed elsewhere, together with
+  // their `retryAt`, or else restores the retries of the task definition and
+  // hands the job out at once.
   const handleRetryFailedJob = useCallback(async (job: Job, request: JobRetriesRequest) => {
     const incident = await findOpenIncidentOfJob(job);
     if (!incident) {
       await onRefetch();
       throw new Error(t('processInstance:messages.jobIncidentNotFound'));
     }
-    if (request.retries !== undefined) {
-      await updateJobRetries(job.key, { retries: request.retries, retryAt: request.retryAt });
-    }
     try {
-      await resolveIncident(incident.key);
+      await resolveIncident(
+        incident.key,
+        request.retries === undefined ? undefined : { retries: request.retries, retryAt: request.retryAt }
+      );
     } catch (err) {
       await onRefetch();
-      // Any error but a refusal may follow a resolution which succeeded: the
-      // engine saved it, then continuing the instance failed, or the answer of
-      // the partition's leader was lost. The job is back with its workers
-      // then, and only the error is left to report. When the check fails too,
-      // the incident counts as open, which a second Retry clears up.
-      if (!isResolutionRefused(err)) {
+      // A bad request changed nothing. Any other error may find the incident
+      // resolved: a refusal (409) because somebody else resolved it after it
+      // was looked up, which applied none of the retries chosen here; any
+      // other error because the engine saved the resolution, then continuing
+      // the instance failed, or the answer of the partition's leader was lost.
+      // The job is back with its workers then, and only that is left to
+      // report. When the check fails too, the incident counts as open, which
+      // a second Retry clears up.
+      if (!isBadRequest(err)) {
         const stillOpen = await isIncidentOpen(job.processInstanceKey, incident.key).catch(() => true);
         if (!stillOpen) {
-          onShowNotification(
-            t('processInstance:messages.jobRetriedButEngineReportedError', {
-              reason: apiErrorMessage(err) ?? t('processInstance:messages.incidentResolveFailed'),
-            }),
-            'warning',
-            { persist: true }
-          );
+          const reason = apiErrorMessage(err) ?? t('processInstance:messages.incidentResolveFailed');
+          if (!isResolutionRefused(err)) {
+            onShowNotification(t('processInstance:messages.jobRetriedButEngineReportedError', { reason }), 'warning', {
+              persist: true,
+            });
+          } else if (request.retries !== undefined) {
+            onShowNotification(t('processInstance:messages.jobResolvedMeanwhileWithoutRetries', { reason }), 'warning', {
+              persist: true,
+            });
+          } else {
+            onShowNotification(t('processInstance:messages.jobResolvedMeanwhile'), 'success');
+          }
           return;
         }
       }
@@ -216,14 +226,7 @@ export const JobsTab = ({
           { cause: err }
         );
       }
-      if (request.retries === undefined) throw err;
-      throw new RetriesSavedButIncidentOpenError(
-        t('processInstance:messages.retriesSetButResolveFailed', {
-          reason: apiErrorMessage(err) ?? t('processInstance:messages.incidentResolveFailed'),
-        }),
-        request,
-        { cause: err }
-      );
+      throw err;
     }
     onShowNotification(
       request.retryAt

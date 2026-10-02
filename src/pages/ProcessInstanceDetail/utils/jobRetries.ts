@@ -22,26 +22,11 @@ export interface JobRetriesRequest {
 export type UpdateJobRetriesRequest = Required<Pick<JobRetriesRequest, 'retries'>> & Pick<JobRetriesRequest, 'retryAt'>;
 
 /**
- * Thrown when the retries of a failed job were saved but resolving its
- * incident failed: the job stays failed, and a later resolution keeps the
- * saved retries and `retryAt` instead of the task definition's.
- */
-export class RetriesSavedButIncidentOpenError extends Error {
-  readonly saved: JobRetriesRequest;
-
-  constructor(message: string, saved: JobRetriesRequest, options?: ErrorOptions) {
-    super(message, options);
-    this.name = 'RetriesSavedButIncidentOpenError';
-    this.saved = saved;
-  }
-}
-
-/**
- * Thrown when resolving the incident of a failed job, without setting its
- * retries first, was refused because the retries of the task definition no
- * longer evaluate for it. Nothing changed; setting the job's retries is the
- * way out, as a resolution keeps retries set since the job failed instead of
- * evaluating the definition's.
+ * Thrown when resolving the incident of a failed job without retries of the
+ * operator's own was refused because the retries of the task definition no
+ * longer evaluate for it. Nothing changed; giving the job retries with the
+ * resolution is the way out, as the engine then does not evaluate the
+ * definition's.
  */
 export class DefinitionRetriesNotEvaluableError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -51,13 +36,23 @@ export class DefinitionRetriesNotEvaluableError extends Error {
 }
 
 /**
- * True when the engine refused to resolve an incident as things stand (`409`):
- * the retries of the task definition no longer evaluate for the job the
- * resolution would hand out again. Nothing was changed, unlike after other
- * errors, which may follow a resolution that succeeded and raised a new incident.
+ * True when the engine refused a resolution because it conflicts with the
+ * state of the incident or its job (`409`). Nothing was changed, unlike after
+ * other errors, which may follow a resolution that succeeded and raised a new
+ * incident. The incident is either still open, when the retries of the task
+ * definition no longer evaluate for the job the resolution would hand out
+ * again, or it was resolved already, by somebody else or by an earlier attempt.
  */
 export function isResolutionRefused(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 409;
+}
+
+/**
+ * True when the engine refused a request for what it asks (`400`), such as
+ * retries above `jobs.maxRetries` given with a resolution. Nothing was changed.
+ */
+export function isBadRequest(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 400;
 }
 
 /** A whole number from 1 to `max`, or undefined for anything else. */

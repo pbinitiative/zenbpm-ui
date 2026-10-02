@@ -1,12 +1,12 @@
 export {
   MAX_INT32,
   DefinitionRetriesNotEvaluableError,
-  RetriesSavedButIncidentOpenError,
   isWaitingOutBackoff,
   formatDateTimeWithSeconds,
   apiErrorMessage,
   findOpenIncidentOfJob,
   isIncidentOpen,
+  isBadRequest,
   isResolutionRefused,
   parsePositiveInteger,
   timestampAfter,
