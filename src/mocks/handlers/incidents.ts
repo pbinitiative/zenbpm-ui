@@ -10,6 +10,7 @@ import {
   leaderCallFailure,
   operatorRetriesRefusal,
   resolveMockIncident,
+  retryAtSchemaRefusal,
   updateMockJobRetries,
 } from '../data/jobRetries';
 import { withValidation } from '../validation';
@@ -39,6 +40,8 @@ export const incidentHandlers = [
     withValidation(async ({ params, request }) => {
       const { incidentKey } = params;
       const body = await readOptionalBody(request);
+      const schemaRefusal = retryAtSchemaRefusal(body.retryAt);
+      if (schemaRefusal !== undefined) return badRequest(schemaRefusal);
       // checked by the REST layer, before the incident is looked up
       if (body.retryAt !== undefined && body.retries === undefined) {
         return badRequest('retryAt can only be given together with retries');

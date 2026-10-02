@@ -1,5 +1,5 @@
 // MSW handlers for jobs endpoints
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { jobs, findJobByKey, getJobFailuresByJobKey } from '../data/jobs';
 import { parseIsoBackoff } from '@base/utils/isoDuration';
 import {
@@ -8,6 +8,7 @@ import {
   failMockJobWithoutErrorCode,
   leaderCallFailure,
   operatorRetriesRefusal,
+  retryAtSchemaRefusal,
   updateMockJobRetries,
 } from '../data/jobRetries';
 import type { MockJob } from '../data/jobs';
@@ -225,6 +226,10 @@ export const jobHandlers = [
     withValidation(async ({ params, request }) => {
       const { jobKey } = params;
       const body = (await request.json()) as { retries?: unknown; retryAt?: unknown };
+      const schemaRefusal = retryAtSchemaRefusal(body.retryAt);
+      if (schemaRefusal !== undefined) {
+        return HttpResponse.json({ code: 'BAD_REQUEST', message: schemaRefusal }, { status: 400 });
+      }
 
       const call = `update retries of job ${String(jobKey)}`;
       const job = findJobByKey(jobKey as string);
@@ -255,6 +260,8 @@ export const jobHandlers = [
       }
 
       updateMockJobRetries(job, retries, typeof body.retryAt === 'string' ? body.retryAt : undefined);
+      // the answer arrives late, e.g. after the operator moved on to another instance
+      if (hasScenario(request, 'slowRetriesAnswer')) await delay(1500);
       return new HttpResponse(null, { status: 204 });
     })
   ),

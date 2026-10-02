@@ -50,6 +50,25 @@ export const leaderCallFailure = (call: string, reason: string): string => `clie
 /** The name the engine gives a job state in its messages, e.g. `ActivityStateCompleted`. */
 export const engineStateName = (state: string): string => `ActivityState${state.charAt(0).toUpperCase()}${state.slice(1)}`;
 
+/** What the engine's request validator (kin-openapi) accepts as the format `date-time`. */
+const DATE_TIME = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:([0-5]\d|60)(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+
+/**
+ * The refusal of the engine's request validator for a `retryAt` which is not a
+ * date-time. The validator answers before any handler runs, so neither the job
+ * nor the incident is looked up or changed. Undefined for an absent or valid one.
+ */
+export const retryAtSchemaRefusal = (retryAt: unknown): string | undefined => {
+  const prefix = 'request body has an error: doesn\'t match schema: Error at "/retryAt": ';
+  if (retryAt === undefined) return undefined;
+  if (retryAt === null) return `${prefix}Value is not nullable`;
+  if (typeof retryAt !== 'string') return `${prefix}value must be a string`;
+  if (!DATE_TIME.test(retryAt) || Number.isNaN(Date.parse(retryAt))) {
+    return `${prefix}string doesn't match the format "date-time"`;
+  }
+  return undefined;
+};
+
 /**
  * The engine's reason for refusing retries an operator sets for a job, by the
  * retries endpoint or with the resolution of its incident: outside 1 to
@@ -60,6 +79,7 @@ export const operatorRetriesRefusal = (jobKey: string, retries: unknown, retryAt
   if (typeof retries !== 'number' || !Number.isInteger(retries) || retries < 1 || retries > MAX_RETRIES) {
     return `retries of job ${jobKey} must be between 1 and ${MAX_RETRIES} (jobs.maxRetries), got ${String(retries)}`;
   }
+  // a retryAt which is no date-time never gets here, see retryAtSchemaRefusal
   if (typeof retryAt === 'string' && Date.parse(retryAt) > Date.now() + MAX_RETRY_BACKOFF_MS) {
     return `retryAt of job ${jobKey} must not be later than 24h0m0s from now (jobs.maxRetryBackoff), got ${retryAt}`;
   }

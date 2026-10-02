@@ -406,6 +406,10 @@ instead (`pnpm test:e2e -- e2e/pages/process-instances/job-retries.spec.ts`):
     its workers: somebody else resolved its incident meanwhile."
   - Append `&tab=incidents` and click **Resolve**: a green toast says "The incident had already been
     resolved meanwhile.", and no red one appears.
+- **Moving to another instance while an action is still waiting for its answer.** The page keeps
+  showing the instance moved to; the action's refetch of the previous instance is dropped. Covered
+  by the Playwright suite with the mock scenario `slowRetriesAnswer`, which delays the answer of
+  Update Retries.
 - **A failure history that fails to load.**
 
 ## Re-seeding

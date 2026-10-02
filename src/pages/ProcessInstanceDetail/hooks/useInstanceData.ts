@@ -331,6 +331,11 @@ export const useInstanceData = (
   // ── Core fetch: build / rebuild the whole tree ────────────────────────────
   const fetchAll = useCallback(async () => {
     if (!processInstanceKey) return;
+    // A callback of an instance the user navigated away from, such as the
+    // refetch after a job action whose answer arrived late, must not start:
+    // it would take the running fetch of the current instance over and show
+    // the previous instance's tree in its place.
+    if (processInstanceKeyRef.current !== processInstanceKey) return;
     if (activeFetchRef.current?.processInstanceKey === processInstanceKey) return;
 
     const fetchId = nextFetchIdRef.current + 1;
@@ -341,7 +346,10 @@ export const useInstanceData = (
       markDone = resolve;
     });
 
-    const isCurrentFetch = () => activeFetchRef.current?.id === fetchId;
+    // A fetch which started before a navigation is no longer current once the
+    // key changed, even before the new instance's own fetch takes over.
+    const isCurrentFetch = () =>
+      activeFetchRef.current?.id === fetchId && processInstanceKeyRef.current === processInstanceKey;
 
     try {
       const rootInstance = (await getProcessInstance(processInstanceKey)) as unknown as ProcessInstance;
