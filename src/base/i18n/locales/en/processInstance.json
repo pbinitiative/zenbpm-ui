@@ -197,6 +197,7 @@
       "messageHelp": "Why the job failed. Kept as the job's last failure and, once no retries remain, part of the incident message.",
       "outcomeBpmnError": "With an error code the failure throws a BPMN error: a matching error event takes over, otherwise the job fails with an incident. No retry is spent.",
       "outcomeRetry": "Without an error code the failure spends one attempt and leaves {{retries}} retries. The job is handed out again after its backoff; if a worker received it over the job stream, not before that worker's lock lapses, as the UI cannot release it. The variables are dropped.",
+      "outcomeRetryRequested": "Without an error code the failure spends one attempt and leaves the {{retries}} retries entered, or jobs.maxRetries of the engine if that is lower. The job is handed out again after its backoff; if a worker received it over the job stream, not before that worker's lock lapses, as the UI cannot release it. The variables are dropped.",
       "outcomeIncident": "Without an error code this failure leaves no retries: the job fails with an incident and keeps the variables as its output.",
       "retries": "Retries left after this failure",
       "retriesHelp": "Optional; one less than now when empty. The engine caps it at jobs.maxRetries.",
@@ -204,7 +205,7 @@
       "retryBackoff": "Backoff",
       "retryBackoffPlaceholder": "e.g. PT10S",
       "retryBackoffHelp": "Optional ISO-8601 duration overriding the task definition's backoff.",
-      "retryBackoffInvalid": "Enter an ISO-8601 duration in weeks, days, hours, minutes or seconds, such as PT10S or P1D"
+      "retryBackoffInvalid": "Enter an ISO-8601 duration in weeks, days, hours, minutes or whole seconds, such as PT10S or P1D"
     },
     "addVariable": {
       "title": "Add Variable",

@@ -109,7 +109,8 @@ shown in the dialog; the failure history.
 
 **What is tested:** the Fail job outcome note (retry spent, incident, BPMN error, stream lock);
 the new optional `retries`/`retryBackoff` fields and their validation; a fresh failure history
-after a failure; a failure sent from the UI names no `deliveryToken`.
+after a failure; a failure sent from the UI names no `deliveryToken`; a refused failure keeps the
+dialog open with the engine's reason.
 
 1. Open A2. ⋮ → **Fail job**. The dialog shows:
    - The last failure (yellow box).
@@ -118,9 +119,12 @@ after a failure; a failure sent from the UI names no `deliveryToken`.
      job is handed out again after its backoff; if a worker received it over the job stream, not
      before that worker's lock lapses…"
 2. Type `0` in *Retries left after this failure*. The note changes to "…this failure leaves no
-   retries: the job fails with an incident…". Clear the field.
+   retries: the job fails with an incident…". Type `150`: the note says "…leaves the 150 retries
+   entered, or jobs.maxRetries of the engine if that is lower…", since the engine caps the value
+   (100 by default) and the UI cannot read that limit. Clear the field.
 3. Type `P1Y` in *Backoff*. You get "Enter an ISO-8601 duration in weeks, days, hours, minutes or
-   seconds…" and **Fail job** is disabled. `P1D` or `PT10M` is accepted.
+   whole seconds…" and **Fail job** is disabled. `PT1.5S` gets the same, since the engine refuses
+   fractional seconds. `P1D` or `PT10M` is accepted.
 4. Type any *Error Code*. The Retries/Backoff fields disappear (the engine ignores them for a BPMN
    error) and the note switches to the BPMN error text. Clear the error code again.
 5. Open ⋮ → **Failure history** once first, and close it. Open the browser's DevTools on the
@@ -137,9 +141,14 @@ after a failure; a failure sent from the UI names no `deliveryToken`.
    - The row shows retries `4`, `2 FAILED`, and "Retrying at" about 10 minutes from now.
    - ⋮ → **Failure history** immediately shows 2 rows, newest first: `second failure from the UI`,
      "Backoff until …". It is not the stale single row cached from the first opening.
-6. Fail once more with Retries left `0`. The row becomes `Failed`, retries `0` (red), `3 FAILED`.
-   ⋮ now offers **Retry** instead of Update Retries and Fail job. The **Incidents** tab shows a new
-   incident whose **Job** column links to this job.
+6. Open the same page in a second browser tab, ⋮ → **Fail job** there, type Message `too late`, and
+   leave the dialog open. Back in the first tab, fail once more with Retries left `0`. The row
+   becomes `Failed`, retries `0` (red), `3 FAILED`. ⋮ now offers **Retry** instead of Update
+   Retries and Fail job. The **Incidents** tab shows a new incident whose **Job** column links to
+   this job.
+7. In the second tab click **Fail job**. The dialog stays open with a red box naming the engine's
+   reason ("…job no longer waits for a worker or an operator…"), `too late` is still in the Message
+   field, no success toast appears, and the row behind the dialog turns `Failed`. Cancel.
 
 ### A3: a backoff which ends while you watch
 
@@ -361,6 +370,10 @@ instead (`pnpm test:e2e -- e2e/pages/process-instances/job-retries.spec.ts`):
     closed; the incident stays **Unresolved**.
   - `jobRetriesScenario=resolutionSavedThenInstanceFails`: the resolution was saved, but continuing
     the instance failed. No toast: the incident is **Resolved**, and the refetch shows it.
+  - `jobRetriesScenario=resolveIncidentFailsOnce,unresolvedIncidentsReadFails`: the resolution
+    failed, and so did the check whether the incident is still open, as in an outage. A red toast
+    "Resolving the incident failed, and checking whether it is still open failed too, so it may or
+    may not be resolved. The error was: failed to resolve incident …" stays until closed.
 - **An error which followed a resolution that succeeded, in the Retry dialog.** In the same mock mode,
   open `http://localhost:3000/process-instances/3100000000000000038?jobRetriesScenario=resolutionSavedThenInstanceFails`,
   ⋮ → **Retry**:
@@ -381,7 +394,7 @@ instead (`pnpm test:e2e -- e2e/pages/process-instances/job-retries.spec.ts`):
 
 ## Re-seeding
 
-With the engine running (as in step 1):
+With the engine running (as in step 1), and Python 3.9 or newer:
 
 ```bash
 python3 <folder holding the script and the template>/seed_job_retry_scenarios.py

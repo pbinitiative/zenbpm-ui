@@ -10,21 +10,13 @@ import {
 } from '../data/jobRetries';
 import type { MockJob } from '../data/jobs';
 import { withValidation } from '../validation';
+import { hasScenario } from './scenarios';
 
 const BASE_URL = '/v1';
 
 // Engine defaults of jobs.maxRetries and jobs.maxRetryBackoff
 const MAX_RETRIES = 100;
 const MAX_RETRY_BACKOFF_MS = 24 * 60 * 60 * 1000;
-
-// E2E tests name a scenario in the page URL, e.g. `?jobRetriesScenario=failureHistoryFails`.
-const getScenario = (request: Request): string | null => {
-  if (import.meta.env.VITE_E2E_TEST !== 'true' || !request.referrer) {
-    return null;
-  }
-
-  return new URL(request.referrer).searchParams.get('jobRetriesScenario');
-};
 
 // Legacy fixtures use the UI-only waiting states next to the engine's `active`.
 const WAITING_STATES = new Set(['active', 'activatable', 'activated']);
@@ -175,6 +167,7 @@ export const jobHandlers = [
       }
 
       // Like the engine, the retry fields are validated whatever the error code.
+      // Retries above jobs.maxRetries are capped, not refused.
       const retries = typeof body.retries === 'number' ? body.retries : undefined;
       if (retries !== undefined && retries < 0) {
         return HttpResponse.json(
@@ -221,7 +214,7 @@ export const jobHandlers = [
         typeof body.variables === 'object' && body.variables !== null
           ? (body.variables as Record<string, unknown>)
           : undefined,
-        retries,
+        retries === undefined ? undefined : Math.min(retries, MAX_RETRIES),
         retryBackoffMs
       );
       return new HttpResponse(null, { status: 204 });
@@ -300,7 +293,7 @@ export const jobHandlers = [
       if (!findJobByKey(jobKey as string)) {
         return jobNotFound(jobKey);
       }
-      if (getScenario(request) === 'failureHistoryFails') {
+      if (hasScenario(request, 'failureHistoryFails')) {
         return HttpResponse.json(
           { code: 'INTERNAL', message: 'failed to read the failures of the job' },
           { status: 500 }

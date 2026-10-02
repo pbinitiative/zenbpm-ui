@@ -127,13 +127,17 @@ export function apiErrorMessage(error: unknown): string | undefined {
 }
 
 /**
- * Pages through the unresolved incidents of a process instance until `pick`
- * chooses one from a page.
+ * Pages through the unresolved incidents of a process instance for the first
+ * one `matches` accepts. Only when no page holds one does the first incident
+ * `fallback` accepts count, wherever it was seen. The last page is the one
+ * shorter than a full page or reaching `totalCount`.
  */
 async function findOpenIncident(
   processInstanceKey: string,
-  pick: (page: Incident[]) => Incident | undefined
+  matches: (incident: Incident) => boolean,
+  fallback: (incident: Incident) => boolean = () => false
 ): Promise<Incident | undefined> {
+  let fallbackIncident: Incident | undefined;
   for (let page = 1; ; page++) {
     const result = await getIncidents(processInstanceKey, {
       state: GetIncidentsState.unresolved,
@@ -141,10 +145,11 @@ async function findOpenIncident(
       size: INCIDENT_LOOKUP_PAGE_SIZE,
     });
     const items = result.items ?? [];
-    const incident = pick(items);
+    const incident = items.find(matches);
     if (incident) return incident;
-    if (items.length < INCIDENT_LOOKUP_PAGE_SIZE || page * INCIDENT_LOOKUP_PAGE_SIZE >= (result.totalCount ?? 0)) {
-      return undefined;
+    fallbackIncident ??= items.find(fallback);
+    if (items.length < INCIDENT_LOOKUP_PAGE_SIZE || page * INCIDENT_LOOKUP_PAGE_SIZE >= result.totalCount) {
+      return fallbackIncident;
     }
   }
 }
@@ -152,21 +157,19 @@ async function findOpenIncident(
 /**
  * Finds the unresolved incident a failed job raised. Incidents created by the
  * engine carry the job's key; an incident created before they did is matched
- * by its element instance instead.
+ * by its element instance instead, but only when no incident on any page
+ * carries the job's key.
  */
 export function findOpenIncidentOfJob(job: Job): Promise<Incident | undefined> {
   return findOpenIncident(
     job.processInstanceKey,
-    (items) =>
-      items.find((candidate) => candidate.jobKey === job.key) ??
-      items.find((candidate) => !candidate.jobKey && candidate.elementInstanceKey === job.elementInstanceKey)
+    (candidate) => candidate.jobKey === job.key,
+    (candidate) => !candidate.jobKey && candidate.elementInstanceKey === job.elementInstanceKey
   );
 }
 
 /** True while the incident is unresolved. */
 export async function isIncidentOpen(processInstanceKey: string, incidentKey: string): Promise<boolean> {
-  const incident = await findOpenIncident(processInstanceKey, (items) =>
-    items.find((candidate) => candidate.key === incidentKey)
-  );
+  const incident = await findOpenIncident(processInstanceKey, (candidate) => candidate.key === incidentKey);
   return incident !== undefined;
 }

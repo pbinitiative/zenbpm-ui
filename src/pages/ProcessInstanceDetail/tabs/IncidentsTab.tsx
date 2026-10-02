@@ -92,11 +92,17 @@ export const IncidentsTab = ({
       if (isResolutionRefused(err)) {
         // a refusal changed nothing, and the operator has to act on its reason
         onShowNotification?.(t('incidents:messages.resolveRefused', { reason }), 'error', { persist: true });
-      } else if (await resolutionLeftIncidentOpen(processInstanceKeyOfIncident.get(incidentKey), incidentKey)) {
-        // Any other error may follow a resolution which succeeded and then
-        // raised a new incident, which the refetch shows. An incident still
-        // open was not resolved at all.
+        return;
+      }
+      // Any other error may follow a resolution which succeeded and then
+      // raised a new incident, which the refetch shows. An incident still
+      // open was not resolved at all. When the check fails too, as in an
+      // outage, nothing tells the two apart, so the operator hears that.
+      const state = await incidentStateAfterFailedResolution(processInstanceKeyOfIncident.get(incidentKey), incidentKey);
+      if (state === 'open') {
         onShowNotification?.(t('incidents:messages.resolveFailedWithReason', { reason }), 'error', { persist: true });
+      } else if (state === 'unknown') {
+        onShowNotification?.(t('incidents:messages.resolveOutcomeUnknown', { reason }), 'error', { persist: true });
       }
     } finally {
       await onRefetch?.();
@@ -255,15 +261,17 @@ export const IncidentsTab = ({
 };
 
 /**
- * True when the incident is still unresolved after its resolution failed.
- * Unknown when the incident's instance is not known or the check fails,
- * which reads as resolved: the refetch shows the state either way.
+ * Whether the incident is still unresolved after its resolution failed:
+ * `unknown` when the incident's instance is not known or the check fails.
  */
-async function resolutionLeftIncidentOpen(processInstanceKey: string | undefined, incidentKey: string): Promise<boolean> {
-  if (processInstanceKey === undefined) return false;
+async function incidentStateAfterFailedResolution(
+  processInstanceKey: string | undefined,
+  incidentKey: string
+): Promise<'open' | 'resolved' | 'unknown'> {
+  if (processInstanceKey === undefined) return 'unknown';
   try {
-    return await isIncidentOpen(processInstanceKey, incidentKey);
+    return (await isIncidentOpen(processInstanceKey, incidentKey)) ? 'open' : 'resolved';
   } catch {
-    return false;
+    return 'unknown';
   }
 }

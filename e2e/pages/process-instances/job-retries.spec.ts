@@ -406,10 +406,20 @@ test.describe('Process Instance Jobs - Retries', () => {
     const dialog = await openDialogFromMenu(page, SIMPLE_TASK_BACKOFF_JOB_KEY, /fail job/i);
 
     await dialog.getByLabel('Retries left after this failure').fill('5');
-    await expect(dialog.getByTestId('fail-job-outcome')).toContainText('leaves 5 retries');
-    await dialog.getByLabel('Backoff').fill('P1Y');
-    await expect(dialog.getByText('Enter an ISO-8601 duration in weeks, days, hours, minutes or seconds')).toBeVisible();
-    await expect(dialog.getByRole('button', { name: /fail job/i })).toBeDisabled();
+    await expect(dialog.getByTestId('fail-job-outcome')).toContainText(
+      'leaves the 5 retries entered, or jobs.maxRetries of the engine if that is lower'
+    );
+    // refused as the engine refuses them: years, fractional seconds, a component beyond 64 bits
+    for (const refused of ['P1Y', 'PT1.5S', 'P9223372036854775808W']) {
+      await dialog.getByLabel('Backoff').fill(refused);
+      await expect(
+        dialog.getByText('Enter an ISO-8601 duration in weeks, days, hours, minutes or whole seconds')
+      ).toBeVisible();
+      await expect(dialog.getByRole('button', { name: /fail job/i })).toBeDisabled();
+    }
+    // too long to count but taken, as the engine caps it at jobs.maxRetryBackoff
+    await dialog.getByLabel('Backoff').fill('P9223372036854775807W');
+    await expect(dialog.getByRole('button', { name: /fail job/i })).toBeEnabled();
     await dialog.getByLabel('Backoff').fill('P1D');
 
     const request = waitForJobRequest(page, SIMPLE_TASK_BACKOFF_JOB_KEY, 'fail');
@@ -418,6 +428,47 @@ test.describe('Process Instance Jobs - Retries', () => {
 
     expect(body).toEqual({ retries: 5, retryBackoff: 'P1D' });
     await expectJobRow(page, SIMPLE_TASK_BACKOFF_JOB_KEY, { state: 'Active', retries: '5', waiting: true });
+  });
+
+  test('keeps the Fail job dialog open with the reason the engine refused the failure', async ({ page }) => {
+    await openJobsTab(page, SIMPLE_TASK_BACKOFF_INSTANCE_KEY);
+    const dialog = await openDialogFromMenu(page, SIMPLE_TASK_BACKOFF_JOB_KEY, /fail job/i);
+    await dialog.getByLabel('Message').fill('payment service unavailable');
+    // meanwhile a worker's failure uses up the job's retries
+    await page.evaluate(async (jobKey) => {
+      await fetch(`/v1/jobs/${jobKey}/fail`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'worker gave up', retries: 0 }),
+      });
+    }, SIMPLE_TASK_BACKOFF_JOB_KEY);
+
+    await dialog.getByRole('button', { name: /fail job/i }).click();
+
+    await expect(dialog.getByTestId('fail-job-error')).toHaveText(
+      `failed to fail job ${SIMPLE_TASK_BACKOFF_JOB_KEY}: job no longer waits for a worker or an operator: ` +
+        `job ${SIMPLE_TASK_BACKOFF_JOB_KEY} is already failed`
+    );
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByLabel('Message')).toHaveValue('payment service unavailable');
+    await expect(page.getByText(/Job failed \(/)).toHaveCount(0);
+    // the table caught up with the job the worker failed
+    await expectJobRow(page, SIMPLE_TASK_BACKOFF_JOB_KEY, { state: 'Failed', retries: '0', waiting: false });
+  });
+
+  test('leaves no more retries than jobs.maxRetries when a failure names more', async ({ page }) => {
+    await openJobsTab(page, SIMPLE_TASK_BACKOFF_INSTANCE_KEY);
+    const dialog = await openDialogFromMenu(page, SIMPLE_TASK_BACKOFF_JOB_KEY, /fail job/i);
+
+    await dialog.getByLabel('Retries left after this failure').fill('150');
+    await expect(dialog.getByTestId('fail-job-outcome')).toContainText(
+      'leaves the 150 retries entered, or jobs.maxRetries of the engine if that is lower'
+    );
+    await dialog.getByRole('button', { name: /fail job/i }).click();
+    await expect(dialog).not.toBeVisible();
+
+    // the mock caps at the engine default of jobs.maxRetries (100), as the engine does
+    await expectJobRow(page, SIMPLE_TASK_BACKOFF_JOB_KEY, { state: 'Active', retries: '100', waiting: true });
   });
 
   test('announces the incident when the named retries leave none', async ({ page }) => {
@@ -448,6 +499,23 @@ test.describe('Process Instance Jobs - Retries', () => {
     await expect(jobRow(page, SIMPLE_TASK_BACKOFF_JOB_KEY).getByTestId('job-retries-cell')).toContainText('1 failed');
     const history = await openDialogFromMenu(page, SIMPLE_TASK_BACKOFF_JOB_KEY, /failure history/i);
     await expect(history.getByTestId('job-failures-table').locator('tbody tr')).toHaveCount(1);
+  });
+
+  test('sends variables named like int64 fields of the API as entered', async ({ page }) => {
+    await openJobsTab(page, SIMPLE_TASK_BACKOFF_INSTANCE_KEY);
+    const dialog = await openDialogFromMenu(page, SIMPLE_TASK_BACKOFF_JOB_KEY, /fail job/i);
+    const variables = { deliveryToken: '00123', key: '42', order: { jobKey: '7' } };
+
+    await dialog.getByLabel('Error Code').fill('ORDER_FAILED');
+    await dialog.locator('.monaco-editor').first().click();
+    await page.keyboard.press('Control+a');
+    await page.keyboard.insertText(JSON.stringify(variables));
+
+    const request = waitForJobRequest(page, SIMPLE_TASK_BACKOFF_JOB_KEY, 'fail');
+    await dialog.getByRole('button', { name: /fail job/i }).click();
+    const body = (await request).postDataJSON() as Record<string, unknown>;
+
+    expect(body).toEqual({ errorCode: 'ORDER_FAILED', variables });
   });
 
   test('offers retries of its own when the retries of the task definition no longer evaluate', async ({ page }) => {
@@ -553,6 +621,19 @@ test.describe('Process Instance Jobs - Retries', () => {
     await expect(row.getByRole('button', { name: 'Resolve' })).toBeVisible();
   });
 
+  test('says the outcome is unknown when neither the resolution nor the check whether the incident is open succeeds', async ({ page }) => {
+    const row = await openIncidentRow(page, 'resolveIncidentFailsOnce,unresolvedIncidentsReadFails');
+
+    await row.getByRole('button', { name: 'Resolve' }).click();
+
+    const failure = page.getByRole('alert').filter({ hasText: 'checking whether it is still open failed too' });
+    await expect(failure).toContainText(
+      `failed to resolve incident ${SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY}: failed to complete incident with key`
+    );
+    await expect(page.getByText('Incident resolved successfully')).toHaveCount(0);
+    await expect(row.getByRole('button', { name: 'Resolve' })).toBeVisible();
+  });
+
   test('stays silent about an error which followed a resolution that succeeded', async ({ page }) => {
     const row = await openIncidentRow(page, 'resolutionSavedThenInstanceFails');
 
@@ -633,6 +714,38 @@ test.describe('Process Instance Jobs - Retries', () => {
     expect(pages).toEqual(expect.arrayContaining(['1', '2']));
   });
 
+  test('prefers the incident carrying the job key on a later page to one of its element without a job key', async ({ page }) => {
+    await openJobsTab(page, SIMPLE_TASK_FAILED_INSTANCE_KEY);
+    // An incident without a job key on the job's element instance comes first,
+    // and 120 incidents of other elements push the job's to the second page.
+    await page.evaluate(async (processInstanceKey) => {
+      // @ts-expect-error browser-only module URL
+      const { incidents } = await import('/src/mocks/data/incidents.ts');
+      const others = Array.from({ length: 120 }, (_, index) => ({
+        key: `59000000000000${String(index).padStart(5, '0')}`,
+        elementInstanceKey: index === 0 ? `${processInstanceKey}002` : `59100000000000${String(index).padStart(5, '0')}`,
+        elementId: 'other-element',
+        processInstanceKey,
+        processDefinitionKey: '3000000000000000046',
+        message: 'other incident',
+        createdAt: new Date().toISOString(),
+        executionToken: `token-other-${index}`,
+      }));
+      (incidents as unknown[]).unshift(...others);
+    }, SIMPLE_TASK_FAILED_INSTANCE_KEY);
+    const resolutions: string[] = [];
+    page.on('request', (request) => {
+      if (request.method() === 'POST' && request.url().includes('/resolve')) resolutions.push(request.url());
+    });
+    const dialog = await openDialogFromMenu(page, SIMPLE_TASK_FAILED_JOB_KEY, /^retry$/i);
+
+    await dialog.getByRole('button', { name: 'Retry' }).click();
+
+    await expect(dialog).not.toBeVisible();
+    expect(resolutions).toHaveLength(1);
+    expect(resolutions[0]).toContain(`/incidents/${SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY}/resolve`);
+  });
+
   test('pages through a failure history longer than one page', async ({ page }) => {
     await openJobsTab(page, SIMPLE_TASK_BACKOFF_INSTANCE_KEY);
     await page.evaluate(async ({ jobKey, processInstanceKey }) => {
@@ -663,6 +776,13 @@ test.describe('Process Instance Jobs - Retries', () => {
 
   test('says so when the failure history cannot be read', async ({ page }) => {
     await openJobsTab(page, SIMPLE_TASK_BACKOFF_INSTANCE_KEY, 'failureHistoryFails');
+    const dialog = await openDialogFromMenu(page, SIMPLE_TASK_BACKOFF_JOB_KEY, /failure history/i);
+
+    await expect(dialog.getByText('Failed to load the failure history')).toBeVisible({ timeout: 15000 });
+  });
+
+  test('says so when the failure history cannot be read in a combination of scenarios', async ({ page }) => {
+    await openJobsTab(page, SIMPLE_TASK_BACKOFF_INSTANCE_KEY, 'resolveIncidentFailsOnce,failureHistoryFails');
     const dialog = await openDialogFromMenu(page, SIMPLE_TASK_BACKOFF_JOB_KEY, /failure history/i);
 
     await expect(dialog.getByText('Failed to load the failure history')).toBeVisible({ timeout: 15000 });

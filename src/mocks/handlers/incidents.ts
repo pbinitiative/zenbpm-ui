@@ -4,19 +4,9 @@ import { findIncidentByKey } from '../data/incidents';
 import { findJobByKey } from '../data/jobs';
 import { definitionRetriesNotEvaluable, leaderCallFailure, resolveMockIncident } from '../data/jobRetries';
 import { withValidation } from '../validation';
+import { hasScenario } from './scenarios';
 
 const BASE_URL = '/v1';
-
-// E2E tests name scenarios in the page URL, several separated by commas,
-// e.g. `?jobRetriesScenario=resolveIncidentFailsOnce,definitionRetriesNotEvaluable`.
-const hasScenario = (request: Request, scenario: string): boolean => {
-  if (import.meta.env.VITE_E2E_TEST !== 'true' || !request.referrer) {
-    return false;
-  }
-
-  const scenarios = new URL(request.referrer).searchParams.get('jobRetriesScenario') ?? '';
-  return scenarios.split(',').includes(scenario);
-};
 
 let failedResolutions = 0;
 

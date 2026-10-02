@@ -258,47 +258,48 @@ export const JobsTab = ({
     request: FailJobRequest,
     jobType: string
   ) => {
-    try {
-      // Only include keys the API actually accepts. An empty `errorCode`, `message`
-      // or `variables` object should not be sent over the wire at all.
-      const body: FailJobBody = {};
-      if (request.errorCode !== undefined && request.errorCode !== '') {
-        body.errorCode = request.errorCode;
-      }
-      if (request.message !== undefined && request.message !== '') {
-        body.message = request.message;
-      }
-      if (request.variables !== undefined && Object.keys(request.variables).length > 0) {
-        body.variables = request.variables;
-      }
-      if (request.retries !== undefined) {
-        body.retries = request.retries;
-      }
-      if (request.retryBackoff !== undefined) {
-        body.retryBackoff = request.retryBackoff;
-      }
-      // No `deliveryToken`: an operator failing a job means a new failure. The
-      // job shown may be seconds old: had a worker failed that delivery
-      // meanwhile, the failure would be answered as recorded, and had the job
-      // been handed out again, it would be refused with 409. Either way the
-      // operator's failure would change nothing. A job never handed out has
-      // token 0, which the engine refuses with 400.
-      await failJob(jobKey, body);
-      // A failure without an error code adds to the job's failure history.
-      // The history dialog reads afresh on every open anyway; this reaches a
-      // history query still mounted when the failure is sent.
-      void queryClient.invalidateQueries({ queryKey: getGetJobFailuresQueryKey(jobKey) });
-      onShowNotification(
-        t('processInstance:messages.jobFailed') + ` (${jobType})`,
-        'success'
-      );
-      await onRefetch();
-    } catch {
-      onShowNotification(
-        t('processInstance:messages.jobFailFailed') + ` (${jobType})`,
-        'error'
-      );
+    // Only include keys the API actually accepts. An empty `errorCode`, `message`
+    // or `variables` object should not be sent over the wire at all.
+    const body: FailJobBody = {};
+    if (request.errorCode !== undefined && request.errorCode !== '') {
+      body.errorCode = request.errorCode;
     }
+    if (request.message !== undefined && request.message !== '') {
+      body.message = request.message;
+    }
+    if (request.variables !== undefined && Object.keys(request.variables).length > 0) {
+      body.variables = request.variables;
+    }
+    if (request.retries !== undefined) {
+      body.retries = request.retries;
+    }
+    if (request.retryBackoff !== undefined) {
+      body.retryBackoff = request.retryBackoff;
+    }
+    // No `deliveryToken`: an operator failing a job means a new failure. The
+    // job shown may be seconds old: had a worker failed that delivery
+    // meanwhile, the failure would be answered as recorded, and had the job
+    // been handed out again, it would be refused with 409. Either way the
+    // operator's failure would change nothing. A job never handed out has
+    // token 0, which the engine refuses with 400.
+    try {
+      await failJob(jobKey, body);
+    } catch (err) {
+      // A refusal, such as a `409` for a job completed or failed meanwhile,
+      // reaches the dialog, which stays open and shows the engine's reason;
+      // the table catches up with the job's state.
+      await onRefetch();
+      throw err;
+    }
+    // A failure without an error code adds to the job's failure history.
+    // The history dialog reads afresh on every open anyway; this reaches a
+    // history query still mounted when the failure is sent.
+    void queryClient.invalidateQueries({ queryKey: getGetJobFailuresQueryKey(jobKey) });
+    onShowNotification(
+      t('processInstance:messages.jobFailed') + ` (${jobType})`,
+      'success'
+    );
+    await onRefetch();
   }, [onRefetch, onShowNotification, queryClient, t]);
 
   const columns: Column<Job>[] = useMemo(

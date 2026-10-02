@@ -88,3 +88,9 @@ export const addMinutes = (dateStr: string, minutes: number): string => {
   date.setMinutes(date.getMinutes() + minutes);
   return date.toISOString();
 };
+
+export const addSeconds = (dateStr: string, seconds: number): string => {
+  const date = new Date(dateStr);
+  date.setSeconds(date.getSeconds() + seconds);
+  return date.toISOString();
+};

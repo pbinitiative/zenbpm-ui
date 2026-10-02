@@ -15,7 +15,7 @@ import {
 import { JsonEditor } from '@components/JsonEditor';
 import { parseIsoBackoff } from '@base/utils/isoDuration';
 import type { Job } from '../types';
-import { MAX_INT32 } from '../utils';
+import { MAX_INT32, apiErrorMessage } from '../utils';
 
 export interface FailJobRequest {
   errorCode?: string;
@@ -60,6 +60,7 @@ export const FailJobDialog = ({
   const [variables, setVariables] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const validateJson = useCallback((value: string) => {
     // Empty string is allowed — the user can submit without variables.
@@ -93,6 +94,7 @@ export const FailJobDialog = ({
     if (!validateJson(variables) || retriesInvalid || backoffInvalid) return;
 
     setLoading(true);
+    setError(null);
     try {
       const trimmedCode = errorCode.trim();
       let parsedVariables: Record<string, unknown> | undefined;
@@ -110,23 +112,30 @@ export const FailJobDialog = ({
         retries: trimmedCode === '' ? retriesLeft : undefined,
         retryBackoff: trimmedCode === '' && trimmedBackoff !== '' ? trimmedBackoff : undefined,
       });
+    } catch (err) {
+      // The dialog stays open with what the operator entered and the reason.
+      setError(apiErrorMessage(err) ?? t('processInstance:messages.jobFailFailed'));
     } finally {
       setLoading(false);
     }
   }, [
     errorCode, message, job.key, onFail, validateJson, variables,
-    retriesInvalid, backoffInvalid, retriesLeft, backoffInput,
+    retriesInvalid, backoffInvalid, retriesLeft, backoffInput, t,
   ]);
 
   // Without an error code the engine spends one attempt and leaves the retries
   // the request names, else one less than now; only the failure which leaves
   // none fails the job with an incident. With one it throws a BPMN error.
+  // Named retries above jobs.maxRetries are capped, and the UI cannot read
+  // that limit, so the outcome promises them only as an upper bound.
   const remaining = retriesLeft ?? Math.max((job.retries ?? 1) - 1, 0);
   const outcome = isBpmnError
     ? t('processInstance:dialogs.failJob.outcomeBpmnError')
     : remaining === 0
       ? t('processInstance:dialogs.failJob.outcomeIncident')
-      : t('processInstance:dialogs.failJob.outcomeRetry', { retries: remaining });
+      : retriesLeft !== undefined
+        ? t('processInstance:dialogs.failJob.outcomeRetryRequested', { retries: remaining })
+        : t('processInstance:dialogs.failJob.outcomeRetry', { retries: remaining });
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -212,6 +221,12 @@ export const FailJobDialog = ({
           <Alert severity="info" data-testid="fail-job-outcome">
             {outcome}
           </Alert>
+
+          {error && (
+            <Alert severity="error" data-testid="fail-job-error">
+              {error}
+            </Alert>
+          )}
         </Box>
       </DialogContent>
       <DialogActions>

@@ -1,7 +1,7 @@
 // Simple Task Process - mock data
 // BPMN Flow: StartEvent_1 -> id (serviceTask "Test") -> Event_1j4mcqg (EndEvent)
 import type { MockProcessDefinition, MockProcessInstance, MockIncident } from '../types';
-import { hoursAgo, daysAgo, addMinutes } from '../types';
+import { hoursAgo, daysAgo, addMinutes, addSeconds } from '../types';
 import {
   SIMPLE_TASK_ACTIVE_INSTANCE_KEY,
   SIMPLE_TASK_FALSY_FORM_INSTANCE_KEY,
@@ -391,6 +391,7 @@ export const jobs = [
 
 // Failures without an error code the jobs above reported. The failed job has
 // two series: its attempts restart at 1 after the earlier incident's resolution.
+// Each `retryAt` follows the backoff policy of its job.
 export const jobFailures = [
   {
     key: '5200000000000000005',
@@ -398,7 +399,7 @@ export const jobFailures = [
     processInstanceKey: SIMPLE_TASK_FAILED_INSTANCE_KEY,
     attempt: 1,
     failedAt: addMinutes(daysAgo(3), 1),
-    retryAt: addMinutes(daysAgo(3), 1),
+    retryAt: addSeconds(addMinutes(daysAgo(3), 1), 10),
     message: 'Failed to connect to external CRM system: Connection refused',
   },
   {
@@ -434,7 +435,7 @@ export const jobFailures = [
     processInstanceKey: SIMPLE_TASK_FAILED_INSTANCE_KEY,
     attempt: 1,
     failedAt: addMinutes(daysAgo(2), 2),
-    retryAt: addMinutes(daysAgo(2), 2),
+    retryAt: addSeconds(addMinutes(daysAgo(2), 2), 10),
     message: 'Failed to connect to external CRM system: Connection timeout after 30s',
   },
   {

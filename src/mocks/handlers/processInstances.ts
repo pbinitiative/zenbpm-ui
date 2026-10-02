@@ -8,6 +8,7 @@ import { findProcessDefinitionByKey } from '../data/processDefinitions';
 import { getJobsByProcessInstanceKey } from '../data/jobs';
 import { getIncidentsByProcessInstanceKey } from '../data/incidents';
 import { withValidation } from '../validation';
+import { hasScenario } from './scenarios';
 import {
   SHOWCASE_ACTIVE_INSTANCE_KEY,
   SHOWCASE_PROCESS_DEFINITION_KEY,
@@ -125,8 +126,8 @@ const MOCK_ERROR_SUBSCRIPTIONS = [
 
 function paginateEventSubscriptions<T extends { state: string }>(items: T[], request: Request) {
   const url = new URL(request.url);
-  const page = parseInt(url.searchParams.get('page') || '1', 10);
-  const size = parseInt(url.searchParams.get('size') || '10', 10);
+  const page = Number.parseInt(url.searchParams.get('page') || '1', 10);
+  const size = Number.parseInt(url.searchParams.get('size') || '10', 10);
   const state = url.searchParams.get('state');
   const filteredItems = state ? items.filter((item) => item.state === state) : items;
   const startIndex = (page - 1) * size;
@@ -232,8 +233,9 @@ function sortItems<T>(items: T[], sortBy: string | null, sortOrder: string | nul
       return order * (aValue - bValue);
     }
 
-    // Default: convert to string and compare
-    return order * String(aValue).localeCompare(String(bValue));
+    // Anything else, such as booleans or the objects `sortBy` may name from
+    // the URL, compares by its JSON text rather than by '[object Object]'
+    return order * JSON.stringify(aValue).localeCompare(JSON.stringify(bValue));
   });
 }
 
@@ -285,13 +287,13 @@ export const processInstanceHandlers = [
     `${BASE_URL}/process-instances`,
     withValidation(({ request }) => {
       const url = new URL(request.url);
-      const page = parseInt(url.searchParams.get('page') || '1', 10);
-      const size = parseInt(url.searchParams.get('size') || '10', 10);
+      const page = Number.parseInt(url.searchParams.get('page') || '1', 10);
+      const size = Number.parseInt(url.searchParams.get('size') || '10', 10);
       const processDefinitionKey = url.searchParams.get('processDefinitionKey');
       const bpmnProcessId = url.searchParams.get('bpmnProcessId');
       const state = url.searchParams.get('state');
       const partitionParam = url.searchParams.get('partition');
-      const partition = partitionParam ? parseInt(partitionParam, 10) : null;
+      const partition = partitionParam ? Number.parseInt(partitionParam, 10) : null;
       const sortBy = url.searchParams.get('sortBy');
       const sortOrder = url.searchParams.get('sortOrder');
 
@@ -428,8 +430,8 @@ export const processInstanceHandlers = [
     withValidation(({ params, request }) => {
       const { processInstanceKey } = params;
       const url = new URL(request.url);
-      const page = parseInt(url.searchParams.get('page') || '1', 10);
-      const size = parseInt(url.searchParams.get('size') || '10', 10);
+      const page = Number.parseInt(url.searchParams.get('page') || '1', 10);
+      const size = Number.parseInt(url.searchParams.get('size') || '10', 10);
       const state = url.searchParams.get('state');
 
       let children = processInstances.filter(
@@ -469,8 +471,8 @@ export const processInstanceHandlers = [
     withValidation(({ params, request }) => {
       const { processInstanceKey } = params;
       const url = new URL(request.url);
-      const page = parseInt(url.searchParams.get('page') || '1', 10);
-      const size = parseInt(url.searchParams.get('size') || '10', 10);
+      const page = Number.parseInt(url.searchParams.get('page') || '1', 10);
+      const size = Number.parseInt(url.searchParams.get('size') || '10', 10);
 
       const jobs = getJobsByProcessInstanceKey(processInstanceKey as string);
 
@@ -534,9 +536,19 @@ export const processInstanceHandlers = [
     withValidation(({ params, request }) => {
       const { processInstanceKey } = params;
       const url = new URL(request.url);
-      const page = parseInt(url.searchParams.get('page') || '1', 10);
-      const size = parseInt(url.searchParams.get('size') || '10', 10);
+      const page = Number.parseInt(url.searchParams.get('page') || '1', 10);
+      const size = Number.parseInt(url.searchParams.get('size') || '10', 10);
       const state = url.searchParams.get('state');
+
+      // The incidents tab reads every state; only the check whether an
+      // incident is still open reads the unresolved ones, so this fails it
+      // alone, as an outage which outlasts a failed resolution would.
+      if (state === 'unresolved' && hasScenario(request, 'unresolvedIncidentsReadFails')) {
+        return HttpResponse.json(
+          { code: 'TECHNICAL_ERROR', message: 'failed to read incidents: partition leader unreachable' },
+          { status: 500 }
+        );
+      }
 
       let filteredIncidents = getIncidentsByProcessInstanceKey(processInstanceKey as string);
 
@@ -568,8 +580,8 @@ export const processInstanceHandlers = [
     withValidation(({ params, request }) => {
       const { processInstanceKey } = params;
       const url = new URL(request.url);
-      const page = parseInt(url.searchParams.get('page') || '1', 10);
-      const size = parseInt(url.searchParams.get('size') || '10', 10);
+      const page = Number.parseInt(url.searchParams.get('page') || '1', 10);
+      const size = Number.parseInt(url.searchParams.get('size') || '10', 10);
 
       const instance = findProcessInstanceByKey(processInstanceKey as string);
 

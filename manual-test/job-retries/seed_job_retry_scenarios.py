@@ -441,7 +441,14 @@ def seed():
 
 
 def local_time(iso_timestamp):
-    return datetime.datetime.fromisoformat(iso_timestamp).astimezone()
+    """An RFC 3339 timestamp of the engine as local time.
+
+    Before Python 3.11, `fromisoformat` accepts neither a trailing `Z` nor other than 3 or
+    6 fractional digits, and Go writes up to 9, so both are normalised first.
+    """
+    normalised = re.sub(r"[Zz]$", "+00:00", iso_timestamp)
+    normalised = re.sub(r"\.(\d+)", lambda fraction: "." + fraction.group(1)[:6].ljust(6, "0"), normalised)
+    return datetime.datetime.fromisoformat(normalised).astimezone()
 
 
 def ui_time(moment):

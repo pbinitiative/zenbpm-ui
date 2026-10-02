@@ -25,6 +25,8 @@ const JSONBigStringify = JSONBigInt({ useNativeBigInt: true });
  * carry as a JSON number although the generated type says `string`. It is
  * listed so that a token sent back as a string reaches the engine as a
  * number; the engine refuses a string with 400.
+ *
+ * The names are matched wherever they occur, except inside `variables`.
  */
 const INT64_KEY_FIELDS = new Set([
   'key',
@@ -40,8 +42,17 @@ const INT64_KEY_FIELDS = new Set([
 ]);
 
 /**
+ * Fields whose value is a map of process variables. Its entries are named and
+ * typed by the process, not by the API: a variable called `deliveryToken` or
+ * `key` holding `"00123"` must stay that string. Every free-form object of the
+ * API's request bodies is such a `variables` field.
+ */
+const VARIABLE_MAP_FIELDS = new Set(['variables']);
+
+/**
  * Recursively convert string keys to BigInt for proper JSON serialization.
  * This allows mock data to store keys as strings while serializing them as JSON numbers.
+ * Variable maps are passed through untouched.
  */
 function convertKeysToBigInt(obj: unknown): unknown {
   if (obj === null || obj === undefined) {
@@ -55,7 +66,9 @@ function convertKeysToBigInt(obj: unknown): unknown {
   if (typeof obj === 'object') {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      if (INT64_KEY_FIELDS.has(key) && typeof value === 'string' && /^\d+$/.test(value)) {
+      if (VARIABLE_MAP_FIELDS.has(key)) {
+        result[key] = value;
+      } else if (INT64_KEY_FIELDS.has(key) && typeof value === 'string' && /^\d+$/.test(value)) {
         // Convert string key to BigInt for JSON number serialization
         result[key] = BigInt(value);
       } else {

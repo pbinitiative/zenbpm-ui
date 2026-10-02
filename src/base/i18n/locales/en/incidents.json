@@ -27,7 +27,8 @@
     "resolved": "Incident resolved successfully",
     "resolveFailed": "Failed to resolve incident",
     "resolveRefused": "The incident was not resolved: {{reason}}. For the incident of a job, open the job in the Jobs tab and retry it with retries of your own.",
-    "resolveFailedWithReason": "The incident is still open. The engine said: {{reason}}"
+    "resolveFailedWithReason": "The incident is still open. The engine said: {{reason}}",
+    "resolveOutcomeUnknown": "Resolving the incident failed, and checking whether it is still open failed too, so it may or may not be resolved. The error was: {{reason}}. The table shows its state once the engine answers again."
   },
   "detail": {
     "title": "Incident Details"
