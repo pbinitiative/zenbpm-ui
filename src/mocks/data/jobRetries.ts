@@ -54,19 +54,34 @@ export const engineStateName = (state: string): string => `ActivityState${state.
 const DATE_TIME = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:([0-5]\d|60)(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
 
 /**
- * The refusal of the engine's request validator for a `retryAt` which is not a
- * date-time. The validator answers before any handler runs, so neither the job
- * nor the incident is looked up or changed. Undefined for an absent or valid one.
+ * The refusal of the engine's Go JSON decoder for a `retryAt` which passed the
+ * validator's pattern but names a moment no calendar has, such as February 30
+ * or second 60. `Date.parse` would roll February 30 over to March 2 instead.
+ */
+const goTimeDecodeRefusal = (retryAt: string): string | undefined => {
+  const [, year, month, day, second] = /^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}:(\d{2})/.exec(retryAt) ?? [];
+  const date = new Date(0);
+  date.setUTCFullYear(Number(year), Number(month) - 1, Number(day));
+  const refusal = (field: string) => `can't decode JSON body: parsing time "${retryAt}": ${field} out of range`;
+  if (date.getUTCMonth() !== Number(month) - 1 || date.getUTCDate() !== Number(day)) return refusal('day');
+  if (second === '60') return refusal('second');
+  return undefined;
+};
+
+/**
+ * The engine's refusal of a `retryAt` which is not a date-time: by its request
+ * validator for a value which does not match the format, else by the decoder
+ * of the body (see goTimeDecodeRefusal). Both answer before any handler runs,
+ * so neither the job nor the incident is looked up or changed. Undefined for an
+ * absent or valid one.
  */
 export const retryAtSchemaRefusal = (retryAt: unknown): string | undefined => {
   const prefix = 'request body has an error: doesn\'t match schema: Error at "/retryAt": ';
   if (retryAt === undefined) return undefined;
   if (retryAt === null) return `${prefix}Value is not nullable`;
   if (typeof retryAt !== 'string') return `${prefix}value must be a string`;
-  if (!DATE_TIME.test(retryAt) || Number.isNaN(Date.parse(retryAt))) {
-    return `${prefix}string doesn't match the format "date-time"`;
-  }
-  return undefined;
+  if (!DATE_TIME.test(retryAt)) return `${prefix}string doesn't match the format "date-time"`;
+  return goTimeDecodeRefusal(retryAt);
 };
 
 /**

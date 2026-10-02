@@ -346,10 +346,10 @@ export const useInstanceData = (
       markDone = resolve;
     });
 
+    const holdsFetchSlot = () => activeFetchRef.current?.id === fetchId;
     // A fetch which started before a navigation is no longer current once the
     // key changed, even before the new instance's own fetch takes over.
-    const isCurrentFetch = () =>
-      activeFetchRef.current?.id === fetchId && processInstanceKeyRef.current === processInstanceKey;
+    const isCurrentFetch = () => holdsFetchSlot() && processInstanceKeyRef.current === processInstanceKey;
 
     try {
       const rootInstance = (await getProcessInstance(processInstanceKey)) as unknown as ProcessInstance;
@@ -429,7 +429,9 @@ export const useInstanceData = (
         setError(err instanceof Error ? err.message : 'Failed to load process instance');
       }
     } finally {
-      if (isCurrentFetch()) {
+      // released whatever the key is now: a slot kept after a navigation would
+      // refuse every later fetch of this instance and spin `refetchAll`
+      if (holdsFetchSlot()) {
         activeFetchRef.current = null;
       }
       markDone();

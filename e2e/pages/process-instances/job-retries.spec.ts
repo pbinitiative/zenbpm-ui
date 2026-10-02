@@ -309,23 +309,24 @@ test.describe('Process Instance Jobs - Retries', () => {
     await expect(jobRow(page, SIMPLE_TASK_FAILED_JOB_KEY)).toHaveCount(1);
   });
 
-  test('refuses a retryAt which is no date-time on both endpoints, as the engine does, and changes nothing', async ({ page }) => {
+  test('refuses a retryAt which is no date-time or no calendar date on both endpoints, as the engine does, and changes nothing', async ({ page }) => {
     await openJobsTab(page, SIMPLE_TASK_FAILED_INSTANCE_KEY);
     const { answers, job } = await page.evaluate(
       async ({ processInstanceKey, jobKey, incidentKey }) => {
-        const send = async (url: string, body: unknown) => {
+        const send = async (url: string, retryAt: unknown) => {
           const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
+            body: JSON.stringify({ retries: 3, retryAt }),
           });
           const text = await response.text();
-          return { status: response.status, message: text === '' ? '' : (JSON.parse(text) as { message: string }).message };
+          return { retryAt, status: response.status, message: text === '' ? '' : (JSON.parse(text) as { message: string }).message };
         };
         const answered = [];
-        for (const retryAt of ['not-a-date', '2026-10-02', 1700000000000, null]) {
-          answered.push(await send(`/v1/jobs/${jobKey}/retries`, { retries: 3, retryAt }));
-          answered.push(await send(`/v1/incidents/${incidentKey}/resolve`, { retries: 3, retryAt }));
+        // the validator refuses the first four, the decoder of the body the last two, which Date.parse would accept or roll over
+        for (const retryAt of ['not-a-date', '2026-10-02', 1700000000000, null, '2026-02-30T10:00:00Z', '2026-12-31T23:59:60Z']) {
+          answered.push(await send(`/v1/jobs/${jobKey}/retries`, retryAt));
+          answered.push(await send(`/v1/incidents/${incidentKey}/resolve`, retryAt));
         }
         // the mocks keep their state only until the page is loaded again, so the job is read in this page;
         // keys are int64 JSON numbers, read from their source text to keep every digit
@@ -344,8 +345,14 @@ test.describe('Process Instance Jobs - Retries', () => {
       }
     );
 
+    const decoderRefusals: Record<string, string> = {
+      '2026-02-30T10:00:00Z': 'parsing time "2026-02-30T10:00:00Z": day out of range',
+      '2026-12-31T23:59:60Z': 'parsing time "2026-12-31T23:59:60Z": second out of range',
+    };
+    expect(answers).toHaveLength(12);
     for (const answer of answers) {
-      expect(answer).toMatchObject({ status: 400, message: expect.stringContaining('Error at "/retryAt"') as unknown });
+      const expected = typeof answer.retryAt === 'string' ? decoderRefusals[answer.retryAt] : undefined;
+      expect(answer).toMatchObject({ status: 400, message: expect.stringContaining(expected ?? 'Error at "/retryAt"') as unknown });
     }
     expect(job).toMatchObject({ state: 'failed', retries: 0 });
   });
