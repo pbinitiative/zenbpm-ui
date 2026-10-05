@@ -65,19 +65,6 @@ const EVENT_ELEMENT_TYPES = new Set([
   'RECEIVE_TASK',
   `EVENT_BASED_GATEWAY`,
 ]);
-// Routing elements normally complete within the API's millisecond precision.
-// Render an exact zero as the smallest visible duration so a completed routing
-// step is not confused with an active/waiting element. Event-based gateways
-// and intermediate/boundary events are deliberately excluded because their
-// history can represent time spent waiting for a message or timer.
-const IMMEDIATE_ROUTING_ELEMENT_TYPES = new Set([
-  'START_EVENT',
-  'END_EVENT',
-  'SEQUENCE_FLOW',
-  'EXCLUSIVE_GATEWAY',
-  'INCLUSIVE_GATEWAY',
-  'PARALLEL_GATEWAY',
-]);
 
 const normalizeElementType = (elementType: string) =>
   elementType
@@ -89,22 +76,6 @@ const canLinkToJob = (row: FlowElementHistory) =>
   JOB_ELEMENT_TYPES.has(normalizeElementType(row.elementType));
 const canLinkToEvent = (row: FlowElementHistory) =>
   EVENT_ELEMENT_TYPES.has(normalizeElementType(row.elementType));
-
-const formatHistoryDuration = (row: FlowElementHistory) => {
-  if (!row.completedAt) return '-';
-
-  const createdAt = new Date(row.createdAt).getTime();
-  const completedAt = new Date(row.completedAt).getTime();
-  if (
-    IMMEDIATE_ROUTING_ELEMENT_TYPES.has(normalizeElementType(row.elementType))
-    && Number.isFinite(createdAt)
-    && completedAt === createdAt
-  ) {
-    return '1ms';
-  }
-
-  return formatDuration(row.createdAt, row.completedAt);
-};
 
 /** BFS walk — returns all nodes, root first */
 function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
@@ -285,7 +256,7 @@ export const HistoryTab = ({
         id: 'duration',
         label: t('processInstance:fields.duration'),
         width: 140,
-        render: formatHistoryDuration,
+        render: (row) => (row.completedAt ? formatDuration(row.createdAt, row.completedAt) : '-'),
       },
       {
         id: 'actions',

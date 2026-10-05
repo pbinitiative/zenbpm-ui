@@ -22,7 +22,8 @@ const { ACTIVE_INSTANCE_KEY, COMPLETED_INSTANCE_KEY } = instanceKeys;
  *    `completedAt`, giving us the richest possible assertions.
  *  - `ACTIVE_INSTANCE_KEY` (showcase-process, active, stopped at task-a) —
  *    the in-flight task-a has no `completedAt`, so we can verify the `-`
- *    fallback.
+ *    fallback, while a synthetic completed catch event verifies that every
+ *    completed zero-duration element renders `0ms`.
  *  - Multi-instance pagination fixture — used to verify that the duration
  *    column does NOT depend on a `createdAt`/`completedAt` of zero and that
  *    sub-hour durations render correctly.
@@ -71,12 +72,12 @@ test.describe('Process Instance History - Duration Column', () => {
   });
 
   test('should format the longest duration in the completed instance as `1h`', async ({ page }) => {
-    // The mock data seeds task-b with a 60-minute span (started at +31min,
-    // completed at +91min). That's the longest duration in the completed
+    // The mock data seeds task-b with a 60-minute span (started at +30min,
+    // completed at +90min). That's the longest duration in the completed
     // showcase instance, and the formatter must surface it as "1h".
     //
-    // The other 5 elements all complete within 29 minutes, so `1h` must
-    // appear exactly once in the Duration column for this instance.
+    // task-a takes 30 minutes and the routing elements complete in 0ms, so
+    // `1h` must appear exactly once in the Duration column for this instance.
     const historyTable = page.getByTestId('history-table');
     const durationCells = historyTable.locator('tbody tr td:nth-child(6)');
     const texts = await durationCells.allInnerTexts();
@@ -85,7 +86,7 @@ test.describe('Process Instance History - Duration Column', () => {
     expect(oneHourCells).toHaveLength(1);
   });
 
-  test('should render `1ms` for immediately completed routing elements', async ({ page }) => {
+  test('should render `0ms` for immediately completed routing elements', async ({ page }) => {
     const historyTable = page.getByTestId('history-table');
 
     for (const elementId of [
@@ -96,11 +97,11 @@ test.describe('Process Instance History - Duration Column', () => {
     ]) {
       const routingElementRow = historyTable.locator('tbody tr').filter({ hasText: elementId });
       await expect(routingElementRow).toHaveCount(1);
-      await expect(routingElementRow.locator('td:nth-child(6)')).toHaveText('1ms');
+      await expect(routingElementRow.locator('td:nth-child(6)')).toHaveText('0ms');
     }
   });
 
-  test('should use the compact `<unit><value> <unit><value>...` format', async ({ page }) => {
+  test('should use the compact `<value><unit> <value><unit>...` format', async ({ page }) => {
     // The formatter must use the documented unit suffixes: d, h, m, s, ms.
     // We assert that the Duration column never contains a colon, comma, slash,
     // or `am`/`pm` marker — those would indicate that the previous
@@ -145,7 +146,7 @@ test.describe('Process Instance History - Duration Column (active instance)', ()
     await expect(durationCell).toHaveText('-');
   });
 
-  test('should render `1ms` for an immediately completed StartEvent', async ({ page }) => {
+  test('should render `0ms` for an immediately completed StartEvent', async ({ page }) => {
     // Even in an active instance, the StartEvent has already completed. It is
     // created and completed at the same timestamp, so its zero duration must
     // be distinguishable from the `-` used for the still-active task.
@@ -159,10 +160,10 @@ test.describe('Process Instance History - Duration Column (active instance)', ()
     await expect(startRow).toHaveCount(1);
 
     const durationCell = startRow.locator('td:nth-child(6)');
-    await expect(durationCell).toHaveText('1ms');
+    await expect(durationCell).toHaveText('0ms');
   });
 
-  test('should render `-` for a zero-duration element that is not instantaneous', async ({ page }) => {
+  test('should render `0ms` for any completed zero-duration element', async ({ page }) => {
     await page.goto(`/process-instances/${instanceKey}`);
     await expect(page.getByText('Instance Details')).toBeVisible({ timeout: 10000 });
     await page.getByRole('tab', { name: /History/i }).click();
@@ -171,9 +172,10 @@ test.describe('Process Instance History - Duration Column (active instance)', ()
     const historyTable = page.getByTestId('history-table');
     const eventRow = historyTable.locator('tbody tr').filter({ hasText: 'messageCatchEvent' });
     await expect(eventRow).toHaveCount(1);
+    await expect(eventRow.locator('td:nth-child(4)')).toHaveText(/completed/i);
 
     const durationCell = eventRow.locator('td:nth-child(6)');
-    await expect(durationCell).toHaveText('-');
+    await expect(durationCell).toHaveText('0ms');
   });
 });
 
