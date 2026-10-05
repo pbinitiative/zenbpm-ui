@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import {
   expectAppShell,
   expectDesignerActions,
-  expectVisibleTitles,
+  expectVisibleButtons,
 } from '../supports/appAssertions.ts';
 
 test('decision designer shows the DRD canvas, properties and editor actions', async ({ page }) => {
@@ -26,7 +26,7 @@ test('decision designer shows the DRD canvas, properties and editor actions', as
   );
   await expect(page.getByTitle('Open decision table', { exact: true })).toBeEnabled();
 
-  await expectVisibleTitles(page, [
+  await expectVisibleButtons(page, [
     'Activate hand tool',
     'Activate lasso tool',
     'Create decision',

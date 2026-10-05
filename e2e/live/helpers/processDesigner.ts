@@ -90,7 +90,7 @@ export async function appendElement(page: Page, sourceId: string, title: string,
 
 export async function createFromPalette(page: Page, title: string, position: CanvasPoint, id: string): Promise<string[]> {
   const previousIds = await page.locator('.djs-shape:not(.djs-label)').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-element-id')));
-  await page.locator('.djs-palette').getByTitle(title, { exact: true }).click();
+  await page.locator('.djs-palette').getByRole('button', { name: title, exact: true }).click();
   const point = await screenPoint(page, position);
   await page.mouse.move(point.x, point.y, { steps: 10 });
   await page.mouse.click(point.x, point.y);

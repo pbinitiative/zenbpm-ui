@@ -57,14 +57,15 @@ const createInstance = (
   stoppedAt: StoppedAt = 'task-a',
   isHighValue = false // Determines if it goes through task-b (price > 50000)
 ): MockProcessInstance => {
-  const startCompletedAt = addMinutes(createdAt, 1);
+  // Start events complete immediately, so their duration is exactly 0 ms.
+  const startCompletedAt = createdAt;
   const taskACompletedAt = stoppedAt !== 'task-a' ? addMinutes(createdAt, 30) : undefined;
-  const gatewayCompletedAt = taskACompletedAt ? addMinutes(taskACompletedAt, 1) : undefined;
+  const gatewayCompletedAt = taskACompletedAt;
   const taskBCompletedAt = stoppedAt === 'completed' && isHighValue ? addMinutes(gatewayCompletedAt!, 60) : undefined;
   const joinGatewayCompletedAt = stoppedAt === 'completed'
-    ? (isHighValue ? addMinutes(taskBCompletedAt!, 1) : addMinutes(gatewayCompletedAt!, 1))
+    ? (isHighValue ? taskBCompletedAt! : gatewayCompletedAt!)
     : undefined;
-  const endCompletedAt = joinGatewayCompletedAt ? addMinutes(joinGatewayCompletedAt, 1) : undefined;
+  const endCompletedAt = joinGatewayCompletedAt;
 
   // Process-state snapshots downstream elements read from.
   const afterTaskA = { ...variables, baseApproved: true };
@@ -479,7 +480,7 @@ export const jobs = [
     processInstanceKey: '3100000000000000014',
     processDefinitionKey: '3000000000000000033',
     state: 'active' as const,
-    createdAt: addMinutes(hoursAgo(2), 1),
+    createdAt: hoursAgo(2),
     inputVariables: { customerId: 'CUST-001', customerName: 'John Smith', loanAmount: 50000 },
     candidateGroups: ['loan-reviewers'],
   },
@@ -492,7 +493,7 @@ export const jobs = [
     processInstanceKey: '3100000000000000024',
     processDefinitionKey: '3000000000000000033',
     state: 'active' as const,
-    createdAt: addMinutes(hoursAgo(3), 1),
+    createdAt: hoursAgo(3),
     inputVariables: { customerId: 'CUST-102', customerName: 'Oliver Jones', loanAmount: 35000 },
     candidateGroups: ['loan-reviewers'],
   },
@@ -505,7 +506,7 @@ export const jobs = [
     processInstanceKey: '3100000000000000029',
     processDefinitionKey: '3000000000000000033',
     state: 'active' as const,
-    createdAt: addMinutes(hoursAgo(4), 1),
+    createdAt: hoursAgo(4),
     inputVariables: { customerId: 'CUST-201', customerName: 'Liam Brown', loanAmount: 45000 },
     candidateGroups: ['loan-reviewers'],
   },
@@ -518,7 +519,7 @@ export const jobs = [
     processInstanceKey: '3100000000000000033',
     processDefinitionKey: '3000000000000000033',
     state: 'active' as const,
-    createdAt: addMinutes(hoursAgo(2), 1),
+    createdAt: hoursAgo(2),
     inputVariables: { customerId: 'CUST-302', customerName: 'Isabella Garcia', loanAmount: 30000 },
     candidateGroups: ['loan-reviewers'],
   },
@@ -531,7 +532,7 @@ export const jobs = [
     processInstanceKey: '3100000000000000016',
     processDefinitionKey: '3000000000000000033',
     state: 'failed' as const,
-    createdAt: addMinutes(daysAgo(2), 1),
+    createdAt: daysAgo(2),
     inputVariables: { customerId: 'CUST-004', customerName: 'Alice Brown', loanAmount: 15000 },
     candidateGroups: ['loan-reviewers'],
     errorMessage: 'External credit service unavailable: Connection timeout after 30000ms',
@@ -546,7 +547,7 @@ export const jobs = [
     processInstanceKey: '3100000000000000035',
     processDefinitionKey: '3000000000000000033',
     state: 'failed' as const,
-    createdAt: addMinutes(hoursAgo(5), 1),
+    createdAt: hoursAgo(5),
     inputVariables: { customerId: 'CUST-305', customerName: 'Elijah Thomas', loanAmount: 30000 },
     candidateGroups: ['loan-reviewers'],
     errorMessage: 'Document validation failed: Required document "ID_PROOF" is missing',
@@ -562,7 +563,7 @@ export const jobs = [
     processInstanceKey: '3100000000000000015',
     processDefinitionKey: '3000000000000000033',
     state: 'active' as const,
-    createdAt: addMinutes(hoursAgo(5), 31),
+    createdAt: addMinutes(hoursAgo(5), 30),
     inputVariables: { customerId: 'CUST-002', customerName: 'Jane Doe', loanAmount: 75000 },
     candidateGroups: ['loan-managers'],
   },
@@ -575,7 +576,7 @@ export const jobs = [
     processInstanceKey: '3100000000000000023',
     processDefinitionKey: '3000000000000000033',
     state: 'active' as const,
-    createdAt: addMinutes(hoursAgo(1), 31),
+    createdAt: addMinutes(hoursAgo(1), 30),
     inputVariables: { customerId: 'CUST-101', customerName: 'Emma Watson', loanAmount: 75000 },
     candidateGroups: ['loan-managers'],
   },
@@ -588,7 +589,7 @@ export const jobs = [
     processInstanceKey: '3100000000000000032',
     processDefinitionKey: '3000000000000000033',
     state: 'active' as const,
-    createdAt: addMinutes(hoursAgo(1), 31),
+    createdAt: addMinutes(hoursAgo(1), 30),
     inputVariables: { customerId: 'CUST-301', customerName: 'Noah Davis', loanAmount: 60000 },
     candidateGroups: ['loan-managers'],
   },
@@ -601,7 +602,7 @@ export const jobs = [
     processInstanceKey: '3100000000000000034',
     processDefinitionKey: '3000000000000000033',
     state: 'active' as const,
-    createdAt: addMinutes(hoursAgo(4), 31),
+    createdAt: addMinutes(hoursAgo(4), 30),
     inputVariables: { customerId: 'CUST-304', customerName: 'Charlotte Anderson', loanAmount: 55000 },
     candidateGroups: ['loan-managers'],
   },

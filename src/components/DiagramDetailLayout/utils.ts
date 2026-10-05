@@ -21,9 +21,9 @@ export function formatDate(dateString: string): string {
  * string with the largest non-zero units first, e.g. `15d 1h 33m 12ms`.
  *
  * Units used: `d` (days), `h` (hours), `m` (minutes), `s` (seconds), `ms` (ms).
- * Zero-valued units are omitted; a zero/negative duration returns `'-'`.
+ * Zero-valued units are omitted; an exact zero renders as `0ms`.
  *
- * Returns `'-'` for invalid input or when the end is not after the start.
+ * Returns `'-'` for invalid input or when the end is before the start.
  */
 export function formatDuration(start: string, end: string): string {
   if (!start || !end) return '-';
@@ -42,10 +42,11 @@ export function formatDuration(start: string, end: string): string {
  * the largest non-zero units first, e.g. `15d 1h 33m 12ms`.
  *
  * Units used: `d` (days), `h` (hours), `m` (minutes), `s` (seconds), `ms` (ms).
- * Zero-valued units are omitted; a zero/negative duration returns `'-'`.
+ * Zero-valued units are omitted; an exact zero renders as `0ms`.
  */
 export function formatDurationMs(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return '-';
+  if (!Number.isFinite(ms) || ms < 0) return '-';
+  if (ms === 0) return '0ms';
 
   const totalSeconds = Math.floor(ms / 1000);
   const days = Math.floor(totalSeconds / 86400);
