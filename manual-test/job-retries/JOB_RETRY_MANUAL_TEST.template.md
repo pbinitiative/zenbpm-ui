@@ -8,12 +8,16 @@ Incidents tab (the job an incident names, and the reason the engine refuses a re
 Every scenario has its own process instance, seeded into the engine's database
 `zenbpm/zen_bpm_node_data`.
 
-The seeded data was created through the engine's REST API only, with the engine built from
-the zenbpm working tree, including its uncommitted job retry changes: scenarios H1 and H2 need
-the engine to answer `409` for an incident it cannot resolve. See [Re-seeding](#re-seeding) to
-create fresh instances.
+The seeded data is created through the engine's REST API only, by the seeding script of step 4
+below, with the engine built from the zenbpm working tree, including its uncommitted job retry
+changes: scenarios H1 and H2 need the engine to answer `409` for an incident it cannot resolve.
 
-## 1. Start the engine and the UI
+## 1. How to run this test
+
+The file in git is the **template**. The guide to follow is `JOB_RETRY_MANUAL_TEST.md` next to
+it, which the seeding script renders from the template with the links to the instances it
+created and the times of their backoffs. That file is ignored by git, so it exists only after a
+seeding run. Five steps, in this order:
 
 1. **Engine.** Start zenbpm the way you normally do, with **no `CONFIG_FILE`** and working
    directory `zenbpm/`, so that it opens `zen_bpm_node_data` (node id `zenbpm`, REST on `:8080`).
@@ -44,8 +48,33 @@ create fresh instances.
    pnpm dev:live              # http://localhost:3000, proxies /v1 to localhost:8080
    ```
 
-4. Open the links in the table below. Each instance also carries a `scenario` variable
-   (Variables tab) naming its scenario.
+4. **Seed the scenarios and render the guide.** With the engine and the UI running, and
+   Python 3.9 or newer (standard library only, nothing to install):
+
+   ```bash
+   cd <your zenbpm-ui checkout>
+   python3 manual-test/job-retries/seed_job_retry_scenarios.py
+   # options: --engine http://localhost:8080  --ui http://localhost:3000  --template PATH  --out-dir DIR
+   ```
+
+   The script deploys the `retry-demo-*` processes once (the engine answers a redeployment of
+   the same XML with the existing key), starts one instance per scenario and drives it to the
+   state the scenario needs, then writes two files next to the template:
+   `JOB_RETRY_MANUAL_TEST.md`, this guide with the links and times filled in, and
+   `seeded-instances.md`, the table of instances alone. It runs from any directory, needs
+   `JOB_RETRY_MANUAL_TEST.template.md` next to itself (or in the current directory, or named with
+   `--template`), seeds nothing before it finds it, and writes both files next to the template
+   unless `--out-dir` says otherwise. It stops with a message naming the column when the engine
+   runs on a stale data directory (see step 1).
+5. **Open `manual-test/job-retries/JOB_RETRY_MANUAL_TEST.md`**, not the template, and follow it
+   from section 2. Each instance also carries a `scenario` variable (Variables tab) naming its
+   scenario.
+
+Every run of the script adds fresh instances and overwrites both generated files, so run it
+again for another round: the steps below change the data, and each scenario is meant to be
+walked through once. To start from an empty database, stop the engine, delete
+`zenbpm/zen_bpm_node_data`, start the engine, then run the script. Change the template, never
+the generated guide: the next run overwrites it.
 
 **Time-sensitive data.** The backoff of scenarios A1–A3 ends on **{{backoff_end_date}}**, and
 the next delivery chosen for B3 is **{{b3_retry_date}}**. After those times the "Retrying at"
@@ -60,7 +89,8 @@ captions are gone and B3 no longer shows a kept delivery time. Re-seed then.
 In live mode the job rows show the **element id** (`charge-card`, `reserve-stock`, …), not the
 BPMN name. "⋮" below means the row actions button at the end of a job row.
 
-The steps change the data. Each scenario is meant to be walked through once; re-seed for another round.
+The steps change the data. Each scenario is meant to be walked through once; re-seed for another
+round (step 4 of section 1).
 
 ---
 
@@ -414,24 +444,8 @@ instead (`pnpm test:e2e -- e2e/pages/process-instances/job-retries.spec.ts`):
 
 ## Re-seeding
 
-With the engine running (as in step 1), and Python 3.9 or newer:
-
-```bash
-python3 <folder holding the script and the template>/seed_job_retry_scenarios.py
-# options: --engine http://localhost:8080  --ui http://localhost:3000  --template PATH  --out-dir DIR
-```
-
-The script runs from any directory. It needs `JOB_RETRY_MANUAL_TEST.template.md` next to itself
-(or in the current directory, or named with `--template`), so keep the two files together when you
-pass them on. It refuses to seed anything when it finds no template. Both files are written next to
-the template unless `--out-dir` says otherwise.
-
-Every run:
-- Adds fresh instances for all scenarios; the definitions are deployed once.
-- Rewrites `seeded-instances.md` and this guide (`JOB_RETRY_MANUAL_TEST.md`, rendered from
-  `JOB_RETRY_MANUAL_TEST.template.md`) with the new links and times. Edit the template, not the guide.
-
-To start from an empty database, stop the engine, delete `zenbpm/zen_bpm_node_data`, start the
-engine, then run the script.
+Run the seeding script again, as in step 4 of section 1, with the engine running. Every run adds
+fresh instances for all scenarios and rewrites `seeded-instances.md` and this guide with the new
+links and times. Keep the script and the template together when you pass them on.
 
 This folder (`manual-test/job-retries/`) is a test aid. Keep it out of the feature commit.
