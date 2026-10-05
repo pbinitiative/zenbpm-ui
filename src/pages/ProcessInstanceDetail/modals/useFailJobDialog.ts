@@ -1,17 +1,13 @@
 import { useCallback } from 'react';
 import { useModal } from '@components/Modals';
-import { FailJobDialog, type FailJobDialogProps } from './FailJobDialog';
+import { FailJobDialog, type FailJobDialogProps, type FailJobRequest } from './FailJobDialog';
 import type { Job } from '../types';
 
 const FAIL_JOB_DIALOG_ID = 'fail-job-dialog';
 
 interface OpenFailJobDialogProps {
   job: Job;
-  onFail: (
-    jobKey: string,
-    errorCode: string | undefined,
-    variables: Record<string, unknown> | undefined
-  ) => Promise<void>;
+  onFail: (jobKey: string, request: FailJobRequest) => Promise<void>;
 }
 
 export function useFailJobDialog() {
@@ -24,12 +20,8 @@ export function useFailJobDialog() {
     (props: OpenFailJobDialogProps) => {
       openModal({
         job: props.job,
-        onFail: async (
-          jobKey: string,
-          errorCode: string | undefined,
-          variables: Record<string, unknown> | undefined
-        ) => {
-          await props.onFail(jobKey, errorCode, variables);
+        onFail: async (jobKey: string, request: FailJobRequest) => {
+          await props.onFail(jobKey, request);
           closeModal();
         },
       });

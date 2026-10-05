@@ -1,6 +1,7 @@
-import { Box, Button, Tooltip, IconButton, Link } from '@mui/material';
+import { Box, Button, Tooltip, IconButton, Link, Typography } from '@mui/material';
 import InfoIcon from '@mui/icons-material/Info';
 import { MonoText } from '@components/MonoText';
+import { MonoLinkButton } from '@components/MonoLink';
 import { StateBadge } from '@components/StateBadge';
 import type { Column } from '@components/DataTable';
 import type { Incident } from '../IncidentsTable';
@@ -18,13 +19,15 @@ interface ColumnOptions {
   onMessageClick: (message: string) => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
   onElementIdClick?: (elementId: string) => void;
+  /** Called when the job of an incident is clicked; without it the job key is shown as plain text. */
+  onViewJob?: (incident: Incident) => void;
 }
 
 export const getIncidentColumns = (
   t: TranslateFunction,
   options: ColumnOptions
 ): Column<Incident>[] => {
-  const { onViewDetails, onResolve, onMessageClick, onElementIdClick } = options;
+  const { onViewDetails, onResolve, onMessageClick, onElementIdClick, onViewJob } = options;
 
   return [
     {
@@ -60,6 +63,35 @@ export const getIncidentColumns = (
           {row.elementId}
         </Link>
       ),
+    },
+    {
+      id: 'jobKey',
+      label: t('incidents:fields.job'),
+      width: 180,
+      render: (row) => {
+        // Incidents a job raised carry its key; incidents of other elements have no job.
+        if (!row.jobKey) {
+          return <Typography variant="body2" color="text.secondary">-</Typography>;
+        }
+        if (!onViewJob) {
+          return <MonoText>{row.jobKey}</MonoText>;
+        }
+        return (
+          <Tooltip title={t('incidents:actions.viewJob')}>
+            <Box component="span">
+              <MonoLinkButton
+                data-testid="incident-job-link"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewJob(row);
+                }}
+              >
+                {row.jobKey}
+              </MonoLinkButton>
+            </Box>
+          </Tooltip>
+        );
+      },
     },
     {
       id: 'message',

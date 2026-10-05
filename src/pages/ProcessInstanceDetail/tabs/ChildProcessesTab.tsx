@@ -9,37 +9,17 @@ import { MonoText } from '@components/MonoText';
 import { NumericBadge } from '@components/NumericBadge';
 import type { ProcessInstance } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
+import { collectNodes, compareByProcessType } from '../utils';
 import { formatDate } from '@/components/DiagramDetailLayout/utils';
 
 // Translation function type - avoids strict i18n namespace key inference in inline renders
 type T = (key: string) => string;
 
-// processType display order — determines section ordering after the main instance
-const PROCESS_TYPE_ORDER: Record<string, number> = {
-  default: 0,
-  callActivity: 1,
-  subprocess: 2,
-  multiInstance: 3,
-};
-
 // Engine-internal process types that are not shown as standalone rows
-const HIDDEN_PROCESS_TYPES = ['multiInstance', 'subprocess'];
+const HIDDEN_PROCESS_TYPES = new Set(['multiInstance', 'subprocess']);
 
 interface ChildProcessesTabProps {
   instanceTree: ProcessInstanceNode | null;
-}
-
-/** BFS walk — returns all nodes, root first */
-function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
-  const result: ProcessInstanceNode[] = [];
-  const queue: ProcessInstanceNode[] = [root];
-  while (queue.length > 0) {
-    const node = queue.shift();
-    if (node === undefined) continue;
-    result.push(node);
-    queue.push(...node.children);
-  }
-  return result;
 }
 
 export const ChildProcessesTab = ({
@@ -130,23 +110,16 @@ export const ChildProcessesTab = ({
     const rootNode = nodes[0];
 
     // Non-root nodes sorted by processType then key
-    const nonRootNodes = nodes.slice(1).sort((a, b) => {
-      const typeA = a.instance.processType ?? '';
-      const typeB = b.instance.processType ?? '';
-      const orderA = PROCESS_TYPE_ORDER[typeA] ?? 99;
-      const orderB = PROCESS_TYPE_ORDER[typeB] ?? 99;
-      if (orderA !== orderB) return orderA - orderB;
-      return a.instance.key.localeCompare(b.instance.key);
-    });
+    const nonRootNodes = nodes.slice(1).sort(compareByProcessType);
 
     // Visible children of root (callActivity and default; exclude multiInstance/subprocess wrappers)
     const rootVisibleChildren = rootNode.children.filter(
-      (c) => !HIDDEN_PROCESS_TYPES.includes(c.instance.processType ?? ''),
+      (c) => !HIDDEN_PROCESS_TYPES.has(c.instance.processType ?? ''),
     );
 
     // Non-root nodes that have at least one visible child
     const nonRootWithChildren = nonRootNodes.filter((n) =>
-      n.children.some((c) => !HIDDEN_PROCESS_TYPES.includes(c.instance.processType ?? ''))
+      n.children.some((c) => !HIDDEN_PROCESS_TYPES.has(c.instance.processType ?? ''))
     );
 
     if (nonRootWithChildren.length === 0) {
@@ -161,7 +134,7 @@ export const ChildProcessesTab = ({
 
     for (const node of nonRootWithChildren) {
       const visibleChildren = node.children.filter(
-        (c) => !HIDDEN_PROCESS_TYPES.includes(c.instance.processType ?? ''),
+        (c) => !HIDDEN_PROCESS_TYPES.has(c.instance.processType ?? ''),
       );
       const typeLabel = node.instance.processType
         ? t(`processes:types.${node.instance.processType}`)

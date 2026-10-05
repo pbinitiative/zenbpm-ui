@@ -113,11 +113,12 @@ test.describe('Custom-typed User Task Jobs', () => {
     await expect(page.getByRole('menuitem', { name: UPDATE_RETRIES_LABEL })).toBeVisible();
   });
 
-  test('keeps Update Retries visible for an inactive custom-typed User Task', async ({ page }) => {
+  test('hides Update Retries for a completed custom-typed User Task', async ({ page }) => {
     await page.goto(`/process-instances/${USER_TASK_CLASSIFICATION_ROOT_INSTANCE_KEY}`);
     await expect(page.getByTestId('jobs-table')).toBeVisible({ timeout: 10000 });
 
     // The parent User Task (shared-task) is in 'completed' state in the fixture.
+    // The engine refuses the retries of a completed job, whatever its element type.
     const row = page
       .getByTestId('jobs-table')
       .locator('tbody tr')
@@ -129,15 +130,16 @@ test.describe('Custom-typed User Task Jobs', () => {
       .filter({ has: page.locator('svg[data-testid="MoreVertIcon"]') })
       .first()
       .click();
-    await expect(page.getByRole('menuitem', { name: UPDATE_RETRIES_LABEL })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: /view in history/i })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: UPDATE_RETRIES_LABEL })).toHaveCount(0);
   });
 
   test('hides Update Retries for an inactive non-User Task', async ({ page }) => {
     await page.goto(`/process-instances/${USER_TASK_CLASSIFICATION_ROOT_INSTANCE_KEY}`);
     await expect(page.getByTestId('jobs-table')).toBeVisible({ timeout: 10000 });
 
-    // The inactive service job deliberately uses `user-task-type`; it still
-    // must NOT receive User Task-only Update Retries behavior.
+    // The inactive service job deliberately uses `user-task-type`; a completed
+    // job gets no Update Retries, whatever its routing type.
     const allRows = page
       .getByTestId('jobs-table')
       .locator('tbody tr')

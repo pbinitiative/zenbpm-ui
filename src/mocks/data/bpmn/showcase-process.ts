@@ -398,7 +398,9 @@ export const instances: MockProcessInstance[] = [
 export const incidents: MockIncident[] = [
   {
     key: '3097302399374458881',
-    elementInstanceKey: '2097302399374458884002',
+    // raised by the failed task-a job below, on the job's element instance
+    elementInstanceKey: '3100000000000000016002',
+    jobKey: '5000000000000000007',
     elementId: 'task-a',
     processInstanceKey: '3100000000000000016',
     processDefinitionKey: '3000000000000000033',
@@ -435,7 +437,8 @@ Caused by: java.net.ConnectException: Connection refused (Connection refused)
   },
   {
     key: '3097302399374458882',
-    elementInstanceKey: '2097302399374461009002',
+    elementInstanceKey: '3100000000000000035002',
+    jobKey: '5000000000000000022',
     elementId: 'task-a',
     processInstanceKey: '3100000000000000035',
     processDefinitionKey: '3000000000000000033',
@@ -524,6 +527,7 @@ export const jobs = [
   },
   {
     key: '5000000000000000007',
+    elementInstanceKey: '3100000000000000016002',
     elementId: 'task-a',
     elementName: 'Base approval',
     type: 'user-task-type',
@@ -534,11 +538,13 @@ export const jobs = [
     createdAt: addMinutes(daysAgo(2), 1),
     inputVariables: { customerId: 'CUST-004', customerName: 'Alice Brown', loanAmount: 15000 },
     candidateGroups: ['loan-reviewers'],
-    errorMessage: 'External credit service unavailable: Connection timeout after 30000ms',
+    lastFailureMessage: 'External credit service unavailable: Connection timeout after 30000ms',
     retries: 0,
+    attempts: 1,
   },
   {
     key: '5000000000000000022',
+    elementInstanceKey: '3100000000000000035002',
     elementId: 'task-a',
     elementName: 'Base approval',
     type: 'user-task-type',
@@ -549,8 +555,9 @@ export const jobs = [
     createdAt: addMinutes(hoursAgo(5), 1),
     inputVariables: { customerId: 'CUST-305', customerName: 'Elijah Thomas', loanAmount: 30000 },
     candidateGroups: ['loan-reviewers'],
-    errorMessage: 'Document validation failed: Required document "ID_PROOF" is missing',
+    lastFailureMessage: 'Document validation failed: Required document "ID_PROOF" is missing',
     retries: 0,
+    attempts: 1,
   },
   // task-b (High value approval) jobs
   {
@@ -604,5 +611,27 @@ export const jobs = [
     createdAt: addMinutes(hoursAgo(4), 31),
     inputVariables: { customerId: 'CUST-304', customerName: 'Charlotte Anderson', loanAmount: 55000 },
     candidateGroups: ['loan-managers'],
+  },
+];
+
+// The failures which exhausted the single attempt of the failed task-a jobs above
+export const jobFailures = [
+  {
+    key: '5200000000000000011',
+    jobKey: '5000000000000000007',
+    processInstanceKey: '3100000000000000016',
+    attempt: 1,
+    failedAt: daysAgo(2),
+    message: 'External credit service unavailable: Connection timeout after 30000ms',
+    incidentKey: '3097302399374458881',
+  },
+  {
+    key: '5200000000000000012',
+    jobKey: '5000000000000000022',
+    processInstanceKey: '3100000000000000035',
+    attempt: 1,
+    failedAt: hoursAgo(5),
+    message: 'Document validation failed: Required document "ID_PROOF" is missing',
+    incidentKey: '3097302399374458882',
   },
 ];

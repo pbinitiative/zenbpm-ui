@@ -28,6 +28,7 @@ import {
   type FocusedEventType,
 } from './hooks';
 import { JobsTab, VariablesTab, IncidentsTab, HistoryTab, ChildProcessesTab, DecisionInstancesTab, EventSubscriptionsTab } from './tabs';
+import type { NotificationOptions } from './types';
 
 // Tab panel component
 interface TabPanelProps {
@@ -192,16 +193,20 @@ export const ProcessInstanceDetailPage = () => {
     open: boolean;
     message: string;
     severity: 'success' | 'error' | 'warning';
+    persist: boolean;
   }>({
     open: false,
     message: '',
     severity: 'success',
+    persist: false,
   });
 
-  // Show notification helper
+  // Show notification helper. A message the operator has to read and act on,
+  // such as the engine's reason for refusing a request, persists until it is
+  // closed instead of hiding after a few seconds or on a click elsewhere.
   const showNotification = useCallback(
-    (message: string, severity: 'success' | 'error' | 'warning') => {
-      setSnackbar({ open: true, message, severity });
+    (message: string, severity: 'success' | 'error' | 'warning', options?: NotificationOptions) => {
+      setSnackbar({ open: true, message, severity, persist: options?.persist ?? false });
     },
     [],
   );
@@ -270,9 +275,6 @@ export const ProcessInstanceDetailPage = () => {
     variablesPageSize,
     setVariablesPage,
     setVariablesPageSize,
-    historySortBy,
-    historySortOrder,
-    setHistorySort,
     messageSubscriptionsPage,
     messageSubscriptionsPageSize,
     messageSubscriptionsState,
@@ -302,13 +304,13 @@ export const ProcessInstanceDetailPage = () => {
     if (!instanceTree) return 0;
     // BFS over the entire tree — mirrors exactly what ChildProcessesTab renders as rows.
     // multiInstance and subprocess wrappers are hidden in the tab; everything else is a row.
-    const HIDDEN = ['multiInstance', 'subprocess'];
+    const HIDDEN = new Set(['multiInstance', 'subprocess']);
     const queue = [...instanceTree.children];
     let count = 0;
     while (queue.length > 0) {
       const node = queue.shift();
       if (node === undefined) continue;
-      if (!HIDDEN.includes(node.instance.processType ?? '')) count++;
+      if (!HIDDEN.has(node.instance.processType ?? '')) count++;
       queue.push(...node.children);
     }
     return count;
@@ -828,9 +830,6 @@ export const ProcessInstanceDetailPage = () => {
           <TabPanel value={activeTab} index={1}>
             <HistoryTab
               instanceTree={instanceTree}
-              historySortBy={historySortBy}
-              historySortOrder={historySortOrder}
-              onSortChange={setHistorySort}
               onElementIdClick={handleElementIdClick}
               onNavigateToJobs={(key) => handleFocusNavigation('jobs', key)}
               onNavigateToEvents={handleEventFocusNavigation}
@@ -853,6 +852,7 @@ export const ProcessInstanceDetailPage = () => {
               onRefetch={refetchAll}
               onShowNotification={showNotification}
               onElementIdClick={handleElementIdClick}
+              onNavigateToJob={(key) => handleFocusNavigation('jobs', key)}
             />
           </TabPanel>
 
@@ -929,8 +929,11 @@ export const ProcessInstanceDetailPage = () => {
       {/* Success/Error/Warning Snackbar — Alert wrapper gives us severity coloring */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        autoHideDuration={snackbar.persist ? null : 6000}
+        onClose={(_event, reason) => {
+          if (snackbar.persist && reason === 'clickaway') return;
+          setSnackbar({ ...snackbar, open: false });
+        }}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert

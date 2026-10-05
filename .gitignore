@@ -33,6 +33,9 @@ src/base/i18n/resources.ts
 playwright-report/
 test-results/
 
+# Manual test guide rendered by manual-test/job-retries/seed_job_retry_scenarios.py from its template
+manual-test/job-retries/JOB_RETRY_MANUAL_TEST.md
+
 *storybook.log
 storybook-static
 trivy-reports/

@@ -13,7 +13,8 @@ import {
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import { StateBadge } from '@components/StateBadge';
-import { MonoLink } from '@components/MonoLink';
+import { MonoLink, MonoLinkButton } from '@components/MonoLink';
+import { MonoText } from '@components/MonoText';
 import type { Incident } from '../IncidentsTable';
 import { formatDate } from '@/components/DiagramDetailLayout/utils';
 
@@ -22,6 +23,8 @@ export interface IncidentDetailModalProps {
   incident: Incident;
   onClose: () => void;
   onResolve?: (incidentKey: string) => void;
+  /** Opens the job the incident was created for; without it the job key is shown as plain text. */
+  onViewJob?: (incident: Incident) => void;
 }
 
 export const IncidentDetailModal = ({
@@ -29,6 +32,7 @@ export const IncidentDetailModal = ({
   incident,
   onClose,
   onResolve,
+  onViewJob,
 }: IncidentDetailModalProps) => {
   const { t } = useTranslation([ns.common, ns.incidents]);
 
@@ -71,6 +75,19 @@ export const IncidentDetailModal = ({
           <DetailRow label={t('incidents:fields.elementId')}>
             <Typography variant="body2">{incident.elementId}</Typography>
           </DetailRow>
+
+          {/* Job the incident was created for */}
+          {incident.jobKey && (
+            <DetailRow label={t('incidents:fields.job')}>
+              {onViewJob ? (
+                <MonoLinkButton data-testid="incident-detail-job-link" onClick={() => onViewJob(incident)}>
+                  {incident.jobKey}
+                </MonoLinkButton>
+              ) : (
+                <MonoText>{incident.jobKey}</MonoText>
+              )}
+            </DetailRow>
+          )}
 
           {/* Process Instance */}
           <DetailRow label={t('incidents:fields.processInstance')}>

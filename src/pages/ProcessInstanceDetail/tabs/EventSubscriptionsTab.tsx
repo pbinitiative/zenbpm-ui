@@ -27,15 +27,8 @@ import type { MessageSubscription, TimerSubscription, ErrorSubscription } from '
 import type { EventSubscriptionState } from '@base/openapi/generated-api/schemas/eventSubscriptionState';
 import { useTriggerMessageDialog } from '../modals/useTriggerMessageDialog';
 import type { ProcessInstanceNode } from '../types/tree';
+import { collectNodes, compareByProcessType } from '../utils';
 import type { EventSubscriptionFilterState, FocusedEventType } from '../hooks';
-
-// processType display order — determines section ordering after the main instance
-const PROCESS_TYPE_ORDER: Record<string, number> = {
-  default: 0,
-  callActivity: 1,
-  subprocess: 2,
-  multiInstance: 3,
-};
 
 interface EventSubscriptionsTabProps {
   instanceTree: ProcessInstanceNode | null;
@@ -90,29 +83,14 @@ const toFilterValue = (state: EventSubscriptionFilterState): string => (state ==
 const renderStateCell = (options: FilterOption[], state: string) =>
   options.find((option) => option.value === state)?.renderContent ?? <StateBadge state={state} />;
 
-/** BFS walk — returns all nodes, root first, skipping non-root callActivity */
-function collectNodes(root: ProcessInstanceNode): ProcessInstanceNode[] {
-  const result: ProcessInstanceNode[] = [];
-  const queue: ProcessInstanceNode[] = [root];
-  while (queue.length > 0) {
-    const node = queue.shift();
-    if (node === undefined) continue;
-    if (!node.isRoot && node.instance.processType === 'callActivity') continue;
-    result.push(node);
-    queue.push(...node.children);
-  }
-  return result;
-}
+/** A called process below the root, whose subscriptions this tab leaves out with all below it. */
+const isCallActivityBelowRoot = (node: ProcessInstanceNode): boolean =>
+  !node.isRoot && node.instance.processType === 'callActivity';
 
 /** Build sorted child nodes for section labelling (same order as JobsTab) */
 function getSortedNodes(nodes: ProcessInstanceNode[]): ProcessInstanceNode[] {
   const [root, ...children] = nodes;
-  const sorted = children.sort((a, b) => {
-    const orderA = PROCESS_TYPE_ORDER[a.instance.processType ?? ''] ?? 99;
-    const orderB = PROCESS_TYPE_ORDER[b.instance.processType ?? ''] ?? 99;
-    if (orderA !== orderB) return orderA - orderB;
-    return a.instance.key.localeCompare(b.instance.key);
-  });
+  const sorted = children.toSorted(compareByProcessType);
   return [root, ...sorted];
 }
 
@@ -349,7 +327,7 @@ export const EventSubscriptionsTab = ({
   const { messageFlatData, messageSections, messageTotalCount, messagePaginationTotal } = useMemo(() => {
     if (!instanceTree) return { messageFlatData: [], messageSections: undefined, messageTotalCount: 0, messagePaginationTotal: 0 };
 
-    const nodes = getSortedNodes(collectNodes(instanceTree));
+    const nodes = getSortedNodes(collectNodes(instanceTree, isCallActivityBelowRoot));
     const rootNode = nodes[0];
     const childNodes = nodes.slice(1);
 
@@ -429,7 +407,7 @@ export const EventSubscriptionsTab = ({
   const { timerFlatData, timerSections, timerTotalCount, timerPaginationTotal } = useMemo(() => {
     if (!instanceTree) return { timerFlatData: [], timerSections: undefined, timerTotalCount: 0, timerPaginationTotal: 0 };
 
-    const nodes = getSortedNodes(collectNodes(instanceTree));
+    const nodes = getSortedNodes(collectNodes(instanceTree, isCallActivityBelowRoot));
     const rootNode = nodes[0];
     const childNodes = nodes.slice(1);
 
@@ -512,7 +490,7 @@ export const EventSubscriptionsTab = ({
   const { errorFlatData, errorSections, errorTotalCount, errorPaginationTotal } = useMemo(() => {
     if (!instanceTree) return { errorFlatData: [], errorSections: undefined, errorTotalCount: 0, errorPaginationTotal: 0 };
 
-    const nodes = getSortedNodes(collectNodes(instanceTree));
+    const nodes = getSortedNodes(collectNodes(instanceTree, isCallActivityBelowRoot));
     const rootNode = nodes[0];
     const childNodes = nodes.slice(1);
 
