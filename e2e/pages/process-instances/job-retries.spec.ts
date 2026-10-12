@@ -323,8 +323,18 @@ test.describe('Process Instance Jobs - Retries', () => {
           return { retryAt, status: response.status, message: text === '' ? '' : (JSON.parse(text) as { message: string }).message };
         };
         const answered = [];
-        // the validator refuses the first four, the decoder of the body the last two, which Date.parse would accept or roll over
-        for (const retryAt of ['not-a-date', '2026-10-02', 1700000000000, null, '2026-02-30T10:00:00Z', '2026-12-31T23:59:60Z']) {
+        // the validator refuses the first four, the decoder of the body the rest, which Date.parse would accept or roll over
+        for (const retryAt of [
+          'not-a-date',
+          '2026-10-02',
+          1700000000000,
+          null,
+          '2026-02-30T10:00:00Z',
+          '2026-12-31T23:59:60Z',
+          '2026-02-30T10:00:60Z',
+          '2026-01-01T10:00:00+25:00',
+          '2026-01-01T10:00:00+99:99',
+        ]) {
           answered.push(await send(`/v1/jobs/${jobKey}/retries`, retryAt));
           answered.push(await send(`/v1/incidents/${incidentKey}/resolve`, retryAt));
         }
@@ -348,13 +358,55 @@ test.describe('Process Instance Jobs - Retries', () => {
     const decoderRefusals: Record<string, string> = {
       '2026-02-30T10:00:00Z': 'parsing time "2026-02-30T10:00:00Z": day out of range',
       '2026-12-31T23:59:60Z': 'parsing time "2026-12-31T23:59:60Z": second out of range',
+      // Go names the second before the day, and the offset's minute before its hour
+      '2026-02-30T10:00:60Z': 'parsing time "2026-02-30T10:00:60Z": second out of range',
+      '2026-01-01T10:00:00+25:00': 'parsing time "2026-01-01T10:00:00+25:00": time zone offset hour out of range',
+      '2026-01-01T10:00:00+99:99': 'parsing time "2026-01-01T10:00:00+99:99": time zone offset minute out of range',
     };
-    expect(answers).toHaveLength(12);
+    expect(answers).toHaveLength(18);
     for (const answer of answers) {
       const expected = typeof answer.retryAt === 'string' ? decoderRefusals[answer.retryAt] : undefined;
       expect(answer).toMatchObject({ status: 400, message: expect.stringContaining(expected ?? 'Error at "/retryAt"') as unknown });
     }
     expect(job).toMatchObject({ state: 'failed', retries: 0 });
+  });
+
+  test('reads the moment of a retryAt whose offset Go accepts beyond RFC 3339, such as +24:00, as the engine does', async ({ page }) => {
+    await openJobsTab(page, SIMPLE_TASK_FAILED_INSTANCE_KEY);
+    const { answers, job, expectedRetryAt } = await page.evaluate(
+      async ({ processInstanceKey, jobKey }) => {
+        const hour = 60 * 60 * 1000;
+        // the wall clock of a moment, written with an offset Date.parse cannot read
+        const withOffset = (moment: number, offset: string, offsetMs: number) =>
+          new Date(moment + offsetMs).toISOString().replace(/\.\d{3}Z$/, offset);
+        const send = async (retryAt: string) => {
+          const response = await fetch(`/v1/jobs/${jobKey}/retries`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ retries: 3, retryAt }),
+          });
+          const text = await response.text();
+          return { status: response.status, message: text === '' ? '' : (JSON.parse(text) as { message: string }).message };
+        };
+        const inAnHour = Math.floor((Date.now() + hour) / 1000) * 1000;
+        // 25 hours ahead, beyond jobs.maxRetryBackoff, then an hour ahead
+        const tooLate = await send(withOffset(inAnHour + 24 * hour, '+23:60', 24 * hour));
+        const accepted = await send(withOffset(inAnHour, '-24:00', -24 * hour));
+        const text = await (await fetch(`/v1/process-instances/${processInstanceKey}/jobs?page=1&size=100`)).text();
+        const keepKeyDigits = (key: string, value: unknown, context?: { source?: string }) =>
+          key === 'key' && context?.source !== undefined ? context.source : value;
+        const page = JSON.parse(text, keepKeyDigits as (key: string, value: unknown) => unknown) as {
+          items: { key: string; retries: number; retryAt?: string }[];
+        };
+        return { answers: [tooLate, accepted], job: page.items.find((item) => item.key === jobKey), expectedRetryAt: inAnHour };
+      },
+      { processInstanceKey: SIMPLE_TASK_FAILED_INSTANCE_KEY, jobKey: SIMPLE_TASK_FAILED_JOB_KEY }
+    );
+
+    expect(answers[0]).toMatchObject({ status: 400, message: expect.stringContaining('jobs.maxRetryBackoff') as unknown });
+    expect(answers[1]).toMatchObject({ status: 204 });
+    expect(job).toMatchObject({ retries: 3 });
+    expect(Date.parse(job?.retryAt ?? '')).toBe(expectedRetryAt);
   });
 
   test('lists the failures of a job newest first across its series of attempts', async ({ page }) => {

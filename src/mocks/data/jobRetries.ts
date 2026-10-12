@@ -53,19 +53,40 @@ export const engineStateName = (state: string): string => `ActivityState${state.
 /** What the engine's request validator (kin-openapi) accepts as the format `date-time`. */
 const DATE_TIME = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:([0-5]\d|60)(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
 
+/** The parts of a `retryAt` which matched DATE_TIME; the offset's are undefined for `Z`. */
+const DATE_TIME_PARTS = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2}:(\d{2})(?:\.\d+)?)(?:Z|([+-])(\d{2}):(\d{2}))$/;
+
 /**
  * The refusal of the engine's Go JSON decoder for a `retryAt` which passed the
- * validator's pattern but names a moment no calendar has, such as February 30
- * or second 60. `Date.parse` would roll February 30 over to March 2 instead.
+ * validator's pattern but names a moment no calendar has, such as February 30,
+ * second 60 or an offset of 25 hours. `Date.parse` would roll February 30 over
+ * to March 2 instead. Go refuses an offset only beyond 24 hours or 60 minutes,
+ * and names the first field it finds out of range: the second, the offset's
+ * minute, its hour, then the day.
  */
 const goTimeDecodeRefusal = (retryAt: string): string | undefined => {
-  const [, year, month, day, second] = /^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}:(\d{2})/.exec(retryAt) ?? [];
+  const [, year, month, day, , second, , offsetHours, offsetMinutes] = DATE_TIME_PARTS.exec(retryAt) ?? [];
   const date = new Date(0);
   date.setUTCFullYear(Number(year), Number(month) - 1, Number(day));
   const refusal = (field: string) => `can't decode JSON body: parsing time "${retryAt}": ${field} out of range`;
-  if (date.getUTCMonth() !== Number(month) - 1 || date.getUTCDate() !== Number(day)) return refusal('day');
   if (second === '60') return refusal('second');
+  if (Number(offsetMinutes) > 60) return refusal('time zone offset minute');
+  if (Number(offsetHours) > 24) return refusal('time zone offset hour');
+  if (date.getUTCMonth() !== Number(month) - 1 || date.getUTCDate() !== Number(day)) return refusal('day');
   return undefined;
+};
+
+/**
+ * The moment of a `retryAt` the engine accepted, its offset read as Go reads
+ * it. `Date.parse` gives NaN for the offsets Go accepts beyond RFC 3339, such
+ * as `+24:00` or `+23:60`.
+ */
+const retryAtMillis = (retryAt: string): number => {
+  const [, year, month, day, time, , sign, offsetHours, offsetMinutes] = DATE_TIME_PARTS.exec(retryAt) ?? [];
+  const utc = Date.parse(`${year}-${month}-${day}T${time}Z`);
+  if (sign === undefined) return utc;
+  const offsetMs = (Number(offsetHours) * 60 + Number(offsetMinutes)) * 60 * 1000;
+  return sign === '+' ? utc - offsetMs : utc + offsetMs;
 };
 
 /**
@@ -95,17 +116,21 @@ export const operatorRetriesRefusal = (jobKey: string, retries: unknown, retryAt
     return `retries of job ${jobKey} must be between 1 and ${MAX_RETRIES} (jobs.maxRetries), got ${String(retries)}`;
   }
   // a retryAt which is no date-time never gets here, see retryAtSchemaRefusal
-  if (typeof retryAt === 'string' && Date.parse(retryAt) > Date.now() + MAX_RETRY_BACKOFF_MS) {
+  if (typeof retryAt === 'string' && retryAtMillis(retryAt) > Date.now() + MAX_RETRY_BACKOFF_MS) {
     return `retryAt of job ${jobKey} must not be later than 24h0m0s from now (jobs.maxRetryBackoff), got ${retryAt}`;
   }
   return undefined;
 };
 
-/** Sets the remaining retries of an active or failed job and when it is handed out next. */
+/**
+ * Sets the remaining retries of an active or failed job and when it is handed
+ * out next. Like the engine, it keeps the moment of `retryAt`, not its text.
+ */
 export const updateMockJobRetries = (job: MockJob, retries: number, retryAt: string | undefined): void => {
   const now = Date.now();
+  const retryAtMs = retryAt === undefined ? undefined : retryAtMillis(retryAt);
   job.retries = retries;
-  job.retryAt = isAhead(retryAt, now) ? retryAt : undefined;
+  job.retryAt = retryAtMs !== undefined && retryAtMs > now ? new Date(retryAtMs).toISOString() : undefined;
   job.retriesSetByOperator = true;
 };
 
