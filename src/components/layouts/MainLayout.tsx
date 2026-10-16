@@ -55,7 +55,15 @@ interface LogoProps {
   headerHover: string;
 }
 
-const Logo = ({ showText = true, onClick, appName, textColor, logoUrl, brandColor, headerHover }: LogoProps) => (
+const Logo = ({
+  showText = true,
+  onClick,
+  appName,
+  textColor,
+  logoUrl,
+  brandColor,
+  headerHover,
+}: LogoProps) => (
   <Box
     sx={{
       display: 'flex',
@@ -71,13 +79,30 @@ const Logo = ({ showText = true, onClick, appName, textColor, logoUrl, brandColo
     onClick={onClick}
   >
     {logoUrl ? (
-      <Box
-        component="img"
-        src={logoUrl}
-        alt={appName}
-        data-testid="header-logo"
-        sx={{ height: 32, maxWidth: 180, objectFit: 'contain' }}
-      />
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Box
+          component="img"
+          src={logoUrl}
+          alt={appName}
+          data-testid="header-logo"
+          sx={{ height: 32, maxWidth: 180, objectFit: 'contain' }}
+        />
+        {/* Tenant logo replaces the ZenBPM mark, so keep the product attribution next to it */}
+        {showText && (
+          <Typography
+            component="span"
+            data-testid="header-powered-by"
+            sx={{
+              fontSize: '0.625rem',
+              lineHeight: 1.2,
+              color: textColor,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            powered by ZenBPM
+          </Typography>
+        )}
+      </Box>
     ) : (
       <>
         <Box
