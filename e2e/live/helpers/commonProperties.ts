@@ -74,11 +74,15 @@ export async function editBusinessKey(page: Page): Promise<void> {
   await fillEntry(page, 'zenbpm-businessKey-expression', 'orderId');
 }
 
-export async function editMultiInstance(page: Page): Promise<void> {
+// The engine refuses to deploy a non-blank completionCondition, so a model that
+// must deploy leaves it out.
+export async function editMultiInstance(page: Page, { completionCondition = true } = {}): Promise<void> {
   await openGroup(page, 'multiInstance');
   await fillEntry(page, 'zenbpm-multiInstance-inputCollection', 'items');
   await fillEntry(page, 'zenbpm-multiInstance-inputElement', 'item');
   await fillEntry(page, 'zenbpm-multiInstance-outputCollection', 'results');
   await fillEntry(page, 'zenbpm-multiInstance-outputElement', 'item');
-  await fillEntry(page, 'zenbpm-multiInstance-completionCondition', 'numberOfCompletedInstances >= 1');
+  if (completionCondition) {
+    await fillEntry(page, 'zenbpm-multiInstance-completionCondition', 'numberOfCompletedInstances >= 1');
+  }
 }

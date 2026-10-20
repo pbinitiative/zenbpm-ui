@@ -158,7 +158,7 @@ test.describe('Business rule task — dmnDecision / latest — parallel loop', (
 
     test('deploys the designed process and reads back its BPMN XML', async ({page}) => {
         await configureDmnDecision(page);
-        await editMultiInstance(page);
+        await editMultiInstance(page, {completionCondition: false});
         const xml = await downloadBpmnXml(page);
         await expectDesign(page, xml, ELEMENT_ID);
         const response = await deployProcess(page);
@@ -196,7 +196,7 @@ test.describe('Business rule task — dmnDecision / latest — sequential loop',
 
     test('deploys the designed process and reads back its BPMN XML', async ({page}) => {
         await configureDmnDecision(page);
-        await editMultiInstance(page);
+        await editMultiInstance(page, {completionCondition: false});
         const xml = await downloadBpmnXml(page);
         await expectDesign(page, xml, ELEMENT_ID);
         const response = await deployProcess(page);

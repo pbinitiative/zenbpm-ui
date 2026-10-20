@@ -91,7 +91,7 @@ test.describe('User task — parallel loop', () => {
 
     test('deploys the designed process and reads back its BPMN XML', async ({page}) => {
         await configureUserTask(page);
-        await editMultiInstance(page);
+        await editMultiInstance(page, {completionCondition: false});
         const xml = await downloadBpmnXml(page);
         await expectDesign(page, xml, ELEMENT_ID);
         const response = await deployProcess(page);
@@ -129,7 +129,7 @@ test.describe('User task — sequential loop', () => {
 
     test('deploys the designed process and reads back its BPMN XML', async ({page}) => {
         await configureUserTask(page);
-        await editMultiInstance(page);
+        await editMultiInstance(page, {completionCondition: false});
         const xml = await downloadBpmnXml(page);
         await expectDesign(page, xml, ELEMENT_ID);
         const response = await deployProcess(page);
