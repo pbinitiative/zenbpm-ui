@@ -20,7 +20,7 @@ import {
   editMultiInstance,
 } from '../../helpers/commonProperties';
 import { expectXmlElements, expectValidBpmnXml } from '../../helpers/bpmnAssertions';
-import { deployProcess, expectDeploymentSaved } from '../../helpers/processDeployment';
+import { deployProcess, expectDeploymentRejected, expectDeploymentSaved } from '../../helpers/processDeployment';
 
 const ELEMENT_ID = 'Element_under_test';
 const PROPERTY_GROUPS = [
@@ -88,11 +88,21 @@ test.describe('Service task — parallel loop', () => {
 
   test('deploys the designed process and reads back its BPMN XML', async ({ page }) => {
     await configureServiceTask(page);
-    await editMultiInstance(page);
+    await editMultiInstance(page, { completionCondition: false });
     const xml = await downloadBpmnXml(page);
     await expectDesign(page, xml, ELEMENT_ID);
     const response = await deployProcess(page);
     await expectDeploymentSaved(page, response, xml);
+  });
+
+  test('rejects deployment with a multi-instance completion condition', async ({ page }) => {
+    await configureServiceTask(page);
+    await editMultiInstance(page);
+    const xml = await downloadBpmnXml(page);
+    await expectDesign(page, xml, ELEMENT_ID);
+    await expectCompletionConditionXml(page, xml, ELEMENT_ID);
+    const response = await deployProcess(page);
+    await expectDeploymentRejected(page, response, `serviceTask id="${ELEMENT_ID}" has a multi-instance completionCondition`);
   });
 
     async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
@@ -126,11 +136,21 @@ test.describe('Service task — sequential loop', () => {
 
   test('deploys the designed process and reads back its BPMN XML', async ({ page }) => {
     await configureServiceTask(page);
-    await editMultiInstance(page);
+    await editMultiInstance(page, { completionCondition: false });
     const xml = await downloadBpmnXml(page);
     await expectDesign(page, xml, ELEMENT_ID);
     const response = await deployProcess(page);
     await expectDeploymentSaved(page, response, xml);
+  });
+
+  test('rejects deployment with a multi-instance completion condition', async ({ page }) => {
+    await configureServiceTask(page);
+    await editMultiInstance(page);
+    const xml = await downloadBpmnXml(page);
+    await expectDesign(page, xml, ELEMENT_ID);
+    await expectCompletionConditionXml(page, xml, ELEMENT_ID);
+    const response = await deployProcess(page);
+    await expectDeploymentRejected(page, response, `serviceTask id="${ELEMENT_ID}" has a multi-instance completionCondition`);
   });
 
     async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
@@ -197,4 +217,8 @@ async function expectServiceTaskXml(page: Page, xml: string, id: string): Promis
     await expectValidBpmnXml(page, xml);
     await expectXmlElements(page, xml, `[id="${id}"]`, [{ name: 'serviceTask' }]);
     await expectXmlElements(page, xml, `BPMNShape[bpmnElement="${id}"]`, [{ name: 'BPMNShape' }]);
+}
+
+async function expectCompletionConditionXml(page: Page, xml: string, id: string): Promise<void> {
+    await expectXmlElements(page, xml, `[id="${id}"] > multiInstanceLoopCharacteristics > completionCondition`, [{ name: 'completionCondition' }]);
 }
