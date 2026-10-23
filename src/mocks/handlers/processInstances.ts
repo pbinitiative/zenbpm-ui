@@ -514,6 +514,7 @@ export const processInstanceHandlers = [
           retryAt: job.retryAt,
           lastFailureMessage: job.lastFailureMessage,
           retryBackoff: job.retryBackoff,
+          deliveryToken: job.deliveryToken ?? 0,
           createdAt: job.createdAt,
           completedAt: job.completedAt,
           inputVariables: job.inputVariables,

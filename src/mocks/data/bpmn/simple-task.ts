@@ -4,6 +4,7 @@ import type { MockProcessDefinition, MockProcessInstance, MockIncident } from '.
 import { hoursAgo, daysAgo, addMinutes, addSeconds } from '../types';
 import {
   SIMPLE_TASK_ACTIVE_INSTANCE_KEY,
+  SIMPLE_TASK_ACTIVE_JOB_KEY,
   SIMPLE_TASK_FALSY_FORM_INSTANCE_KEY,
   SIMPLE_TASK_BACKOFF_INSTANCE_KEY,
   SIMPLE_TASK_BACKOFF_JOB_KEY,
@@ -277,7 +278,7 @@ Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection i
 // Jobs for this process - service task jobs
 export const jobs = [
   {
-    key: '5000000000000000008',
+    key: SIMPLE_TASK_ACTIVE_JOB_KEY,
     elementId: 'id',
     elementName: 'Test',
     type: 'TestType',
@@ -286,6 +287,8 @@ export const jobs = [
     processDefinitionKey: '3000000000000000046',
     state: 'active' as const,
     createdAt: addMinutes(hoursAgo(1), 1),
+    // Never handed out to a worker.
+    deliveryToken: 0,
     // ZEN_FORM is provided as a parsed object (rather than a string) to prove
     // that any truthy, schema-shaped value triggers the form dialog regardless
     // of job type.
@@ -354,6 +357,8 @@ export const jobs = [
     retryAt: addMinutes(new Date().toISOString(), 30),
     lastFailureMessage: 'java.net.ConnectException: payment service unavailable',
     retryBackoff: 'PT30M,PT1H',
+    // Handed out once, to the worker which failed it.
+    deliveryToken: 1,
   },
   {
     key: '5000000000000000024',
@@ -386,6 +391,8 @@ export const jobs = [
     attempts: 3,
     lastFailureMessage: 'Failed to connect to external CRM system: Connection timeout after 30s',
     retryBackoff: 'PT10S,PT1M',
+    // Handed out once per attempt.
+    deliveryToken: 3,
   },
 ];
 

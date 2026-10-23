@@ -1,9 +1,10 @@
 /**
  * OpenAPI Transformer for Orval
  *
- * This transformer converts int64 fields to string types in the generated TypeScript.
+ * This transformer converts int64 keys to string types in the generated TypeScript.
  * JavaScript's Number type loses precision for integers > 2^53-1 (MAX_SAFE_INTEGER),
- * so we need to handle int64 values as strings.
+ * so we need to handle int64 keys as strings. Int64 counters stay numbers; see
+ * `openapi-int64.mjs`.
  *
  * The runtime conversion is handled by:
  * - Incoming: json-bigint (axios response transformer) converts large numbers to strings
@@ -11,17 +12,21 @@
  */
 
 import type { OpenAPIObject, SchemaObject, ReferenceObject } from 'openapi3-ts/oas30';
+import { isInt64Key } from './openapi-int64.mjs';
 
 /**
- * Recursively transform all int64 fields to string type
+ * Recursively transform all int64 keys to string type. `name` is the property
+ * or parameter the schema belongs to, if any. The members of its
+ * `allOf`/`oneOf`/`anyOf` and its `items` keep that name, so a counter stays a
+ * counter when composed or listed.
  */
-function transformSchema(schema: SchemaObject | ReferenceObject | undefined): void {
+function transformSchema(schema: SchemaObject | ReferenceObject | undefined, name?: string): void {
   if (!schema || '$ref' in schema) {
     return;
   }
 
-  // Transform int64 to string
-  if (schema.type === 'integer' && schema.format === 'int64') {
+  // Transform int64 keys to string
+  if (isInt64Key(schema, name)) {
     schema.type = 'string';
     // Keep format as documentation but it won't affect TypeScript type
     schema.format = 'int64-string';
@@ -33,23 +38,25 @@ function transformSchema(schema: SchemaObject | ReferenceObject | undefined): vo
 
   // Recursively process nested schemas
   if (schema.properties) {
-    Object.values(schema.properties).forEach(transformSchema);
+    Object.entries(schema.properties).forEach(([propertyName, property]) => {
+      transformSchema(property, propertyName);
+    });
   }
 
   if (schema.items) {
-    transformSchema(schema.items);
+    transformSchema(schema.items, name);
   }
 
   if (schema.allOf) {
-    schema.allOf.forEach(transformSchema);
+    schema.allOf.forEach((member) => transformSchema(member, name));
   }
 
   if (schema.oneOf) {
-    schema.oneOf.forEach(transformSchema);
+    schema.oneOf.forEach((member) => transformSchema(member, name));
   }
 
   if (schema.anyOf) {
-    schema.anyOf.forEach(transformSchema);
+    schema.anyOf.forEach((member) => transformSchema(member, name));
   }
 
   if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
@@ -58,7 +65,7 @@ function transformSchema(schema: SchemaObject | ReferenceObject | undefined): vo
 }
 
 /**
- * Transform the OpenAPI spec to use string types for int64 fields.
+ * Transform the OpenAPI spec to use string types for int64 keys.
  * This is called by Orval before generating TypeScript types.
  */
 export default (inputSpec: OpenAPIObject): OpenAPIObject => {
@@ -66,7 +73,7 @@ export default (inputSpec: OpenAPIObject): OpenAPIObject => {
 
   // Transform all schemas in components
   if (spec.components?.schemas) {
-    Object.values(spec.components.schemas).forEach(transformSchema);
+    Object.values(spec.components.schemas).forEach((schema) => transformSchema(schema));
   }
 
   // Transform inline schemas in paths
@@ -104,7 +111,7 @@ export default (inputSpec: OpenAPIObject): OpenAPIObject => {
         if (operation.parameters) {
           operation.parameters.forEach((param) => {
             if ('schema' in param && param.schema) {
-              transformSchema(param.schema);
+              transformSchema(param.schema, param.name);
             }
           });
         }
