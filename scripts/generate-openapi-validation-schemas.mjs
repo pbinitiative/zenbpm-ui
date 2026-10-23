@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { exec } from 'child_process';
 import 'dotenv/config';
+import { checkInt64Classification, retypeInt64KeysToString } from './openapi-int64.mjs';
 
 async function generateSchemas() {
   const extractPathRegex = /^https?:\/\/[^/]+(\/[^?#]*)?/;
@@ -38,29 +39,21 @@ async function generateSchemas() {
       }
     }
 
-    const retypeKeysToString = (root) => {
-      if (!root || typeof root !== "object") return;
-      const stack = [root];
-      while (stack.length > 0) {
-        const obj = stack.pop();
-        if (!obj || typeof obj !== "object") continue;
-        if (
-          obj.type === "integer" &&
-          obj.format === "int64"
-        ) {
-          obj.type = "string";
-          obj.pattern = '^\\d{15,25}$';
-          delete obj.format;
-        }
-        for (const key of Object.keys(obj)) {
-          const value = obj[key];
-          if (value && typeof value === "object") {
-            stack.push(value);
-          }
-        }
-      }
-    };
-    retypeKeysToString(schemas)
+    // Int64 keys arrive as strings (json-bigint); int64 counters stay integers
+    const { unmatchedCounters, keysNotNamedLikeKeys } = checkInt64Classification(retypeInt64KeysToString(schemas));
+    if (unmatchedCounters.length > 0) {
+      console.error(
+        `❌ INT64_COUNTER_FIELDS in scripts/openapi-int64.mjs lists ${unmatchedCounters.join(', ')}, which no int64 property ` +
+        `of the spec matched: remove a stale entry, or give the counter a shape the classification sees`
+      );
+      process.exit(1);
+    }
+    if (keysNotNamedLikeKeys.length > 0) {
+      console.warn(
+        `⚠️ int64 properties treated as keys although not named like one: ${keysNotNamedLikeKeys.join(', ')}. ` +
+        `List counters in INT64_COUNTER_FIELDS in scripts/openapi-int64.mjs.`
+      );
+    }
 
     // 4. Extract endpoint schemas
     const endpointSchemas = {};

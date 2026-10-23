@@ -21,10 +21,9 @@ const JSONBigStringify = JSONBigInt({ useNativeBigInt: true });
 /**
  * Fields that contain int64 keys and should be serialized as JSON numbers.
  *
- * `deliveryToken` is an int64 but no key: a small counter, which responses
- * carry as a JSON number although the generated type says `string`. It is
- * listed so that a token sent back as a string reaches the engine as a
- * number; the engine refuses a string with 400.
+ * Int64 counters such as `deliveryToken` are not listed: their generated type
+ * is `number`, which serializes as a JSON number anyway (see
+ * `scripts/openapi-int64.mjs`).
  *
  * The names are matched wherever they occur, except inside `variables`.
  */
@@ -38,12 +37,11 @@ const INT64_KEY_FIELDS = new Set([
   'decisionRequirementsKey',
   'jobKey',
   'incidentKey',
-  'deliveryToken',
 ]);
 
 /**
  * Fields whose value is a map of process variables. Its entries are named and
- * typed by the process, not by the API: a variable called `deliveryToken` or
+ * typed by the process, not by the API: a variable called `jobKey` or
  * `key` holding `"00123"` must stay that string. Every free-form object of the
  * API's request bodies is such a `variables` field.
  */
