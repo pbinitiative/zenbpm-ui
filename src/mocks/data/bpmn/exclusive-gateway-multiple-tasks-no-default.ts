@@ -209,6 +209,6 @@ export const incidents: MockIncident[] = [
     processDefinitionKey: '3000000000000000005',
     message: 'Database constraint violation: Duplicate order ID "ORD-2024-102"',
     createdAt: hoursAgo(4),
-    executionToken: 'token-423456',
+    executionToken: '7100000000000423456',
   },
 ];

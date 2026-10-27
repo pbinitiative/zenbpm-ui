@@ -49,6 +49,6 @@ export const incidents: MockIncident[] = [
     processDefinitionKey: '3000000000000000023',
     message: 'Invalid timer duration expression: "invalid" cannot be parsed as ISO 8601 duration',
     createdAt: hoursAgo(1),
-    executionToken: 'token-320001',
+    executionToken: '7100000000000320001',
   },
 ];

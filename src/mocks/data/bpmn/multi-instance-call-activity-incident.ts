@@ -81,6 +81,7 @@ export const instances: MockProcessInstance[] = [
     key: CALLED_INSTANCE_KEY,
     processDefinitionKey: '3000000000000000091',
     bpmnProcessId: 'called_incident_process',
+    version: 1,
     createdAt: '2026-01-01T10:03:00.000Z',
     state: 'active',
     processType: 'callActivity',

@@ -25,7 +25,7 @@ export const instances: MockProcessInstance[] = [
     activeElementInstances: [{ key: '3100000000000000067', elementId: 'callActivity', elementType: 'callActivity' }],
     history: [
       {
-        key: '3100000000000000066-h1',
+        key: '3100000000000000466',
         elementId: 'StartEvent_1',
         elementType: 'startEvent',
         state: 'completed',
@@ -33,7 +33,7 @@ export const instances: MockProcessInstance[] = [
         completedAt: hoursAgo(47),
       },
       {
-        key: '3100000000000000066-h2',
+        key: '3100000000000000467',
         elementId: 'callActivity',
         elementType: 'callActivity',
         state: 'active',

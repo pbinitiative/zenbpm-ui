@@ -29,10 +29,11 @@ interface MockDecisionInstance {
       evaluatedOutputs?: Array<{ outputId: string; outputName: string; outputValue: unknown }>;
     }>;
   }>;
-  decisionOutput: Record<string, unknown>;
+  /** Any JSON value: a decision with a single unnamed output returns its bare value */
+  decisionOutput: unknown;
 }
 
-const decisionInstances: MockDecisionInstance[] = [
+export const decisionInstances: MockDecisionInstance[] = [
   // Sport decision instances - based on sport.results.yml test cases
   {
     key: '4100000000000000001',

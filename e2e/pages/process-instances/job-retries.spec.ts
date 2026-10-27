@@ -812,7 +812,7 @@ test.describe('Process Instance Jobs - Retries', () => {
         processDefinitionKey: '3000000000000000046',
         message: 'other incident',
         createdAt: new Date().toISOString(),
-        executionToken: `token-other-${index}`,
+        executionToken: `59200000000000${String(index).padStart(5, '0')}`,
       }));
       (incidents as unknown[]).unshift(...others);
     }, SIMPLE_TASK_FAILED_INSTANCE_KEY);
@@ -847,7 +847,7 @@ test.describe('Process Instance Jobs - Retries', () => {
         processDefinitionKey: '3000000000000000046',
         message: 'other incident',
         createdAt: new Date().toISOString(),
-        executionToken: `token-other-${index}`,
+        executionToken: `59200000000000${String(index).padStart(5, '0')}`,
       }));
       (incidents as unknown[]).unshift(...others);
     }, SIMPLE_TASK_FAILED_INSTANCE_KEY);

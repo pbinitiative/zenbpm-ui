@@ -222,6 +222,29 @@ test.describe('Decision Instance Detail Page', () => {
     await expect(page.locator('code').filter({ hasText: 'sport' })).toBeVisible();
   });
 
+  // A decision with a single unnamed output returns its bare value, and one
+  // no rule matched returns null: outputs as well, however falsy
+  for (const output of [false, 0, '', null]) {
+    test(`should display the output ${JSON.stringify(output)} in metadata`, async ({ page }) => {
+      await page.goto('/');
+      await expect(page.getByText('Process Definitions')).toBeVisible({ timeout: 10000 });
+
+      await page.evaluate(async ({ key, output }) => {
+        // @ts-expect-error browser-only module URL
+        const { decisionInstances } = await import('/src/mocks/handlers/decisionInstances.ts');
+        const instance = (decisionInstances as Array<{ key: string; decisionOutput: unknown }>)
+          .find((decisionInstance) => decisionInstance.key === key);
+        if (instance) instance.decisionOutput = output;
+        // Navigate within the app, which keeps the changed mock data
+        window.history.pushState({}, '', `/decision-instances/${key}`);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }, { key: '4100000000000000001', output });
+      await expect(page.getByRole('heading', { name: 'Metadata' })).toBeVisible({ timeout: 10000 });
+
+      await expect(page.locator('code').filter({ hasText: new RegExp(`^${JSON.stringify(output)}$`) })).toBeVisible();
+    });
+  }
+
   test('should display decision definition chip', async ({ page }) => {
     await page.goto('/decision-instances/4100000000000000001');
     await expect(page.getByRole('heading', { name: 'Metadata' })).toBeVisible({ timeout: 10000 });

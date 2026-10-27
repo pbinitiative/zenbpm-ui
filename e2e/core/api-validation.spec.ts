@@ -17,39 +17,6 @@ import {
  * to the console when responses don't match the schema.
  */
 
-// Helper to collect validation errors from console
-function createValidationErrorCollector(page: import('@playwright/test').Page) {
-  const errors: string[] = [];
-
-  const handler = (msg: ConsoleMessage) => {
-    const text = msg.text();
-    // Capture MSW Validator errors (now logged via console.error)
-    if (text.includes('[MSW Validator]') && text.includes('Invalid')) {
-      errors.push(text);
-    }
-  };
-
-  page.on('console', handler);
-  page.on('pageerror', (err) => {
-    if (err.message.includes('[MSW Validator]')) {
-      errors.push(err.message);
-    }
-  });
-
-  return {
-    errors,
-    cleanup: () => page.off('console', handler),
-  };
-}
-
-// Wait for network to be idle (all API calls completed)
-async function waitForApiCalls(page: import('@playwright/test').Page) {
-  // Wait for network idle
-  await page.waitForLoadState('networkidle');
-  // Additional wait to ensure all responses are processed
-  await page.waitForTimeout(500);
-}
-
 test.describe('API Response Validation', () => {
 
   test('Home page - no validation errors', async ({ page }) => {
@@ -295,6 +262,42 @@ test.describe('API Validation - Edge Cases', () => {
   });
 });
 
+// The engine stores a decision's output as raw JSON: an object for named
+// outputs, an array for a collect hit policy, the bare value of a single
+// unnamed output, null when no rule matched, or nothing at all.
+test.describe('API Validation - decision output', () => {
+  test('accepts a decision output of any JSON type, or none', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByText('Process Definitions')).toBeVisible({ timeout: 10000 });
+
+    const results = await page.evaluate(async () => {
+      // @ts-expect-error browser-only module URL
+      const { axiosResponseTransformer } = await import('/src/base/utils/jsonBigInt.ts');
+      // @ts-expect-error browser-only module URL
+      const { validateResponse } = await import('/src/mocks/validation/validator.ts');
+      const valid = (fields: string) => (validateResponse(
+        'GET',
+        '/v1/decision-instances/4100000000000000001',
+        axiosResponseTransformer(`{"key":4100000000000000001,"dmnResourceDefinitionKey":4000000000000000001${fields}}`)
+      ) as { valid: boolean }).valid;
+      const detail = ',"evaluatedAt":"2024-01-15T10:30:00Z","evaluatedDecisions":[]';
+      const outputs = ['{"sport":"squash"}', '[{"discount":0.1},{"discount":0.05}]', '"squash"', '0', 'false', 'null'];
+      return {
+        outputs: outputs.map((output) => valid(`${detail},"decisionOutput":${output}`)),
+        omitted: valid(detail),
+        // Without its required fields, so that the endpoint's schema is known to apply
+        withoutRequiredFields: valid(',"decisionOutput":{"sport":"squash"}'),
+      };
+    });
+
+    expect(results).toEqual({
+      outputs: [true, true, true, true, true, true],
+      omitted: true,
+      withoutRequiredFields: false,
+    });
+  });
+});
+
 // Delivery tokens are int64 counters, not keys: small JSON numbers which the
 // response transformer leaves numbers and the validator checks as integers,
 // while keys stay precision-preserving strings.
@@ -367,17 +370,30 @@ test.describe('API Validation - int64 counters', () => {
       return Promise.all(processInstanceKeys.map(async (processInstanceKey) => {
         const response = await AXIOS_INSTANCE.get(`/process-instances/${processInstanceKey}/jobs`);
         const { items } = response.data as { items: Array<{ key: unknown; deliveryToken?: unknown }> };
-        // The validator resolves no URL with a path parameter yet, so name the endpoint's template
-        const { valid } = validateResponse(
-          'GET', '/v1/process-instances/{processInstanceKey}/jobs', response.data
-        ) as { valid: boolean };
-        return { valid, jobs: items.map(({ key, deliveryToken }) => ({ key, deliveryToken })) };
+        const valid = (body: unknown) => (validateResponse(
+          'GET', `/v1/process-instances/${processInstanceKey}/jobs`, body
+        ) as { valid: boolean }).valid;
+        // The same page with its delivery tokens as strings, which the schema must refuse
+        const stringTokens = { ...response.data, items: items.map((job) => ({ ...job, deliveryToken: '1' })) };
+        return {
+          valid: valid(response.data),
+          stringTokensValid: valid(stringTokens),
+          jobs: items.map(({ key, deliveryToken }) => ({ key, deliveryToken })),
+        };
       }));
     }, [SIMPLE_TASK_ACTIVE_INSTANCE_KEY, SIMPLE_TASK_BACKOFF_INSTANCE_KEY]);
 
     expect(instances).toEqual([
-      { valid: true, jobs: expect.arrayContaining([{ key: SIMPLE_TASK_ACTIVE_JOB_KEY, deliveryToken: 0 }]) },
-      { valid: true, jobs: expect.arrayContaining([{ key: SIMPLE_TASK_BACKOFF_JOB_KEY, deliveryToken: 1 }]) },
+      {
+        valid: true,
+        stringTokensValid: false,
+        jobs: expect.arrayContaining([{ key: SIMPLE_TASK_ACTIVE_JOB_KEY, deliveryToken: 0 }]),
+      },
+      {
+        valid: true,
+        stringTokensValid: false,
+        jobs: expect.arrayContaining([{ key: SIMPLE_TASK_BACKOFF_JOB_KEY, deliveryToken: 1 }]),
+      },
     ]);
   });
 
@@ -398,3 +414,36 @@ test.describe('API Validation - int64 counters', () => {
     );
   });
 });
+
+// Helper to collect validation errors from console
+function createValidationErrorCollector(page: import('@playwright/test').Page) {
+  const errors: string[] = [];
+
+  const handler = (msg: ConsoleMessage) => {
+    const text = msg.text();
+    // Capture MSW Validator errors (now logged via console.error)
+    if (text.includes('[MSW Validator]') && text.includes('Invalid')) {
+      errors.push(text);
+    }
+  };
+
+  page.on('console', handler);
+  page.on('pageerror', (err) => {
+    if (err.message.includes('[MSW Validator]')) {
+      errors.push(err.message);
+    }
+  });
+
+  return {
+    errors,
+    cleanup: () => page.off('console', handler),
+  };
+}
+
+// Wait for network to be idle (all API calls completed)
+async function waitForApiCalls(page: import('@playwright/test').Page) {
+  // Wait for network idle
+  await page.waitForLoadState('networkidle');
+  // Additional wait to ensure all responses are processed
+  await page.waitForTimeout(500);
+}

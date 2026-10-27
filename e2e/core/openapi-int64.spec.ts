@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test';
 import type { OpenAPIObject } from 'openapi3-ts/oas30';
 import transformer from '../../scripts/openapi-transformer';
-import { checkInt64Classification, retypeInt64KeysToString } from '../../scripts/openapi-int64.mjs';
+import {
+  checkInt64Classification,
+  classifyInt64OfPaths,
+  retypeInt64KeysToString,
+} from '../../scripts/openapi-int64.mjs';
 
 /**
  * Int64 classification of the generators
@@ -19,6 +23,7 @@ test.describe('int64 classification of the generators', () => {
     expect(typesAt(generated.components?.schemas)).toEqual(EXPECTED_TYPES);
     expect(typeAt(generated.paths, ['/jobs/{jobKey}', 'get', 'parameters', '0', 'schema'])).toBe('string');
     expect(typeAt(generated.paths, ['/jobs/{jobKey}', 'get', 'parameters', '1', 'schema'])).toBe('integer');
+    expect(typeAt(generated.paths, [...FAIL_BODY, 'properties', 'deliveryToken'])).toBe('integer');
   });
 
   test('validation schemas keep counters integers in any shape and make keys strings', () => {
@@ -40,6 +45,22 @@ test.describe('int64 classification of the generators', () => {
       keysNotNamedLikeKeys: ['attempts'],
     });
   });
+
+  test('classifies the inline schemas of the paths, which the validation schemas leave out', () => {
+    const { paths } = spec();
+    const untouched = structuredClone(paths);
+
+    const classification = classifyInt64OfPaths(paths);
+
+    expect(paths).toEqual(untouched);
+    expect(classification).toEqual({ keys: new Set(['jobKey', 'jobKeyIn']), counters: new Set(['deliveryToken']) });
+    // A counter which no component schema has, but a request body does, is matched
+    const components = { Job: { type: 'object', properties: { key: int64() } } };
+    expect(checkInt64Classification(retypeInt64KeysToString(components), classification)).toEqual({
+      unmatchedCounters: [],
+      keysNotNamedLikeKeys: [],
+    });
+  });
 });
 
 // Where the synthetic spec has an int64, and what each generator must make of it
@@ -59,6 +80,9 @@ const EXPECTED_TYPES: Record<string, string> = {
 
 const int64 = () => ({ type: 'integer' as const, format: 'int64' });
 
+// The inline request body of the job failure in the synthetic spec
+const FAIL_BODY = ['/jobs/{jobKey}/fail', 'post', 'requestBody', 'content', 'application/json', 'schema'];
+
 function spec(): OpenAPIObject {
   return {
     openapi: '3.0.0',
@@ -70,6 +94,22 @@ function spec(): OpenAPIObject {
             { name: 'jobKey', in: 'path', required: true, schema: int64() },
             { name: 'deliveryToken', in: 'query', schema: int64() },
           ],
+          responses: {},
+        },
+      },
+      '/jobs': {
+        get: {
+          parameters: [{ name: 'jobKeyIn', in: 'query', schema: { type: 'array', items: int64() } }],
+          responses: {},
+        },
+      },
+      '/jobs/{jobKey}/fail': {
+        post: {
+          requestBody: {
+            content: {
+              'application/json': { schema: { type: 'object', properties: { deliveryToken: int64() } } },
+            },
+          },
           responses: {},
         },
       },

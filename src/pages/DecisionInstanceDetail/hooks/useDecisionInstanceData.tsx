@@ -197,8 +197,8 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
       });
     }
 
-    // Output
-    if (instance.decisionOutput) {
+    // Output: any JSON value, so `false`, `0`, `""` and `null` are outputs too
+    if (instance.decisionOutput !== undefined) {
       fields.push({
         label: t('decisions:fields.output'),
         value: (

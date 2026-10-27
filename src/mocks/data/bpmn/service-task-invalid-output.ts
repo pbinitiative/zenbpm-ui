@@ -49,6 +49,6 @@ export const incidents: MockIncident[] = [
     processDefinitionKey: '3000000000000000032',
     message: 'Output mapping expression failed: undefined variable "result.nonExistentField"',
     createdAt: hoursAgo(5),
-    executionToken: 'token-329001',
+    executionToken: '7100000000000329001',
   },
 ];

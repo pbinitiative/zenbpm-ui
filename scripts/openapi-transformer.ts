@@ -12,7 +12,7 @@
  */
 
 import type { OpenAPIObject, SchemaObject, ReferenceObject } from 'openapi3-ts/oas30';
-import { isInt64Key } from './openapi-int64.mjs';
+import { forEachInlineSchema, isInt64Key } from './openapi-int64.mjs';
 
 /**
  * Recursively transform all int64 keys to string type. `name` is the property
@@ -76,48 +76,8 @@ export default (inputSpec: OpenAPIObject): OpenAPIObject => {
     Object.values(spec.components.schemas).forEach((schema) => transformSchema(schema));
   }
 
-  // Transform inline schemas in paths
-  if (spec.paths) {
-    Object.values(spec.paths).forEach((pathItem) => {
-      if (!pathItem) return;
-
-      const operations = ['get', 'post', 'put', 'patch', 'delete'] as const;
-      operations.forEach((method) => {
-        const operation = pathItem[method];
-        if (!operation) return;
-
-        // Transform request body schemas
-        if (operation.requestBody && 'content' in operation.requestBody) {
-          Object.values(operation.requestBody.content).forEach((mediaType) => {
-            transformSchema(mediaType.schema);
-          });
-        }
-
-        // Transform response schemas
-        if (operation.responses) {
-          Object.values(operation.responses).forEach((response) => {
-            if (response && 'content' in response) {
-              const responseObj = response as { content?: Record<string, { schema?: SchemaObject | ReferenceObject }> };
-              if (responseObj.content) {
-                Object.values(responseObj.content).forEach((mediaType) => {
-                  transformSchema(mediaType.schema);
-                });
-              }
-            }
-          });
-        }
-
-        // Transform parameter schemas
-        if (operation.parameters) {
-          operation.parameters.forEach((param) => {
-            if ('schema' in param && param.schema) {
-              transformSchema(param.schema, param.name);
-            }
-          });
-        }
-      });
-    });
-  }
+  // Transform inline schemas in paths: bodies, responses and parameters
+  forEachInlineSchema<SchemaObject | ReferenceObject>(spec.paths, transformSchema);
 
   return spec;
 };

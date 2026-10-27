@@ -45,6 +45,8 @@ export interface MockProcessInstance {
   partition: number;
   /** Key of the parent process instance (only set for child processes) */
   parentProcessInstanceKey?: string;
+  /** Version of the definition, for an instance whose definition the mocks leave out */
+  version?: number;
 }
 
 export interface MockIncident {

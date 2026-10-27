@@ -34,12 +34,14 @@ const SAME_VALUE_KEYWORDS = new Set(['allOf', 'oneOf', 'anyOf']);
  * over into the members of its `allOf`/`oneOf`/`anyOf` and into its `items`,
  * while the properties of a nested object have names of their own.
  *
+ * `name` is the property or parameter `root` belongs to, if any.
+ *
  * Returns the names of the properties classified as keys and as counters.
  */
-export const retypeInt64KeysToString = (root) => {
+export const retypeInt64KeysToString = (root, name) => {
   const keys = new Set();
   const counters = new Set();
-  const stack = [[root, undefined]];
+  const stack = [[root, name]];
   while (stack.length > 0) {
     const [schema, name] = stack.pop();
     if (!schema || typeof schema !== 'object') continue;
@@ -71,18 +73,70 @@ export const retypeInt64KeysToString = (root) => {
   return { keys, counters };
 };
 
-// How keys are named: `key`, `…Key` or `…Token`
-const KEY_NAME = /^key$|Key$|Token$/;
+const OPERATIONS = ['get', 'post', 'put', 'patch', 'delete'];
 
 /**
- * Checks a classification made by `retypeInt64KeysToString`, since every int64
- * is a key by default: a new counter would silently become a key string.
+ * Calls `visit` with every inline schema of `paths` the Orval transformer
+ * retypes: the request and response bodies and the parameters of every
+ * operation, a parameter's schema with the parameter's name. Shared by the
+ * transformer and `classifyInt64OfPaths`, so that the check covers whatever the
+ * client types retype.
+ */
+export const forEachInlineSchema = (paths, visit) => {
+  for (const pathItem of Object.values(paths ?? {})) {
+    for (const method of OPERATIONS) {
+      const operation = pathItem?.[method];
+      if (!operation) continue;
+      for (const mediaType of Object.values(operation.requestBody?.content ?? {})) {
+        visit(mediaType.schema);
+      }
+      for (const response of Object.values(operation.responses ?? {})) {
+        for (const mediaType of Object.values(response?.content ?? {})) {
+          visit(mediaType.schema);
+        }
+      }
+      for (const parameter of operation.parameters ?? []) {
+        visit(parameter.schema, parameter.name);
+      }
+    }
+  }
+};
+
+/**
+ * Classifies the int64 fields of the inline schemas of `paths` as the Orval
+ * transformer retypes them (see `forEachInlineSchema`). `paths` stays untouched.
+ *
+ * The validation schemas leave these schemas out, so a check of their
+ * classification alone would miss the counters and keys only the paths have.
+ */
+export const classifyInt64OfPaths = (paths) => {
+  const keys = new Set();
+  const counters = new Set();
+  forEachInlineSchema(paths, (schema, name) => {
+    const classification = retypeInt64KeysToString(structuredClone(schema), name);
+    classification.keys.forEach((key) => keys.add(key));
+    classification.counters.forEach((counter) => counters.add(counter));
+  });
+  return { keys, counters };
+};
+
+// How keys are named: `key`, `…Key` or `…Token`, and `…KeyIn` for a filter by keys
+const KEY_NAME = /^key$|Key$|KeyIn$|Token$/;
+
+/**
+ * Checks the classifications made by `retypeInt64KeysToString` and
+ * `classifyInt64OfPaths` of one spec, since every int64 is a key by default: a
+ * new counter would silently become a key string.
  *
  * Returns the listed counters which no int64 property matched, because their
  * entry is stale or their schema got a shape the classification does not see,
  * and the keys which are not named like one, which may be unlisted counters.
  */
-export const checkInt64Classification = ({ keys, counters }) => ({
-  unmatchedCounters: [...INT64_COUNTER_FIELDS].filter((name) => !counters.has(name)),
-  keysNotNamedLikeKeys: [...keys].filter((name) => name !== undefined && !KEY_NAME.test(name)),
-});
+export const checkInt64Classification = (...classifications) => {
+  const keys = new Set(classifications.flatMap((classification) => [...classification.keys]));
+  const counters = new Set(classifications.flatMap((classification) => [...classification.counters]));
+  return {
+    unmatchedCounters: [...INT64_COUNTER_FIELDS].filter((name) => !counters.has(name)),
+    keysNotNamedLikeKeys: [...keys].filter((name) => name !== undefined && !KEY_NAME.test(name)),
+  };
+};

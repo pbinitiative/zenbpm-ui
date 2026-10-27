@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { exec } from 'child_process';
 import 'dotenv/config';
-import { checkInt64Classification, retypeInt64KeysToString } from './openapi-int64.mjs';
+import { checkInt64Classification, classifyInt64OfPaths, retypeInt64KeysToString } from './openapi-int64.mjs';
 
 async function generateSchemas() {
   const extractPathRegex = /^https?:\/\/[^/]+(\/[^?#]*)?/;
@@ -39,8 +39,12 @@ async function generateSchemas() {
       }
     }
 
-    // Int64 keys arrive as strings (json-bigint); int64 counters stay integers
-    const { unmatchedCounters, keysNotNamedLikeKeys } = checkInt64Classification(retypeInt64KeysToString(schemas));
+    // Int64 keys arrive as strings (json-bigint); int64 counters stay integers.
+    // The check covers the inline schemas of the paths too, as the client types do.
+    const { unmatchedCounters, keysNotNamedLikeKeys } = checkInt64Classification(
+      retypeInt64KeysToString(schemas),
+      classifyInt64OfPaths(apiSpec.paths)
+    );
     if (unmatchedCounters.length > 0) {
       console.error(
         `❌ INT64_COUNTER_FIELDS in scripts/openapi-int64.mjs lists ${unmatchedCounters.join(', ')}, which no int64 property ` +

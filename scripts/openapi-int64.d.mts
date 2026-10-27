@@ -20,15 +20,31 @@ export interface Int64Classification {
 
 /**
  * Rewrites the int64 keys under `root` into the key strings the runtime
- * validator expects, leaving the counters integers.
+ * validator expects, leaving the counters integers. `name` is the property or
+ * parameter `root` belongs to, if any.
  */
-export function retypeInt64KeysToString(root: unknown): Int64Classification;
+export function retypeInt64KeysToString(root: unknown, name?: string): Int64Classification;
 
 /**
- * Checks a classification made by `retypeInt64KeysToString`: the listed
- * counters which no int64 property matched, and the keys not named like one.
+ * Calls `visit` with every inline schema of `paths` the Orval transformer
+ * retypes: request and response bodies, and parameters with their name.
  */
-export function checkInt64Classification(classification: Int64Classification): {
+export function forEachInlineSchema<Schema = unknown>(
+  paths: unknown,
+  visit: (schema: Schema | undefined, name?: string) => void
+): void;
+
+/**
+ * Classifies the int64 fields of the inline schemas of `paths`, as the Orval
+ * transformer retypes them, without changing `paths`.
+ */
+export function classifyInt64OfPaths(paths: unknown): Int64Classification;
+
+/**
+ * Checks the classifications of one spec: the listed counters which no int64
+ * property matched, and the keys not named like one.
+ */
+export function checkInt64Classification(...classifications: Int64Classification[]): {
   unmatchedCounters: string[];
   keysNotNamedLikeKeys: string[];
 };

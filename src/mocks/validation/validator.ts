@@ -132,13 +132,13 @@ function matchEndpoint(method: string, url: string): string | null {
     return exactKey;
   }
 
-  // Try pattern matching (replace path params with :param)
+  // Try pattern matching (path params as {param}, as the spec names them, or :param)
   for (const key of Object.keys(endpointSchemas)) {
     const [keyMethod, keyPath] = key.split(' ');
     if (keyMethod !== method) continue;
 
     // Convert pattern to regex
-    const pattern = keyPath.replace(/:[^/]+/g, '[^/]+');
+    const pattern = keyPath.replace(/\{[^/}]+}|:[^/]+/g, '[^/]+');
     const regex = new RegExp(`^${pattern}$`);
     if (regex.test(urlPath)) {
       return key;

@@ -219,7 +219,7 @@ Caused by: jdk.nashorn.internal.runtime.ECMAException: ReferenceError: "customer
 \tat jdk.scripting.nashorn/jdk.nashorn.internal.runtime.ScriptFunction.invoke(ScriptFunction.java:513)
 \t... 11 more`,
     createdAt: hoursAgo(1),
-    executionToken: 'token-223456',
+    executionToken: '7100000000000223456',
   },
   {
     key: SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY,
@@ -256,7 +256,7 @@ Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection i
 \t... 6 more`,
     // raised by the failure which exhausted the job's current series below
     createdAt: addMinutes(daysAgo(2), 5),
-    executionToken: 'token-223457',
+    executionToken: '7100000000000223457',
     jobKey: SIMPLE_TASK_FAILED_JOB_KEY,
   },
   {
@@ -270,7 +270,7 @@ Caused by: java.sql.SQLTransientConnectionException: HikariPool-1 - Connection i
     message: `Failed to connect to external CRM system: Connection refused (job ${SIMPLE_TASK_FAILED_JOB_KEY}: 3 attempts, retries exhausted)`,
     createdAt: addMinutes(daysAgo(3), 5),
     resolvedAt: addMinutes(daysAgo(3), 30),
-    executionToken: 'token-223457',
+    executionToken: '7100000000000223457',
     jobKey: SIMPLE_TASK_FAILED_JOB_KEY,
   },
 ];

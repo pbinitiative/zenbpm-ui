@@ -1,5 +1,6 @@
 // MSW handlers for process instances endpoints
 import { delay, http, HttpResponse } from 'msw';
+import { parse } from '@base/utils/jsonBigInt';
 import {
   processInstances,
   findProcessInstanceByKey,
@@ -150,7 +151,9 @@ function getProcessDefinitionVersion(pi: (typeof processInstances)[0]) {
         version: definition.version,
         ...(definition.versionTag ? { versionTag: definition.versionTag } : {}),
       }
-    : {};
+    : pi.version !== undefined
+      ? { version: pi.version }
+      : {};
 }
 
 // Helper to transform a process instance to response format (reused across handlers)
@@ -401,18 +404,28 @@ export const processInstanceHandlers = [
   http.post(
     `${BASE_URL}/process-instances`,
     withValidation(async ({ request }) => {
-      const body = (await request.json()) as {
+      // The client sends keys as JSON numbers, too long for JSON.parse
+      const body = parse(await request.text()) as {
         processDefinitionKey: string;
         variables?: Record<string, unknown>;
       };
 
-      const newKey = `${Date.now()}`;
+      // A key as long as the engine's, so that it travels as one
+      const newKey = `3${String(Date.now()).padStart(18, '0')}`;
       const createdAt = new Date().toISOString();
+      const definition = findProcessDefinitionByKey(body.processDefinitionKey);
 
       return HttpResponse.json(
         {
           key: newKey,
           processDefinitionKey: body.processDefinitionKey,
+          ...(definition
+            ? {
+                bpmnProcessId: definition.bpmnProcessId,
+                version: definition.version,
+                ...(definition.versionTag ? { versionTag: definition.versionTag } : {}),
+              }
+            : {}),
           createdAt,
           state: 'active',
           processType: 'default',

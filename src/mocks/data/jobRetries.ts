@@ -38,6 +38,12 @@ const elementInstanceKeyOf = (job: MockJob): string =>
   )?.key ??
   job.key;
 
+/**
+ * The execution token a job runs on, as the engine names the incidents of the
+ * job's element by. The mock jobs keep no token, so it derives from the job key.
+ */
+const executionTokenOf = (job: MockJob): string => `72${job.key.slice(2)}`;
+
 const isAhead = (timestamp: string | undefined, now: number): boolean =>
   timestamp !== undefined && Date.parse(timestamp) > now;
 
@@ -176,7 +182,7 @@ export const failMockJobWithoutErrorCode = (
         ? `job ${job.key} failed without a message (${attempts}, retries exhausted)`
         : `${message} (job ${job.key}: ${attempts}, retries exhausted)`,
       createdAt: new Date(now).toISOString(),
-      executionToken: `token-${job.key}`,
+      executionToken: executionTokenOf(job),
       jobKey: job.key,
     };
     incidents.push(incident);
@@ -224,7 +230,7 @@ export const jobOfMockIncident = (incident: MockIncident): MockJob | undefined =
     (job) =>
       PENDING_STATES.has(job.state) &&
       job.processInstanceKey === incident.processInstanceKey &&
-      (incident.executionToken === `token-${job.key}` || elementInstanceKeyOf(job) === incident.elementInstanceKey)
+      (incident.executionToken === executionTokenOf(job) || elementInstanceKeyOf(job) === incident.elementInstanceKey)
   );
 };
 

@@ -50,6 +50,7 @@ function createPartitionedResponse(page: number) {
             key: `310000000000000000${index}`,
             processDefinitionKey: PROCESS_DEFINITION_KEY,
             bpmnProcessId: 'showcase-process',
+            version: 1,
             createdAt: '2026-08-23T12:00:00Z',
             state: 'active',
             processType: 'default',
