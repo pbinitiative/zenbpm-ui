@@ -203,7 +203,12 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
         label: t('decisions:fields.output'),
         value: (
           <Box
-            onClick={() => openOutputDialog({ output: instance.decisionOutput })}
+            // The dialog shows a string as text: quote it, as the metadata does
+            onClick={() => openOutputDialog({
+              output: typeof instance.decisionOutput === 'string'
+                ? JSON.stringify(instance.decisionOutput)
+                : instance.decisionOutput,
+            })}
             component="code"
             sx={{
               display: 'block',
@@ -231,14 +236,15 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
   }, [instance, t, openOutputDialog]);
 
   // Build definition info
+  const dmnResourceDefinitionKey = instance?.dmnResourceDefinitionKey;
   const definitionInfo = useMemo((): DefinitionInfo | undefined => {
-    if (!instance?.dmnResourceDefinitionKey) return undefined;
+    if (!dmnResourceDefinitionKey) return undefined;
 
     return {
-      key: instance.dmnResourceDefinitionKey,
+      key: dmnResourceDefinitionKey,
       type: 'decision',
     };
-  }, [instance?.dmnResourceDefinitionKey]);
+  }, [dmnResourceDefinitionKey]);
 
   return {
     instance,

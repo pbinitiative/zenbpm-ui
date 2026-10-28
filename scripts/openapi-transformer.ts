@@ -12,56 +12,31 @@
  */
 
 import type { OpenAPIObject, SchemaObject, ReferenceObject } from 'openapi3-ts/oas30';
-import { forEachInlineSchema, isInt64Key } from './openapi-int64.mjs';
+import { forEachInlineSchema, forEachSchema, isInt64Key } from './openapi-int64.mjs';
 
 /**
- * Recursively transform all int64 keys to string type. `name` is the property
+ * Transform all int64 keys under `root` to string type. `name` is the property
  * or parameter the schema belongs to, if any. The members of its
- * `allOf`/`oneOf`/`anyOf` and its `items` keep that name, so a counter stays a
- * counter when composed or listed.
+ * `allOf`/`oneOf`/`anyOf`/`not` and its `items` keep that name, so a counter stays a
+ * counter when composed or listed (see `forEachSchema`).
  */
-function transformSchema(schema: SchemaObject | ReferenceObject | undefined, name?: string): void {
-  if (!schema || '$ref' in schema) {
-    return;
-  }
-
-  // Transform int64 keys to string
-  if (isInt64Key(schema, name)) {
-    schema.type = 'string';
-    // Keep format as documentation but it won't affect TypeScript type
-    schema.format = 'int64-string';
-    // Add description note if not present
-    if (!schema.description) {
-      schema.description = 'Int64 value represented as string to preserve precision';
-    }
-  }
-
-  // Recursively process nested schemas
-  if (schema.properties) {
-    Object.entries(schema.properties).forEach(([propertyName, property]) => {
-      transformSchema(property, propertyName);
-    });
-  }
-
-  if (schema.items) {
-    transformSchema(schema.items, name);
-  }
-
-  if (schema.allOf) {
-    schema.allOf.forEach((member) => transformSchema(member, name));
-  }
-
-  if (schema.oneOf) {
-    schema.oneOf.forEach((member) => transformSchema(member, name));
-  }
-
-  if (schema.anyOf) {
-    schema.anyOf.forEach((member) => transformSchema(member, name));
-  }
-
-  if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
-    transformSchema(schema.additionalProperties);
-  }
+function transformSchema(root: SchemaObject | ReferenceObject | undefined, name?: string): void {
+  forEachSchema<SchemaObject | ReferenceObject>(
+    root,
+    (schema, name) => {
+      // Transform int64 keys to string
+      if (isInt64Key(schema, name)) {
+        schema.type = 'string';
+        // Keep format as documentation but it won't affect TypeScript type
+        schema.format = 'int64-string';
+        // Add description note if not present
+        if (!schema.description) {
+          schema.description = 'Int64 value represented as string to preserve precision';
+        }
+      }
+    },
+    name
+  );
 }
 
 /**

@@ -6,8 +6,12 @@
  * Number.MAX_SAFE_INTEGER, so the UI carries them as strings: json-bigint
  * parses them into strings, and the generated types and schemas say `string`.
  *
- * A counter is an int64 in the engine's contract, but stays small: json-bigint
- * leaves it a JavaScript number, so its type and schema keep `integer`.
+ * A counter is an int64 in the engine's contract, but stays small: it is a
+ * JavaScript number, so its type and schema keep `integer`. json-bigint turns
+ * every integer of more than 15 digits into a string, so the response parser
+ * turns a counter back into a number up to Number.MAX_SAFE_INTEGER (see
+ * `src/base/utils/jsonBigInt.ts`). A larger counter is not supported: it stays
+ * a string, which the validator refuses.
  */
 
 /**
@@ -26,51 +30,71 @@ export const isInt64Key = (schema, name) =>
   schema.type === 'integer' && schema.format === 'int64' && !INT64_COUNTER_FIELDS.has(name);
 
 // Keywords whose subschemas describe the value of the schema itself
-const SAME_VALUE_KEYWORDS = new Set(['allOf', 'oneOf', 'anyOf']);
+const SAME_VALUE_KEYWORDS = ['allOf', 'oneOf', 'anyOf', 'not', 'items'];
 
 /**
- * Rewrites the int64 keys under `root` into the key strings the runtime
- * validator expects, leaving the counters integers. A property's name carries
- * over into the members of its `allOf`/`oneOf`/`anyOf` and into its `items`,
- * while the properties of a nested object have names of their own.
+ * Calls `visit` with `root` and every subschema under it, together with the
+ * name of the property or parameter it belongs to, if any. `name` is the one of
+ * `root`. A property's name carries over into its `allOf`/`oneOf`/`anyOf`/`not`
+ * and its `items`, while the properties of a nested object have names of their
+ * own and the values of a map none. References are not followed.
  *
- * `name` is the property or parameter `root` belongs to, if any.
- *
- * Returns the names of the properties classified as keys and as counters.
+ * Both generators walk their schemas with it, so that they retype the same.
  */
-export const retypeInt64KeysToString = (root, name) => {
-  const keys = new Set();
-  const counters = new Set();
+export const forEachSchema = (root, visit, name) => {
   const stack = [[root, name]];
   while (stack.length > 0) {
     const [schema, name] = stack.pop();
-    if (!schema || typeof schema !== 'object') continue;
-    if (isInt64Key(schema, name)) {
-      schema.type = 'string';
-      schema.pattern = '^\\d{15,25}$';
-      delete schema.format;
-      keys.add(name);
-    } else if (schema.type === 'integer' && schema.format === 'int64') {
-      counters.add(name);
+    if (!schema || typeof schema !== 'object' || '$ref' in schema) continue;
+    visit(schema, name);
+    for (const [propertyName, property] of Object.entries(schema.properties ?? {})) {
+      stack.push([property, propertyName]);
     }
-    for (const [keyword, value] of Object.entries(schema)) {
-      if (!value || typeof value !== 'object') continue;
-      if (keyword === 'properties') {
-        for (const [propertyName, property] of Object.entries(value)) {
-          stack.push([property, propertyName]);
-        }
-      } else if (SAME_VALUE_KEYWORDS.has(keyword) && Array.isArray(value)) {
-        for (const member of value) {
-          stack.push([member, name]);
-        }
-      } else if (keyword === 'items') {
-        stack.push([value, name]);
-      } else {
-        stack.push([value, undefined]);
+    for (const keyword of SAME_VALUE_KEYWORDS) {
+      for (const member of [schema[keyword] ?? []].flat()) {
+        stack.push([member, name]);
       }
     }
+    stack.push([schema.additionalProperties, undefined]);
   }
-  return { keys, counters };
+};
+
+/**
+ * Rewrites the int64 keys under `root` into the key strings the runtime
+ * validator expects, leaving the counters integers. `name` is the property or
+ * parameter `root` belongs to, if any. Adds the names of the properties it
+ * classified to `classification`.
+ */
+const retypeSchema = (root, name, classification) => {
+  forEachSchema(
+    root,
+    (schema, name) => {
+      if (isInt64Key(schema, name)) {
+        schema.type = 'string';
+        schema.pattern = '^\\d{15,25}$';
+        delete schema.format;
+        classification.keys.add(name);
+      } else if (schema.type === 'integer' && schema.format === 'int64') {
+        classification.counters.add(name);
+      }
+    },
+    name
+  );
+};
+
+/**
+ * Rewrites the int64 keys of the component `schemas`, a map of schemas by
+ * name, into the key strings the runtime validator expects, leaving the
+ * counters integers.
+ *
+ * Returns the names of the properties classified as keys and as counters.
+ */
+export const retypeInt64KeysToString = (schemas) => {
+  const classification = { keys: new Set(), counters: new Set() };
+  for (const schema of Object.values(schemas ?? {})) {
+    retypeSchema(schema, undefined, classification);
+  }
+  return classification;
 };
 
 const OPERATIONS = ['get', 'post', 'put', 'patch', 'delete'];
@@ -110,18 +134,21 @@ export const forEachInlineSchema = (paths, visit) => {
  * classification alone would miss the counters and keys only the paths have.
  */
 export const classifyInt64OfPaths = (paths) => {
-  const keys = new Set();
-  const counters = new Set();
+  const classification = { keys: new Set(), counters: new Set() };
   forEachInlineSchema(paths, (schema, name) => {
-    const classification = retypeInt64KeysToString(structuredClone(schema), name);
-    classification.keys.forEach((key) => keys.add(key));
-    classification.counters.forEach((counter) => counters.add(counter));
+    retypeSchema(structuredClone(schema), name, classification);
   });
-  return { keys, counters };
+  return classification;
 };
 
-// How keys are named: `key`, `…Key` or `…Token`, and `…KeyIn` for a filter by keys
-const KEY_NAME = /^key$|Key$|KeyIn$|Token$/;
+// How keys are named: `key`, `…Key`, and `…KeyIn` for a filter by keys
+const KEY_NAME = /^key$|Key$|KeyIn$/;
+
+/**
+ * The int64 keys named otherwise, one by one, since a counter may have a name
+ * like theirs: `deliveryToken` would pass for a key as well as `executionToken`.
+ */
+const KEYS_NOT_NAMED_LIKE_KEYS = new Set(['executionToken']);
 
 /**
  * Checks the classifications made by `retypeInt64KeysToString` and
@@ -130,13 +157,17 @@ const KEY_NAME = /^key$|Key$|KeyIn$|Token$/;
  *
  * Returns the listed counters which no int64 property matched, because their
  * entry is stale or their schema got a shape the classification does not see,
- * and the keys which are not named like one, which may be unlisted counters.
+ * and the keys which are neither named like one nor listed in
+ * `KEYS_NOT_NAMED_LIKE_KEYS`, which may be unlisted counters. Both fail the
+ * generation. Both lists are sorted.
  */
 export const checkInt64Classification = (...classifications) => {
   const keys = new Set(classifications.flatMap((classification) => [...classification.keys]));
   const counters = new Set(classifications.flatMap((classification) => [...classification.counters]));
   return {
-    unmatchedCounters: [...INT64_COUNTER_FIELDS].filter((name) => !counters.has(name)),
-    keysNotNamedLikeKeys: [...keys].filter((name) => name !== undefined && !KEY_NAME.test(name)),
+    unmatchedCounters: [...INT64_COUNTER_FIELDS].filter((name) => !counters.has(name)).sort(),
+    keysNotNamedLikeKeys: [...keys]
+      .filter((name) => name !== undefined && !KEY_NAME.test(name) && !KEYS_NOT_NAMED_LIKE_KEYS.has(name))
+      .sort(),
   };
 };

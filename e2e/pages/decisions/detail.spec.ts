@@ -245,6 +245,27 @@ test.describe('Decision Instance Detail Page', () => {
     });
   }
 
+  test('should show a string output quoted in the output dialog, as in metadata', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByText('Process Definitions')).toBeVisible({ timeout: 10000 });
+
+    await page.evaluate(async (key) => {
+      // @ts-expect-error browser-only module URL
+      const { decisionInstances } = await import('/src/mocks/handlers/decisionInstances.ts');
+      const instance = (decisionInstances as Array<{ key: string; decisionOutput: unknown }>)
+        .find((decisionInstance) => decisionInstance.key === key);
+      if (instance) instance.decisionOutput = '';
+      // Navigate within the app, which keeps the changed mock data
+      window.history.pushState({}, '', `/decision-instances/${key}`);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }, '4100000000000000001');
+    await expect(page.getByRole('heading', { name: 'Metadata' })).toBeVisible({ timeout: 10000 });
+
+    await page.locator('code').filter({ hasText: /^""$/ }).click();
+
+    await expect(page.getByTestId('output-dialog-content')).toHaveText('""');
+  });
+
   test('should display decision definition chip', async ({ page }) => {
     await page.goto('/decision-instances/4100000000000000001');
     await expect(page.getByRole('heading', { name: 'Metadata' })).toBeVisible({ timeout: 10000 });

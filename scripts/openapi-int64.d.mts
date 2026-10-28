@@ -10,6 +10,18 @@ export const INT64_COUNTER_FIELDS: ReadonlySet<string>;
 export function isInt64Key(schema: { type?: unknown; format?: unknown }, name?: string): boolean;
 
 /**
+ * Calls `visit` with `root` and every subschema under it, together with the
+ * name of the property or parameter it belongs to, if any. `name` is the one of
+ * `root`. Both generators walk their schemas with it, so that they retype the
+ * same.
+ */
+export function forEachSchema<Schema = unknown>(
+  root: Schema | undefined,
+  visit: (schema: Exclude<Schema, { $ref: string }>, name?: string) => void,
+  name?: string
+): void;
+
+/**
  * Names of the properties which an int64 classification found to be keys and
  * counters. `undefined` stands for a schema of no property.
  */
@@ -19,11 +31,11 @@ export interface Int64Classification {
 }
 
 /**
- * Rewrites the int64 keys under `root` into the key strings the runtime
- * validator expects, leaving the counters integers. `name` is the property or
- * parameter `root` belongs to, if any.
+ * Rewrites the int64 keys of the component `schemas`, a map of schemas by
+ * name, into the key strings the runtime validator expects, leaving the
+ * counters integers.
  */
-export function retypeInt64KeysToString(root: unknown, name?: string): Int64Classification;
+export function retypeInt64KeysToString(schemas: unknown): Int64Classification;
 
 /**
  * Calls `visit` with every inline schema of `paths` the Orval transformer
@@ -42,7 +54,7 @@ export function classifyInt64OfPaths(paths: unknown): Int64Classification;
 
 /**
  * Checks the classifications of one spec: the listed counters which no int64
- * property matched, and the keys not named like one.
+ * property matched, and the keys neither named like one nor listed as such.
  */
 export function checkInt64Classification(...classifications: Int64Classification[]): {
   unmatchedCounters: string[];

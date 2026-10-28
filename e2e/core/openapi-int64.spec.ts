@@ -24,6 +24,8 @@ test.describe('int64 classification of the generators', () => {
     expect(typeAt(generated.paths, ['/jobs/{jobKey}', 'get', 'parameters', '0', 'schema'])).toBe('string');
     expect(typeAt(generated.paths, ['/jobs/{jobKey}', 'get', 'parameters', '1', 'schema'])).toBe('integer');
     expect(typeAt(generated.paths, [...FAIL_BODY, 'properties', 'deliveryToken'])).toBe('integer');
+    // A worker's request takes the token of a delivery, so never `0`
+    expect(typeAt(generated.paths, [...FAIL_BODY, 'properties', 'deliveryToken'], 'minimum')).toBe(1);
   });
 
   test('validation schemas keep counters integers in any shape and make keys strings', () => {
@@ -37,12 +39,18 @@ test.describe('int64 classification of the generators', () => {
   });
 
   test('reports listed counters no int64 matched and keys not named like one', () => {
-    // A counter added to the contract without being listed, and none of the listed counters
-    const schemas = { Job: { type: 'object', properties: { key: int64(), executionToken: int64(), attempts: int64() } } };
+    // Counters added to the contract without being listed, one named like the
+    // delivery token, and none of the listed counters
+    const schemas = {
+      Job: {
+        type: 'object',
+        properties: { key: int64(), executionToken: int64(), attempts: int64(), retryToken: int64() },
+      },
+    };
 
     expect(checkInt64Classification(retypeInt64KeysToString(schemas))).toEqual({
       unmatchedCounters: ['deliveryToken'],
-      keysNotNamedLikeKeys: ['attempts'],
+      keysNotNamedLikeKeys: ['attempts', 'retryToken'],
     });
   });
 
@@ -76,6 +84,9 @@ const EXPECTED_TYPES: Record<string, string> = {
   'JobPage.properties.items.items.properties.deliveryToken': 'integer',
   // The properties of an object have names of their own, whatever the object is called
   'Delivery.properties.deliveryToken.properties.jobKey': 'string',
+  // A counter ruled out with `not`, and the values of a map, which have no name
+  'NotJob.properties.deliveryToken.not': 'integer',
+  'KeysByName.additionalProperties': 'string',
 };
 
 const int64 = () => ({ type: 'integer' as const, format: 'int64' });
@@ -107,7 +118,9 @@ function spec(): OpenAPIObject {
         post: {
           requestBody: {
             content: {
-              'application/json': { schema: { type: 'object', properties: { deliveryToken: int64() } } },
+              'application/json': {
+                schema: { type: 'object', properties: { deliveryToken: { ...int64(), minimum: 1 } } },
+              },
             },
           },
           responses: {},
@@ -133,6 +146,8 @@ function spec(): OpenAPIObject {
           type: 'object',
           properties: { deliveryToken: { type: 'object', properties: { jobKey: int64() } } },
         },
+        NotJob: { type: 'object', properties: { deliveryToken: { not: int64() } } },
+        KeysByName: { type: 'object', additionalProperties: int64() },
       },
     },
   };

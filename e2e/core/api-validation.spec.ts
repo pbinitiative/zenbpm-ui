@@ -331,7 +331,7 @@ test.describe('API Validation - int64 counters', () => {
     expect(collector.errors, `Validation errors found:\n${collector.errors.join('\n')}`).toHaveLength(0);
   });
 
-  test('refuses a delivery token sent as a string and a key sent as a number', async ({ page }) => {
+  test('refuses a delivery token sent as a string, a fraction or null, and a key sent as a number', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByText('Process Definitions')).toBeVisible({ timeout: 10000 });
 
@@ -349,13 +349,48 @@ test.describe('API Validation - int64 counters', () => {
         `"deliveryToken":${deliveryToken}}`;
       const valid = (body: unknown) => (validateResponse('GET', '/v1/jobs', body) as { valid: boolean }).valid;
       return {
-        numbers: ['0', '1', '2'].map((token) => valid(page(job(jobKey, token)))),
+        numbers: ['0', '1', '2', '1000000000000000'].map((token) => valid(page(job(jobKey, token)))),
         stringToken: valid(page(job(jobKey, '"1"'))),
+        fractionToken: valid(page(job(jobKey, '1.5'))),
+        nullToken: valid(page(job(jobKey, 'null'))),
         numberKey: valid(page(job('42', '1'))),
       };
     }, SIMPLE_TASK_FAILED_JOB_KEY);
 
-    expect(results).toEqual({ numbers: [true, true, true], stringToken: false, numberKey: false });
+    expect(results).toEqual({
+      numbers: [true, true, true, true],
+      stringToken: false,
+      fractionToken: false,
+      nullToken: false,
+      numberKey: false,
+    });
+  });
+
+  // json-bigint makes a string of every number of more than 15 digits; the
+  // parser turns a counter back into a number while a number holds it exactly
+  test('keeps delivery tokens numbers up to the largest safe integer', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByText('Process Definitions')).toBeVisible({ timeout: 10000 });
+
+    const results = await page.evaluate(async () => {
+      // @ts-expect-error browser-only module URL
+      const { axiosResponseTransformer } = await import('/src/base/utils/jsonBigInt.ts');
+      const parsed = (deliveryToken: string) => (axiosResponseTransformer(
+        `{"key":5000000000000000024,"deliveryToken":${deliveryToken},"variables":{"deliveryToken":1000000000000000}}`
+      ) as { key: unknown; deliveryToken: unknown; variables: { deliveryToken: unknown } });
+      return {
+        sixteenDigits: parsed('1000000000000000'),
+        largestSafe: parsed('9007199254740991').deliveryToken,
+        beyondSafe: parsed('9007199254740993').deliveryToken,
+      };
+    });
+
+    expect(results).toEqual({
+      sixteenDigits: { key: '5000000000000000024', deliveryToken: 1000000000000000, variables: { deliveryToken: '1000000000000000' } },
+      largestSafe: 9007199254740991,
+      // Not supported: a number would lose its digits, so it stays a string, which the validator refuses
+      beyondSafe: '9007199254740993',
+    });
   });
 
   test('Jobs of a process instance with numeric delivery tokens - match the schema', async ({ page }) => {
