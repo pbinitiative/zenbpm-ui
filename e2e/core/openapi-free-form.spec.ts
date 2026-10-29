@@ -51,6 +51,26 @@ test.describe('free-form fields of the spec', () => {
     expect(checkFreeFormFields(classification)).toEqual([]);
   });
 
+  test('follows references to the components, also round in circles', () => {
+    const schemas = {
+      Variables: { type: 'object', additionalProperties: true },
+      AnyValue: { $ref: '#/components/schemas/Variables' },
+      Job: { type: 'object', properties: { key: { type: 'string' } } },
+      Loop: { $ref: '#/components/schemas/Loop' },
+    };
+    const reference = (name: string) => ({ $ref: `#/components/schemas/${name}` });
+
+    expect(['Variables', 'AnyValue', 'Job', 'Loop', 'Missing'].map((name) => isFreeForm(reference(name), schemas)))
+      .toEqual([true, true, false, false, false]);
+    expect(isFreeForm({ type: 'object', additionalProperties: reference('Variables') }, schemas)).toBe(true);
+    // A property referring to a free-form component is free-form too, so that its name is checked
+    expect(checkFreeFormFields(classifyFreeFormFields({
+      ...schemas,
+      Instance: { type: 'object', properties: { variables: reference('Variables') } },
+      Detail: { type: 'object', properties: { variables: reference('Job') } },
+    }, {}))).toEqual(['variables']);
+  });
+
   test('reports a name which is free-form in one place and structured in another', () => {
     const schemas = {
       Job: { type: 'object', properties: { variables: {} } },

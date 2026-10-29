@@ -64,3 +64,11 @@ export function checkInt64Classification(...classifications: Int64Classification
   keysNotNamedLikeKeys: string[];
   keysOfOtherTypes: string[];
 };
+
+/**
+ * Where the component `schemas` and the bodies of `paths` have an int64 which
+ * is not the value of a property, which the runtime would not convert: an
+ * array's items (`Schema.property[]`), a map's values (`Schema.property{}`) or a
+ * whole body. Sorted.
+ */
+export function findInt64sNotPropertyValues(schemas: unknown, paths: unknown): string[];

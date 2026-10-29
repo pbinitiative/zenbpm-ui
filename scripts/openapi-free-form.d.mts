@@ -6,9 +6,10 @@ export function constraintsOf(schema: object): string[];
 
 /**
  * Whether `schema` is free-form: of any JSON value, or an object of no declared
- * properties whose entries are free-form or scalars.
+ * properties whose entries are free-form or scalars. A reference to one of the
+ * component `schemas` is what that component is.
  */
-export function isFreeForm(schema: unknown): boolean;
+export function isFreeForm(schema: unknown, schemas?: unknown, seen?: Set<string>): boolean;
 
 /**
  * Names of the properties which are free-form, and of those which are not.

@@ -20,20 +20,28 @@ const SCALAR_TYPES = new Set(['string', 'number', 'integer', 'boolean']);
 export const constraintsOf = (schema) =>
   Object.keys(schema).filter((keyword) => !ANNOTATIONS.has(keyword) && !keyword.startsWith('x-'));
 
+const COMPONENT_REF = /^#\/components\/schemas\/(.+)$/;
+
 /**
  * Whether `schema` is free-form: of any JSON value, or an object of no declared
  * properties whose entries are free-form or scalars. A map of API objects is
- * not, as their fields are the API's.
+ * not, as their fields are the API's. A reference to one of the component
+ * `schemas` is what that component is; `seen` holds the references followed.
  */
-export const isFreeForm = (schema) => {
-  if (!schema || typeof schema !== 'object' || '$ref' in schema) return false;
+export const isFreeForm = (schema, schemas, seen = new Set()) => {
+  if (!schema || typeof schema !== 'object') return false;
+  if ('$ref' in schema) {
+    const name = COMPONENT_REF.exec(schema.$ref)?.[1];
+    if (name === undefined || seen.has(name)) return false;
+    return isFreeForm(schemas?.[name], schemas, new Set(seen).add(name));
+  }
   const constraints = constraintsOf(schema);
   if (constraints.length === 0) return true;
   if (schema.type !== 'object' || !constraints.every((keyword) => keyword === 'type' || keyword === 'additionalProperties')) {
     return false;
   }
   const entries = schema.additionalProperties;
-  return entries === undefined || entries === true || isFreeForm(entries) ||
+  return entries === undefined || entries === true || isFreeForm(entries, schemas, seen) ||
     (typeof entries === 'object' && SCALAR_TYPES.has(entries.type) && constraintsOf(entries).every((keyword) => keyword === 'type' || keyword === 'format'));
 };
 
@@ -47,7 +55,7 @@ export const classifyFreeFormFields = (schemas, paths) => {
   const classify = (root) => {
     forEachSchema(root, (schema) => {
       for (const [name, property] of Object.entries(schema.properties ?? {})) {
-        (isFreeForm(property) ? classification.freeForm : classification.structured).add(name);
+        (isFreeForm(property, schemas) ? classification.freeForm : classification.structured).add(name);
       }
     });
   };

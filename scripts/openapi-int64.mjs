@@ -179,3 +179,43 @@ export const checkInt64Classification = (...classifications) => {
     keysOfOtherTypes: [...keys].filter((name) => name !== undefined && others.has(name)).sort(),
   };
 };
+
+/**
+ * Where the component `schemas` and the request and response bodies of `paths`
+ * have an int64 which is not the value of a property: an array's items, a map's
+ * values or a whole body. The runtime converts an int64 by the name of the
+ * property it is the value of (`src/base/utils/jsonBigInt.ts`), so it would miss
+ * those: they fail the generation. Parameters are no JSON, so are left out.
+ * Sorted.
+ */
+export const findInt64sNotPropertyValues = (schemas, paths) => {
+  const found = new Set();
+  const search = (root, location) => {
+    const stack = [[root, location, false]];
+    while (stack.length > 0) {
+      const [schema, location, propertyValue] = stack.pop();
+      if (!schema || typeof schema !== 'object' || '$ref' in schema) continue;
+      if (schema.type === 'integer' && schema.format === 'int64' && !propertyValue) {
+        found.add(location);
+      }
+      for (const [name, property] of Object.entries(schema.properties ?? {})) {
+        stack.push([property, `${location}.${name}`, true]);
+      }
+      // The members of a composition describe the same value; `not` none
+      for (const keyword of ['allOf', 'oneOf', 'anyOf']) {
+        for (const member of schema[keyword] ?? []) {
+          stack.push([member, location, propertyValue]);
+        }
+      }
+      stack.push([schema.items, `${location}[]`, false]);
+      stack.push([schema.additionalProperties, `${location}{}`, false]);
+    }
+  };
+  for (const [name, schema] of Object.entries(schemas ?? {})) {
+    search(schema, name);
+  }
+  forEachInlineSchema(paths, (schema, name) => {
+    if (name === undefined) search(schema, 'an inline body');
+  });
+  return [...found].sort();
+};

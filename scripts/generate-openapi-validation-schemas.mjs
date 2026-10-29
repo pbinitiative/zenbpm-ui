@@ -2,7 +2,12 @@ import fs from 'fs/promises';
 import path from 'path';
 import { exec } from 'child_process';
 import 'dotenv/config';
-import { checkInt64Classification, classifyInt64OfPaths, retypeInt64KeysToString } from './openapi-int64.mjs';
+import {
+  checkInt64Classification,
+  classifyInt64OfPaths,
+  findInt64sNotPropertyValues,
+  retypeInt64KeysToString,
+} from './openapi-int64.mjs';
 import { checkFreeFormFields, classifyFreeFormFields } from './openapi-free-form.mjs';
 import { dropUntypedNullable } from './openapi-nullable.mjs';
 
@@ -55,6 +60,15 @@ async function generateSchemas() {
       process.exit(1);
     }
     const freeFormFields = [...freeForm.freeForm].sort();
+
+    const int64sNotPropertyValues = findInt64sNotPropertyValues(schemas, apiSpec.paths);
+    if (int64sNotPropertyValues.length > 0) {
+      console.error(
+        `❌ int64s which are not the value of a property: ${int64sNotPropertyValues.join(', ')}. ` +
+        `src/base/utils/jsonBigInt.ts converts int64s by their property's name only: support the shape there first.`
+      );
+      process.exit(1);
+    }
 
     // AJV refuses `nullable` without `type`, so it is dropped, keeping null valid
     dropUntypedNullable(schemas);

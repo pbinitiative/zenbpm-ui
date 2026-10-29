@@ -4,6 +4,7 @@ import transformer from '../../scripts/openapi-transformer';
 import {
   checkInt64Classification,
   classifyInt64OfPaths,
+  findInt64sNotPropertyValues,
   retypeInt64KeysToString,
 } from '../../scripts/openapi-int64.mjs';
 
@@ -75,6 +76,18 @@ test.describe('int64 classification of the generators', () => {
       // A counter is never sent otherwise than as its value is, so its name may be shared
       keysOfOtherTypes: ['key'],
     });
+  });
+
+  // The generators classify these shapes, but the runtime converts by property name only
+  test('reports the int64s which are not the value of a property, which the runtime would miss', () => {
+    const { components, paths } = spec();
+
+    // Not the array of keys of a parameter, which is no JSON, nor a composed counter or one ruled out with `not`
+    expect(findInt64sNotPropertyValues(components?.schemas, paths)).toEqual(['KeysByName{}', 'Tokens.deliveryToken[]']);
+    // The items of a body
+    expect(findInt64sNotPropertyValues({}, {
+      '/jobs': { post: { requestBody: { content: { 'application/json': { schema: { type: 'array', items: int64() } } } } } },
+    })).toEqual(['an inline body[]']);
   });
 
   test('classifies the inline schemas of the paths, which the validation schemas leave out', () => {

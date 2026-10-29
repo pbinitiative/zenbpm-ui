@@ -43,6 +43,9 @@ const INT64_KEY_FIELDS: ReadonlySet<string> = new Set(int64KeyFields);
  */
 const INT64_COUNTER_FIELDS: ReadonlySet<string> = new Set(int64CounterFields);
 
+// The counters' names as JSON writes them, to skip the responses without one
+const INT64_COUNTER_NAMES_IN_JSON = int64CounterFields.map((name) => JSON.stringify(name));
+
 /**
  * Free-form fields, such as variables, decision outputs and task headers, as
  * `scripts/openapi-free-form.mjs` classifies them. Their content is named and
@@ -88,17 +91,23 @@ type Path = Array<string | number>;
 /**
  * Paths of the int64 counters holding a string of more than 15 digits: a number
  * which json-bigint parsed into a string, or a JSON string. Free-form fields are
- * not searched.
+ * not searched. `path` is the one of `obj`, extended and restored on the way.
  */
 function findLongCounters(obj: unknown, path: Path = [], found: Path[] = []): Path[] {
   if (Array.isArray(obj)) {
-    obj.forEach((item, index) => findLongCounters(item, [...path, index], found));
+    obj.forEach((item, index) => {
+      path.push(index);
+      findLongCounters(item, path, found);
+      path.pop();
+    });
   } else if (obj !== null && typeof obj === 'object') {
     for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       if (INT64_COUNTER_FIELDS.has(key) && typeof value === 'string' && /^\d{16,}$/.test(value)) {
         found.push([...path, key]);
       } else if (!FREE_FORM_FIELDS.has(key)) {
-        findLongCounters(value, [...path, key], found);
+        path.push(key);
+        findLongCounters(value, path, found);
+        path.pop();
       }
     }
   }
@@ -119,6 +128,7 @@ const valueAt = (root: unknown, path: Path): unknown =>
  * that long hardly occur, so this rarely happens.
  */
 function restoreCounters(text: string, value: unknown): void {
+  if (!INT64_COUNTER_NAMES_IN_JSON.some((name) => text.includes(name))) return;
   const counters = findLongCounters(value);
   if (counters.length === 0) return;
   const tokens: unknown = JSONBigNumberParse.parse(text);

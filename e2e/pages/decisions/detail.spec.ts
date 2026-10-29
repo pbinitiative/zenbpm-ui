@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 
+// `src/mocks/handlers/decisionInstances.ts` exposes its data to the tests
+type MockWindow = { __mockDecisionInstances: Array<{ key: string; decisionOutput: unknown }> };
+
 test.describe('Decisions Page - Definitions Tab', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to decisions page
@@ -229,10 +232,9 @@ test.describe('Decision Instance Detail Page', () => {
       await page.goto('/');
       await expect(page.getByText('Process Definitions')).toBeVisible({ timeout: 10000 });
 
-      await page.evaluate(async ({ key, output }) => {
-        // @ts-expect-error browser-only module URL
-        const { decisionInstances } = await import('/src/mocks/handlers/decisionInstances.ts');
-        const instance = (decisionInstances as Array<{ key: string; decisionOutput: unknown }>)
+      await page.evaluate(({ key, output }) => {
+        // The data the mock handlers serve, whichever URL the app imported them by
+        const instance = (window as unknown as MockWindow).__mockDecisionInstances
           .find((decisionInstance) => decisionInstance.key === key);
         if (instance) instance.decisionOutput = output;
         // Navigate within the app, which keeps the changed mock data
@@ -249,10 +251,8 @@ test.describe('Decision Instance Detail Page', () => {
     await page.goto('/');
     await expect(page.getByText('Process Definitions')).toBeVisible({ timeout: 10000 });
 
-    await page.evaluate(async (key) => {
-      // @ts-expect-error browser-only module URL
-      const { decisionInstances } = await import('/src/mocks/handlers/decisionInstances.ts');
-      const instance = (decisionInstances as Array<{ key: string; decisionOutput: unknown }>)
+    await page.evaluate((key) => {
+      const instance = (window as unknown as MockWindow).__mockDecisionInstances
         .find((decisionInstance) => decisionInstance.key === key);
       if (instance) instance.decisionOutput = '';
       // Navigate within the app, which keeps the changed mock data
