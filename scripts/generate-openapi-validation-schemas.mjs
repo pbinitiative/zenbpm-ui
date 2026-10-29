@@ -3,6 +3,7 @@ import path from 'path';
 import { exec } from 'child_process';
 import 'dotenv/config';
 import { checkInt64Classification, classifyInt64OfPaths, retypeInt64KeysToString } from './openapi-int64.mjs';
+import { dropUntypedNullable } from './openapi-nullable.mjs';
 
 async function generateSchemas() {
   const extractPathRegex = /^https?:\/\/[^/]+(\/[^?#]*)?/;
@@ -39,6 +40,9 @@ async function generateSchemas() {
         schemas[schemaName] = schema;
       }
     }
+
+    // AJV refuses `nullable` without `type`, which admits null anyway
+    dropUntypedNullable(schemas);
 
     // Int64 keys arrive as strings (json-bigint); int64 counters stay integers.
     // The check covers the inline schemas of the paths too, as the client types do.
