@@ -14,6 +14,9 @@ import {
  * int64 keys into strings and keep int64 counters integers, by the name of the
  * property or parameter. These tests run both on the shapes a counter may take
  * in the spec, so that a counter cannot turn into a key string again.
+ *
+ * Unit tests of the generator scripts, run in Node by Playwright for lack of a
+ * unit test runner: they take no `page`.
  */
 
 test.describe('int64 classification of the generators', () => {
@@ -35,7 +38,11 @@ test.describe('int64 classification of the generators', () => {
 
     expect(typesAt(schemas)).toEqual(EXPECTED_TYPES);
     expect(typeAt(schemas, ['Job', 'properties', 'key'], 'pattern')).toBe('^\\d{15,25}$');
-    expect(checkInt64Classification(classification)).toEqual({ unmatchedCounters: [], keysNotNamedLikeKeys: [] });
+    expect(checkInt64Classification(classification)).toEqual({
+      unmatchedCounters: [],
+      keysNotNamedLikeKeys: [],
+      keysOfOtherTypes: [],
+    });
   });
 
   test('reports listed counters no int64 matched and keys not named like one', () => {
@@ -51,6 +58,22 @@ test.describe('int64 classification of the generators', () => {
     expect(checkInt64Classification(retypeInt64KeysToString(schemas))).toEqual({
       unmatchedCounters: ['deliveryToken'],
       keysNotNamedLikeKeys: ['attempts', 'retryToken'],
+      keysOfOtherTypes: [],
+    });
+  });
+
+  test('reports keys whose name another scalar has too, which the request serialization would send as numbers', () => {
+    // A string `key` holding digits would reach the engine as a JSON number
+    const schemas = {
+      Job: { type: 'object', properties: { key: int64(), deliveryToken: int64() } },
+      Variable: { type: 'object', properties: { key: { type: 'string' }, deliveryToken: { type: 'string' } } },
+    };
+
+    expect(checkInt64Classification(retypeInt64KeysToString(schemas))).toEqual({
+      unmatchedCounters: [],
+      keysNotNamedLikeKeys: [],
+      // A counter is never sent otherwise than as its value is, so its name may be shared
+      keysOfOtherTypes: ['key'],
     });
   });
 
@@ -61,12 +84,17 @@ test.describe('int64 classification of the generators', () => {
     const classification = classifyInt64OfPaths(paths);
 
     expect(paths).toEqual(untouched);
-    expect(classification).toEqual({ keys: new Set(['jobKey', 'jobKeyIn']), counters: new Set(['deliveryToken']) });
+    expect(classification).toEqual({
+      keys: new Set(['jobKey', 'jobKeyIn']),
+      counters: new Set(['deliveryToken']),
+      others: new Set(),
+    });
     // A counter which no component schema has, but a request body does, is matched
     const components = { Job: { type: 'object', properties: { key: int64() } } };
     expect(checkInt64Classification(retypeInt64KeysToString(components), classification)).toEqual({
       unmatchedCounters: [],
       keysNotNamedLikeKeys: [],
+      keysOfOtherTypes: [],
     });
   });
 });

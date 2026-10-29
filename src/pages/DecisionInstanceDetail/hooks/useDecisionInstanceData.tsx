@@ -203,12 +203,8 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
         label: t('decisions:fields.output'),
         value: (
           <Box
-            // The dialog shows a string as text: quote it, as the metadata does
-            onClick={() => openOutputDialog({
-              output: typeof instance.decisionOutput === 'string'
-                ? JSON.stringify(instance.decisionOutput)
-                : instance.decisionOutput,
-            })}
+            // As JSON, so that a string is quoted, as the metadata does
+            onClick={() => openOutputDialog({ output: instance.decisionOutput, json: true })}
             component="code"
             sx={{
               display: 'block',

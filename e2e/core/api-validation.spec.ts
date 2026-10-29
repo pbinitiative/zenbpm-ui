@@ -17,6 +17,39 @@ import {
  * to the console when responses don't match the schema.
  */
 
+// Helper to collect validation errors from console
+function createValidationErrorCollector(page: import('@playwright/test').Page) {
+  const errors: string[] = [];
+
+  const handler = (msg: ConsoleMessage) => {
+    const text = msg.text();
+    // Capture MSW Validator errors (now logged via console.error)
+    if (text.includes('[MSW Validator]') && text.includes('Invalid')) {
+      errors.push(text);
+    }
+  };
+
+  page.on('console', handler);
+  page.on('pageerror', (err) => {
+    if (err.message.includes('[MSW Validator]')) {
+      errors.push(err.message);
+    }
+  });
+
+  return {
+    errors,
+    cleanup: () => page.off('console', handler),
+  };
+}
+
+// Wait for network to be idle (all API calls completed)
+async function waitForApiCalls(page: import('@playwright/test').Page) {
+  // Wait for network idle
+  await page.waitForLoadState('networkidle');
+  // Additional wait to ensure all responses are processed
+  await page.waitForTimeout(500);
+}
+
 test.describe('API Response Validation', () => {
 
   test('Home page - no validation errors', async ({ page }) => {
@@ -278,7 +311,7 @@ test.describe('API Validation - decision output', () => {
       const valid = (fields: string) => (validateResponse(
         'GET',
         '/v1/decision-instances/4100000000000000001',
-        axiosResponseTransformer(`{"key":4100000000000000001,"dmnResourceDefinitionKey":4000000000000000001${fields}}`)
+        axiosResponseTransformer(`{"key":4100000000000000001,"dmnResourceDefinitionKey":4000000000000000001${fields}}`) as unknown
       ) as { valid: boolean }).valid;
       const detail = ',"evaluatedAt":"2024-01-15T10:30:00Z","evaluatedDecisions":[]';
       const outputs = ['{"sport":"squash"}', '[{"discount":0.1},{"discount":0.05}]', '"squash"', '0', 'false', 'null'];
@@ -331,7 +364,7 @@ test.describe('API Validation - int64 counters', () => {
     expect(collector.errors, `Validation errors found:\n${collector.errors.join('\n')}`).toHaveLength(0);
   });
 
-  test('refuses a delivery token sent as a string, a fraction or null, and a key sent as a number', async ({ page }) => {
+  test('refuses a delivery token sent as a string of any length, a fraction or null, and a key sent as a number', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByText('Process Definitions')).toBeVisible({ timeout: 10000 });
 
@@ -342,15 +375,20 @@ test.describe('API Validation - int64 counters', () => {
       const { validateResponse } = await import('/src/mocks/validation/validator.ts');
       const page = (job: string) => axiosResponseTransformer(
         `{"partitions":[{"partition":1,"totalCount":1,"items":[${job}]}],"page":1,"size":10,"count":1,"totalCount":1}`
-      );
+      ) as unknown;
       const job = (key: string, deliveryToken: string) =>
         `{"key":${key},"elementInstanceKey":${jobKey},"elementId":"task","type":"t","elementType":"SERVICE_TASK",` +
         `"processInstanceKey":${jobKey},"state":"active","createdAt":"2026-01-01T00:00:00Z","inputVariables":{},` +
         `"deliveryToken":${deliveryToken}}`;
       const valid = (body: unknown) => (validateResponse('GET', '/v1/jobs', body) as { valid: boolean }).valid;
       return {
-        numbers: ['0', '1', '2', '1000000000000000'].map((token) => valid(page(job(jobKey, token)))),
+        numbers: ['0', '1', '2', '1000000000000000', '9007199254740991'].map((token) => valid(page(job(jobKey, token)))),
         stringToken: valid(page(job(jobKey, '"1"'))),
+        // As long as the numbers json-bigint parses into strings, the padded ones too
+        longStringTokens: ['"1000000000000000"', '"9007199254740991"', '"0000000000000000"', '"0000000000000001"']
+          .map((token) => valid(page(job(jobKey, token)))),
+        // A number would lose its digits
+        beyondSafeToken: valid(page(job(jobKey, '9007199254740993'))),
         fractionToken: valid(page(job(jobKey, '1.5'))),
         nullToken: valid(page(job(jobKey, 'null'))),
         numberKey: valid(page(job('42', '1'))),
@@ -358,15 +396,17 @@ test.describe('API Validation - int64 counters', () => {
     }, SIMPLE_TASK_FAILED_JOB_KEY);
 
     expect(results).toEqual({
-      numbers: [true, true, true, true],
+      numbers: [true, true, true, true, true],
       stringToken: false,
+      longStringTokens: [false, false, false, false],
+      beyondSafeToken: false,
       fractionToken: false,
       nullToken: false,
       numberKey: false,
     });
   });
 
-  // json-bigint makes a string of every number of more than 15 digits; the
+  // json-bigint makes a string of every number of more than 15 characters; the
   // parser turns a counter back into a number while a number holds it exactly
   test('keeps delivery tokens numbers up to the largest safe integer', async ({ page }) => {
     await page.goto('/');
@@ -390,6 +430,48 @@ test.describe('API Validation - int64 counters', () => {
       largestSafe: 9007199254740991,
       // Not supported: a number would lose its digits, so it stays a string, which the validator refuses
       beyondSafe: '9007199254740993',
+    });
+  });
+
+  // Variables, decision outputs and task headers are named and typed by the
+  // process: a `deliveryToken` in there is no counter, whatever it holds
+  test('leaves the content of free-form fields as json-bigint parses it', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByText('Process Definitions')).toBeVisible({ timeout: 10000 });
+
+    // Each a number, a padded JSON string and a JSON string of 16 digits
+    const content = '{"deliveryToken":1000000000000000,"padded":{"deliveryToken":"0000000000000001"},' +
+      '"listed":[{"deliveryToken":"1000000000000000"}]}';
+    const parsedContent = {
+      deliveryToken: '1000000000000000',
+      padded: { deliveryToken: '0000000000000001' },
+      listed: [{ deliveryToken: '1000000000000000' }],
+    };
+
+    const parsed = await page.evaluate(async (content) => {
+      // @ts-expect-error browser-only module URL
+      const { axiosResponseTransformer } = await import('/src/base/utils/jsonBigInt.ts');
+      return axiosResponseTransformer(
+        `{"key":5000000000000000024,"deliveryToken":1000000000000000,"inputVariables":${content},` +
+        `"outputVariables":${content},"variables":${content},"taskHeaders":{"deliveryToken":"0000000000000001"},` +
+        `"decisionOutput":[${content}],"evaluatedDecisions":[{"evaluatedInputs":[{"inputValue":${content}}],` +
+        `"matchedRules":[{"evaluatedOutputs":[{"outputValue":${content}}]}]}]}`
+      ) as unknown;
+    }, content);
+
+    expect(parsed).toEqual({
+      key: '5000000000000000024',
+      // The job's own counter still is one
+      deliveryToken: 1000000000000000,
+      inputVariables: parsedContent,
+      outputVariables: parsedContent,
+      variables: parsedContent,
+      taskHeaders: { deliveryToken: '0000000000000001' },
+      decisionOutput: [parsedContent],
+      evaluatedDecisions: [{
+        evaluatedInputs: [{ inputValue: parsedContent }],
+        matchedRules: [{ evaluatedOutputs: [{ outputValue: parsedContent }] }],
+      }],
     });
   });
 
@@ -432,6 +514,27 @@ test.describe('API Validation - int64 counters', () => {
     ]);
   });
 
+  test('serializes mock keys as JSON numbers, the content of free-form fields as it is', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByText('Process Definitions')).toBeVisible({ timeout: 10000 });
+
+    const body = await page.evaluate(async (jobKey) => {
+      // @ts-expect-error browser-only module URL
+      const { stringifyMockData } = await import('/src/base/utils/jsonBigInt.ts');
+      return stringifyMockData({
+        key: jobKey,
+        inputVariables: { key: '42' },
+        outputVariables: { jobKey: '00123' },
+        taskHeaders: { processInstanceKey: '7' },
+      }) as string;
+    }, SIMPLE_TASK_BACKOFF_JOB_KEY);
+
+    expect(body).toBe(
+      `{"key":${SIMPLE_TASK_BACKOFF_JOB_KEY},"inputVariables":{"key":"42"},"outputVariables":{"jobKey":"00123"},` +
+      `"taskHeaders":{"processInstanceKey":"7"}}`
+    );
+  });
+
   test('sends a delivery token and int64 keys as JSON numbers, variables as entered', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByText('Process Definitions')).toBeVisible({ timeout: 10000 });
@@ -449,36 +552,3 @@ test.describe('API Validation - int64 counters', () => {
     );
   });
 });
-
-// Helper to collect validation errors from console
-function createValidationErrorCollector(page: import('@playwright/test').Page) {
-  const errors: string[] = [];
-
-  const handler = (msg: ConsoleMessage) => {
-    const text = msg.text();
-    // Capture MSW Validator errors (now logged via console.error)
-    if (text.includes('[MSW Validator]') && text.includes('Invalid')) {
-      errors.push(text);
-    }
-  };
-
-  page.on('console', handler);
-  page.on('pageerror', (err) => {
-    if (err.message.includes('[MSW Validator]')) {
-      errors.push(err.message);
-    }
-  });
-
-  return {
-    errors,
-    cleanup: () => page.off('console', handler),
-  };
-}
-
-// Wait for network to be idle (all API calls completed)
-async function waitForApiCalls(page: import('@playwright/test').Page) {
-  // Wait for network idle
-  await page.waitForLoadState('networkidle');
-  // Additional wait to ensure all responses are processed
-  await page.waitForTimeout(500);
-}

@@ -263,7 +263,10 @@ test.describe('Decision Instance Detail Page', () => {
 
     await page.locator('code').filter({ hasText: /^""$/ }).click();
 
-    await expect(page.getByTestId('output-dialog-content')).toHaveText('""');
+    const content = page.getByTestId('output-dialog-content');
+    await expect(content).toHaveText('""');
+    // In the monospace font of every other output, not as text
+    await expect(content).toHaveCSS('font-family', 'monospace');
   });
 
   test('should display decision definition chip', async ({ page }) => {

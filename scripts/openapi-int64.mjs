@@ -8,7 +8,7 @@
  *
  * A counter is an int64 in the engine's contract, but stays small: it is a
  * JavaScript number, so its type and schema keep `integer`. json-bigint turns
- * every integer of more than 15 digits into a string, so the response parser
+ * every number of more than 15 characters into a string, so the response parser
  * turns a counter back into a number up to Number.MAX_SAFE_INTEGER (see
  * `src/base/utils/jsonBigInt.ts`). A larger counter is not supported: it stays
  * a string, which the validator refuses.
@@ -28,6 +28,8 @@ export const INT64_COUNTER_FIELDS = new Set(['deliveryToken']);
  */
 export const isInt64Key = (schema, name) =>
   schema.type === 'integer' && schema.format === 'int64' && !INT64_COUNTER_FIELDS.has(name);
+
+const SCALAR_TYPES = new Set(['string', 'number', 'integer', 'boolean']);
 
 // Keywords whose subschemas describe the value of the schema itself
 const SAME_VALUE_KEYWORDS = ['allOf', 'oneOf', 'anyOf', 'not', 'items'];
@@ -63,7 +65,7 @@ export const forEachSchema = (root, visit, name) => {
  * Rewrites the int64 keys under `root` into the key strings the runtime
  * validator expects, leaving the counters integers. `name` is the property or
  * parameter `root` belongs to, if any. Adds the names of the properties it
- * classified to `classification`.
+ * classified to `classification`, and of the other scalar ones to its `others`.
  */
 const retypeSchema = (root, name, classification) => {
   forEachSchema(
@@ -76,6 +78,8 @@ const retypeSchema = (root, name, classification) => {
         classification.keys.add(name);
       } else if (schema.type === 'integer' && schema.format === 'int64') {
         classification.counters.add(name);
+      } else if (name !== undefined && SCALAR_TYPES.has(schema.type)) {
+        classification.others.add(name);
       }
     },
     name
@@ -90,7 +94,7 @@ const retypeSchema = (root, name, classification) => {
  * Returns the names of the properties classified as keys and as counters.
  */
 export const retypeInt64KeysToString = (schemas) => {
-  const classification = { keys: new Set(), counters: new Set() };
+  const classification = { keys: new Set(), counters: new Set(), others: new Set() };
   for (const schema of Object.values(schemas ?? {})) {
     retypeSchema(schema, undefined, classification);
   }
@@ -134,7 +138,7 @@ export const forEachInlineSchema = (paths, visit) => {
  * classification alone would miss the counters and keys only the paths have.
  */
 export const classifyInt64OfPaths = (paths) => {
-  const classification = { keys: new Set(), counters: new Set() };
+  const classification = { keys: new Set(), counters: new Set(), others: new Set() };
   forEachInlineSchema(paths, (schema, name) => {
     retypeSchema(structuredClone(schema), name, classification);
   });
@@ -157,17 +161,21 @@ const KEYS_NOT_NAMED_LIKE_KEYS = new Set(['executionToken']);
  *
  * Returns the listed counters which no int64 property matched, because their
  * entry is stale or their schema got a shape the classification does not see,
- * and the keys which are neither named like one nor listed in
- * `KEYS_NOT_NAMED_LIKE_KEYS`, which may be unlisted counters. Both fail the
- * generation. Both lists are sorted.
+ * the keys which are neither named like one nor listed in
+ * `KEYS_NOT_NAMED_LIKE_KEYS`, which may be unlisted counters, and the keys whose
+ * name some other scalar has too: the request serialization matches the names
+ * wherever they occur, so it would send a string of digits under that name as a
+ * number. All three fail the generation. The lists are sorted.
  */
 export const checkInt64Classification = (...classifications) => {
   const keys = new Set(classifications.flatMap((classification) => [...classification.keys]));
   const counters = new Set(classifications.flatMap((classification) => [...classification.counters]));
+  const others = new Set(classifications.flatMap((classification) => [...classification.others]));
   return {
     unmatchedCounters: [...INT64_COUNTER_FIELDS].filter((name) => !counters.has(name)).sort(),
     keysNotNamedLikeKeys: [...keys]
       .filter((name) => name !== undefined && !KEY_NAME.test(name) && !KEYS_NOT_NAMED_LIKE_KEYS.has(name))
       .sort(),
+    keysOfOtherTypes: [...keys].filter((name) => name !== undefined && others.has(name)).sort(),
   };
 };

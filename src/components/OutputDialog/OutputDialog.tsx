@@ -6,9 +6,12 @@ export interface OutputDialogProps {
   onClose: () => void;
   output?: unknown;
   title?: string;
+  /** Show `output` as JSON even when it is a string, which is then quoted */
+  json?: boolean;
 }
 
-export const OutputDialog = ({ open, onClose, output, title }: OutputDialogProps) => {
+export const OutputDialog = ({ open, onClose, output, title, json = false }: OutputDialogProps) => {
+  const text = typeof output === 'string' && !json;
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth data-testid="output-dialog">
       <DialogTitle
@@ -37,12 +40,12 @@ export const OutputDialog = ({ open, onClose, output, title }: OutputDialogProps
             borderRadius: 1,
             overflow: 'auto',
             fontSize: '0.875rem',
-            fontFamily: typeof output === 'string' ? 'inherit' : 'monospace',
-            whiteSpace: typeof output === 'string' ? 'pre-wrap' : 'pre',
+            fontFamily: text ? 'inherit' : 'monospace',
+            whiteSpace: text ? 'pre-wrap' : 'pre',
             m: 0,
           }}
         >
-          {typeof output === 'string' ? output : JSON.stringify(output, null, 2)}
+          {text ? output : JSON.stringify(output, null, 2)}
         </Box>
       </DialogContent>
     </Dialog>

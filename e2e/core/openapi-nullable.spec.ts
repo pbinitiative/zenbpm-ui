@@ -7,7 +7,11 @@ import { dropUntypedNullable } from '../../scripts/openapi-nullable.mjs';
  *
  * A schema of any JSON value admits null by `nullable: true` without `type`,
  * which AJV refuses to compile. The validation schema generator drops it there,
- * so that the runtime validator compiles and still accepts null.
+ * so that the runtime validator compiles and still accepts null, also where the
+ * schema constrains its value otherwise.
+ *
+ * Unit tests of the generator scripts, run in Node by Playwright for lack of a
+ * unit test runner: they take no `page`.
  */
 
 test.describe('nullable of the validation schemas', () => {
@@ -30,12 +34,15 @@ test.describe('nullable of the validation schemas', () => {
           output: { description: 'any JSON value' },
           outputs: { type: 'array', items: {} },
           name: { type: 'string', nullable: true },
+          status: { description: 'a status', anyOf: [{ enum: ['ACTIVE', 'DONE'] }, { type: 'null' }] },
+          owner: { anyOf: [{ allOf: [{ type: 'object', required: ['id'] }] }, { type: 'null' }] },
+          notNullable: { description: 'no null' },
         },
       },
     });
   });
 
-  test('the dropped schemas compile and accept any JSON value, null too', () => {
+  test('the dropped schemas compile and accept the same values, null too', () => {
     const generated = schemas();
     dropUntypedNullable(generated);
     const ajv = new Ajv({ strict: false });
@@ -46,6 +53,9 @@ test.describe('nullable of the validation schemas', () => {
     expect(outputs.map((output) => validDetail({ output, outputs: [output] }))).toEqual(outputs.map(() => true));
     expect(validDetail({ name: null })).toBe(true);
     expect(validDetail({ name: 1 })).toBe(false);
+    // A constrained value or null, as before
+    expect([null, 'ACTIVE', 'OTHER'].map((status) => validDetail({ status }))).toEqual([true, true, false]);
+    expect([null, { id: 1 }, {}].map((owner) => validDetail({ owner }))).toEqual([true, true, false]);
   });
 });
 
@@ -58,6 +68,9 @@ function schemas() {
         output: { nullable: true, description: 'any JSON value' },
         outputs: { type: 'array', items: { nullable: true } },
         name: { type: 'string', nullable: true },
+        status: { nullable: true, description: 'a status', enum: ['ACTIVE', 'DONE'] },
+        owner: { nullable: true, allOf: [{ type: 'object', required: ['id'] }] },
+        notNullable: { nullable: false, description: 'no null' },
       },
     },
   };

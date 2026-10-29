@@ -10,11 +10,15 @@
  * - Stringify bigint values as JSON numbers (for API/mock compatibility)
  */
 import JSONBigInt from 'json-bigint';
+import { freeFormFields } from '@base/openapi/generated-api/free-form-fields';
 import { int64CounterFields, int64KeyFields } from '@base/openapi/generated-api/int64-fields';
 
 // For parsing API responses: store big integers as strings for safe handling in React
-// storeAsString: converts integers of more than 15 digits to strings
+// storeAsString: converts numbers of more than 15 characters to strings
 const JSONBigParse = JSONBigInt({ storeAsString: true });
+
+// Converts those numbers to BigNumber instead, which tells them from JSON strings
+const JSONBigNumberParse = JSONBigInt();
 
 // For stringifying mock data: use native BigInt which serializes as JSON numbers
 const JSONBigStringify = JSONBigInt({ useNativeBigInt: true });
@@ -24,7 +28,7 @@ const JSONBigStringify = JSONBigInt({ useNativeBigInt: true });
  * every int64 property and parameter of the spec which is not a counter, as
  * `scripts/openapi-int64.mjs` classifies them.
  *
- * The names are matched wherever they occur, except inside `variables`.
+ * The names are matched wherever they occur, except inside free-form fields.
  */
 const INT64_KEY_FIELDS: ReadonlySet<string> = new Set(int64KeyFields);
 
@@ -35,22 +39,22 @@ const INT64_KEY_FIELDS: ReadonlySet<string> = new Set(int64KeyFields);
  * it back into a number up to Number.MAX_SAFE_INTEGER. A larger one stays a
  * string, which the validator refuses.
  *
- * The names are matched wherever they occur, except inside `variables`.
+ * The names are matched wherever they occur, except inside free-form fields.
  */
 const INT64_COUNTER_FIELDS: ReadonlySet<string> = new Set(int64CounterFields);
 
 /**
- * Fields whose value is a map of process variables. Its entries are named and
+ * Free-form fields, such as variables, decision outputs and task headers, as
+ * `scripts/openapi-free-form.mjs` classifies them. Their content is named and
  * typed by the process, not by the API: a variable called `jobKey` or
- * `key` holding `"00123"` must stay that string. Every free-form object of the
- * API's request bodies is such a `variables` field.
+ * `deliveryToken` holding `"00123"` must stay that string.
  */
-const VARIABLE_MAP_FIELDS = new Set(['variables']);
+const FREE_FORM_FIELDS: ReadonlySet<string> = new Set(freeFormFields);
 
 /**
  * Recursively convert string keys to BigInt for proper JSON serialization.
  * This allows mock data to store keys as strings while serializing them as JSON numbers.
- * Variable maps are passed through untouched.
+ * Free-form fields are passed through untouched.
  */
 function convertKeysToBigInt(obj: unknown): unknown {
   if (obj === null || obj === undefined) {
@@ -64,7 +68,7 @@ function convertKeysToBigInt(obj: unknown): unknown {
   if (typeof obj === 'object') {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      if (VARIABLE_MAP_FIELDS.has(key)) {
+      if (FREE_FORM_FIELDS.has(key)) {
         result[key] = value;
       } else if (INT64_KEY_FIELDS.has(key) && typeof value === 'string' && /^\d+$/.test(value)) {
         // Convert string key to BigInt for JSON number serialization
@@ -79,29 +83,51 @@ function convertKeysToBigInt(obj: unknown): unknown {
   return obj;
 }
 
+type Path = Array<string | number>;
+
 /**
- * Turn the int64 counters which json-bigint parsed into strings back into
- * numbers, as long as a number holds them exactly. Changes `obj` in place.
- * Variable maps are passed through untouched.
- *
- * json-bigint makes strings of the numbers of more than 15 digits only, so a
- * counter which the API sent as a shorter JSON string stays a string, and the
- * validator refuses it.
+ * Paths of the int64 counters holding a string of more than 15 digits: a number
+ * which json-bigint parsed into a string, or a JSON string. Free-form fields are
+ * not searched.
  */
-function restoreCounters(obj: unknown): void {
+function findLongCounters(obj: unknown, path: Path = [], found: Path[] = []): Path[] {
   if (Array.isArray(obj)) {
-    obj.forEach(restoreCounters);
+    obj.forEach((item, index) => findLongCounters(item, [...path, index], found));
   } else if (obj !== null && typeof obj === 'object') {
-    const record = obj as Record<string, unknown>;
-    for (const [key, value] of Object.entries(record)) {
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       if (INT64_COUNTER_FIELDS.has(key) && typeof value === 'string' && /^\d{16,}$/.test(value)) {
-        const counter = Number(value);
-        if (Number.isSafeInteger(counter)) {
-          record[key] = counter;
-        }
-      } else if (!VARIABLE_MAP_FIELDS.has(key)) {
-        restoreCounters(value);
+        found.push([...path, key]);
+      } else if (!FREE_FORM_FIELDS.has(key)) {
+        findLongCounters(value, [...path, key], found);
       }
+    }
+  }
+  return found;
+}
+
+const valueAt = (root: unknown, path: Path): unknown =>
+  path.reduce<unknown>((node, segment) => (node as Record<string | number, unknown>)[segment], root);
+
+/**
+ * Turn the int64 counters which json-bigint parsed from numbers into strings
+ * back into numbers, as long as a number holds them exactly. Changes `value`,
+ * the parsed `text`, in place.
+ *
+ * A counter which the API sent as a JSON string stays a string, and the
+ * validator refuses it. json-bigint parses both into the same string, so `text`
+ * is parsed again, with BigNumbers for numbers, to tell them apart. Counters
+ * that long hardly occur, so this rarely happens.
+ */
+function restoreCounters(text: string, value: unknown): void {
+  const counters = findLongCounters(value);
+  if (counters.length === 0) return;
+  const tokens: unknown = JSONBigNumberParse.parse(text);
+  for (const path of counters) {
+    if (typeof valueAt(tokens, path) === 'string') continue;
+    const counter = Number(valueAt(value, path));
+    if (Number.isSafeInteger(counter)) {
+      const parent = valueAt(value, path.slice(0, -1)) as Record<string, unknown>;
+      parent[path[path.length - 1]] = counter;
     }
   }
 }
@@ -113,7 +139,7 @@ function restoreCounters(obj: unknown): void {
  */
 export const parse = (text: string): unknown => {
   const value: unknown = JSONBigParse.parse(text);
-  restoreCounters(value);
+  restoreCounters(text, value);
   return value;
 };
 

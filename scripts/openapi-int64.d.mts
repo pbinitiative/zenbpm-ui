@@ -23,11 +23,13 @@ export function forEachSchema<Schema = unknown>(
 
 /**
  * Names of the properties which an int64 classification found to be keys and
- * counters. `undefined` stands for a schema of no property.
+ * counters, and of the other scalar properties. `undefined` stands for a schema
+ * of no property.
  */
 export interface Int64Classification {
   keys: Set<string | undefined>;
   counters: Set<string | undefined>;
+  others: Set<string>;
 }
 
 /**
@@ -54,9 +56,11 @@ export function classifyInt64OfPaths(paths: unknown): Int64Classification;
 
 /**
  * Checks the classifications of one spec: the listed counters which no int64
- * property matched, and the keys neither named like one nor listed as such.
+ * property matched, the keys neither named like one nor listed as such, and the
+ * keys whose name some other scalar has too.
  */
 export function checkInt64Classification(...classifications: Int64Classification[]): {
   unmatchedCounters: string[];
   keysNotNamedLikeKeys: string[];
+  keysOfOtherTypes: string[];
 };
