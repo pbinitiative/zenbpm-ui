@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 
+// `src/mocks/handlers/decisionInstances.ts` exposes its data to the tests
+type MockWindow = { __mockDecisionInstances: Array<{ key: string; decisionOutput: unknown }> };
+
 test.describe('Decisions Page - Definitions Tab', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to decisions page
@@ -220,6 +223,50 @@ test.describe('Decision Instance Detail Page', () => {
 
     // Should show output value in metadata panel (the green code block with the JSON output)
     await expect(page.locator('code').filter({ hasText: 'sport' })).toBeVisible();
+  });
+
+  // A decision with a single unnamed output returns its bare value, and one
+  // no rule matched returns null: outputs as well, however falsy
+  for (const output of [false, 0, '', null]) {
+    test(`should display the output ${JSON.stringify(output)} in metadata`, async ({ page }) => {
+      await page.goto('/');
+      await expect(page.getByText('Process Definitions')).toBeVisible({ timeout: 10000 });
+
+      await page.evaluate(({ key, output }) => {
+        // The data the mock handlers serve, whichever URL the app imported them by
+        const instance = (window as unknown as MockWindow).__mockDecisionInstances
+          .find((decisionInstance) => decisionInstance.key === key);
+        if (instance) instance.decisionOutput = output;
+        // Navigate within the app, which keeps the changed mock data
+        window.history.pushState({}, '', `/decision-instances/${key}`);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }, { key: '4100000000000000001', output });
+      await expect(page.getByRole('heading', { name: 'Metadata' })).toBeVisible({ timeout: 10000 });
+
+      await expect(page.locator('code').filter({ hasText: new RegExp(`^${JSON.stringify(output)}$`) })).toBeVisible();
+    });
+  }
+
+  test('should show a string output quoted in the output dialog, as in metadata', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByText('Process Definitions')).toBeVisible({ timeout: 10000 });
+
+    await page.evaluate((key) => {
+      const instance = (window as unknown as MockWindow).__mockDecisionInstances
+        .find((decisionInstance) => decisionInstance.key === key);
+      if (instance) instance.decisionOutput = '';
+      // Navigate within the app, which keeps the changed mock data
+      window.history.pushState({}, '', `/decision-instances/${key}`);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }, '4100000000000000001');
+    await expect(page.getByRole('heading', { name: 'Metadata' })).toBeVisible({ timeout: 10000 });
+
+    await page.locator('code').filter({ hasText: /^""$/ }).click();
+
+    const content = page.getByTestId('output-dialog-content');
+    await expect(content).toHaveText('""');
+    // In the monospace font of every other output, not as text
+    await expect(content).toHaveCSS('font-family', 'monospace');
   });
 
   test('should display decision definition chip', async ({ page }) => {

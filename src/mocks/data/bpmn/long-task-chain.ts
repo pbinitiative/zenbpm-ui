@@ -97,6 +97,6 @@ export const incidents: MockIncident[] = [
     processDefinitionKey: '3000000000000000016',
     message: 'External service unavailable - connection refused',
     createdAt: hoursAgo(1),
-    executionToken: 'token-315001',
+    executionToken: '7100000000000315001',
   },
 ];

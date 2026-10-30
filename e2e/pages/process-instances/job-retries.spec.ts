@@ -650,7 +650,7 @@ test.describe('Process Instance Jobs - Retries', () => {
   test('sends variables named like int64 fields of the API as entered', async ({ page }) => {
     await openJobsTab(page, SIMPLE_TASK_BACKOFF_INSTANCE_KEY);
     const dialog = await openDialogFromMenu(page, SIMPLE_TASK_BACKOFF_JOB_KEY, /fail job/i);
-    const variables = { deliveryToken: '00123', key: '42', order: { jobKey: '7' } };
+    const variables = { processInstanceKey: '00123', key: '42', order: { jobKey: '7' } };
 
     await dialog.getByLabel('Error Code').fill('ORDER_FAILED');
     await dialog.locator('.monaco-editor').first().click();
@@ -812,7 +812,7 @@ test.describe('Process Instance Jobs - Retries', () => {
         processDefinitionKey: '3000000000000000046',
         message: 'other incident',
         createdAt: new Date().toISOString(),
-        executionToken: `token-other-${index}`,
+        executionToken: `59200000000000${String(index).padStart(5, '0')}`,
       }));
       (incidents as unknown[]).unshift(...others);
     }, SIMPLE_TASK_FAILED_INSTANCE_KEY);
@@ -847,7 +847,7 @@ test.describe('Process Instance Jobs - Retries', () => {
         processDefinitionKey: '3000000000000000046',
         message: 'other incident',
         createdAt: new Date().toISOString(),
-        executionToken: `token-other-${index}`,
+        executionToken: `59200000000000${String(index).padStart(5, '0')}`,
       }));
       (incidents as unknown[]).unshift(...others);
     }, SIMPLE_TASK_FAILED_INSTANCE_KEY);

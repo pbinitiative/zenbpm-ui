@@ -202,7 +202,7 @@ export const incidents: MockIncident[] = [
     message: 'Email notification failed: SMTP server rejected connection',
     createdAt: daysAgo(1),
     resolvedAt: hoursAgo(20),
-    executionToken: 'token-323456',
+    executionToken: '7100000000000323456',
   },
 ];
 

@@ -73,6 +73,7 @@ export const jobHandlers = [
         retryAt: job.retryAt,
         lastFailureMessage: job.lastFailureMessage,
         retryBackoff: job.retryBackoff,
+        deliveryToken: job.deliveryToken ?? 0,
         assignee: job.assignee,
         candidateGroups: job.candidateGroups,
         createdAt: job.createdAt,

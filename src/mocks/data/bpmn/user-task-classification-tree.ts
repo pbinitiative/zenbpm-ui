@@ -72,6 +72,7 @@ const childInstances: MockProcessInstance[] = [
     key: CHILD_INSTANCE_KEY,
     processDefinitionKey: CHILD_PROCESS_DEFINITION_KEY,
     bpmnProcessId: 'child-classification-process',
+    version: 1,
     createdAt: hoursAgo(2),
     state: 'active',
     variables: {},

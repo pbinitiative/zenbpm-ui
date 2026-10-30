@@ -29,7 +29,8 @@ interface MockDecisionInstance {
       evaluatedOutputs?: Array<{ outputId: string; outputName: string; outputValue: unknown }>;
     }>;
   }>;
-  decisionOutput: Record<string, unknown>;
+  /** Any JSON value: a decision with a single unnamed output returns its bare value */
+  decisionOutput: unknown;
 }
 
 const decisionInstances: MockDecisionInstance[] = [
@@ -335,6 +336,13 @@ const decisionInstances: MockDecisionInstance[] = [
   },
 ];
 
+// Exposed to window, so that tests change the data the handlers serve. A
+// test importing this module by its URL may get another copy: once Vite has
+// reloaded the page, the app imports it as `decisionInstances.ts?t=…`.
+if (typeof window !== 'undefined') {
+  (window as unknown as { __mockDecisionInstances: MockDecisionInstance[] }).__mockDecisionInstances = decisionInstances;
+}
+
 export const decisionInstanceHandlers = [
   // GET /decision-instances - List decision instances (partitioned format)
   http.get(
@@ -420,8 +428,6 @@ export const decisionInstanceHandlers = [
         inputCount: instance.inputCount,
         outputCount: instance.outputCount,
         dmnResourceDefinitionVersion: 1,
-        decisionRequirementsKey: instance.dmnResourceDefinitionKey,
-        decisionRequirementsId: instance.dmnResourceDefinitionId,
         evaluatedDecisions: instance.evaluatedDecisions,
         decisionOutput: instance.decisionOutput,
       });

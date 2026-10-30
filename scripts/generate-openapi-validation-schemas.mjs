@@ -2,6 +2,14 @@ import fs from 'fs/promises';
 import path from 'path';
 import { exec } from 'child_process';
 import 'dotenv/config';
+import {
+  checkInt64Classification,
+  classifyInt64OfPaths,
+  findInt64sNotPropertyValues,
+  retypeInt64KeysToString,
+} from './openapi-int64.mjs';
+import { checkFreeFormFields, classifyFreeFormFields } from './openapi-free-form.mjs';
+import { dropUntypedNullable } from './openapi-nullable.mjs';
 
 async function generateSchemas() {
   const extractPathRegex = /^https?:\/\/[^/]+(\/[^?#]*)?/;
@@ -14,6 +22,8 @@ async function generateSchemas() {
     const inputFile = path.resolve(process.cwd(), 'openapi/api.yaml');
     const bundledFile = path.resolve(process.cwd(), 'src/base/openapi/generated-api/api.bundled.json');
     const outputFile = path.resolve(process.cwd(), 'src/base/openapi/generated-api/generated-openapi-schemas.ts');
+    const int64FieldsFile = path.resolve(process.cwd(), 'src/base/openapi/generated-api/int64-fields.ts');
+    const freeFormFieldsFile = path.resolve(process.cwd(), 'src/base/openapi/generated-api/free-form-fields.ts');
 
     // 1. Bundle the OpenAPI spec
     await new Promise((resolve, reject) => {
@@ -38,29 +48,62 @@ async function generateSchemas() {
       }
     }
 
-    const retypeKeysToString = (root) => {
-      if (!root || typeof root !== "object") return;
-      const stack = [root];
-      while (stack.length > 0) {
-        const obj = stack.pop();
-        if (!obj || typeof obj !== "object") continue;
-        if (
-          obj.type === "integer" &&
-          obj.format === "int64"
-        ) {
-          obj.type = "string";
-          obj.pattern = '^\\d{15,25}$';
-          delete obj.format;
-        }
-        for (const key of Object.keys(obj)) {
-          const value = obj[key];
-          if (value && typeof value === "object") {
-            stack.push(value);
-          }
-        }
-      }
-    };
-    retypeKeysToString(schemas)
+    // Variables, decision outputs and the like: the request serialization and
+    // the response parsing leave their content as it is
+    const freeForm = classifyFreeFormFields(schemas, apiSpec.paths);
+    const mixedFreeFormFields = checkFreeFormFields(freeForm);
+    if (mixedFreeFormFields.length > 0) {
+      console.error(
+        `❌ properties free-form in one place and not in another: ${mixedFreeFormFields.join(', ')}. ` +
+        `src/base/utils/jsonBigInt.ts matches the names wherever they occur: rename one of them.`
+      );
+      process.exit(1);
+    }
+    const freeFormFields = [...freeForm.freeForm].sort();
+
+    const int64sNotPropertyValues = findInt64sNotPropertyValues(schemas, apiSpec.paths);
+    if (int64sNotPropertyValues.length > 0) {
+      console.error(
+        `❌ int64s which are not the value of a property: ${int64sNotPropertyValues.join(', ')}. ` +
+        `src/base/utils/jsonBigInt.ts converts int64s by their property's name only: support the shape there first.`
+      );
+      process.exit(1);
+    }
+
+    // AJV refuses `nullable` without `type`, so it is dropped, keeping null valid
+    dropUntypedNullable(schemas);
+
+    // Int64 keys arrive as strings (json-bigint); int64 counters stay integers.
+    // The check covers the inline schemas of the paths too, as the client types do.
+    const componentInt64 = retypeInt64KeysToString(schemas);
+    const pathInt64 = classifyInt64OfPaths(apiSpec.paths);
+    const { unmatchedCounters, keysNotNamedLikeKeys, keysOfOtherTypes } = checkInt64Classification(componentInt64, pathInt64);
+    if (unmatchedCounters.length > 0) {
+      console.error(
+        `❌ INT64_COUNTER_FIELDS in scripts/openapi-int64.mjs lists ${unmatchedCounters.join(', ')}, which no int64 property ` +
+        `of the spec matched: remove a stale entry, or give the counter a shape the classification sees`
+      );
+      process.exit(1);
+    }
+    if (keysNotNamedLikeKeys.length > 0) {
+      console.error(
+        `❌ int64 properties not named like a key: ${keysNotNamedLikeKeys.join(', ')}. In scripts/openapi-int64.mjs, ` +
+        `list a counter in INT64_COUNTER_FIELDS, or a key in KEYS_NOT_NAMED_LIKE_KEYS.`
+      );
+      process.exit(1);
+    }
+    if (keysOfOtherTypes.length > 0) {
+      console.error(
+        `❌ int64 keys whose name another scalar property has too: ${keysOfOtherTypes.join(', ')}. ` +
+        `The request serialization would send a string of digits under that name as a number: rename one of them.`
+      );
+      process.exit(1);
+    }
+    // The names the request serialization and the response parsing go by (src/base/utils/jsonBigInt.ts)
+    const int64FieldNames = (...classified) =>
+      [...new Set(classified.flatMap((names) => [...names]))].filter((name) => name !== undefined).sort();
+    const int64KeyFields = int64FieldNames(componentInt64.keys, pathInt64.keys);
+    const int64CounterFields = int64FieldNames(componentInt64.counters, pathInt64.counters);
 
     // 4. Extract endpoint schemas
     const endpointSchemas = {};
@@ -107,8 +150,20 @@ export const schemas = ${JSON.stringify(schemas, null, 2)} as const;
 export const endpointSchemas = ${JSON.stringify(endpointSchemas, null, 2)} as const;
 `;
 
-    // 6. Write the output file
+    // 6. Write the output files
     await fs.writeFile(outputFile, outputContent);
+    await fs.writeFile(int64FieldsFile, `
+// This file is auto-generated by a script. Do not edit it manually.
+// Names of the int64 properties and parameters of the spec, classified by scripts/openapi-int64.mjs.
+export const int64KeyFields = ${JSON.stringify(int64KeyFields, null, 2)} as const;
+
+export const int64CounterFields = ${JSON.stringify(int64CounterFields, null, 2)} as const;
+`);
+    await fs.writeFile(freeFormFieldsFile, `
+// This file is auto-generated by a script. Do not edit it manually.
+// Names of the free-form properties of the spec, classified by scripts/openapi-free-form.mjs.
+export const freeFormFields = ${JSON.stringify(freeFormFields, null, 2)} as const;
+`);
 
     console.log(`✅ OpenAPI schemas generated successfully at: ${outputFile}`);
 

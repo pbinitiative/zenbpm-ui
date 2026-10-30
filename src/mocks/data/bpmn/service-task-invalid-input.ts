@@ -49,6 +49,6 @@ export const incidents: MockIncident[] = [
     processDefinitionKey: '3000000000000000031',
     message: 'FEEL expression evaluation failed: Cannot read property "value" of null',
     createdAt: hoursAgo(3),
-    executionToken: 'token-328001',
+    executionToken: '7100000000000328001',
   },
 ];

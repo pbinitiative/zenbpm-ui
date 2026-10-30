@@ -53,6 +53,8 @@ export interface MockJob {
   retriesSetByOperator?: boolean;
   /** Output of the failure which exhausted the retries. */
   outputVariables?: Record<string, unknown>;
+  /** Token of the latest delivery over the job stream; absent means never handed out, sent as `0`. */
+  deliveryToken?: number;
 }
 
 export interface MockJobFailure {

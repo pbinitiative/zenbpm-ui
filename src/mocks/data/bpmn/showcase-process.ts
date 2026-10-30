@@ -434,7 +434,7 @@ Caused by: java.net.ConnectException: Connection refused (Connection refused)
 \tat java.base/sun.nio.ch.NioSocketImpl.timedFinishConnect(NioSocketImpl.java:542)
 \t... 21 more`,
     createdAt: daysAgo(2),
-    executionToken: 'token-123456',
+    executionToken: '7100000000000123456',
   },
   {
     key: '3097302399374458882',
@@ -454,7 +454,7 @@ Caused by: java.net.ConnectException: Connection refused (Connection refused)
 \tat java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
 \tat java.base/java.lang.Thread.run(Thread.java:833)`,
     createdAt: hoursAgo(5),
-    executionToken: 'token-123457',
+    executionToken: '7100000000000123457',
   },
   // Unresolved incident for the dedicated statistics test instance (3100000000000000250).
   // Together with its active element, task-a will have activeCount: 1 AND incidentCount: 1.
@@ -466,7 +466,7 @@ Caused by: java.net.ConnectException: Connection refused (Connection refused)
     processDefinitionKey: '3000000000000000033',
     message: 'Statistics test incident: service unavailable',
     createdAt: hoursAgo(3),
-    executionToken: 'token-stats-001',
+    executionToken: '7100000000000900001',
   },
 ];
 

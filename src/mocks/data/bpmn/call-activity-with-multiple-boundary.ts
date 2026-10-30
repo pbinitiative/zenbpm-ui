@@ -73,6 +73,6 @@ export const incidents: MockIncident[] = [
     processDefinitionKey: '3000000000000000004',
     message: 'Called process timed out after 30 seconds',
     createdAt: hoursAgo(2),
-    executionToken: 'token-303001',
+    executionToken: '7100000000000303001',
   },
 ];

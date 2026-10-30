@@ -197,13 +197,14 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
       });
     }
 
-    // Output
-    if (instance.decisionOutput) {
+    // Output: any JSON value, so `false`, `0`, `""` and `null` are outputs too
+    if (instance.decisionOutput !== undefined) {
       fields.push({
         label: t('decisions:fields.output'),
         value: (
           <Box
-            onClick={() => openOutputDialog({ output: instance.decisionOutput })}
+            // As JSON, so that a string is quoted, as the metadata does
+            onClick={() => openOutputDialog({ output: instance.decisionOutput, json: true })}
             component="code"
             sx={{
               display: 'block',
@@ -231,14 +232,15 @@ export function useDecisionInstanceData(decisionInstanceKey: string | undefined)
   }, [instance, t, openOutputDialog]);
 
   // Build definition info
+  const dmnResourceDefinitionKey = instance?.dmnResourceDefinitionKey;
   const definitionInfo = useMemo((): DefinitionInfo | undefined => {
-    if (!instance?.dmnResourceDefinitionKey) return undefined;
+    if (!dmnResourceDefinitionKey) return undefined;
 
     return {
-      key: instance.dmnResourceDefinitionKey,
+      key: dmnResourceDefinitionKey,
       type: 'decision',
     };
-  }, [instance?.dmnResourceDefinitionKey]);
+  }, [dmnResourceDefinitionKey]);
 
   return {
     instance,

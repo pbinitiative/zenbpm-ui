@@ -49,6 +49,6 @@ export const incidents: MockIncident[] = [
     processDefinitionKey: '3000000000000000040',
     message: 'Message subscription creation failed: invalid correlation key expression',
     createdAt: hoursAgo(2),
-    executionToken: 'token-335001',
+    executionToken: '7100000000000335001',
   },
 ];

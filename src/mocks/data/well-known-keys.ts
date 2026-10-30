@@ -35,6 +35,8 @@ export const USER_TASK_CLASSIFICATION_CHILD_INSTANCE_KEY = '3100000000000000301'
 // classifies its jobs as User Tasks.
 export const USER_TASK_CLASSIFICATION_CHILD_USER_TASK_INSTANCE_KEY = '3100000000000000302';
 export const SIMPLE_TASK_ACTIVE_INSTANCE_KEY = '3100000000000000017';
+// Its service job, never handed out to a worker.
+export const SIMPLE_TASK_ACTIVE_JOB_KEY = '5000000000000000008';
 // Second active simple-task instance — used to verify falsy ZEN_FORM retains the generic completion dialog.
 export const SIMPLE_TASK_FALSY_FORM_INSTANCE_KEY = '3100000000000000025';
 // Simple-task instance whose service job failed once and waits out a retry backoff.
