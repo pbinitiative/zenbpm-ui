@@ -26,7 +26,6 @@ import {
     expectMetadataXml,
 } from '../../helpers/commonProperties';
 import {
-    editMessageReference,
     editSignalReference,
     editEscalationReference,
 } from '../../helpers/eventProperties';
@@ -90,17 +89,20 @@ test.describe('Message intermediate throw event', () => {
 
     test('shows, edits and persists properties through XML import', async ({page}) => {
         const editedId = await editIntermediateThrowEventProperties(page);
-        await editMessageReference(page);
-        await expectPropertyGroups(page, [...PROPERTY_GROUPS, 'message']);
+        await configureTaskDefinition(page);
+        // Executed as a job like a Send Task: Task definition replaces the Message group.
+        await expectPropertyGroups(page, [...PROPERTY_GROUPS, 'zenbpm-taskDefinition']);
         const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
         expectMetadataXml(xml);
         await expectDesign(page, xml, editedId);
+        await expectTaskDefinitionXml(page, xml, editedId);
     });
 
     test('deploys the designed process and reads back its BPMN XML', async ({page}) => {
-        await editMessageReference(page);
+        await configureTaskDefinition(page);
         const xml = await downloadBpmnXml(page);
         await expectDesign(page, xml, ELEMENT_ID);
+        await expectTaskDefinitionXml(page, xml, ELEMENT_ID);
         const response = await deployProcess(page);
         await expectDeploymentSaved(page, response, xml);
     });
@@ -293,4 +295,16 @@ async function expectIntermediateThrowEventXml(page: Page, xml: string, id: stri
     await expectValidBpmnXml(page, xml);
     await expectXmlElements(page, xml, `[id="${id}"]`, [{name: 'intermediateThrowEvent'}]);
     await expectXmlElements(page, xml, `BPMNShape[bpmnElement="${id}"]`, [{name: 'BPMNShape'}]);
+}
+
+async function configureTaskDefinition(page: Page): Promise<void> {
+    await openGroup(page, 'zenbpm-taskDefinition');
+    await fillEntry(page, 'zenbpm-taskDef-type', 'e2e-worker');
+    await fillEntry(page, 'zenbpm-taskDef-retries', '3');
+}
+
+async function expectTaskDefinitionXml(page: Page, xml: string, id: string): Promise<void> {
+    await expectXmlElements(page, xml, `[id="${id}"] > extensionElements > taskDefinition`, [
+        {name: 'taskDefinition', attributes: {type: 'e2e-worker', retries: '3'}},
+    ]);
 }
