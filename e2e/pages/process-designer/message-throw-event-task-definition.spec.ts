@@ -44,11 +44,17 @@ test.describe('Process Designer — Message intermediate throw event Task defini
     });
 
     // Re-import the exported XML and verify the values survive the round-trip.
+    // The import is async and keeps the element id, so wait for the old shape
+    // to detach; otherwise the old (already edited) element could be selected.
+    const previousShape = await page.locator(`[data-element-id="${ELEMENT_ID}"]`).elementHandle();
     await fileInput.setInputFiles({
       name: 'exported.bpmn',
       mimeType: 'application/xml',
       buffer: Buffer.from(xml, 'utf-8'),
     });
+    if (previousShape) {
+      await expect.poll(() => previousShape.evaluate((element) => element.isConnected)).toBe(false);
+    }
     await selectThrowEvent(page);
     await expect(page.locator('[data-group-id="group-message"]')).toHaveCount(0);
     await openTaskDefinitionGroup(page);
