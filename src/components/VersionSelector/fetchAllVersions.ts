@@ -15,7 +15,9 @@ interface VersionsPage<T> {
  * `VERSION_MAX_PAGES` pages, the versions left out are then the oldest.
  *
  * Returns the versions newest first, without duplicates (a deployment made
- * while paging shifts the following pages by one).
+ * while paging shifts the following pages by one). Only a failure of the
+ * first page rejects: if a later page fails, the newer versions already
+ * loaded are returned, which still include the latest one.
  */
 export async function fetchAllVersions<T extends { key: string | number; version: number }>(
   fetchPage: (page: number, size: number) => Promise<VersionsPage<T>>,
@@ -23,7 +25,15 @@ export async function fetchAllVersions<T extends { key: string | number; version
   const byKey = new Map<string, T>();
 
   for (let page = 1; page <= VERSION_MAX_PAGES; page += 1) {
-    const { items = [], totalCount } = await fetchPage(page, VERSION_PAGE_SIZE);
+    let response: VersionsPage<T>;
+    try {
+      response = await fetchPage(page, VERSION_PAGE_SIZE);
+    } catch (err) {
+      if (page === 1) throw err;
+      console.error(`Failed to load versions page ${page}; showing the newer ones loaded:`, err);
+      break;
+    }
+    const { items = [], totalCount } = response;
     for (const item of items) {
       byKey.set(String(item.key), item);
     }

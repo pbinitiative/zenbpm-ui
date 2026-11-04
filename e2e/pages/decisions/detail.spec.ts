@@ -293,8 +293,8 @@ test.describe('Decision Instance Detail Page', () => {
     await page.goto('/decision-instances/4100000000000000001');
     await expect(page.getByRole('heading', { name: 'Metadata' })).toBeVisible({ timeout: 10000 });
 
-    // The definition's numeric version is shown as a pill
-    await expect(page.getByTestId('version-pill')).toHaveText(/^v\d+$/);
+    // The instance's definition, 4000000000000000001, is version 1 (of 2)
+    await expect(page.getByTestId('version-pill')).toHaveText('v1');
   });
 
   test('should render outputs as JSON array in dialog when multiple rules match', async ({ page }) => {

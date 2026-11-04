@@ -70,11 +70,15 @@ export const StartInstanceDialog = ({
   // Selected version key
   const [selectedVersion, setSelectedVersion] = useState<string>('');
 
-  // Sorted versions (descending)
-  const versionOptions = useMemo(
-    () => [...allVersions].sort((a, b) => b.version - a.version),
-    [allVersions],
-  );
+  // Sorted versions (descending). The selected definition is always an
+  // option, even if the loaded list lacks it (e.g. beyond the paging limit).
+  const versionOptions = useMemo(() => {
+    const options =
+      selectedDefinition && !allVersions.some((v) => v.key === selectedDefinition.key)
+        ? [...allVersions, selectedDefinition]
+        : allVersions;
+    return [...options].sort((a, b) => b.version - a.version);
+  }, [allVersions, selectedDefinition]);
 
   // Actual process definition key used for starting the instance
   const processDefinitionKey = selectedVersion;
@@ -84,9 +88,12 @@ export const StartInstanceDialog = ({
     if (!selectedDefinition) {
       setAllVersions([]);
       setSelectedVersion('');
+      setLoadingVersions(false);
       return;
     }
 
+    // Ignore the result of a load superseded by another process selection
+    let active = true;
     const loadVersions = async () => {
       setLoadingVersions(true);
       try {
@@ -94,16 +101,19 @@ export const StartInstanceDialog = ({
         const items = await fetchAllVersions((page, size) =>
           getProcessDefinitions({ bpmnProcessId, page, size, sortBy: 'version', sortOrder: 'desc' }),
         );
-        setAllVersions(items);
+        if (active) setAllVersions(items);
       } catch (err) {
         console.error('Failed to load process versions:', err);
-        setAllVersions([]);
+        if (active) setAllVersions([]);
       } finally {
-        setLoadingVersions(false);
+        if (active) setLoadingVersions(false);
       }
     };
 
     void loadVersions();
+    return () => {
+      active = false;
+    };
   }, [selectedDefinition]);
 
   // Auto-select the latest version when versions are loaded
@@ -162,11 +172,19 @@ export const StartInstanceDialog = ({
     setError(null);
   }, []);
 
-  // Handle process selection — reset version so auto-select triggers
-  const handleDefinitionChange = useCallback((value: ProcessDefinitionSimple | null) => {
-    setSelectedDefinition(value);
-    setSelectedVersion('');
-  }, []);
+  // Handle process selection — reset version so auto-select triggers. Drop the
+  // previous process's versions in the same update, or auto-select would pick
+  // one of them before the new process's versions load.
+  const handleDefinitionChange = useCallback(
+    (value: ProcessDefinitionSimple | null) => {
+      if (value?.bpmnProcessId !== selectedDefinition?.bpmnProcessId) {
+        setAllVersions([]);
+      }
+      setSelectedDefinition(value);
+      setSelectedVersion('');
+    },
+    [selectedDefinition],
+  );
 
   // Create instance
   const handleCreate = useCallback(async () => {

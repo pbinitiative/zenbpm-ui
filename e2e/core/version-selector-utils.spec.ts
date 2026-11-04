@@ -104,7 +104,20 @@ test.describe('fetchAllVersions', () => {
     expect(versions[0].version).toBe((VERSION_MAX_PAGES + 1) * VERSION_PAGE_SIZE);
   });
 
-  test('propagates a failed request', async () => {
+  test('rejects when the first page fails', async () => {
     await expect(fetchAllVersions(() => Promise.reject(new Error('boom')))).rejects.toThrow('boom');
+  });
+
+  test('keeps the newer versions when a later page fails', async () => {
+    const { fetchPage } = pagedEndpoint(3 * VERSION_PAGE_SIZE);
+    const requestedPages: number[] = [];
+    const versions = await fetchAllVersions((page, size) => {
+      requestedPages.push(page);
+      return page === 3 ? Promise.reject(new Error('boom')) : fetchPage(page, size);
+    });
+    expect(requestedPages).toEqual([1, 2, 3]);
+    expect(versions).toHaveLength(2 * VERSION_PAGE_SIZE);
+    // Newest first, so the latest version is among those kept
+    expect(versions[0].version).toBe(3 * VERSION_PAGE_SIZE);
   });
 });
