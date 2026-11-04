@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { getLatestVersionKey } from '../../src/components/VersionSelector';
+// Import the plain modules, not the VersionSelector index: it also exports the
+// React components, whose i18n JSON imports Playwright's Node loader can't load
+import { getLatestVersionKey } from '../../src/components/VersionSelector/utils';
 import {
   fetchAllVersions,
   VERSION_MAX_PAGES,
