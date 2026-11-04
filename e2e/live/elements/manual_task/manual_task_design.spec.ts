@@ -18,7 +18,7 @@ import {
     editMultiInstance,
 } from '../../helpers/commonProperties';
 import {expectXmlElements, expectValidBpmnXml} from '../../helpers/bpmnAssertions';
-import {deployProcess, expectDeploymentRejected} from '../../helpers/processDeployment';
+import {deployProcess, expectDeploymentRejected, expectDeploymentSaved} from '../../helpers/processDeployment';
 
 const ELEMENT_ID = 'Element_under_test';
 const PROPERTY_GROUPS = COMMON_PROPERTY_GROUPS;
@@ -42,11 +42,11 @@ test.describe('Manual task', () => {
         await expectDesign(page, xml, editedId);
     });
 
-    test('rejects unsupported deployment with a specific validation error', async ({page}) => {
+    test('deploys the designed process and reads back its BPMN XML', async ({page}) => {
         const xml = await downloadBpmnXml(page);
         await expectDesign(page, xml, ELEMENT_ID);
         const response = await deployProcess(page);
-        await expectDeploymentRejected(page, response, 'unsupported element type \'manualTask\'');
+        await expectDeploymentSaved(page, response, xml);
     });
 
     async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
@@ -76,12 +76,21 @@ test.describe('Manual task — parallel loop', () => {
         await expectDesign(page, xml, editedId);
     });
 
-    test('rejects unsupported deployment with a specific validation error', async ({page}) => {
-        await editMultiInstance(page);
+    test('deploys the designed process and reads back its BPMN XML', async ({page}) => {
+        await editMultiInstance(page, {completionCondition: false});
         const xml = await downloadBpmnXml(page);
         await expectDesign(page, xml, ELEMENT_ID);
         const response = await deployProcess(page);
-        await expectDeploymentRejected(page, response, 'unsupported element type \'manualTask\'');
+        await expectDeploymentSaved(page, response, xml);
+    });
+
+    test('rejects deployment with a multi-instance completion condition', async ({page}) => {
+        await editMultiInstance(page);
+        const xml = await downloadBpmnXml(page);
+        await expectDesign(page, xml, ELEMENT_ID);
+        await expectCompletionConditionXml(page, xml, ELEMENT_ID);
+        const response = await deployProcess(page);
+        await expectDeploymentRejected(page, response, `manualTask id="${ELEMENT_ID}" has a multi-instance completionCondition`);
     });
 
     async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
@@ -112,12 +121,21 @@ test.describe('Manual task — sequential loop', () => {
         await expectDesign(page, xml, editedId);
     });
 
-    test('rejects unsupported deployment with a specific validation error', async ({page}) => {
-        await editMultiInstance(page);
+    test('deploys the designed process and reads back its BPMN XML', async ({page}) => {
+        await editMultiInstance(page, {completionCondition: false});
         const xml = await downloadBpmnXml(page);
         await expectDesign(page, xml, ELEMENT_ID);
         const response = await deployProcess(page);
-        await expectDeploymentRejected(page, response, 'unsupported element type \'manualTask\'');
+        await expectDeploymentSaved(page, response, xml);
+    });
+
+    test('rejects deployment with a multi-instance completion condition', async ({page}) => {
+        await editMultiInstance(page);
+        const xml = await downloadBpmnXml(page);
+        await expectDesign(page, xml, ELEMENT_ID);
+        await expectCompletionConditionXml(page, xml, ELEMENT_ID);
+        const response = await deployProcess(page);
+        await expectDeploymentRejected(page, response, `manualTask id="${ELEMENT_ID}" has a multi-instance completionCondition`);
     });
 
     async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
@@ -147,11 +165,11 @@ test.describe('Manual task — standard loop', () => {
         await expectDesign(page, xml, editedId);
     });
 
-    test('rejects unsupported deployment with a specific validation error', async ({page}) => {
+    test('deploys the designed process and reads back its BPMN XML', async ({page}) => {
         const xml = await downloadBpmnXml(page);
         await expectDesign(page, xml, ELEMENT_ID);
         const response = await deployProcess(page);
-        await expectDeploymentRejected(page, response, 'unsupported element type \'manualTask\'');
+        await expectDeploymentSaved(page, response, xml);
     });
 
     async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
@@ -174,4 +192,8 @@ async function expectManualTaskXml(page: Page, xml: string, id: string): Promise
     await expectValidBpmnXml(page, xml);
     await expectXmlElements(page, xml, `[id="${id}"]`, [{name: 'manualTask'}]);
     await expectXmlElements(page, xml, `BPMNShape[bpmnElement="${id}"]`, [{name: 'BPMNShape'}]);
+}
+
+async function expectCompletionConditionXml(page: Page, xml: string, id: string): Promise<void> {
+    await expectXmlElements(page, xml, `[id="${id}"] > multiInstanceLoopCharacteristics > completionCondition`, [{name: 'completionCondition'}]);
 }
