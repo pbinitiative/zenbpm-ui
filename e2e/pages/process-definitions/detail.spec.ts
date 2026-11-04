@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 test.describe('Process Definition Detail Page', () => {
   const processDefinitionKey = '3000000000000000033'; // Showcase Process
@@ -166,12 +166,15 @@ test.describe('Process Definition Detail - Navigation', () => {
 });
 
 test.describe('Process definition version-tag displays', () => {
-  test('displays a single definition tag and prefers it in the instances table', async ({ page }) => {
+  test('displays a single definition version with its tag and prefers the tag in the instances table', async ({ page }) => {
     await page.goto('/process-definitions/3000000000000000001');
     const metadataPanel = page.locator('.MuiPaper-root').filter({
       has: page.getByText('Definition Details', { exact: true }),
     });
-    await expect(metadataPanel.getByText('release-single', { exact: true })).toBeVisible();
+    await expect(metadataPanel.getByTestId('version-pill')).toHaveText('v1');
+    await expect(metadataPanel.getByTestId('version-tag')).toHaveText('release-single');
+    // The only deployed version is the latest one
+    await expect(metadataPanel.getByTestId('version-latest-chip')).toHaveText('latest');
     await expect(page.getByTestId('version-selector')).toHaveCount(0);
 
     await page.goto('/processes/instances');
@@ -194,7 +197,7 @@ test.describe('Process definition version-tag displays', () => {
 });
 
 test.describe('Start Instance version selection', () => {
-  test('renders tagged options, hides Current, and starts the selected version', async ({ page }) => {
+  test('renders numbered tagged options, marks only the latest, and starts the selected version', async ({ page }) => {
     await page.goto('/process-definitions/3000000000000000033');
     await page.getByTestId('process-definition-start-instance-button').click();
 
@@ -205,10 +208,12 @@ test.describe('Start Instance version selection', () => {
 
     const options = page.getByRole('option');
     await expect(options).toHaveCount(3);
-    await expect(options.nth(0)).toHaveText('v3.0.0-rc1');
-    await expect(options.nth(1)).toHaveText('v2.1.0');
-    await expect(options.nth(2)).toHaveText('release-1');
-    await expect(options.getByText('Current', { exact: true })).toHaveCount(0);
+    await expect(options.getByTestId('version-pill')).toHaveText(['v3', 'v2', 'v1']);
+    await expect(options.getByTestId('version-tag')).toHaveText(['v3.0.0-rc1', 'v2.1.0', 'release-1']);
+    await expect(options.getByTestId('version-latest-chip')).toHaveCount(1);
+    await expect(options.nth(0).getByTestId('version-latest-chip')).toBeVisible();
+    // The dialog picks a version to start; it doesn't mark a displayed version
+    await expect(options.getByTestId('version-viewing-chip')).toHaveCount(0);
     await options.nth(1).click();
 
     const responsePromise = page.waitForResponse(
@@ -234,8 +239,8 @@ test.describe('Start Instance version selection', () => {
     await versionSelect.getByRole('combobox').click();
     const options = page.getByRole('option');
     await expect(options).toHaveCount(2);
-    await expect(options.nth(0)).toHaveText('v2');
-    await expect(options.nth(1)).toHaveText('v1');
+    await expect(options.getByTestId('version-pill')).toHaveText(['v2', 'v1']);
+    await expect(options.getByTestId('version-tag')).toHaveCount(0);
     await options.nth(0).click();
 
     const responsePromise = page.waitForResponse(
@@ -254,23 +259,46 @@ test.describe('Start Instance version selection', () => {
 });
 
 test.describe('Process Definition Detail - Version Switching', () => {
-  test('shows tagged versions, marks the current version, and navigates after selection', async ({ page }) => {
+  test('shows numbered tagged versions, marks the viewed and latest versions, and navigates after selection', async ({ page }) => {
     await page.goto('/process-definitions/3000000000000000033');
     await expect(page.getByText('Definition Details')).toBeVisible();
 
     const versionSelect = page.getByTestId('version-selector');
     await expect(versionSelect).toBeVisible();
+    // Closed selector: the viewed (older) version with its number and tag, not marked latest
+    await expect(versionSelect.getByTestId('version-pill')).toHaveText('v1');
+    await expect(versionSelect.getByTestId('version-tag')).toHaveText('release-1');
+    // Tags are shown verbatim, not uppercased like other captions
+    await expect(versionSelect.getByTestId('version-tag')).toHaveCSS('text-transform', 'none');
+    await expect(versionSelect.getByTestId('version-latest-chip')).toHaveCount(0);
     await versionSelect.click();
 
     const options = page.getByRole('option');
     await expect(options).toHaveCount(3);
-    await expect(options.nth(0)).toHaveText('v3.0.0-rc1');
-    await expect(options.nth(1)).toHaveText('v2.1.0');
-    await expect(options.nth(2)).toContainText('release-1');
-    await expect(options.nth(2).getByText('current', { exact: true })).toBeVisible();
+    await expect(options.getByTestId('version-pill')).toHaveText(['v3', 'v2', 'v1']);
+    await expect(options.getByTestId('version-tag')).toHaveText(['v3.0.0-rc1', 'v2.1.0', 'release-1']);
+    await expect(options.getByTestId('version-latest-chip')).toHaveCount(1);
+    await expect(options.nth(0).getByTestId('version-latest-chip')).toHaveText('latest');
+    await expect(options.getByTestId('version-viewing-chip')).toHaveCount(1);
+    await expect(options.nth(2).getByTestId('version-viewing-chip')).toHaveText('viewing');
 
     await options.nth(1).click();
     await expect(page).toHaveURL(/\/process-definitions\/3000000000000000034$/);
+  });
+
+  test('marks the latest version in the closed selector when viewing it', async ({ page }) => {
+    await page.goto('/process-definitions/3000000000000000035');
+    const versionSelect = page.getByTestId('version-selector');
+    await expect(versionSelect.getByTestId('version-pill')).toHaveText('v3');
+    await expect(versionSelect.getByTestId('version-tag')).toHaveText('v3.0.0-rc1');
+    await expect(versionSelect.getByTestId('version-latest-chip')).toBeVisible();
+    // The viewing marker is only shown in the open menu
+    await expect(versionSelect.getByTestId('version-viewing-chip')).toHaveCount(0);
+
+    await versionSelect.click();
+    const options = page.getByRole('option');
+    await expect(options.nth(0).getByTestId('version-latest-chip')).toBeVisible();
+    await expect(options.nth(0).getByTestId('version-viewing-chip')).toBeVisible();
   });
 
   test('uses numeric labels when versions have no tags', async ({ page }) => {
@@ -281,8 +309,131 @@ test.describe('Process Definition Detail - Version Switching', () => {
 
     const options = page.getByRole('option');
     await expect(options).toHaveCount(2);
-    await expect(options.nth(0)).toHaveText('v2');
-    await expect(options.nth(1)).toContainText('v1');
+    await expect(options.getByTestId('version-pill')).toHaveText(['v2', 'v1']);
+    await expect(options.getByTestId('version-tag')).toHaveCount(0);
+    await expect(options.nth(0).getByTestId('version-latest-chip')).toBeVisible();
+    await expect(options.nth(1).getByTestId('version-viewing-chip')).toBeVisible();
+  });
+});
+
+// `src/mocks/handlers/processDefinitions.ts` exposes its data to the tests
+type MockProcessDefinition = {
+  key: string;
+  version: number;
+  bpmnProcessId: string;
+  bpmnProcessName?: string;
+  versionTag?: string;
+  bpmnData: string;
+  createdAt: string;
+};
+type MockWindow = { __mockProcessDefinitions: MockProcessDefinition[] };
+
+const LONG_HISTORY_VERSIONS = 150; // more than one page of the 100-item version list
+const LONG_HISTORY_FIRST_KEY = '3000000000000009000';
+// Keys exceed Number.MAX_SAFE_INTEGER, so add with BigInt
+const longHistoryKey = (version: number) => `${BigInt(LONG_HISTORY_FIRST_KEY) + BigInt(version)}`;
+
+/**
+ * Adds a process with a long version history to the mock data and opens one
+ * of its versions within the app, which keeps the changed mock data.
+ */
+async function openLongHistoryVersion(
+  page: Page,
+  version: number,
+  latestTag = `release-${LONG_HISTORY_VERSIONS}`,
+) {
+  await page.goto('/process-definitions/3000000000000000047');
+  await expect(page.getByText('Definition Details')).toBeVisible();
+  await page.evaluate(
+    ({ count, firstKey, latestTag, openKey }) => {
+      const definitions = (window as unknown as MockWindow).__mockProcessDefinitions;
+      const template = definitions[0];
+      for (let v = 1; v <= count; v += 1) {
+        definitions.push({
+          ...template,
+          key: `${BigInt(firstKey) + BigInt(v)}`,
+          version: v,
+          bpmnProcessId: 'Long_History_Process',
+          bpmnProcessName: 'Long History Process',
+          versionTag: v === count ? latestTag : `release-${v}`,
+        });
+      }
+      window.history.pushState({}, '', `/process-definitions/${openKey}`);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    },
+    {
+      count: LONG_HISTORY_VERSIONS,
+      firstKey: LONG_HISTORY_FIRST_KEY,
+      latestTag,
+      openKey: longHistoryKey(version),
+    },
+  );
+  await expect(page.getByText('Long History Process')).toBeVisible();
+}
+
+test.describe('Process Definition Detail - Long version history', () => {
+  test('lists every version and shows an old one that is not on the first page', async ({ page }) => {
+    await openLongHistoryVersion(page, 1);
+
+    const versionSelect = page.getByTestId('version-selector');
+    await expect(versionSelect.getByTestId('version-pill')).toHaveText('v1');
+    await expect(versionSelect.getByTestId('version-tag')).toHaveText('release-1');
+    await expect(versionSelect.getByTestId('version-latest-chip')).toHaveCount(0);
+
+    await versionSelect.click();
+    const options = page.getByRole('option');
+    await expect(options).toHaveCount(LONG_HISTORY_VERSIONS);
+    await expect(options.nth(0).getByTestId('version-pill')).toHaveText(`v${LONG_HISTORY_VERSIONS}`);
+    await expect(options.getByTestId('version-latest-chip')).toHaveCount(1);
+    await expect(options.nth(0).getByTestId('version-latest-chip')).toBeVisible();
+    await expect(options.last().getByTestId('version-pill')).toHaveText('v1');
+    await expect(options.last().getByTestId('version-viewing-chip')).toBeVisible();
+  });
+
+  test('starts an instance of an old version that is not on the first page', async ({ page }) => {
+    await openLongHistoryVersion(page, 1);
+    await page.getByTestId('process-definition-start-instance-button').click();
+
+    // The dialog pre-selects the version the page shows
+    const dialog = page.getByRole('dialog');
+    const dialogSelect = dialog.getByTestId('version-selector');
+    await expect(dialogSelect).not.toHaveClass(/Mui-disabled/);
+    await expect(dialogSelect.getByTestId('version-pill')).toHaveText('v1');
+    await expect(dialogSelect.getByTestId('version-latest-chip')).toHaveCount(0);
+    await dialogSelect.getByRole('combobox').click();
+    const options = page.getByRole('option');
+    await expect(options).toHaveCount(LONG_HISTORY_VERSIONS);
+    await expect(options.nth(0).getByTestId('version-latest-chip')).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        new URL(response.url()).pathname === '/v1/process-instances',
+    );
+    await dialog.getByRole('button', { name: 'Start', exact: true }).click();
+    const response = await responsePromise;
+    // Keys are int64 JSON numbers; inspect raw JSON to avoid JavaScript number rounding.
+    expect(response.request().postData()).toContain(`"processDefinitionKey":${longHistoryKey(1)}`);
+  });
+
+  test('keeps the number and latest marker of a long tag on a phone screen', async ({ page }) => {
+    const viewportWidth = 390;
+    await page.setViewportSize({ width: viewportWidth, height: 844 });
+    const longTag = `release-${'LongIdentifier'.repeat(12)}`;
+    await openLongHistoryVersion(page, LONG_HISTORY_VERSIONS, longTag);
+
+    const versionSelect = page.getByTestId('version-selector');
+    const tag = versionSelect.getByTestId('version-tag');
+    await expect(tag).toHaveText(longTag);
+    await expect(tag).toHaveAttribute('title', longTag);
+
+    // The page doesn't scroll sideways, and the tag is cut short instead
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewportWidth);
+    expect(await tag.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+    for (const part of [versionSelect, versionSelect.getByTestId('version-pill'), versionSelect.getByTestId('version-latest-chip')]) {
+      await expect(part).toBeInViewport({ ratio: 1 });
+    }
   });
 });
 

@@ -13,7 +13,7 @@ import {
   IconButton,
   CircularProgress,
 } from '@mui/material';
-import { VersionSelector } from '@components/VersionSelector';
+import { VersionSelector, fetchAllVersions } from '@components/VersionSelector';
 
 import CloseIcon from '@mui/icons-material/Close';
 import { JsonEditor } from '@components/JsonEditor';
@@ -90,11 +90,11 @@ export const StartInstanceDialog = ({
     const loadVersions = async () => {
       setLoadingVersions(true);
       try {
-        const data = await getProcessDefinitions({
-          bpmnProcessId: selectedDefinition.bpmnProcessId,
-          size: 100,
-        });
-        setAllVersions(data.items || []);
+        const { bpmnProcessId } = selectedDefinition;
+        const items = await fetchAllVersions((page, size) =>
+          getProcessDefinitions({ bpmnProcessId, page, size, sortBy: 'version', sortOrder: 'desc' }),
+        );
+        setAllVersions(items);
       } catch (err) {
         console.error('Failed to load process versions:', err);
         setAllVersions([]);
@@ -258,7 +258,6 @@ export const StartInstanceDialog = ({
                 version: v.version,
                 versionTag: v.versionTag,
               }))}
-              showCurrentChip={false}
               disabled={!selectedDefinition || loadingVersions}
             />
           </Box>

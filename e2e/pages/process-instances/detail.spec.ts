@@ -21,10 +21,12 @@ test.describe('Process Instance Detail Page', () => {
     await expect(page.getByText(ACTIVE_INSTANCE_KEY)).toBeVisible();
     // State chip in metadata section
     await expect(page.getByText('Active').first()).toBeVisible();
-    // A tag is displayed verbatim and takes precedence over the numeric version.
-    await expect(
-      page.getByTestId('process-instance-metadata-panel').getByText('release-1', { exact: true })
-    ).toBeVisible();
+    // The numeric version stays visible beside the tag
+    const metadataPanel = page.getByTestId('process-instance-metadata-panel');
+    await expect(metadataPanel.getByTestId('version-pill')).toHaveText('v1');
+    await expect(metadataPanel.getByTestId('version-tag')).toHaveText('release-1');
+    // Without the definition's version list, the instance view doesn't claim "latest"
+    await expect(metadataPanel.getByTestId('version-latest-chip')).toHaveCount(0);
   });
 
   test('should fall back to the numeric version when no version tag is present', async ({ page }) => {

@@ -177,6 +177,26 @@ test.describe('Decision Definition Detail Page', () => {
     // Version field should be visible
     await expect(page.getByText('Version')).toBeVisible();
   });
+
+  test('marks the viewed and latest versions in the version selector', async ({ page }) => {
+    // drd_sports v1; v2 is the latest
+    await page.goto('/decision-definitions/4000000000000000001');
+    const versionSelect = page.getByTestId('version-selector');
+    await expect(versionSelect.getByTestId('version-pill')).toHaveText('v1');
+    await expect(versionSelect.getByTestId('version-latest-chip')).toHaveCount(0);
+    await versionSelect.click();
+
+    const options = page.getByRole('option');
+    await expect(options.getByTestId('version-pill')).toHaveText(['v2', 'v1']);
+    await expect(options.nth(0).getByTestId('version-latest-chip')).toHaveText('latest');
+    await expect(options.nth(1).getByTestId('version-viewing-chip')).toHaveText('viewing');
+    await expect(options.getByTestId('version-latest-chip')).toHaveCount(1);
+    await expect(options.getByTestId('version-viewing-chip')).toHaveCount(1);
+
+    await options.nth(0).click();
+    await expect(page).toHaveURL(/\/decision-definitions\/4000000000000000002$/);
+    await expect(versionSelect.getByTestId('version-latest-chip')).toBeVisible();
+  });
 });
 
 test.describe('Decision Instance Detail Page', () => {
@@ -269,13 +289,12 @@ test.describe('Decision Instance Detail Page', () => {
     await expect(content).toHaveCSS('font-family', 'monospace');
   });
 
-  test('should display decision definition chip', async ({ page }) => {
+  test('should display decision definition version', async ({ page }) => {
     await page.goto('/decision-instances/4100000000000000001');
     await expect(page.getByRole('heading', { name: 'Metadata' })).toBeVisible({ timeout: 10000 });
 
-    // Should show the DMN resource definition ID as a chip
-    const chips = page.locator('.MuiChip-root');
-    await expect(chips.first()).toBeVisible();
+    // The definition's numeric version is shown as a pill
+    await expect(page.getByTestId('version-pill')).toHaveText(/^v\d+$/);
   });
 
   test('should render outputs as JSON array in dialog when multiple rules match', async ({ page }) => {

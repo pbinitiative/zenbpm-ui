@@ -11,6 +11,7 @@ import {
   useGetProcessDefinitionElementStatistics,
 } from '@base/openapi';
 import { useStartInstanceDialog } from '@components/StartInstanceDialog';
+import { fetchAllVersions } from '@components/VersionSelector';
 import type { ProcessDefinition, SnackbarState } from '../types';
 import { extractActivityIds } from '../utils';
 
@@ -108,14 +109,11 @@ export function useProcessDefinitionData({
 
         if (data.bpmnProcessId) {
           try {
-            const versionsData = await getProcessDefinitions({
-              bpmnProcessId: data.bpmnProcessId,
-              page: 1,
-              size: 100,
-            });
-            const items = (versionsData.items || []) as VersionInfo[];
-            items.sort((a, b) => b.version - a.version);
-            setVersions(items);
+            const bpmnProcessId = data.bpmnProcessId;
+            const items = await fetchAllVersions((page, size) =>
+              getProcessDefinitions({ bpmnProcessId, page, size, sortBy: 'version', sortOrder: 'desc' }),
+            );
+            setVersions(items as VersionInfo[]);
           } catch {
             // Versions fetch is not critical
           }

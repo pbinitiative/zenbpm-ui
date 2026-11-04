@@ -1,7 +1,7 @@
-import { useTranslation } from 'react-i18next';
-import { Box, Chip, FormControl, Select, MenuItem, Typography } from '@mui/material';
-import { ns } from '@base/i18n';
-import { VersionPill } from '@components/VersionPill';
+import { useMemo } from 'react';
+import { FormControl, Select, MenuItem, Typography } from '@mui/material';
+import { VersionLabel } from './VersionLabel';
+import { getLatestVersionKey } from './utils';
 
 export interface VersionOption {
   key: string;
@@ -14,35 +14,35 @@ interface VersionSelectorProps {
   onChange: (value: string) => void;
   options: VersionOption[];
   disabled?: boolean;
-  /** The key of the currently active version (displays a "current" chip) */
-  currentKey?: string;
   /** Label for the form control */
   label?: string;
-  /** Whether to show the current chip */
-  showCurrentChip?: boolean;
+  /** Mark the selected option as the version displayed on the page (menu only) */
+  showViewingChip?: boolean;
   /** Size of the Select */
   size?: 'small' | 'medium';
 }
 
 /**
  * A shared version selector dropdown.
- * - Displays versionTag as a Chip when present
- * - Falls back to plain "v{version}" display when no versionTag
+ * - Always shows the numeric version, followed by the versionTag when present
+ * - Marks the latest version (highest number among the options) and, optionally,
+ *   the displayed one
  */
 export function VersionSelector({
   value,
   onChange,
   options,
   disabled = false,
-  currentKey,
   label,
-  showCurrentChip = true,
+  showViewingChip = false,
   size = 'small',
 }: VersionSelectorProps) {
-  const { t } = useTranslation([ns.common, ns.processes]);
+  const latestKey = useMemo(() => getLatestVersionKey(options), [options]);
 
   return (
-    <FormControl size={size} disabled={disabled}>
+    // Never wider than the container, so a long tag shrinks instead of
+    // pushing the version number and markers out of view
+    <FormControl size={size} disabled={disabled} sx={{ maxWidth: '100%', minWidth: 0 }}>
       {label && (
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           {label}
@@ -54,24 +54,30 @@ export function VersionSelector({
         size={size}
         fullWidth
         MenuProps={{ slotProps: { paper: { sx: { maxHeight: 300 } } } }}
+        sx={{ '& .MuiSelect-select': { minWidth: 0 } }}
+        renderValue={(selected) => {
+          const option = options.find((o) => o.key === selected);
+          if (!option) return null;
+          return (
+            <VersionLabel
+              version={option.version}
+              versionTag={option.versionTag}
+              isLatest={option.key === latestKey}
+              size={size}
+            />
+          );
+        }}
         data-testid="version-selector"
       >
         {options.map((option) => (
           <MenuItem key={option.key} value={option.key}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {option.versionTag ? (
-                <VersionPill version={option.versionTag} size={size} withoutVPrefix />
-              ) : (
-                <VersionPill version={option.version} size={size} />
-              )}
-              {showCurrentChip && currentKey === option.key && (
-                <Chip
-                  label={t('common:current')}
-                  size="small"
-                  sx={{ ml: 0.5, height: 18, fontSize: '0.65rem' }}
-                />
-              )}
-            </Box>
+            <VersionLabel
+              version={option.version}
+              versionTag={option.versionTag}
+              isLatest={option.key === latestKey}
+              isViewing={showViewingChip && option.key === value}
+              size={size}
+            />
           </MenuItem>
         ))}
       </Select>

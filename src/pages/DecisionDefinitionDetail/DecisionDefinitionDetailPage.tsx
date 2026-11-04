@@ -15,6 +15,7 @@ import { DiagramDetailLayout, MetadataPanel } from '@components/DiagramDetailLay
 import type { MetadataField, VersionInfo } from '@components/DiagramDetailLayout';
 import { DecisionInstancesTable } from '@components/DecisionInstancesTable';
 import { getDmnResourceDefinition, getDmnResourceDefinitions } from '@base/openapi';
+import { fetchAllVersions } from '@components/VersionSelector';
 
 interface DmnResourceDefinition {
   key: string;
@@ -50,14 +51,17 @@ export const DecisionDefinitionDetailPage = () => {
         // Fetch all versions for this DMN resource
         if (data.dmnResourceDefinitionId) {
           try {
-            const versionsData = await getDmnResourceDefinitions({
-              dmnResourceDefinitionId: data.dmnResourceDefinitionId,
-              page: 1,
-              size: 100,
-            });
-            const items = (versionsData.items || []) as VersionInfo[];
-            items.sort((a, b) => b.version - a.version);
-            setVersions(items);
+            const dmnResourceDefinitionId = data.dmnResourceDefinitionId;
+            const items = await fetchAllVersions((page, size) =>
+              getDmnResourceDefinitions({
+                dmnResourceDefinitionId,
+                page,
+                size,
+                sortBy: 'version',
+                sortOrder: 'desc',
+              }),
+            );
+            setVersions(items as unknown as VersionInfo[]);
           } catch {
             // Versions fetch is not critical
           }

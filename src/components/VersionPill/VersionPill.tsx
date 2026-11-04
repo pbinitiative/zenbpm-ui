@@ -4,10 +4,9 @@ interface VersionPillProps {
   version: number | string;
   size?: 'small' | 'medium';
   sx?: SxProps<Theme>;
-  withoutVPrefix?: boolean;
 }
 
-export const VersionPill = ({ version, size = 'small', sx, withoutVPrefix }: VersionPillProps) => {
+export const VersionPill = ({ version, size = 'small', sx }: VersionPillProps) => {
   const isSmall = size === 'small';
 
   return (
@@ -27,7 +26,7 @@ export const VersionPill = ({ version, size = 'small', sx, withoutVPrefix }: Ver
       }}
       data-testid="version-pill"
     >
-      {withoutVPrefix ? version : `v${version}`}
+      v{version}
     </Box>
   );
 };

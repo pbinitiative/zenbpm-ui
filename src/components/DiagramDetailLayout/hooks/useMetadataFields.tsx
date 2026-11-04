@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import { Box, Chip, Tooltip } from '@mui/material';
-import { VersionSelector } from '@components/VersionSelector';
+import { Box, Tooltip } from '@mui/material';
+import { VersionSelector, VersionLabel, getLatestVersionKey } from '@components/VersionSelector';
 import ErrorIcon from '@mui/icons-material/Error';
 import { MonoText } from '@components/MonoText';
 import { StateBadge } from '@components/StateBadge';
@@ -102,16 +102,22 @@ export function useMetadataFields({
 
     // Version
     if (version !== undefined) {
-      if (versions.length > 1 && onVersionChange) {
+      // The displayed version is always an option, even if the list lacks it,
+      // so the closed selector shows its number and tag
+      const displayedKey = String(entityKey);
+      const versionOptions = versions.some((v) => v.key === displayedKey)
+        ? versions
+        : [...versions, { key: displayedKey, version, versionTag }].sort((a, b) => b.version - a.version);
+
+      if (versions.length > 0 && versionOptions.length > 1 && onVersionChange) {
         result.push({
           label: t('common:fields.version'),
           value: (
             <VersionSelector
               value={String(entityKey ?? '')}
               onChange={(val) => onVersionChange(val)}
-              options={versions}
-              currentKey={String(entityKey ?? '')}
-              showCurrentChip
+              options={versionOptions}
+              showViewingChip
             />
           ),
         });
@@ -119,16 +125,10 @@ export function useMetadataFields({
         result.push({
           label: t('common:fields.version'),
           value: (
-            <Chip
-              label={versionTag || `v${version}`}
-              size="small"
-              sx={{
-                bgcolor: 'grey.100',
-                color: 'primary.main',
-                fontWeight: 600,
-                fontSize: '0.75rem',
-                height: 20,
-              }}
+            <VersionLabel
+              version={version}
+              versionTag={versionTag}
+              isLatest={getLatestVersionKey(versions) === displayedKey}
             />
           ),
         });

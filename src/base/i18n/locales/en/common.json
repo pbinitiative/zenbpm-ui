@@ -177,7 +177,8 @@
   "createdAt": "Created At",
   "state": "State",
   "key": "Key",
-  "current": "current",
+  "versionLatest": "latest",
+  "versionViewing": "viewing",
   "loading": "Loading",
   "noOptions": "No options",
   "fields": {
