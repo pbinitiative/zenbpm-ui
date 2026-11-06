@@ -45,8 +45,8 @@ importers:
         specifier: 0.5.2
         version: 0.5.2(@bpmn-io/properties-panel@3.58.1)(bpmn-js-properties-panel@5.65.3(@bpmn-io/properties-panel@3.58.1)(bpmn-js@18.31.1)(camunda-bpmn-js-behaviors@1.18.0(bpmn-js@18.31.1)(camunda-bpmn-moddle@7.0.1)(zeebe-bpmn-moddle@1.16.0))(diagram-js@15.28.1))(bpmn-js@18.31.1)(bpmn-moddle@10.3.1)
       '@tanstack/react-query':
-        specifier: ^5.105.1
-        version: 5.105.1(@types/react@19.3.0)(react@19.3.1)
+        specifier: ^5.105.3
+        version: 5.105.3(@types/react@19.3.0)(react@19.3.1)
       axios:
         specifier: ^1.21.0
         version: 1.21.0
@@ -152,7 +152,7 @@ importers:
         version: 4.6.2
       orval:
         specifier: ^8.46.0
-        version: 8.46.0(@tanstack/react-query@5.105.1(@types/react@19.3.0)(react@19.3.1))(msw@3.0.3(@types/node@26.6.6)(graphql@16.14.2)(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(typedoc-plugin-markdown@4.12.0(typedoc@0.28.20(typescript@5.9.3)))(typedoc@0.28.20(typescript@5.9.3))(zod@4.4.3)
+        version: 8.46.0(@tanstack/react-query@5.105.3(@types/react@19.3.0)(react@19.3.1))(msw@3.0.3(@types/node@26.6.6)(graphql@16.14.2)(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(typedoc-plugin-markdown@4.12.0(typedoc@0.28.20(typescript@5.9.3)))(typedoc@0.28.20(typescript@5.9.3))(zod@4.4.3)
       storybook:
         specifier: ^10.6.5
         version: 10.6.5(@types/react@19.3.0)(react@19.3.1)
@@ -1511,11 +1511,11 @@ packages:
       typescript:
         optional: true
 
-  '@tanstack/query-core@5.105.1':
-    resolution: {integrity: sha512-B/rNlZoZ54w1dlddiUt9oEe1SLM+37c00SKLJEg9YH+7as3Y54P81o9Fh+2ujZ36tXPnQJ5oVe7AcyEWkyFhPg==}
+  '@tanstack/query-core@5.105.3':
+    resolution: {integrity: sha512-v1rbNy7MB/4Akth7CQH+CerV13K7Ok9hAusEsfz4sCjDdu3/kOSJPoWfoB+YjdEX1eBFBWKNAGE5nqZCgdlHDw==}
 
-  '@tanstack/react-query@5.105.1':
-    resolution: {integrity: sha512-qcu+/+PtBOjW8qU4/0l47QVmNG7hPOWsCLzP0bTRhE1X7HYa757C4732wXTUH0QhCjTV1yedX8onsCiEwlNYrA==}
+  '@tanstack/react-query@5.105.3':
+    resolution: {integrity: sha512-dj5hGWZmwoc9NG4enoXuYbiYwb5FxgJYPVv06eUgicMTfEMTRXn08Xv9D/r1V8TfjAv+BpxdvZFzJ1h3hSWZcQ==}
     peerDependencies:
       '@types/react': ^18 || ^19
       react: ^18 || ^19
@@ -4430,12 +4430,12 @@ snapshots:
       - '@faker-js/faker'
       - '@modelcontextprotocol/server'
 
-  '@orval/query@8.46.0(@tanstack/react-query@5.105.1(@types/react@19.3.0)(react@19.3.1))':
+  '@orval/query@8.46.0(@tanstack/react-query@5.105.3(@types/react@19.3.0)(react@19.3.1))':
     dependencies:
       '@orval/core': 8.46.0
       '@orval/fetch': 8.46.0
     optionalDependencies:
-      '@tanstack/react-query': 5.105.1(@types/react@19.3.0)(react@19.3.1)
+      '@tanstack/react-query': 5.105.3(@types/react@19.3.0)(react@19.3.1)
     transitivePeerDependencies:
       - '@faker-js/faker'
       - '@modelcontextprotocol/server'
@@ -4859,11 +4859,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@tanstack/query-core@5.105.1': {}
+  '@tanstack/query-core@5.105.3': {}
 
-  '@tanstack/react-query@5.105.1(@types/react@19.3.0)(react@19.3.1)':
+  '@tanstack/react-query@5.105.3(@types/react@19.3.0)(react@19.3.1)':
     dependencies:
-      '@tanstack/query-core': 5.105.1
+      '@tanstack/query-core': 5.105.3
       react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
@@ -6209,7 +6209,7 @@ snapshots:
       type-check: 0.4.0
       word-wrap: 1.2.5
 
-  orval@8.46.0(@tanstack/react-query@5.105.1(@types/react@19.3.0)(react@19.3.1))(msw@3.0.3(@types/node@26.6.6)(graphql@16.14.2)(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(typedoc-plugin-markdown@4.12.0(typedoc@0.28.20(typescript@5.9.3)))(typedoc@0.28.20(typescript@5.9.3))(zod@4.4.3):
+  orval@8.46.0(@tanstack/react-query@5.105.3(@types/react@19.3.0)(react@19.3.1))(msw@3.0.3(@types/node@26.6.6)(graphql@16.14.2)(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(typedoc-plugin-markdown@4.12.0(typedoc@0.28.20(typescript@5.9.3)))(typedoc@0.28.20(typescript@5.9.3))(zod@4.4.3):
     dependencies:
       '@commander-js/extra-typings': 15.0.0(commander@15.0.0)
       '@orval/angular': 8.46.0
@@ -6221,7 +6221,7 @@ snapshots:
       '@orval/mcp': 8.46.0(zod@4.4.3)
       '@orval/mock': 8.46.0(msw@3.0.3(@types/node@26.6.6)(graphql@16.14.2)(typescript@5.9.3)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))
       '@orval/pinia-colada': 8.46.0
-      '@orval/query': 8.46.0(@tanstack/react-query@5.105.1(@types/react@19.3.0)(react@19.3.1))
+      '@orval/query': 8.46.0(@tanstack/react-query@5.105.3(@types/react@19.3.0)(react@19.3.1))
       '@orval/solid-start': 8.46.0
       '@orval/swr': 8.46.0
       '@orval/zod': 8.46.0(zod@4.4.3)
