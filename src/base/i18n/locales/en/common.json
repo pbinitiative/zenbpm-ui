@@ -83,7 +83,8 @@
     "submit": "Submit",
     "leave": "Leave",
     "stay": "Stay",
-    "clickToView": "Click to view"
+    "clickToView": "Click to view",
+    "retry": "Retry"
   },
   "all": "All",
   "pagination": {
@@ -179,6 +180,8 @@
   "key": "Key",
   "versionLatest": "latest",
   "versionViewing": "viewing",
+  "versionsLoadFailed": "Couldn't load the versions.",
+  "olderVersionsLoadFailed": "Couldn't load older versions.",
   "loading": "Loading",
   "noOptions": "No options",
   "fields": {

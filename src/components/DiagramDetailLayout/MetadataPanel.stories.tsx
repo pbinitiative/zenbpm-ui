@@ -26,22 +26,29 @@ export const ProcessDefinition: Story = {
     entityKey: '3000000000000000046',
     name: 'Order Processing',
     version: 1,
-    resourceName: 'order-process.bpmn',
     additionalFields: [{ label: 'Process ID', value: 'Order_Process' }],
   },
 };
 
 export const ProcessDefinitionWithVersions: Story = {
   args: {
-    entityKey: '3000000000000000046',
+    entityKey: '3000000000000000047',
     name: 'Order Processing',
     version: 2,
-    versions: [
-      { key: '3000000000000048', version: 3, versionTag: 'v3.0.0' },
-      { key: '3000000000000047', version: 2, versionTag: 'v2.1.0' },
-      { key: '3000000000000046', version: 1 },
-    ],
-    resourceName: 'order-process.bpmn',
+    versionTag: 'v2.1.0',
+    versionHistory: {
+      versions: [
+        { key: '3000000000000000048', version: 3, versionTag: 'v3.0.0' },
+        { key: '3000000000000000047', version: 2, versionTag: 'v2.1.0' },
+        { key: '3000000000000000046', version: 1 },
+      ],
+      latestKey: '3000000000000000048',
+      loading: false,
+      hasMore: false,
+      loadingMore: false,
+      loadMore: () => {},
+      retry: () => {},
+    },
     onVersionChange: (key) => console.log('Version changed to:', key),
   },
 };
@@ -101,7 +108,6 @@ export const DecisionDefinition: Story = {
     entityKey: '4000000000000000001',
     name: 'Customer Eligibility',
     version: 1,
-    resourceName: 'eligibility.dmn',
     additionalFields: [{ label: 'Decision ID', value: 'customer_eligibility' }],
   },
 };
@@ -122,6 +128,6 @@ export const WithProcessInstanceLink: Story = {
     entityKey: '5000000000000000001',
     state: 'active',
     createdAt: new Date().toISOString(),
-    processInstanceKey: '3100000000000000017',
+    parentProcessInstanceKey: '3100000000000000017',
   },
 };

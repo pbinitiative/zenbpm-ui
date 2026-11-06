@@ -1,16 +1,17 @@
 import { test, expect } from '@playwright/test';
-// Import the plain modules, not the VersionSelector index: it also exports the
+// Import the plain helpers, not the VersionSelector index: it also exports the
 // React components, whose i18n JSON imports Playwright's Node loader can't load
-import { getLatestVersionKey } from '../../src/components/VersionSelector/utils';
 import {
-  fetchAllVersions,
-  VERSION_MAX_PAGES,
+  getLatestVersionKey,
+  getNextVersionPage,
+  mergeVersionPages,
+  resolveLatestKey,
   VERSION_PAGE_SIZE,
-} from '../../src/components/VersionSelector/fetchAllVersions';
+  versionPageParams,
+  withSelectedOption,
+} from '../../src/components/VersionSelector/utils';
 
 // Pure functions: these tests need no browser page
-
-type Version = { key: string; version: number };
 
 const permutations = <T>(items: T[]): T[][] =>
   items.length <= 1
@@ -45,79 +46,124 @@ test.describe('getLatestVersionKey', () => {
   });
 });
 
-/** A paged endpoint over `total` versions, oldest first unless `newestFirst` */
-function pagedEndpoint(total: number, { newestFirst = true } = {}) {
-  const all: Version[] = Array.from({ length: total }, (_, i) => ({ key: `k${i + 1}`, version: i + 1 }));
-  if (newestFirst) all.reverse();
-  const requestedPages: number[] = [];
-  const fetchPage = (page: number, size: number) => {
-    requestedPages.push(page);
-    return Promise.resolve({ items: all.slice((page - 1) * size, page * size), totalCount: total });
-  };
-  return { fetchPage, requestedPages };
-}
+/** `count` versions, newest first, ending at version `last` */
+const versionsPage = (last: number, count: number, totalCount?: number) => ({
+  items: Array.from({ length: count }, (_, i) => ({ key: `k${last - i}`, version: last - i })),
+  totalCount,
+});
 
-test.describe('fetchAllVersions', () => {
-  test('loads a single page with one request', async () => {
-    const { fetchPage, requestedPages } = pagedEndpoint(3);
-    const versions = await fetchAllVersions(fetchPage);
-    expect(versions.map((v) => v.version)).toEqual([3, 2, 1]);
-    expect(requestedPages).toEqual([1]);
+test.describe('versionPageParams', () => {
+  test('requests full pages, newest first', () => {
+    expect(versionPageParams(3)).toEqual({ page: 3, size: VERSION_PAGE_SIZE, sortBy: 'version', sortOrder: 'desc' });
+  });
+});
+
+test.describe('getNextVersionPage', () => {
+  test('stops after a single page holding every version', () => {
+    const page = versionsPage(3, 3, 3);
+    expect(getNextVersionPage(page, [page], 1)).toBeUndefined();
   });
 
-  test('loads every page of a long history, newest first', async () => {
-    const { fetchPage, requestedPages } = pagedEndpoint(2 * VERSION_PAGE_SIZE + 1, { newestFirst: false });
-    const versions = await fetchAllVersions(fetchPage);
-    expect(versions).toHaveLength(2 * VERSION_PAGE_SIZE + 1);
-    expect(versions[0].version).toBe(2 * VERSION_PAGE_SIZE + 1);
-    expect(versions.at(-1)?.version).toBe(1);
-    expect(requestedPages).toEqual([1, 2, 3]);
+  test('continues until the pages hold totalCount items', () => {
+    const total = 2 * VERSION_PAGE_SIZE + 1;
+    const first = versionsPage(total, VERSION_PAGE_SIZE, total);
+    const second = versionsPage(total - VERSION_PAGE_SIZE, VERSION_PAGE_SIZE, total);
+    const third = versionsPage(1, 1, total);
+    expect(getNextVersionPage(first, [first], 1)).toBe(2);
+    expect(getNextVersionPage(second, [first, second], 2)).toBe(3);
+    expect(getNextVersionPage(third, [first, second, third], 3)).toBeUndefined();
   });
 
-  test('stops after the page that reaches totalCount', async () => {
-    const { fetchPage, requestedPages } = pagedEndpoint(2 * VERSION_PAGE_SIZE);
-    await fetchAllVersions(fetchPage);
-    expect(requestedPages).toEqual([1, 2]);
+  test('stops at a page reaching totalCount exactly', () => {
+    const first = versionsPage(2 * VERSION_PAGE_SIZE, VERSION_PAGE_SIZE, 2 * VERSION_PAGE_SIZE);
+    const second = versionsPage(VERSION_PAGE_SIZE, VERSION_PAGE_SIZE, 2 * VERSION_PAGE_SIZE);
+    expect(getNextVersionPage(second, [first, second], 2)).toBeUndefined();
   });
 
-  test('drops a version repeated when a deployment shifts the pages', async () => {
-    const first = Array.from({ length: VERSION_PAGE_SIZE }, (_, i) => ({
-      key: `k${VERSION_PAGE_SIZE + 1 - i}`,
-      version: VERSION_PAGE_SIZE + 1 - i,
-    }));
+  test('counts the items received when the server returns smaller pages than requested', () => {
+    const first = versionsPage(120, 50, 120);
+    const second = versionsPage(70, 50, 120);
+    expect(getNextVersionPage(first, [first], 1)).toBe(2);
+    expect(getNextVersionPage(second, [first, second], 2)).toBe(3);
+  });
+
+  test('stops at an empty page, and at a short page without totalCount', () => {
+    const empty = { items: [], totalCount: 500 };
+    expect(getNextVersionPage(empty, [empty], 4)).toBeUndefined();
+    const short = versionsPage(5, 5);
+    expect(getNextVersionPage(short, [short], 1)).toBeUndefined();
+    const full = versionsPage(500, VERSION_PAGE_SIZE);
+    expect(getNextVersionPage(full, [full], 1)).toBe(2);
+  });
+});
+
+test.describe('mergeVersionPages', () => {
+  test('returns the versions newest first, whatever the page order', () => {
+    const merged = mergeVersionPages([
+      { items: [{ key: 'k1', version: 1 }, { key: 'k3', version: 3 }] },
+      { items: [{ key: 'k2', version: 2 }] },
+    ]);
+    expect(merged.map((v) => v.version)).toEqual([3, 2, 1]);
+  });
+
+  test('drops a version repeated when a deployment shifts the pages', () => {
+    const first = versionsPage(VERSION_PAGE_SIZE + 1, VERSION_PAGE_SIZE);
     // A new version was deployed between the two requests: the last item of
     // page 1 reappears at the top of page 2
-    const second = [first.at(-1)!, { key: 'k1', version: 1 }];
-    const pages = [first, second];
-    const versions = await fetchAllVersions((page) =>
-      Promise.resolve({ items: pages[page - 1] ?? [], totalCount: VERSION_PAGE_SIZE + 2 }),
-    );
-    expect(versions).toHaveLength(VERSION_PAGE_SIZE + 1);
-    expect(new Set(versions.map((v) => v.key)).size).toBe(VERSION_PAGE_SIZE + 1);
+    const second = { items: [first.items.at(-1)!, { key: 'k1', version: 1 }] };
+    const merged = mergeVersionPages([first, second]);
+    expect(merged).toHaveLength(VERSION_PAGE_SIZE + 1);
+    expect(new Set(merged.map((v) => v.key)).size).toBe(VERSION_PAGE_SIZE + 1);
   });
 
-  test('stops at the page limit', async () => {
-    const { fetchPage, requestedPages } = pagedEndpoint((VERSION_MAX_PAGES + 1) * VERSION_PAGE_SIZE);
-    const versions = await fetchAllVersions(fetchPage);
-    expect(requestedPages).toHaveLength(VERSION_MAX_PAGES);
-    // Requested newest first, so the latest version is still among them
-    expect(versions[0].version).toBe((VERSION_MAX_PAGES + 1) * VERSION_PAGE_SIZE);
+  test('makes keys strings, which the JSON parser leaves numbers up to 15 digits', () => {
+    const merged = mergeVersionPages([
+      { items: [{ key: 123456789012345 as unknown as string, version: 1, versionTag: 'release-1' }] },
+    ]);
+    expect(merged).toEqual([{ key: '123456789012345', version: 1, versionTag: 'release-1' }]);
+  });
+});
+
+test.describe('withSelectedOption', () => {
+  const options = [
+    { key: 'k3', version: 3 },
+    { key: 'k2', version: 2 },
+  ];
+
+  test('adds a selected version the options lack, in version order', () => {
+    expect(withSelectedOption(options, { key: 'k1', version: 1 }).map((o) => o.key)).toEqual(['k3', 'k2', 'k1']);
+    expect(withSelectedOption([{ key: 'k1', version: 1 }], { key: 'k5', version: 5 }).map((o) => o.key)).toEqual(['k5', 'k1']);
   });
 
-  test('rejects when the first page fails', async () => {
-    await expect(fetchAllVersions(() => Promise.reject(new Error('boom')))).rejects.toThrow('boom');
+  test('keeps the options as they are when they hold the selected version', () => {
+    expect(withSelectedOption(options, { key: 'k2', version: 2 })).toBe(options);
+    expect(withSelectedOption(options)).toBe(options);
   });
 
-  test('keeps the newer versions when a later page fails', async () => {
-    const { fetchPage } = pagedEndpoint(3 * VERSION_PAGE_SIZE);
-    const requestedPages: number[] = [];
-    const versions = await fetchAllVersions((page, size) => {
-      requestedPages.push(page);
-      return page === 3 ? Promise.reject(new Error('boom')) : fetchPage(page, size);
-    });
-    expect(requestedPages).toEqual([1, 2, 3]);
-    expect(versions).toHaveLength(2 * VERSION_PAGE_SIZE);
-    // Newest first, so the latest version is among those kept
-    expect(versions[0].version).toBe(3 * VERSION_PAGE_SIZE);
+  test('matches a numeric key with its string', () => {
+    const numericKey = [{ key: 123456789012345 as unknown as string, version: 1 }];
+    expect(withSelectedOption(numericKey, { key: '123456789012345', version: 1 })).toBe(numericKey);
+  });
+});
+
+test.describe('resolveLatestKey', () => {
+  const versions = [
+    { key: 'k3', version: 3 },
+    { key: 'k2', version: 2 },
+  ];
+
+  test('keeps the latest of the list when the selected version is in it or older', () => {
+    expect(resolveLatestKey('k3', versions, { key: 'k2', version: 2 })).toBe('k3');
+    expect(resolveLatestKey('k3', versions, { key: 'k1', version: 1 })).toBe('k3');
+    expect(resolveLatestKey('k3', versions)).toBe('k3');
+  });
+
+  test('takes a selected version newer than the list, which is then out of date', () => {
+    expect(resolveLatestKey('k3', versions, { key: 'k4', version: 4 })).toBe('k4');
+  });
+
+  test('stays unknown while the list is', () => {
+    expect(resolveLatestKey(undefined, versions, { key: 'k4', version: 4 })).toBeUndefined();
+    expect(resolveLatestKey(undefined, [], { key: 'k1', version: 1 })).toBeUndefined();
   });
 });

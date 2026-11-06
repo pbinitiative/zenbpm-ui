@@ -12,7 +12,9 @@ test('partitioned pagination uses the largest partition total', async ({ page })
     // The Vite-served module is available in the browser, not to Playwright's Node type resolver.
     // @ts-expect-error browser-only module URL
     const { worker } = await import('/src/mocks/browser.ts');
-    worker.stop();
+    // MSW 3 stops asynchronously: wait until the Service Worker lets requests
+    // through, so that `page.route` below sees them
+    await worker.stop();
   });
 
   await page.route('**/v1/process-instances**', async (route) => {

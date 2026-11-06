@@ -2,16 +2,15 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import type { MetadataField, VersionInfo } from '@components/DiagramDetailLayout';
+import type { MetadataField } from '@components/DiagramDetailLayout';
 import { transformStatisticsToElementStatistics } from '@components/BpmnDiagram';
 import type { ElementStatistics } from '@components/BpmnDiagram';
 import {
   getProcessDefinition,
-  getProcessDefinitions,
   useGetProcessDefinitionElementStatistics,
 } from '@base/openapi';
 import { useStartInstanceDialog } from '@components/StartInstanceDialog';
-import { fetchAllVersions } from '@components/VersionSelector';
+import { useProcessVersionHistory, type VersionHistory } from '@components/VersionSelector';
 import type { ProcessDefinition, SnackbarState } from '../types';
 import { extractActivityIds } from '../utils';
 
@@ -22,7 +21,7 @@ interface UseProcessDefinitionDataOptions {
 
 interface UseProcessDefinitionDataResult {
   processDefinition: ProcessDefinition | null;
-  versions: VersionInfo[];
+  versionHistory: VersionHistory;
   activityIds: string[];
   loading: boolean;
   error: string | null;
@@ -57,11 +56,13 @@ export function useProcessDefinitionData({
   // searchParams, we'd build the new URL from a stale value and drop other
   // filter params (e.g. state=active) on the floor.
   const searchParamsRef = useRef(searchParams);
+  // Assigned during render, not in an effect: the table's effects call back
+  // before this component's effects run, and would read the previous value.
+  // eslint-disable-next-line react-hooks/refs
   searchParamsRef.current = searchParams;
 
   // State
   const [processDefinition, setProcessDefinition] = useState<ProcessDefinition | null>(null);
-  const [versions, setVersions] = useState<VersionInfo[]>([]);
   const [activityIds, setActivityIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +91,11 @@ export function useProcessDefinitionData({
     [rawElementStatistics]
   );
 
+  // The version list loads on its own, so the page doesn't wait for it. It is
+  // shared with the Start Instance dialog and kept across version switches,
+  // but requested again when the page opens, for versions deployed meanwhile.
+  const versionHistory = useProcessVersionHistory(processDefinition?.bpmnProcessId, { staleTime: 0 });
+
   // Fetch process definition
   useEffect(() => {
     if (!processDefinitionKey) return;
@@ -105,18 +111,6 @@ export function useProcessDefinitionData({
         if (data.bpmnData) {
           const ids = extractActivityIds(data.bpmnData);
           setActivityIds(ids);
-        }
-
-        if (data.bpmnProcessId) {
-          try {
-            const bpmnProcessId = data.bpmnProcessId;
-            const items = await fetchAllVersions((page, size) =>
-              getProcessDefinitions({ bpmnProcessId, page, size, sortBy: 'version', sortOrder: 'desc' }),
-            );
-            setVersions(items as VersionInfo[]);
-          } catch {
-            // Versions fetch is not critical
-          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load process definition');
@@ -183,6 +177,7 @@ export function useProcessDefinitionData({
     if (!processDefinition) return;
     openStartInstance({
       processDefinitionKey: processDefinition.key,
+      processDefinition,
       processName: processDefinition.bpmnProcessName || processDefinition.bpmnProcessId,
       onSuccess: handleInstanceCreated,
     });
@@ -217,7 +212,7 @@ export function useProcessDefinitionData({
 
   return {
     processDefinition,
-    versions,
+    versionHistory,
     activityIds,
     loading,
     error,

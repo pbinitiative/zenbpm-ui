@@ -2,11 +2,12 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
 import { Box, Tooltip } from '@mui/material';
-import { VersionSelector, VersionLabel, getLatestVersionKey } from '@components/VersionSelector';
+import { VersionSelector, VersionLabel, resolveLatestKey, type VersionHistory } from '@components/VersionSelector';
 import ErrorIcon from '@mui/icons-material/Error';
 import { MonoText } from '@components/MonoText';
 import { StateBadge } from '@components/StateBadge';
-import type { MetadataField, VersionInfo } from '../types';
+import type { ProcessInstanceProcessType } from '@base/openapi';
+import type { MetadataField } from '../types';
 import { formatDate } from '../utils';
 
 interface UseMetadataFieldsOptions {
@@ -14,13 +15,13 @@ interface UseMetadataFieldsOptions {
   stateField?: MetadataField;
   state?: string;
   incidentsCount?: number;
-  processType?: string;
+  processType?: ProcessInstanceProcessType;
   createdAt?: string;
   businessKey?: string;
   name?: string;
   version?: number;
   versionTag?: string;
-  versions?: VersionInfo[];
+  versionHistory?: VersionHistory;
   onVersionChange?: (key: string) => void;
   additionalFields?: MetadataField[];
   keyLabel?: string;
@@ -38,7 +39,7 @@ export function useMetadataFields({
   name,
   version,
   versionTag,
-  versions = [],
+  versionHistory,
   onVersionChange,
   additionalFields = [],
   keyLabel,
@@ -88,7 +89,7 @@ export function useMetadataFields({
     if (processType) {
       result.push({
         label: t('common:fields.type'),
-        value: t(`processes:types.${processType}`) as string,
+        value: t(`processes:types.${processType}`),
       });
     }
 
@@ -102,21 +103,28 @@ export function useMetadataFields({
 
     // Version
     if (version !== undefined) {
-      // The displayed version is always an option, even if the list lacks it,
-      // so the closed selector shows its number and tag
       const displayedKey = String(entityKey);
-      const versionOptions = versions.some((v) => v.key === displayedKey)
-        ? versions
-        : [...versions, { key: displayedKey, version, versionTag }].sort((a, b) => b.version - a.version);
+      const displayed = { key: displayedKey, version, versionTag };
+      const hasOtherVersions =
+        !!versionHistory &&
+        (versionHistory.hasMore || versionHistory.versions.some((v) => v.key !== displayedKey));
 
-      if (versions.length > 0 && versionOptions.length > 1 && onVersionChange) {
+      if (hasOtherVersions && onVersionChange) {
         result.push({
           label: t('common:fields.version'),
           value: (
             <VersionSelector
-              value={String(entityKey ?? '')}
+              value={displayedKey}
               onChange={(val) => onVersionChange(val)}
-              options={versionOptions}
+              options={versionHistory.versions}
+              // Shown before the page holding it is loaded
+              selectedOption={displayed}
+              latestKey={versionHistory.latestKey}
+              hasMore={versionHistory.hasMore}
+              loadingMore={versionHistory.loadingMore}
+              onLoadMore={versionHistory.loadMore}
+              error={versionHistory.error}
+              onRetry={versionHistory.retry}
               showViewingChip
             />
           ),
@@ -128,7 +136,12 @@ export function useMetadataFields({
             <VersionLabel
               version={version}
               versionTag={versionTag}
-              isLatest={getLatestVersionKey(versions) === displayedKey}
+              // No "latest" while the version list is loading or failed to
+              isLatest={
+                resolveLatestKey(versionHistory?.latestKey, versionHistory?.versions ?? [], displayed) ===
+                displayedKey
+              }
+              tagLines={2}
             />
           ),
         });
@@ -167,7 +180,7 @@ export function useMetadataFields({
     name,
     version,
     versionTag,
-    versions,
+    versionHistory,
     onVersionChange,
     additionalFields,
     t,

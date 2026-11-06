@@ -13,7 +13,7 @@ import {
   IconButton,
   CircularProgress,
 } from '@mui/material';
-import { VersionSelector, fetchAllVersions } from '@components/VersionSelector';
+import { VersionSelector, useProcessVersionHistory } from '@components/VersionSelector';
 
 import CloseIcon from '@mui/icons-material/Close';
 import { JsonEditor } from '@components/JsonEditor';
@@ -34,6 +34,11 @@ export interface StartInstanceDialogProps {
   processDefinitionKey?: string;
   /** Process name for display (used with processDefinitionKey) */
   processName?: string;
+  /**
+   * The definition of `processDefinitionKey`, when the caller has it: the
+   * dialog then doesn't request it again
+   */
+  processDefinition?: ProcessDefinitionSimple;
   /** Callback when instance is created successfully */
   onSuccess?: (instanceKey: string) => void;
 }
@@ -42,6 +47,7 @@ export const StartInstanceDialog = ({
   open,
   onClose,
   processDefinitionKey: propProcessDefinitionKey,
+  processDefinition: propProcessDefinition,
   onSuccess,
 }: StartInstanceDialogProps) => {
   const { t } = useTranslation([ns.common, ns.processes]);
@@ -50,9 +56,15 @@ export const StartInstanceDialog = ({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // The caller's definition of the pre-selected version, if it passed one
+  const presetDefinition =
+    propProcessDefinition && String(propProcessDefinition.key) === propProcessDefinitionKey
+      ? propProcessDefinition
+      : null;
+
   // Selected process definition (latest version, from search)
   const [selectedDefinition, setSelectedDefinition] = useState<ProcessDefinitionSimple | null>(
-    null,
+    presetDefinition,
   );
 
   const fetchProcessDefinitions = useCallback(
@@ -63,74 +75,38 @@ export const StartInstanceDialog = ({
     [],
   );
 
-  // All versions for the selected bpmnProcessId
-  const [allVersions, setAllVersions] = useState<ProcessDefinitionSimple[]>([]);
-  const [loadingVersions, setLoadingVersions] = useState(false);
+  // Versions of the selected process, shared with the definition page that
+  // opened the dialog, so they aren't requested again
+  const versionHistory = useProcessVersionHistory(selectedDefinition?.bpmnProcessId);
 
   // Selected version key
-  const [selectedVersion, setSelectedVersion] = useState<string>('');
-
-  // Sorted versions (descending). The selected definition is always an
-  // option, even if the loaded list lacks it (e.g. beyond the paging limit).
-  const versionOptions = useMemo(() => {
-    const options =
-      selectedDefinition && !allVersions.some((v) => v.key === selectedDefinition.key)
-        ? [...allVersions, selectedDefinition]
-        : allVersions;
-    return [...options].sort((a, b) => b.version - a.version);
-  }, [allVersions, selectedDefinition]);
+  const [selectedVersion, setSelectedVersion] = useState<string>(
+    presetDefinition ? String(presetDefinition.key) : '',
+  );
 
   // Actual process definition key used for starting the instance
   const processDefinitionKey = selectedVersion;
 
-  // Fetch all versions when a process definition is selected
-  useEffect(() => {
-    if (!selectedDefinition) {
-      setAllVersions([]);
-      setSelectedVersion('');
-      setLoadingVersions(false);
-      return;
-    }
+  // The selected definition shows before the page holding it is loaded
+  const selectedOption = useMemo(
+    () =>
+      selectedDefinition && String(selectedDefinition.key) === selectedVersion
+        ? { ...selectedDefinition, key: selectedVersion }
+        : undefined,
+    [selectedDefinition, selectedVersion],
+  );
 
-    // Ignore the result of a load superseded by another process selection
+  // Pre-select when only the processDefinitionKey prop is provided
+  const hasPresetDefinition = presetDefinition !== null;
+  useEffect(() => {
+    if (!open || !propProcessDefinitionKey || hasPresetDefinition) return;
+
     let active = true;
-    const loadVersions = async () => {
-      setLoadingVersions(true);
-      try {
-        const { bpmnProcessId } = selectedDefinition;
-        const items = await fetchAllVersions((page, size) =>
-          getProcessDefinitions({ bpmnProcessId, page, size, sortBy: 'version', sortOrder: 'desc' }),
-        );
-        if (active) setAllVersions(items);
-      } catch (err) {
-        console.error('Failed to load process versions:', err);
-        if (active) setAllVersions([]);
-      } finally {
-        if (active) setLoadingVersions(false);
-      }
-    };
-
-    void loadVersions();
-    return () => {
-      active = false;
-    };
-  }, [selectedDefinition]);
-
-  // Auto-select the latest version when versions are loaded
-  useEffect(() => {
-    if (versionOptions.length > 0 && !selectedVersion) {
-      setSelectedVersion(versionOptions[0].key);
-    }
-  }, [versionOptions, selectedVersion]);
-
-  // Pre-select when processDefinitionKey prop is provided
-  useEffect(() => {
-    if (!open || !propProcessDefinitionKey) return;
-
     const preselect = async () => {
       try {
         const def = await getProcessDefinition(propProcessDefinitionKey);
-        setSelectedDefinition(def as ProcessDefinitionSimple);
+        if (!active) return;
+        setSelectedDefinition(def);
         setSelectedVersion(propProcessDefinitionKey);
       } catch (err) {
         console.error('Failed to pre-select process definition:', err);
@@ -138,10 +114,17 @@ export const StartInstanceDialog = ({
     };
 
     void preselect();
-  }, [open, propProcessDefinitionKey]);
+    return () => {
+      active = false;
+    };
+  }, [open, propProcessDefinitionKey, hasPresetDefinition]);
 
-  // Reset state when dialog opens
-  useEffect(() => {
+  // Reset the form when the dialog opens again. The modals mount it open,
+  // with this initial state; a caller keeping it mounted while closed
+  // reopens it by changing `open`.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
       setVariables('{}');
       setBusinessKey(null);
@@ -149,11 +132,10 @@ export const StartInstanceDialog = ({
       setLoading(false);
       if (!propProcessDefinitionKey) {
         setSelectedDefinition(null);
-        setAllVersions([]);
         setSelectedVersion('');
       }
     }
-  }, [open, propProcessDefinitionKey]);
+  }
 
   // Validate JSON
   const validateJson = useCallback((json: string): boolean => {
@@ -172,19 +154,11 @@ export const StartInstanceDialog = ({
     setError(null);
   }, []);
 
-  // Handle process selection — reset version so auto-select triggers. Drop the
-  // previous process's versions in the same update, or auto-select would pick
-  // one of them before the new process's versions load.
-  const handleDefinitionChange = useCallback(
-    (value: ProcessDefinitionSimple | null) => {
-      if (value?.bpmnProcessId !== selectedDefinition?.bpmnProcessId) {
-        setAllVersions([]);
-      }
-      setSelectedDefinition(value);
-      setSelectedVersion('');
-    },
-    [selectedDefinition],
-  );
+  // The search lists the latest version of each process: select it
+  const handleDefinitionChange = useCallback((value: ProcessDefinitionSimple | null) => {
+    setSelectedDefinition(value);
+    setSelectedVersion(value ? String(value.key) : '');
+  }, []);
 
   // Create instance
   const handleCreate = useCallback(async () => {
@@ -248,9 +222,17 @@ export const StartInstanceDialog = ({
 
         {/* Process and version selectors */}
         <Box sx={{ mb: 3, mt: 1 }}>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+          {/* Side by side, or stacked on a phone, where the process field would be squeezed */}
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: 2,
+              alignItems: { xs: 'stretch', sm: 'flex-start' },
+            }}
+          >
             {/* Process search selector */}
-            <Box sx={{ flex: 1 }}>
+            <Box sx={{ flex: { sm: 1 }, minWidth: 0 }}>
               <SearchableSelect<ProcessDefinitionSimple>
                 value={selectedDefinition}
                 onChange={handleDefinitionChange}
@@ -268,16 +250,21 @@ export const StartInstanceDialog = ({
             </Box>
 
             {/* Version selector */}
-            <VersionSelector
-              value={selectedVersion}
-              onChange={(val) => setSelectedVersion(val)}
-              options={versionOptions.map((v) => ({
-                key: v.key,
-                version: v.version,
-                versionTag: v.versionTag,
-              }))}
-              disabled={!selectedDefinition || loadingVersions}
-            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: { sm: '50%' } }}>
+              <VersionSelector
+                value={selectedVersion}
+                onChange={setSelectedVersion}
+                options={versionHistory.versions}
+                selectedOption={selectedOption}
+                latestKey={versionHistory.latestKey}
+                hasMore={versionHistory.hasMore}
+                loadingMore={versionHistory.loadingMore}
+                onLoadMore={versionHistory.loadMore}
+                error={versionHistory.error}
+                onRetry={versionHistory.retry}
+                disabled={!selectedDefinition || versionHistory.loading}
+              />
+            </Box>
           </Box>
 
           {/* Business key */}

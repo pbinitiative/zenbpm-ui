@@ -23,7 +23,7 @@ export const ProcessDefinitionDetailPage = () => {
 
   const {
     processDefinition,
-    versions,
+    versionHistory,
     activityIds,
     loading,
     error,
@@ -89,7 +89,7 @@ export const ProcessDefinitionDetailPage = () => {
       name={processDefinition.bpmnProcessName}
       version={processDefinition.version}
       versionTag={processDefinition.versionTag}
-      versions={versions}
+      versionHistory={versionHistory}
       additionalFields={additionalFields}
       onVersionChange={handleVersionChange}
       actions={metadataActions}

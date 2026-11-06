@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
 import { Box } from '@mui/material';
 import { VersionSelector, type VersionOption } from './VersionSelector';
+import { getLatestVersionKey } from './utils';
 
 const meta: Meta<typeof VersionSelector> = {
   title: 'Components/VersionSelector',
@@ -40,6 +41,7 @@ const InteractiveVersionSelector = ({
         value={value}
         onChange={setValue}
         options={options}
+        latestKey={getLatestVersionKey(options)}
         showViewingChip={showViewingChip}
       />
     </Box>
@@ -68,7 +70,7 @@ export const UnsortedUntaggedVersions: Story = {
   ),
 };
 
-/** A long tag is cut short; the number and latest marker stay visible */
+/** A long tag wraps, and is cut short after two lines; the number and latest marker stay visible */
 export const LongTagInNarrowContainer: Story = {
   render: () => (
     <InteractiveVersionSelector
@@ -78,6 +80,19 @@ export const LongTagInNarrowContainer: Story = {
       ]}
       initialKey="2"
       width={240}
+    />
+  ),
+};
+
+/** While the version list loads, "latest" is unknown, so nothing is marked */
+export const LatestUnknown: Story = {
+  render: () => (
+    <VersionSelector
+      value="3000000000000000033"
+      onChange={() => {}}
+      options={[]}
+      selectedOption={{ key: '3000000000000000033', version: 1, versionTag: 'release-1' }}
+      disabled
     />
   ),
 };
