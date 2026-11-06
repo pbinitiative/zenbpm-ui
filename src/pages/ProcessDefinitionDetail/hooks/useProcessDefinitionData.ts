@@ -41,6 +41,11 @@ interface UseProcessDefinitionDataResult {
   navigateToInstance: (key: string) => void;
 }
 
+/**
+ * Data and handlers of the process definition page: the definition, its
+ * version history (loaded separately, so the page doesn't wait for it), the
+ * diagram statistics, URL-synced filters and the Start Instance dialog.
+ */
 export function useProcessDefinitionData({
   processDefinitionKey,
 }: UseProcessDefinitionDataOptions): UseProcessDefinitionDataResult {

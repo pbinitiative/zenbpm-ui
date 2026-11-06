@@ -422,6 +422,31 @@ test.describe('Process Definition Detail - Version Switching', () => {
     await expect(page).toHaveURL(/\/process-definitions\/3000000000000000034$/);
   });
 
+  test('offers Retry when the version list fails to load at all', async ({ page }) => {
+    await page.goto('/process-definitions/3000000000000000047');
+    await expect(page.getByText('Definition Details')).toBeVisible();
+    await failMockRequests(page, versionListFailure('process', 'showcase-process'));
+    await navigateInApp(page, '/process-definitions/3000000000000000033');
+    await expect(page.getByText('showcase-process', { exact: true })).toBeVisible();
+
+    // Without the list, the selector holds the displayed version and Retry
+    const versionSelect = page.getByTestId('version-selector');
+    await expect(versionSelect.getByTestId('version-pill')).toHaveText('v1');
+    await expect(versionSelect.getByTestId('version-latest-chip')).toHaveCount(0);
+    await versionSelect.click();
+    const retry = page.getByTestId('version-selector-retry');
+    await expect(retry).toContainText("Couldn't load the versions.");
+    const options = page.getByRole('option');
+    await expect(options.getByTestId('version-pill')).toHaveText(['v1']);
+
+    await clearMockFailures(page);
+    await retry.click();
+    await expect(retry).toHaveCount(0);
+    await expect(options.getByTestId('version-pill')).toHaveText(['v3', 'v2', 'v1']);
+    await expect(options.nth(0).getByTestId('version-latest-chip')).toBeVisible();
+    await expect(options.nth(2).getByTestId('version-viewing-chip')).toBeVisible();
+  });
+
   test('uses numeric labels when versions have no tags', async ({ page }) => {
     await page.goto('/process-definitions/3000000000000000047');
     const versionSelect = page.getByTestId('version-selector');

@@ -47,6 +47,7 @@ export const ProcessDefinitionWithVersions: Story = {
       hasMore: false,
       loadingMore: false,
       loadMore: () => {},
+      retrying: false,
       retry: () => {},
     },
     onVersionChange: (key) => console.log('Version changed to:', key),

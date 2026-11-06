@@ -25,6 +25,10 @@ interface DmnResourceDefinition {
   dmnData?: string;
 }
 
+/**
+ * A decision definition version: its metadata with the version selector,
+ * its DMN diagram and its decision instances
+ */
 export const DecisionDefinitionDetailPage = () => {
   const { dmnResourceDefinitionKey } = useParams<{ dmnResourceDefinitionKey: string }>();
   const navigate = useNavigate();

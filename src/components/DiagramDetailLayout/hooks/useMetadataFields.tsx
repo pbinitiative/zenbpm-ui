@@ -28,6 +28,12 @@ interface UseMetadataFieldsOptions {
   directFields?: MetadataField[];
 }
 
+/**
+ * The metadata fields of a definition or instance page: `directFields` when
+ * given, otherwise fields built from the individual options. The version
+ * field is a selector when there are other versions to switch to, or a
+ * failed version list to retry, and a label otherwise.
+ */
 export function useMetadataFields({
   entityKey,
   stateField,
@@ -105,11 +111,15 @@ export function useMetadataFields({
     if (version !== undefined) {
       const displayedKey = String(entityKey);
       const displayed = { key: displayedKey, version, versionTag };
-      const hasOtherVersions =
+      // Other versions to switch to, or a failed load, whose Retry item is in
+      // the selector's menu
+      const needsSelector =
         !!versionHistory &&
-        (versionHistory.hasMore || versionHistory.versions.some((v) => v.key !== displayedKey));
+        (versionHistory.hasMore ||
+          !!versionHistory.error ||
+          versionHistory.versions.some((v) => v.key !== displayedKey));
 
-      if (hasOtherVersions && onVersionChange) {
+      if (needsSelector && onVersionChange) {
         result.push({
           label: t('common:fields.version'),
           value: (
@@ -124,6 +134,7 @@ export function useMetadataFields({
               loadingMore={versionHistory.loadingMore}
               onLoadMore={versionHistory.loadMore}
               error={versionHistory.error}
+              retrying={versionHistory.retrying}
               onRetry={versionHistory.retry}
               showViewingChip
             />

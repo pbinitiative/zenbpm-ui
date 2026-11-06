@@ -43,6 +43,12 @@ export interface StartInstanceDialogProps {
   onSuccess?: (instanceKey: string) => void;
 }
 
+/**
+ * Starts an instance of a process definition version. Opened with
+ * `processDefinitionKey`, it pre-selects that version (taking
+ * `processDefinition` instead of requesting it when given); otherwise the
+ * user searches for a process, whose latest version is selected.
+ */
 export const StartInstanceDialog = ({
   open,
   onClose,
@@ -261,6 +267,7 @@ export const StartInstanceDialog = ({
                 loadingMore={versionHistory.loadingMore}
                 onLoadMore={versionHistory.loadMore}
                 error={versionHistory.error}
+                retrying={versionHistory.retrying}
                 onRetry={versionHistory.retry}
                 disabled={!selectedDefinition || versionHistory.loading}
               />

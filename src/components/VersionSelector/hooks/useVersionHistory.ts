@@ -33,6 +33,8 @@ export interface VersionHistory<T extends VersionOption = VersionOption> {
    * pages and the latest version valid
    */
   error?: 'list' | 'olderVersions';
+  /** The request that failed is being repeated; `error` stays set until it succeeds */
+  retrying: boolean;
   /** Repeats the request that failed */
   retry: () => void;
 }
@@ -49,6 +51,11 @@ interface VersionHistoryOptions {
 
 type FetchVersionsPage<T> = (page: number, signal: AbortSignal) => Promise<VersionsPage<T>>;
 
+/**
+ * Pages through a definition's version list, newest first, with react-query:
+ * the list is shared by every component using the same `queryKey`, and a
+ * request is cancelled when no component needs it any more.
+ */
 function useVersionHistory<T extends VersionOption>(
   queryKey: readonly unknown[],
   fetchPage: FetchVersionsPage<T> | undefined,
@@ -71,7 +78,11 @@ function useVersionHistory<T extends VersionOption>(
   const { data, hasNextPage, isError, isFetching, isFetchingNextPage, isFetchNextPageError, fetchNextPage, refetch } =
     query;
   const versions = useMemo(() => mergeVersionPages(data?.pages ?? []), [data]);
-  const error = isFetchNextPageError ? 'olderVersions' : isError ? 'list' : undefined;
+  // Without data, repeating a failed load resets the query to pending: keep
+  // the failure until a load succeeds, so the selector and its menu stay
+  const failedFirstLoad = !data && query.errorUpdatedAt > 0;
+  const error = isFetchNextPageError ? 'olderVersions' : isError || failedFirstLoad ? 'list' : undefined;
+  const retrying = error !== undefined && isFetching;
   // After a failed refresh, the list kept may lack newer versions
   const latestKey = data && error !== 'list' ? getLatestVersionKey(versions) : undefined;
 
@@ -85,7 +96,8 @@ function useVersionHistory<T extends VersionOption>(
     void (isFetchNextPageError ? fetchNextPage() : refetch());
   }, [isFetchNextPageError, fetchNextPage, refetch]);
 
-  const loading = query.isLoading;
+  // The first attempt only: a retry shows in the menu instead
+  const loading = query.isLoading && !failedFirstLoad;
   // Stable while nothing changes, as it feeds memoized metadata fields
   return useMemo(
     () => ({
@@ -96,9 +108,10 @@ function useVersionHistory<T extends VersionOption>(
       loadingMore: isFetchingNextPage,
       loadMore,
       error,
+      retrying,
       retry,
     }),
-    [versions, latestKey, loading, hasNextPage, isFetchingNextPage, loadMore, error, retry],
+    [versions, latestKey, loading, hasNextPage, isFetchingNextPage, loadMore, error, retrying, retry],
   );
 }
 

@@ -33,6 +33,8 @@ interface VersionSelectorProps {
   onLoadMore?: () => void;
   /** A failed load, shown at the end of the menu with a Retry action calling `onRetry` */
   error?: 'list' | 'olderVersions';
+  /** The failed load is being repeated: the menu shows it loading instead of Retry */
+  retrying?: boolean;
   onRetry?: () => void;
   disabled?: boolean;
   /** Label for the form control */
@@ -65,6 +67,7 @@ export function VersionSelector({
   loadingMore = false,
   onLoadMore,
   error,
+  retrying = false,
   onRetry,
   disabled = false,
   label,
@@ -79,6 +82,7 @@ export function VersionSelector({
   const [open, setOpen] = useState(false);
   const retryClickedRef = useRef(false);
 
+  /** Loads the next page when the menu is scrolled near its end */
   const handleMenuScroll = (event: UIEvent<HTMLElement>) => {
     const { scrollHeight, scrollTop, clientHeight } = event.currentTarget;
     if (hasMore && scrollHeight - scrollTop - clientHeight < LOAD_MORE_THRESHOLD_PX) onLoadMore?.();
@@ -133,14 +137,14 @@ export function VersionSelector({
             />
           </MenuItem>
         ))}
-        {loadingMore && (
+        {(loadingMore || retrying) && (
           // Disabled, so neither selectable nor focusable
           <MenuItem disabled data-testid="version-selector-loading-more">
             <CircularProgress size={16} sx={{ mr: 1 }} />
             {t('common:loading')}
           </MenuItem>
         )}
-        {error && onRetry && (
+        {error && onRetry && !loadingMore && !retrying && (
           <MenuItem
             value={RETRY_VALUE}
             onClick={() => {

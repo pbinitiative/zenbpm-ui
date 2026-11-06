@@ -77,9 +77,6 @@ function getFilteredHandlers(config: ApiStrategyConfig): RequestHandler[] {
 }
 
 /**
- * Create the MSW worker with filtered handlers based on API strategy
- */
-/**
  * Answers the requests configured in `mockFailures` with their error status.
  * Returns nothing for the others, so that the next handler answers them.
  */
@@ -92,6 +89,10 @@ const failureHandler = http.all('/v1/*', ({ request }) => {
   );
 });
 
+/**
+ * Create the MSW worker with filtered handlers based on API strategy, after
+ * the handler injecting the failures tests ask for
+ */
 export function createWorker() {
   const filteredHandlers = [failureHandler, ...getFilteredHandlers(apiStrategyConfig)];
 
