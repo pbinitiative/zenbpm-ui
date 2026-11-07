@@ -10,6 +10,14 @@ import { withValidation } from '../validation';
 
 const BASE_URL = '/v1';
 
+// Exposed to window, so that tests change the data the handlers serve. A
+// test importing this module by its URL may get another copy: once Vite has
+// reloaded the page, the app imports it as `processDefinitions.ts?t=…`.
+if (typeof window !== 'undefined') {
+  (window as unknown as { __mockProcessDefinitions: typeof processDefinitions }).__mockProcessDefinitions =
+    processDefinitions;
+}
+
 // Helper to compute statistics for a process definition from actual mock data
 function computeStatisticsForDefinition(processDefinitionKey: string) {
   // Get all instances for this process definition

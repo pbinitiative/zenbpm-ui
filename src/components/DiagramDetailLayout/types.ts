@@ -9,13 +9,6 @@ export interface MetadataField {
   mono?: boolean;
 }
 
-export interface VersionInfo {
-  key: string;
-  version: number;
-  /** Optional display tag for the version (e.g., from `zenbpm:versionTag`) */
-  versionTag?: string;
-}
-
 /** Definition info for instances - displayed as a link to the parent definition */
 export interface DefinitionInfo {
   /** Definition key (used for link) */

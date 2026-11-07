@@ -1,7 +1,16 @@
 import { test, expect } from '@playwright/test';
+import type { MockDecisionDefinition } from '../../../src/mocks/data/types';
+import {
+  navigateInApp,
+  scrollVersionMenuToEnd,
+  trackVersionPageRequests,
+} from '../../fixtures/version-history';
 
-// `src/mocks/handlers/decisionInstances.ts` exposes its data to the tests
-type MockWindow = { __mockDecisionInstances: Array<{ key: string; decisionOutput: unknown }> };
+// `src/mocks/handlers/decisionInstances.ts` and `decisionDefinitions.ts` expose their data to the tests
+type MockWindow = {
+  __mockDecisionInstances: Array<{ key: string; decisionOutput: unknown }>;
+  __mockDecisionDefinitions: MockDecisionDefinition[];
+};
 
 test.describe('Decisions Page - Definitions Tab', () => {
   test.beforeEach(async ({ page }) => {
@@ -177,6 +186,110 @@ test.describe('Decision Definition Detail Page', () => {
     // Version field should be visible
     await expect(page.getByText('Version')).toBeVisible();
   });
+
+  test('marks the viewed and latest versions in the version selector', async ({ page }) => {
+    // drd_sports v1; v2 is the latest
+    const versionsRequest = page.waitForRequest(
+      (request) => new URL(request.url()).pathname === '/v1/dmn-resource-definitions',
+    );
+    await page.goto('/decision-definitions/4000000000000000001');
+    // Newest first, so that the first page holds the latest version
+    const params = new URL((await versionsRequest).url()).searchParams;
+    expect(params.get('sortBy')).toBe('version');
+    expect(params.get('sortOrder')).toBe('desc');
+    const versionSelect = page.getByTestId('version-selector');
+    await expect(versionSelect.getByTestId('version-pill')).toHaveText('v1');
+    await expect(versionSelect.getByTestId('version-latest-chip')).toHaveCount(0);
+    await versionSelect.click();
+
+    const options = page.getByRole('option');
+    await expect(options.getByTestId('version-pill')).toHaveText(['v2', 'v1']);
+    await expect(options.nth(0).getByTestId('version-latest-chip')).toHaveText('latest');
+    await expect(options.nth(1).getByTestId('version-viewing-chip')).toHaveText('viewing');
+    await expect(options.getByTestId('version-latest-chip')).toHaveCount(1);
+    await expect(options.getByTestId('version-viewing-chip')).toHaveCount(1);
+
+    await options.nth(0).click();
+    await expect(page).toHaveURL(/\/decision-definitions\/4000000000000000002$/);
+    await expect(versionSelect.getByTestId('version-latest-chip')).toBeVisible();
+  });
+
+  test('shows a single version as the latest one, without a selector', async ({ page }) => {
+    // example_discounts has one version
+    await page.goto('/decision-definitions/4000000000000000005');
+    const metadataPanel = page.locator('.MuiPaper-root').filter({
+      has: page.getByText('Applicable Discounts', { exact: true }),
+    });
+    await expect(metadataPanel.getByTestId('version-pill')).toHaveText('v1');
+    await expect(metadataPanel.getByTestId('version-latest-chip')).toHaveText('latest');
+    await expect(page.getByTestId('version-selector')).toHaveCount(0);
+  });
+
+  test('marks a version deployed since the last visit as the latest one', async ({ page }) => {
+    const requests = trackVersionPageRequests(page, 'decision', 'drd_sports');
+    await page.goto('/decision-definitions/4000000000000000002');
+    const versionSelect = page.getByTestId('version-selector');
+    await expect(versionSelect.getByTestId('version-latest-chip')).toBeVisible();
+
+    // Leave, deploy v3, and come back within the cache's lifetime
+    await navigateInApp(page, '/decisions/definitions');
+    await expect(versionSelect).toHaveCount(0);
+    await page.evaluate(() => {
+      const definitions = (window as unknown as MockWindow).__mockDecisionDefinitions;
+      const v2 = definitions.find((d) => d.key === '4000000000000000002')!;
+      definitions.push({ ...v2, key: '4000000000000009003', version: 3 });
+    });
+    await navigateInApp(page, '/decision-definitions/4000000000000009003');
+
+    await expect(versionSelect.getByTestId('version-pill')).toHaveText('v3');
+    await expect(versionSelect.getByTestId('version-latest-chip')).toBeVisible();
+    await versionSelect.click();
+    const options = page.getByRole('option');
+    await expect(options.getByTestId('version-pill')).toHaveText(['v3', 'v2', 'v1']);
+    await expect(options.getByTestId('version-latest-chip')).toHaveCount(1);
+    await expect(options.nth(0).getByTestId('version-viewing-chip')).toBeVisible();
+    expect(requests.pages).toEqual([1, 1]);
+  });
+
+  test('loads a long version history a page at a time', async ({ page }) => {
+    const versions = 105; // more than one page of the version list
+    const requests = trackVersionPageRequests(page, 'decision', 'long_history_decision');
+    await page.goto('/decision-definitions/4000000000000000001');
+    await expect(page.getByTestId('version-selector')).toBeVisible();
+    await page.evaluate((count) => {
+      const definitions = (window as unknown as MockWindow).__mockDecisionDefinitions;
+      const template = definitions[0];
+      for (let v = 1; v <= count; v += 1) {
+        definitions.push({
+          ...template,
+          key: `${BigInt('4000000000000008000') + BigInt(v)}`,
+          version: v,
+          decisionDefinitionId: 'long_history_decision',
+          name: 'Long History Decision',
+        });
+      }
+    }, versions);
+    // Version 1 is on the second page
+    await navigateInApp(page, '/decision-definitions/4000000000000008001');
+    await expect(page.getByText('Long History Decision')).toBeVisible();
+
+    const versionSelect = page.getByTestId('version-selector');
+    await expect(versionSelect.getByTestId('version-pill')).toHaveText('v1');
+    await expect(versionSelect.getByTestId('version-latest-chip')).toHaveCount(0);
+    await requests.settle();
+    expect(requests.pages).toEqual([1]);
+
+    await versionSelect.click();
+    await scrollVersionMenuToEnd(page);
+    const options = page.getByRole('option', { disabled: false });
+    await expect(options).toHaveCount(versions);
+    await expect(options.nth(0).getByTestId('version-pill')).toHaveText(`v${versions}`);
+    await expect(options.getByTestId('version-latest-chip')).toHaveCount(1);
+    await expect(options.nth(0).getByTestId('version-latest-chip')).toBeVisible();
+    await expect(options.last().getByTestId('version-viewing-chip')).toBeVisible();
+    await requests.settle();
+    expect(requests.pages).toEqual([1, 2]);
+  });
 });
 
 test.describe('Decision Instance Detail Page', () => {
@@ -269,13 +382,12 @@ test.describe('Decision Instance Detail Page', () => {
     await expect(content).toHaveCSS('font-family', 'monospace');
   });
 
-  test('should display decision definition chip', async ({ page }) => {
+  test('should display decision definition version', async ({ page }) => {
     await page.goto('/decision-instances/4100000000000000001');
     await expect(page.getByRole('heading', { name: 'Metadata' })).toBeVisible({ timeout: 10000 });
 
-    // Should show the DMN resource definition ID as a chip
-    const chips = page.locator('.MuiChip-root');
-    await expect(chips.first()).toBeVisible();
+    // The instance's definition, 4000000000000000001, is version 1 (of 2)
+    await expect(page.getByTestId('version-pill')).toHaveText('v1');
   });
 
   test('should render outputs as JSON array in dialog when multiple rules match', async ({ page }) => {

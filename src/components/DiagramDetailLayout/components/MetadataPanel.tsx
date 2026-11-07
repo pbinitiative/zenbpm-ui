@@ -4,17 +4,18 @@ import { ns } from '@base/i18n';
 import { Box, Button, Divider } from '@mui/material';
 import { NavButton } from '@components/NavButton';
 import { MetadataItem } from './MetadataItem';
-import type { MetadataField, VersionInfo, DefinitionInfo } from '../types';
+import type { VersionHistory } from '@components/VersionSelector';
+import type { MetadataField, DefinitionInfo } from '../types';
 import { useMetadataFields } from '../hooks';
 import CancelIcon from '@mui/icons-material/Cancel';
-import { cancelProcessInstance, type ProcessInstanceState } from '@base/openapi';
+import { cancelProcessInstance, type ProcessInstanceProcessType, type ProcessInstanceState } from '@base/openapi';
 import { useConfirmDialog } from '@/components/ConfirmDialog';
 import { useNotification } from '@base/contexts';
 import axios from "axios";
 import { TERMINAL_STATES } from "@pages/ProcessInstanceDetail/hooks/useInstanceData.ts";
 
 // Re-export types for backward compatibility
-export type { MetadataField, VersionInfo, DefinitionInfo };
+export type { MetadataField, DefinitionInfo };
 
 export interface MetadataPanelProps {
   /** Primary entity key */
@@ -30,7 +31,7 @@ export interface MetadataPanelProps {
   incidentsCount?: number;
 
   /** Process type (e.g. default, multiInstance, subprocess, callActivity) */
-  processType?: string;
+  processType?: ProcessInstanceProcessType;
 
   /** Created at timestamp - formatted automatically */
   createdAt?: string;
@@ -47,8 +48,8 @@ export interface MetadataPanelProps {
   /** Optional display tag for the current version */
   versionTag?: string;
 
-  /** All available versions for version selector */
-  versions?: VersionInfo[];
+  /** The definition's versions, for the version selector */
+  versionHistory?: VersionHistory;
 
   /** Callback when version is changed */
   onVersionChange?: (key: string) => void;
@@ -92,7 +93,7 @@ export const MetadataPanel = ({
   name,
   version,
   versionTag,
-  versions = [],
+  versionHistory,
   onVersionChange,
   definitionInfo,
   parentProcessInstanceKey,
@@ -115,7 +116,7 @@ export const MetadataPanel = ({
     name,
     version,
     versionTag,
-    versions,
+    versionHistory,
     onVersionChange,
     additionalFields,
     keyLabel,

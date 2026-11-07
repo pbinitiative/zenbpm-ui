@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ns } from '@base/i18n';
-import { Box, Chip, Tooltip } from '@mui/material';
-import { VersionSelector } from '@components/VersionSelector';
+import { Box, Tooltip } from '@mui/material';
+import { VersionSelector, VersionLabel, resolveLatestKey, type VersionHistory } from '@components/VersionSelector';
 import ErrorIcon from '@mui/icons-material/Error';
 import { MonoText } from '@components/MonoText';
 import { StateBadge } from '@components/StateBadge';
-import type { MetadataField, VersionInfo } from '../types';
+import type { ProcessInstanceProcessType } from '@base/openapi';
+import type { MetadataField } from '../types';
 import { formatDate } from '../utils';
 
 interface UseMetadataFieldsOptions {
@@ -14,19 +15,25 @@ interface UseMetadataFieldsOptions {
   stateField?: MetadataField;
   state?: string;
   incidentsCount?: number;
-  processType?: string;
+  processType?: ProcessInstanceProcessType;
   createdAt?: string;
   businessKey?: string;
   name?: string;
   version?: number;
   versionTag?: string;
-  versions?: VersionInfo[];
+  versionHistory?: VersionHistory;
   onVersionChange?: (key: string) => void;
   additionalFields?: MetadataField[];
   keyLabel?: string;
   directFields?: MetadataField[];
 }
 
+/**
+ * The metadata fields of a definition or instance page: `directFields` when
+ * given, otherwise fields built from the individual options. The version
+ * field is a selector when there are other versions to switch to, or a
+ * failed version list to retry, and a label otherwise.
+ */
 export function useMetadataFields({
   entityKey,
   stateField,
@@ -38,7 +45,7 @@ export function useMetadataFields({
   name,
   version,
   versionTag,
-  versions = [],
+  versionHistory,
   onVersionChange,
   additionalFields = [],
   keyLabel,
@@ -88,7 +95,7 @@ export function useMetadataFields({
     if (processType) {
       result.push({
         label: t('common:fields.type'),
-        value: t(`processes:types.${processType}`) as string,
+        value: t(`processes:types.${processType}`),
       });
     }
 
@@ -102,16 +109,34 @@ export function useMetadataFields({
 
     // Version
     if (version !== undefined) {
-      if (versions.length > 1 && onVersionChange) {
+      const displayedKey = String(entityKey);
+      const displayed = { key: displayedKey, version, versionTag };
+      // Other versions to switch to, or a failed load, whose Retry item is in
+      // the selector's menu
+      const needsSelector =
+        !!versionHistory &&
+        (versionHistory.hasMore ||
+          !!versionHistory.error ||
+          versionHistory.versions.some((v) => v.key !== displayedKey));
+
+      if (needsSelector && onVersionChange) {
         result.push({
           label: t('common:fields.version'),
           value: (
             <VersionSelector
-              value={String(entityKey ?? '')}
+              value={displayedKey}
               onChange={(val) => onVersionChange(val)}
-              options={versions}
-              currentKey={String(entityKey ?? '')}
-              showCurrentChip
+              options={versionHistory.versions}
+              // Shown before the page holding it is loaded
+              selectedOption={displayed}
+              latestKey={versionHistory.latestKey}
+              hasMore={versionHistory.hasMore}
+              loadingMore={versionHistory.loadingMore}
+              onLoadMore={versionHistory.loadMore}
+              error={versionHistory.error}
+              retrying={versionHistory.retrying}
+              onRetry={versionHistory.retry}
+              showViewingChip
             />
           ),
         });
@@ -119,16 +144,15 @@ export function useMetadataFields({
         result.push({
           label: t('common:fields.version'),
           value: (
-            <Chip
-              label={versionTag || `v${version}`}
-              size="small"
-              sx={{
-                bgcolor: 'grey.100',
-                color: 'primary.main',
-                fontWeight: 600,
-                fontSize: '0.75rem',
-                height: 20,
-              }}
+            <VersionLabel
+              version={version}
+              versionTag={versionTag}
+              // No "latest" while the version list is loading or failed to
+              isLatest={
+                resolveLatestKey(versionHistory?.latestKey, versionHistory?.versions ?? [], displayed) ===
+                displayedKey
+              }
+              tagLines={2}
             />
           ),
         });
@@ -167,7 +191,7 @@ export function useMetadataFields({
     name,
     version,
     versionTag,
-    versions,
+    versionHistory,
     onVersionChange,
     additionalFields,
     t,

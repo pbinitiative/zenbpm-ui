@@ -1,7 +1,8 @@
 // MSW browser worker setup with API strategy support
 import { setupWorker } from 'msw/browser';
-import { http, passthrough, type RequestHandler } from 'msw';
+import { http, HttpResponse, passthrough, type RequestHandler } from 'msw';
 import { handlers } from './handlers';
+import { findMockFailure } from './failures';
 import {
   apiStrategyConfig,
   shouldMockRequest,
@@ -76,10 +77,24 @@ function getFilteredHandlers(config: ApiStrategyConfig): RequestHandler[] {
 }
 
 /**
- * Create the MSW worker with filtered handlers based on API strategy
+ * Answers the requests configured in `mockFailures` with their error status.
+ * Returns nothing for the others, so that the next handler answers them.
+ */
+const failureHandler = http.all('/v1/*', ({ request }) => {
+  const failure = findMockFailure(new URL(request.url));
+  if (!failure) return undefined;
+  return HttpResponse.json(
+    { code: 'MOCK_FAILURE', message: `Injected failure ${failure.status}` },
+    { status: failure.status },
+  );
+});
+
+/**
+ * Create the MSW worker with filtered handlers based on API strategy, after
+ * the handler injecting the failures tests ask for
  */
 export function createWorker() {
-  const filteredHandlers = getFilteredHandlers(apiStrategyConfig);
+  const filteredHandlers = [failureHandler, ...getFilteredHandlers(apiStrategyConfig)];
 
   if (import.meta.env.DEV) {
     logApiStrategyConfig(apiStrategyConfig);

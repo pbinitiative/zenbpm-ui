@@ -1,6 +1,7 @@
 // MSW handlers for decision definitions endpoints
 import { http, HttpResponse } from 'msw';
 import { withValidation } from '../validation';
+import type { MockDecisionDefinition } from '../data/types';
 
 const BASE_URL = '/v1';
 
@@ -339,15 +340,6 @@ const discountsDmn = `<?xml version="1.0" encoding="UTF-8"?>
 </definitions>`;
 
 // Mock decision definitions
-interface MockDecisionDefinition {
-  key: string;
-  version: number;
-  decisionDefinitionId: string;
-  name?: string;
-  resourceName?: string;
-  dmnData?: string;
-}
-
 const decisionDefinitions: MockDecisionDefinition[] = [
   {
     key: '4000000000000000001',
@@ -390,6 +382,14 @@ const decisionDefinitions: MockDecisionDefinition[] = [
     dmnData: discountsDmn,
   },
 ];
+
+// Exposed to window, so that tests change the data the handlers serve. A
+// test importing this module by its URL may get another copy: once Vite has
+// reloaded the page, the app imports it as `decisionDefinitions.ts?t=…`.
+if (typeof window !== 'undefined') {
+  (window as unknown as { __mockDecisionDefinitions: MockDecisionDefinition[] }).__mockDecisionDefinitions =
+    decisionDefinitions;
+}
 
 const findDecisionDefinitionByKey = (key: string) =>
   decisionDefinitions.find((dd) => dd.key === key);
@@ -604,19 +604,36 @@ export const decisionDefinitionHandlers = [
         filtered = Array.from(latestByDefId.values());
       }
 
-      // Paginate
-      const startIndex = (page - 1) * size;
-      const endIndex = startIndex + size;
-      const paginatedItems = filtered.slice(startIndex, endIndex);
-
       // Map to DMN resource definition format (matching DmnResourceDefinitionSimple schema)
-      const items = paginatedItems.map(({ key, version, decisionDefinitionId, name, resourceName }) => ({
+      const definitions = filtered.map(({ key, version, decisionDefinitionId, name, resourceName }) => ({
         key,
         version,
         dmnResourceDefinitionId: decisionDefinitionId,
         dmnDefinitionName: name,
         resourceName,
       }));
+
+      // Sort by one of the schema's sortBy fields, as the backend does
+      const sortBy = url.searchParams.get('sortBy') as
+        | 'dmnDefinitionName'
+        | 'dmnResourceDefinitionId'
+        | 'version'
+        | 'key'
+        | null;
+      if (sortBy) {
+        const order = url.searchParams.get('sortOrder') === 'desc' ? -1 : 1;
+        definitions.sort((a, b) => {
+          const aValue = a[sortBy];
+          const bValue = b[sortBy];
+          return order * (typeof aValue === 'number' && typeof bValue === 'number'
+            ? aValue - bValue
+            : String(aValue).localeCompare(String(bValue)));
+        });
+      }
+
+      // Paginate
+      const startIndex = (page - 1) * size;
+      const items = definitions.slice(startIndex, startIndex + size);
 
       return HttpResponse.json({
         items,

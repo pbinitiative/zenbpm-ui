@@ -1,6 +1,15 @@
 // Shared types for mock data
 // Keys are stored as strings but will be serialized as JSON numbers to simulate real int64 behavior
 
+export interface MockDecisionDefinition {
+  key: string;
+  version: number;
+  decisionDefinitionId: string;
+  name?: string;
+  resourceName?: string;
+  dmnData?: string;
+}
+
 export interface MockProcessDefinition {
   key: string;
   version: number;

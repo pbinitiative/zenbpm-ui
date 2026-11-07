@@ -12,9 +12,10 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import { DmnViewer } from '@components/DmnViewer';
 import { DiagramDetailLayout, MetadataPanel } from '@components/DiagramDetailLayout';
-import type { MetadataField, VersionInfo } from '@components/DiagramDetailLayout';
+import type { MetadataField } from '@components/DiagramDetailLayout';
 import { DecisionInstancesTable } from '@components/DecisionInstancesTable';
-import { getDmnResourceDefinition, getDmnResourceDefinitions } from '@base/openapi';
+import { getDmnResourceDefinition } from '@base/openapi';
+import { useDecisionVersionHistory } from '@components/VersionSelector';
 
 interface DmnResourceDefinition {
   key: string;
@@ -24,6 +25,10 @@ interface DmnResourceDefinition {
   dmnData?: string;
 }
 
+/**
+ * A decision definition version: its metadata with the version selector,
+ * its DMN diagram and its decision instances
+ */
 export const DecisionDefinitionDetailPage = () => {
   const { dmnResourceDefinitionKey } = useParams<{ dmnResourceDefinitionKey: string }>();
   const navigate = useNavigate();
@@ -31,9 +36,13 @@ export const DecisionDefinitionDetailPage = () => {
 
   // State
   const [definition, setDefinition] = useState<DmnResourceDefinition | null>(null);
-  const [versions, setVersions] = useState<VersionInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // The version list loads on its own, so the page doesn't wait for it. It is
+  // kept across version switches, but requested again when the page opens,
+  // for versions deployed meanwhile.
+  const versionHistory = useDecisionVersionHistory(definition?.dmnResourceDefinitionId, { staleTime: 0 });
 
   // Fetch definition
   useEffect(() => {
@@ -46,22 +55,6 @@ export const DecisionDefinitionDetailPage = () => {
       try {
         const data = await getDmnResourceDefinition(dmnResourceDefinitionKey);
         setDefinition(data as unknown as DmnResourceDefinition);
-
-        // Fetch all versions for this DMN resource
-        if (data.dmnResourceDefinitionId) {
-          try {
-            const versionsData = await getDmnResourceDefinitions({
-              dmnResourceDefinitionId: data.dmnResourceDefinitionId,
-              page: 1,
-              size: 100,
-            });
-            const items = (versionsData.items || []) as VersionInfo[];
-            items.sort((a, b) => b.version - a.version);
-            setVersions(items);
-          } catch {
-            // Versions fetch is not critical
-          }
-        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load decision definition');
       } finally {
@@ -136,7 +129,7 @@ export const DecisionDefinitionDetailPage = () => {
       entityKey={definition.key}
       name={definition.dmnDefinitionName}
       version={definition.version}
-      versions={versions}
+      versionHistory={versionHistory}
       additionalFields={additionalFields}
       onVersionChange={handleVersionChange}
       actions={metadataActions}
