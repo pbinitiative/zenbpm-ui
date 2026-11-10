@@ -345,6 +345,18 @@ export const JobsTab = ({
                 {row.elementId}
               </Typography>
             )}
+            {row.listenerEventType && (
+              <Tooltip title={t(`processInstance:listenerJob.tooltip.${row.listenerEventType}`)}>
+                <Chip
+                  label={t(`processInstance:listenerJob.chip.${row.listenerEventType}`)}
+                  size="small"
+                  color="info"
+                  variant="outlined"
+                  data-testid="job-listener-chip"
+                  sx={{ mt: 0.5, fontSize: 'caption.fontSize', height: 20 }}
+                />
+              </Tooltip>
+            )}
           </Box>
         ),
         width: 150,

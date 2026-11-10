@@ -2,6 +2,7 @@
 // Jobs are now primarily defined in individual process files and aggregated here
 
 import * as simpleTask from './bpmn/simple-task';
+import * as startListener from './bpmn/start-listener';
 import * as showcaseProcess from './bpmn/showcase-process';
 import * as simpleUserTask from './bpmn/simple-user-task';
 import * as simpleBusinessRuleTaskExternal from './bpmn/simple-business-rule-task-external';
@@ -28,6 +29,8 @@ export interface MockJob {
    * Independent from the configurable worker-routing `type` value above.
    */
   elementType: string;
+  /** Event type of the execution listener whose job this is; absent for the job of a task. */
+  listenerEventType?: 'end';
   processInstanceKey: string;
   processDefinitionKey: string;
   state: 'active' | 'activatable' | 'activated' | 'completed' | 'failed' | 'canceled';
@@ -226,6 +229,7 @@ const processInstanceOnlyJobs: MockJob[] = paginationTaskNumbers.map((taskNumber
 export const jobs: MockJob[] = [
   ...legacyJobs,
   ...(simpleTask.jobs as MockJob[]),
+  ...startListener.jobs,
   ...(showcaseProcess.jobs as MockJob[]),
   ...(simpleUserTask.jobs as MockJob[]),
   ...(simpleBusinessRuleTaskExternal.jobs as MockJob[]),
@@ -236,6 +240,7 @@ export const jobs: MockJob[] = [
 // Failures without an error code reported for the jobs above, newest first per job
 export const jobFailures: MockJobFailure[] = [
   ...(simpleTask.jobFailures as MockJobFailure[]),
+  ...startListener.jobFailures,
   ...(showcaseProcess.jobFailures as MockJobFailure[]),
 ];
 

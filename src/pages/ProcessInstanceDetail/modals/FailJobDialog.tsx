@@ -15,7 +15,7 @@ import {
 import { JsonEditor } from '@components/JsonEditor';
 import { parseIsoBackoff } from '@base/utils/isoDuration';
 import type { Job } from '../types';
-import { MAX_INT32, apiErrorMessage } from '../utils';
+import { MAX_INT32, apiErrorMessage, isListenerJob } from '../utils';
 
 export interface FailJobRequest {
   errorCode?: string;
@@ -83,9 +83,12 @@ export const FailJobDialog = ({
     validateJson(value);
   }, [validateJson]);
 
+  // A listener job cannot throw a BPMN error (the engine answers 400), so its
+  // dialog offers no error code and always fails it with a retry spent.
+  const isListener = isListenerJob(job);
   // The engine ignores retries and backoff of a BPMN error, so they are
   // offered, validated and sent only for a failure without an error code.
-  const isBpmnError = errorCode.trim() !== '';
+  const isBpmnError = !isListener && errorCode.trim() !== '';
   const retriesLeft = retriesInput.trim() === '' ? undefined : parseRetriesLeft(retriesInput);
   const retriesInvalid = !isBpmnError && retriesInput.trim() !== '' && retriesLeft === undefined;
   const backoffInvalid = !isBpmnError && backoffInput.trim() !== '' && parseIsoBackoff(backoffInput) === undefined;
@@ -96,7 +99,7 @@ export const FailJobDialog = ({
     setLoading(true);
     setError(null);
     try {
-      const trimmedCode = errorCode.trim();
+      const trimmedCode = isListener ? '' : errorCode.trim();
       let parsedVariables: Record<string, unknown> | undefined;
       if (variables !== '') {
         const parsed = JSON.parse(variables) as Record<string, unknown>;
@@ -119,7 +122,7 @@ export const FailJobDialog = ({
       setLoading(false);
     }
   }, [
-    errorCode, message, job.key, onFail, validateJson, variables,
+    errorCode, isListener, message, job.key, onFail, validateJson, variables,
     retriesInvalid, backoffInvalid, retriesLeft, backoffInput, t,
   ]);
 
@@ -151,15 +154,21 @@ export const FailJobDialog = ({
         )}
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 0.5 }}>
-          <TextField
-            label={t('processInstance:dialogs.failJob.errorCode')}
-            value={errorCode}
-            onChange={(e) => setErrorCode(e.target.value)}
-            placeholder={t('processInstance:dialogs.failJob.errorCodePlaceholder')}
-            fullWidth
-            autoFocus
-            size="small"
-          />
+          {isListener ? (
+            <Alert severity="info" data-testid="fail-job-listener-note">
+              {t('processInstance:dialogs.failJob.listenerNote')}
+            </Alert>
+          ) : (
+            <TextField
+              label={t('processInstance:dialogs.failJob.errorCode')}
+              value={errorCode}
+              onChange={(e) => setErrorCode(e.target.value)}
+              placeholder={t('processInstance:dialogs.failJob.errorCodePlaceholder')}
+              fullWidth
+              autoFocus
+              size="small"
+            />
+          )}
 
           <TextField
             label={t('processInstance:dialogs.failJob.message')}
@@ -170,6 +179,7 @@ export const FailJobDialog = ({
             fullWidth
             multiline
             minRows={2}
+            autoFocus={isListener}
             size="small"
           />
 

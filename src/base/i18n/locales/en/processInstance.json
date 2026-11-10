@@ -134,12 +134,21 @@
     "jobResolvedMeanwhile": "Job handed back to its workers: somebody else resolved its incident meanwhile.",
     "jobResolvedMeanwhileWithoutRetries": "Somebody else resolved the incident of this job meanwhile, so the job is back with its workers, but without the retries chosen here. Its row shows the retries it has now; use Update Retries to change them. The engine said: {{reason}}"
   },
+  "listenerJob": {
+    "chip": {
+      "end": "End listener"
+    },
+    "tooltip": {
+      "end": "Job of the start event's end execution listener. The token leaves the start event when this job is completed."
+    }
+  },
   "dialogs": {
     "completeJob": {
       "title": "Complete Job",
       "description": "Complete this job with optional variables.",
       "variables": "Variables (JSON)",
-      "variablesHelp": "Enter variables as JSON object"
+      "variablesHelp": "Enter variables as JSON object",
+      "listenerNote": "This is the job of an execution listener. Completing it lets the token leave the start event, and it takes no variables: the engine would keep them on the job only. To change the instance's variables, edit them on the Variables tab before completing the job."
     },
     "completeFormJob": {
       "title": "Complete Form",
@@ -187,6 +196,7 @@
     },
     "failJob": {
       "title": "Fail Job",
+      "listenerNote": "This is the job of an execution listener, which cannot throw a BPMN error. The failure therefore takes no error code: it spends one attempt, and once no retries remain an incident stands on the start event.",
       "errorCode": "Error Code",
       "variables": "Variables",
       "errorCodePlaceholder": "e.g. ORDER_FAILED",

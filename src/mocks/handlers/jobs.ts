@@ -65,6 +65,7 @@ export const jobHandlers = [
         elementName: job.elementName,
         type: job.type,
         elementType: job.elementType,
+        listenerEventType: job.listenerEventType,
         processInstanceKey: job.processInstanceKey,
         processDefinitionKey: job.processDefinitionKey,
         state: job.state,
@@ -199,6 +200,20 @@ export const jobHandlers = [
             ),
           },
           { status: 409 }
+        );
+      }
+
+      // Like the engine, a listener job refuses a BPMN error once the job is
+      // known to wait, and stays as it was.
+      if (typeof body.errorCode === 'string' && body.errorCode !== '' && job.listenerEventType !== undefined) {
+        return HttpResponse.json(
+          {
+            code: 'BAD_REQUEST',
+            message:
+              `job ${String(jobKey)} is the job of an execution listener, and a listener job cannot throw ` +
+              'a BPMN error: fail it without an error code',
+          },
+          { status: 400 }
         );
       }
 

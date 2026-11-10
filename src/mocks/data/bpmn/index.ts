@@ -46,6 +46,7 @@ import * as simpleLinkEventBroken from './simple-link-event-broken';
 import * as simpleLinkEventOutputVariables from './simple-link-event-output-variables';
 import * as simpleLinkEvents from './simple-link-events';
 import * as simpleTask from './simple-task';
+import * as startListener from './start-listener';
 import * as simpleTaskWithType from './simple-task-with-type';
 import * as simpleUserTask from './simple-user-task';
 import * as simpleTaskNoOutputMapping from './simple_task-no_output_mapping';
@@ -109,6 +110,7 @@ export {
   simpleLinkEventOutputVariables,
   simpleLinkEvents,
   simpleTask,
+  startListener,
   simpleTaskWithType,
   simpleUserTask,
   simpleTaskNoOutputMapping,
@@ -171,6 +173,7 @@ export const allDefinitions: MockProcessDefinition[] = [
   simpleLinkEventOutputVariables.definition,
   simpleLinkEvents.definition,
   simpleTask.definition,
+  startListener.definition,
   simpleTaskWithType.definition,
   simpleUserTask.definition,
   simpleTaskNoOutputMapping.definition,
@@ -233,6 +236,7 @@ export const allInstances: MockProcessInstance[] = [
   ...simpleLinkEventOutputVariables.instances,
   ...simpleLinkEvents.instances,
   ...simpleTask.instances,
+  ...startListener.instances,
   ...simpleTaskWithType.instances,
   ...simpleUserTask.instances,
   ...simpleTaskNoOutputMapping.instances,
@@ -296,6 +300,7 @@ export const allIncidents: MockIncident[] = [
   ...simpleLinkEventOutputVariables.incidents,
   ...simpleLinkEvents.incidents,
   ...simpleTask.incidents,
+  ...startListener.incidents,
   ...simpleTaskWithType.incidents,
   ...simpleUserTask.incidents,
   ...simpleTaskNoOutputMapping.incidents,

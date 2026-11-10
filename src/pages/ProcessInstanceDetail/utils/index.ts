@@ -14,3 +14,4 @@ export {
   type UpdateJobRetriesRequest,
 } from './jobRetries';
 export { collectNodes, compareByProcessType } from './instanceTree';
+export { isListenerJob } from './listenerJobs';

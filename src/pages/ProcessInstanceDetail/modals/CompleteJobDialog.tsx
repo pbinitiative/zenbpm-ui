@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { JsonEditor } from '@components/JsonEditor';
 import type { Job } from '../types';
+import { isListenerJob } from '../utils';
 
 export interface CompleteJobDialogProps {
   open: boolean;
@@ -31,6 +32,7 @@ export const CompleteJobDialog = ({
   const [variables, setVariables] = useState('{}');
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const isListener = isListenerJob(job);
 
   const validateJson = useCallback((value: string) => {
     try {
@@ -49,25 +51,28 @@ export const CompleteJobDialog = ({
   }, [validateJson]);
 
   const handleComplete = useCallback(async () => {
-    if (!validateJson(variables)) return;
+    // A listener job's completion changes no variable, so none are offered or sent.
+    if (!isListener && !validateJson(variables)) return;
 
     setLoading(true);
     try {
-      const parsedVariables = JSON.parse(variables) as Record<string, unknown>;
+      const parsedVariables = isListener ? {} : (JSON.parse(variables) as Record<string, unknown>);
       await onComplete(job.key, parsedVariables);
     } finally {
       setLoading(false);
     }
-  }, [job.key, onComplete, validateJson, variables]);
+  }, [isListener, job.key, onComplete, validateJson, variables]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{t('processInstance:dialogs.completeJob.title')}</DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 1 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {t('processInstance:dialogs.completeJob.description')}
-          </Typography>
+          {!isListener && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {t('processInstance:dialogs.completeJob.description')}
+            </Typography>
+          )}
 
           <Box sx={{ mb: 2 }}>
             <Typography variant="caption" color="text.secondary">
@@ -88,15 +93,21 @@ export const CompleteJobDialog = ({
             <Typography variant="body2">{job.elementName || job.elementId}</Typography>
           </Box>
 
-          <JsonEditor
-            label={t('processInstance:dialogs.completeJob.variables')}
-            value={variables}
-            onChange={handleVariablesChange}
-            error={!!jsonError}
-            errorMessage={jsonError ?? undefined}
-            helperText={t('processInstance:dialogs.completeJob.variablesHelp')}
-            height={180}
-          />
+          {isListener ? (
+            <Alert severity="info" data-testid="complete-job-listener-note">
+              {t('processInstance:dialogs.completeJob.listenerNote')}
+            </Alert>
+          ) : (
+            <JsonEditor
+              label={t('processInstance:dialogs.completeJob.variables')}
+              value={variables}
+              onChange={handleVariablesChange}
+              error={!!jsonError}
+              errorMessage={jsonError ?? undefined}
+              helperText={t('processInstance:dialogs.completeJob.variablesHelp')}
+              height={180}
+            />
+          )}
 
           {job.lastFailureMessage && (
             <Alert severity="warning" sx={{ mt: 2 }}>
