@@ -15,8 +15,9 @@ test('a start event listener holds the token until the UI completes its job', as
   await createProcess(page);
   await appendElement(page, 'Start', 'Append end event', 'End');
   await selectShape(page, 'Start');
-  await openGroup(page, 'zenbpm-executionListener');
-  await fillEntry(page, 'zenbpm-executionListener-type', LISTENER_TYPE);
+  const group = await openGroup(page, 'zenbpm-executionListener');
+  await group.getByTitle('Create new list item').click();
+  await fillEntry(page, 'Start-zenbpm-executionListener-0-type', LISTENER_TYPE);
   const xml = await downloadBpmnXml(page);
   const deployment = await deployProcess(page);
   await expectDeploymentSaved(page, deployment, xml);

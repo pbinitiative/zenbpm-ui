@@ -51,23 +51,36 @@ and the variables sent with its completion stay on the job.
 
 No seeded data. Open **Designer → New process**.
 
-1. Select the start event. The properties panel shows the group **Execution listener** with
-   one field, **Type**, and no Retries.
-2. Enter `order-started` in Type. **Retries** appears. Enter `3`.
-3. Open the XML view or download the BPMN. The start event carries
-   `<zenbpm:executionListeners><zenbpm:executionListener eventType="end" type="order-started" retries="3" /></zenbpm:executionListeners>`.
-4. Enter `=jobType` in Type: the field shows *Enter the job type as a literal: a listener takes
+1. Select the start event. The properties panel shows the group **Execution listener**, empty,
+   with a **Create** button.
+2. Click **Create**. A listener appears with **Event type** *End*, an empty **Type** flagged
+   *Enter the job type of the listener*, and **Retries**. The **Create** button is gone: the
+   engine runs one listener on a start event.
+3. Enter `order-started` in Type and `3` in Retries. The list item is now labelled
+   `order-started`.
+4. Open the XML view or download the BPMN. The start event carries
+   `<zenbpm:executionListeners><zenbpm:executionListener eventType="end" retries="3" type="order-started" /></zenbpm:executionListeners>`.
+5. Enter `=jobType` in Type: the field shows *Enter the job type as a literal: a listener takes
    no FEEL expression*. Deploy: the deployment fails with *invalid execution listener
    eventType="end" on start event id="…": its type "=jobType" is an expression: a listener's
    type must be a literal*.
-5. Enter `-1`, `1.5` and `2147483648` in Retries, one after another: each shows *Enter a whole
-   number from 0 to 2147483647*. `2147483647` shows no error.
-6. Set Type back to `order-started` and deploy. The deployment succeeds.
-7. Clear Type. The listener disappears from the XML together with its retries, and Retries is
-   no longer shown. Undo (Ctrl+Z) brings it back.
-8. Add an expanded sub-process with a start event inside, and an event sub-process. Select their
+6. Enter `-1`, `1.5` and `2147483648` in Retries, one after another: each shows *Enter a whole
+   number from 0 to 2147483647*. `2147483647` shows no error. Set Retries back to `3`.
+7. Clear Type. The listener stays, with its Retries `3`, and Type is flagged again. Enter
+   `order-started` again and deploy. The deployment succeeds.
+8. Hover the list item and click its delete button. The listener disappears from the XML, and
+   **Create** is offered again. Undo (Ctrl+Z) brings it back.
+9. Add an expanded sub-process with a start event inside, and an event sub-process. Select their
    start events, then a task and the end event: none shows the **Execution listener** group,
    because the engine refuses a listener there at deployment.
+10. Drag the top-level start event with its listener into the expanded sub-process and select
+    it. The group is still shown, without **Create**; **Event type** says *Remove this listener:
+    the engine runs a listener only on a start event directly under the process*. Delete the
+    listener, and the group disappears. Undo both steps.
+11. In the XML view, give the listener a second sibling
+    `<zenbpm:executionListener eventType="start" type="audit" />`, switch back to the diagram and
+    select the start event. Both listeners are listed and say *Remove all listeners but one*; the second one's Event type reads `start`.
+    Delete it: the first one's error goes away.
 
 ### L2. A listener job waits, and completing it moves the token on
 
@@ -75,11 +88,14 @@ Open the L2 link.
 
 1. The diagram and the History tab show *Order received* active; nothing behind it has run.
 2. The Jobs tab lists one job, type `listener-demo-started`, with an **End listener** chip below
-   the element. Hovering the chip explains that the token leaves the start event when this job
-   is completed.
+   the element. Hovering the chip explains that the token leaves the element when this job is
+   completed.
 3. Click **Complete**. The dialog shows a note instead of the variables editor: the job takes no
    variables, and the instance's variables are changed on the Variables tab before completing.
-4. Complete it. The success message appears. After the refresh the listener job is
+   Close the dialog.
+4. Open the History tab. The row of *Order received* has a row menu (⋮) with **View related
+   job**, which leads back to the listener job on the Jobs tab. Click **Complete** again.
+5. Complete it. The success message appears. After the refresh the listener job is
    *Completed*, *Order received* is completed, and a new job `listener-demo-ship` waits at
    *Ship order*, without a chip.
 
