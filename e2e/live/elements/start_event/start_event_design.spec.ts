@@ -9,7 +9,7 @@ import {
     appendElement,
     renameSelectedElement,
 } from '../../helpers/processDesigner';
-import {openGroup, fillEntry, expectPropertyGroups} from '../../helpers/propertiesPanel';
+import {openGroup, fillEntry, entry, expectPropertyGroups} from '../../helpers/propertiesPanel';
 import {
     COMMON_PROPERTY_GROUPS,
     editMetadata,
@@ -20,13 +20,19 @@ import {
 } from '../../helpers/commonProperties';
 import {editMessageReference, editSignalReference, editTimer} from '../../helpers/eventProperties';
 import {expectXmlElements, expectEventDefinitions, expectValidBpmnXml} from '../../helpers/bpmnAssertions';
-import {deployProcess, expectDeploymentSaved} from '../../helpers/processDeployment';
+import {deployProcess, expectDeploymentRejected, expectDeploymentSaved} from '../../helpers/processDeployment';
 
 const ELEMENT_ID = 'Element_under_test';
+// Every start event of this spec sits directly under the process, the one
+// place the engine runs an execution listener, so each offers the group.
 const PROPERTY_GROUPS = [
     ...COMMON_PROPERTY_GROUPS,
     'zenbpm-ioMapping-outputs',
+    'zenbpm-executionListener',
 ];
+const LISTENER_GROUP = 'zenbpm-executionListener';
+const LISTENER_TYPE = 'zenbpm-executionListener-type';
+const LISTENER_RETRIES = 'zenbpm-executionListener-retries';
 
 test.describe('Start event', () => {
     test.beforeEach(async ({page}) => {
@@ -270,6 +276,72 @@ test.describe('Signal start event', () => {
         await expectEventDefinitions(page, xml, id, ['signalEventDefinition']);
     }
 });
+
+test.describe('Start event with an execution listener', () => {
+    test.beforeEach(async ({page}) => {
+        await createStartDiagram(page);
+        await selectShape(page, ELEMENT_ID);
+    });
+
+    test('designs the element and exports its end listener', async ({page}) => {
+        await editListener(page, 'order-started', '3');
+        const xml = await downloadBpmnXml(page);
+        await expectDesign(page, xml, ELEMENT_ID);
+        await expectListenerXml(page, xml, ELEMENT_ID, {type: 'order-started', retries: '3'});
+    });
+
+    test('shows, edits and persists properties through XML import', async ({page}) => {
+        const editedId = await editStartEventProperties(page);
+        await editListener(page, 'order-started', '3');
+        await expectPropertyGroups(page, PROPERTY_GROUPS);
+        const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
+        expectMetadataXml(xml);
+        await expectDesign(page, xml, editedId);
+        await expectListenerXml(page, xml, editedId, {type: 'order-started', retries: '3'});
+    });
+
+    test('removes the listener when its type is cleared', async ({page}) => {
+        await editListener(page, 'order-started', '3');
+        await fillEntry(page, LISTENER_TYPE, '');
+        await expect(entry(page, LISTENER_RETRIES)).toHaveCount(0);
+        const xml = await downloadBpmnXml(page);
+        await expectXmlElements(page, xml, `[id="${ELEMENT_ID}"] executionListeners`, []);
+    });
+
+    test('deploys the designed process and reads back its BPMN XML', async ({page}) => {
+        await editListener(page, 'order-started', '3');
+        const xml = await downloadBpmnXml(page);
+        await expectDesign(page, xml, ELEMENT_ID);
+        const response = await deployProcess(page);
+        await expectDeploymentSaved(page, response, xml);
+    });
+
+    test('flags a FEEL type, which the engine refuses at deployment', async ({page}) => {
+        await editListener(page, '=jobType');
+        await expect(entry(page, LISTENER_TYPE).locator('.bio-properties-panel-error')).toContainText('literal');
+        const response = await deployProcess(page);
+        await expectDeploymentRejected(page, response, "a listener's type must be a literal");
+    });
+
+    async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
+        await expectStartEventXml(page, xml, id);
+        await expectEventDefinitions(page, xml, id, []);
+    }
+});
+
+async function editListener(page: Page, type: string, retries?: string): Promise<void> {
+    await openGroup(page, LISTENER_GROUP);
+    await fillEntry(page, LISTENER_TYPE, type);
+    // Retries are offered once the listener exists.
+    if (retries !== undefined) await fillEntry(page, LISTENER_RETRIES, retries);
+}
+
+async function expectListenerXml(page: Page, xml: string, id: string, expected: {type: string; retries: string}): Promise<void> {
+    await expectXmlElements(page, xml, `[id="${id}"] executionListeners > executionListener`, [{
+        name: 'executionListener',
+        attributes: {eventType: 'end', type: expected.type, retries: expected.retries},
+    }]);
+}
 
 async function createStartDiagram(page: Page): Promise<void> {
     await createProcess(page);

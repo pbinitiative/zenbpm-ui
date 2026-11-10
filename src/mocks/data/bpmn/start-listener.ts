@@ -1,7 +1,8 @@
 // Start Listener - mock data
 // BPMN Flow: OrderReceived (startEvent, end execution listener) -> ShipOrder (serviceTask) -> OrderShipped
 // While the listener's job waits, the token stays at the start event: it reads active in
-// the history, and nothing behind the start event has run yet.
+// the history, and nothing behind the start event has run yet. As in the engine, the
+// instance stays active when the listener's job fails with an incident.
 import type { MockProcessDefinition, MockProcessInstance, MockIncident } from '../types';
 import { addMinutes, hoursAgo } from '../types';
 import type { MockJob, MockJobFailure } from '../jobs';
@@ -28,7 +29,6 @@ export const definition: MockProcessDefinition = {
 const createWaitingInstance = (
   key: string,
   createdAt: string,
-  state: 'active' | 'failed',
   variables: Record<string, unknown>,
   partition: number
 ): MockProcessInstance => ({
@@ -36,7 +36,7 @@ const createWaitingInstance = (
   processDefinitionKey: START_LISTENER_PROCESS_DEFINITION_KEY,
   bpmnProcessId: 'start-listener',
   createdAt,
-  state,
+  state: 'active',
   processType: 'default' as const,
   variables,
   activeElementInstances: [{ key: `${key}001`, elementId: 'OrderReceived', elementType: 'startEvent' }],
@@ -45,7 +45,7 @@ const createWaitingInstance = (
       key: `${key}001`,
       elementId: 'OrderReceived',
       elementType: 'startEvent',
-      state,
+      state: 'active',
       startedAt: createdAt,
     },
   ],
@@ -56,8 +56,8 @@ const waitingCreatedAt = hoursAgo(1);
 const failedCreatedAt = hoursAgo(3);
 
 export const instances: MockProcessInstance[] = [
-  createWaitingInstance(START_LISTENER_WAITING_INSTANCE_KEY, waitingCreatedAt, 'active', { orderId: 'ORD-7001' }, 1),
-  createWaitingInstance(START_LISTENER_FAILED_INSTANCE_KEY, failedCreatedAt, 'failed', { orderId: 'ORD-7002' }, 2),
+  createWaitingInstance(START_LISTENER_WAITING_INSTANCE_KEY, waitingCreatedAt, { orderId: 'ORD-7001' }, 1),
+  createWaitingInstance(START_LISTENER_FAILED_INSTANCE_KEY, failedCreatedAt, { orderId: 'ORD-7002' }, 2),
 ];
 
 export const incidents: MockIncident[] = [
