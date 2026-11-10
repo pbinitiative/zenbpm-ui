@@ -60,7 +60,7 @@ const normalizeElementType = (elementType: string) =>
     .replaceAll('-', '_')
     .toUpperCase();
 
-const canLinkToJob = (row: FlowElementHistory) =>
+const isJobElementType = (row: FlowElementHistory) =>
   JOB_ELEMENT_TYPES.has(normalizeElementType(row.elementType));
 const canLinkToEvent = (row: FlowElementHistory) =>
   EVENT_ELEMENT_TYPES.has(normalizeElementType(row.elementType));
@@ -86,6 +86,23 @@ export const HistoryTab = ({
         : history.filter((h) => h.elementType !== 'SEQUENCE_FLOW'),
     [showSequenceFlows],
   );
+  // An element of another type has a job too when it carries an execution
+  // listener, such as a start event held by its listener's job. Such a row
+  // links to the job when the job is among the loaded ones, the current page
+  // of the Jobs tab, so that no row offers a job that does not exist.
+  const loadedJobElementInstanceKeys = useMemo(
+    () => new Set(
+      instanceTree
+        ? collectNodes(instanceTree).flatMap((node) => node.jobs.map((job) => job.elementInstanceKey))
+        : []
+    ),
+    [instanceTree],
+  );
+  const canLinkToJob = useCallback(
+    (row: FlowElementHistory) => isJobElementType(row) || loadedJobElementInstanceKeys.has(row.key),
+    [loadedJobElementInstanceKeys],
+  );
+
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [menuHistory, setMenuHistory] = useState<FlowElementHistory | null>(null);
 
@@ -246,7 +263,7 @@ export const HistoryTab = ({
         },
       },
     ],
-    [t, onElementIdClick, handleMenuOpen, openInputOutputDialog]
+    [t, onElementIdClick, handleMenuOpen, openInputOutputDialog, canLinkToJob]
   );
 
   const toolbar = (

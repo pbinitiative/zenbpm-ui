@@ -21,7 +21,7 @@ test.describe('Process Instance Jobs - Start event listener', () => {
     const chip = jobRow(page, START_LISTENER_WAITING_JOB_KEY).getByTestId('job-listener-chip');
     await expect(chip).toHaveText('End listener');
     await chip.hover();
-    await expect(page.getByRole('tooltip')).toContainText('The token leaves the start event when this job is completed');
+    await expect(page.getByRole('tooltip')).toContainText('The token leaves the element when this job is completed');
 
     await openJobsTab(page, SIMPLE_TASK_ACTIVE_INSTANCE_KEY);
     await expect(jobRow(page, SIMPLE_TASK_ACTIVE_JOB_KEY)).toHaveCount(1);
@@ -43,6 +43,35 @@ test.describe('Process Instance Jobs - Start event listener', () => {
 
     expect((await request).postDataJSON()).toEqual({ variables: {} });
     await expect(dialog).not.toBeVisible();
+  });
+
+  test('opens no form for a ZEN_FORM the listener job inherits from its instance', async ({ page }) => {
+    // The waiting listener job carries the instance's `ZEN_FORM`, which is no form schema.
+    await openJobsTab(page, START_LISTENER_WAITING_INSTANCE_KEY);
+    await jobRow(page, START_LISTENER_WAITING_JOB_KEY).getByRole('button', { name: 'Complete' }).click();
+    const dialog = page.getByRole('dialog');
+
+    await expect(dialog.getByRole('heading', { name: 'Complete Job' })).toBeVisible();
+    await expect(dialog.getByTestId('complete-job-listener-note')).toBeVisible();
+    await expect(dialog.getByText('Complete Form')).toHaveCount(0);
+    await expect(dialog.getByText('does not contain a valid form schema')).toHaveCount(0);
+    await expect(dialog.getByText('Variables (JSON)')).toHaveCount(0);
+
+    const request = page.waitForRequest(
+      (r) => r.method() === 'POST' && r.url().includes(`/jobs/${START_LISTENER_WAITING_JOB_KEY}/complete`)
+    );
+    await dialog.getByRole('button', { name: 'Complete' }).click();
+    expect((await request).postDataJSON()).toEqual({ variables: {} });
+  });
+
+  test('links the start event in the history to its listener job', async ({ page }) => {
+    await page.goto(`/process-instances/${START_LISTENER_WAITING_INSTANCE_KEY}?tab=history`);
+    const historyRow = page.getByTestId('history-table').locator('tbody tr').filter({ hasText: 'OrderReceived' });
+    await historyRow.getByRole('button', { name: 'Row actions' }).click();
+    await page.getByRole('menuitem', { name: 'View related job' }).click();
+
+    await expect(page.getByTestId('jobs-table')).toBeVisible();
+    await expect(jobRow(page, START_LISTENER_WAITING_JOB_KEY)).toHaveCount(1);
   });
 
   test('still offers variables when completing the job of a task', async ({ page }) => {

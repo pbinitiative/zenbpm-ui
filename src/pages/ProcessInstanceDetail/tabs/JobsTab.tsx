@@ -56,6 +56,7 @@ import {
   isIncidentOpen,
   isBadRequest,
   isResolutionRefused,
+  isListenerJob,
   isWaitingOutBackoff,
   type JobRetriesRequest,
   type UpdateJobRetriesRequest,
@@ -345,7 +346,7 @@ export const JobsTab = ({
                 {row.elementId}
               </Typography>
             )}
-            {row.listenerEventType && (
+            {isListenerJob(row) && (
               <Tooltip title={t(`processInstance:listenerJob.tooltip.${row.listenerEventType}`)}>
                 <Chip
                   label={t(`processInstance:listenerJob.chip.${row.listenerEventType}`)}

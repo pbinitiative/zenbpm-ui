@@ -84,11 +84,12 @@ export const FailJobDialog = ({
   }, [validateJson]);
 
   // A listener job cannot throw a BPMN error (the engine answers 400), so its
-  // dialog offers no error code and always fails it with a retry spent.
+  // dialog offers no error code field, and `errorCode` stays empty: the job
+  // always fails with a retry spent.
   const isListener = isListenerJob(job);
   // The engine ignores retries and backoff of a BPMN error, so they are
   // offered, validated and sent only for a failure without an error code.
-  const isBpmnError = !isListener && errorCode.trim() !== '';
+  const isBpmnError = errorCode.trim() !== '';
   const retriesLeft = retriesInput.trim() === '' ? undefined : parseRetriesLeft(retriesInput);
   const retriesInvalid = !isBpmnError && retriesInput.trim() !== '' && retriesLeft === undefined;
   const backoffInvalid = !isBpmnError && backoffInput.trim() !== '' && parseIsoBackoff(backoffInput) === undefined;
@@ -99,7 +100,7 @@ export const FailJobDialog = ({
     setLoading(true);
     setError(null);
     try {
-      const trimmedCode = isListener ? '' : errorCode.trim();
+      const trimmedCode = errorCode.trim();
       let parsedVariables: Record<string, unknown> | undefined;
       if (variables !== '') {
         const parsed = JSON.parse(variables) as Record<string, unknown>;
@@ -122,7 +123,7 @@ export const FailJobDialog = ({
       setLoading(false);
     }
   }, [
-    errorCode, isListener, message, job.key, onFail, validateJson, variables,
+    errorCode, message, job.key, onFail, validateJson, variables,
     retriesInvalid, backoffInvalid, retriesLeft, backoffInput, t,
   ]);
 

@@ -51,17 +51,17 @@ export const CompleteJobDialog = ({
   }, [validateJson]);
 
   const handleComplete = useCallback(async () => {
-    // A listener job's completion changes no variable, so none are offered or sent.
-    if (!isListener && !validateJson(variables)) return;
+    if (!validateJson(variables)) return;
 
     setLoading(true);
     try {
-      const parsedVariables = isListener ? {} : (JSON.parse(variables) as Record<string, unknown>);
+      // A listener job's dialog offers no variables editor, so `variables` keeps its `{}`.
+      const parsedVariables = JSON.parse(variables) as Record<string, unknown>;
       await onComplete(job.key, parsedVariables);
     } finally {
       setLoading(false);
     }
-  }, [isListener, job.key, onComplete, validateJson, variables]);
+  }, [job.key, onComplete, validateJson, variables]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>

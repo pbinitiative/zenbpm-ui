@@ -55,8 +55,13 @@ const createWaitingInstance = (
 const waitingCreatedAt = hoursAgo(1);
 const failedCreatedAt = hoursAgo(3);
 
+// The waiting instance was started with a `ZEN_FORM` variable that is no form
+// schema. Its listener job inherits it like every instance variable, and the
+// UI must not take it for the form of a user task.
+const waitingVariables = { orderId: 'ORD-7001', ZEN_FORM: '{not a form schema' };
+
 export const instances: MockProcessInstance[] = [
-  createWaitingInstance(START_LISTENER_WAITING_INSTANCE_KEY, waitingCreatedAt, { orderId: 'ORD-7001' }, 1),
+  createWaitingInstance(START_LISTENER_WAITING_INSTANCE_KEY, waitingCreatedAt, waitingVariables, 1),
   createWaitingInstance(START_LISTENER_FAILED_INSTANCE_KEY, failedCreatedAt, { orderId: 'ORD-7002' }, 2),
 ];
 
@@ -89,7 +94,7 @@ export const jobs: MockJob[] = [
     processDefinitionKey: START_LISTENER_PROCESS_DEFINITION_KEY,
     state: 'active',
     createdAt: waitingCreatedAt,
-    inputVariables: { orderId: 'ORD-7001' },
+    inputVariables: { ...waitingVariables },
     definitionRetries: 3,
     retries: 3,
   },
