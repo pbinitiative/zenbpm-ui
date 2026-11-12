@@ -32,7 +32,6 @@ export const CompleteJobDialog = ({
   const [variables, setVariables] = useState('{}');
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const isListener = isListenerJob(job);
 
   const validateJson = useCallback((value: string) => {
     try {
@@ -55,7 +54,6 @@ export const CompleteJobDialog = ({
 
     setLoading(true);
     try {
-      // A listener job's dialog offers no variables editor, so `variables` keeps its `{}`.
       const parsedVariables = JSON.parse(variables) as Record<string, unknown>;
       await onComplete(job.key, parsedVariables);
     } finally {
@@ -68,11 +66,9 @@ export const CompleteJobDialog = ({
       <DialogTitle>{t('processInstance:dialogs.completeJob.title')}</DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 1 }}>
-          {!isListener && (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {t('processInstance:dialogs.completeJob.description')}
-            </Typography>
-          )}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {t('processInstance:dialogs.completeJob.description')}
+          </Typography>
 
           <Box sx={{ mb: 2 }}>
             <Typography variant="caption" color="text.secondary">
@@ -93,21 +89,23 @@ export const CompleteJobDialog = ({
             <Typography variant="body2">{job.elementName || job.elementId}</Typography>
           </Box>
 
-          {isListener ? (
-            <Alert severity="info" data-testid="complete-job-listener-note">
-              {t('processInstance:dialogs.completeJob.listenerNote')}
+          {/* The engine keeps what a listener's job is completed with inside the
+              listener's element, so the note says how far the variables reach. */}
+          {isListenerJob(job) && (
+            <Alert severity="info" data-testid="complete-job-listener-note" sx={{ mb: 2 }}>
+              {t(`processInstance:dialogs.completeJob.listenerNote.${job.listenerEventType}`)}
             </Alert>
-          ) : (
-            <JsonEditor
-              label={t('processInstance:dialogs.completeJob.variables')}
-              value={variables}
-              onChange={handleVariablesChange}
-              error={!!jsonError}
-              errorMessage={jsonError ?? undefined}
-              helperText={t('processInstance:dialogs.completeJob.variablesHelp')}
-              height={180}
-            />
           )}
+
+          <JsonEditor
+            label={t('processInstance:dialogs.completeJob.variables')}
+            value={variables}
+            onChange={handleVariablesChange}
+            error={!!jsonError}
+            errorMessage={jsonError ?? undefined}
+            helperText={t('processInstance:dialogs.completeJob.variablesHelp')}
+            height={180}
+          />
 
           {job.lastFailureMessage && (
             <Alert severity="warning" sx={{ mt: 2 }}>

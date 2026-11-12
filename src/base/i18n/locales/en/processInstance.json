@@ -150,7 +150,10 @@
       "description": "Complete this job with optional variables.",
       "variables": "Variables (JSON)",
       "variablesHelp": "Enter variables as JSON object",
-      "listenerNote": "This is the job of an execution listener. Completing it lets the token leave its element, and it takes no variables: the engine would keep them on the job only. To change the instance's variables, edit them on the Variables tab before completing the job."
+      "listenerNote": {
+        "start": "This is the job of a start execution listener. Its variables stay local to the element: the later start listeners and the element's own job receive them, and they reach the instance only where an output mapping of the element names them.",
+        "end": "This is the job of an end execution listener. Its variables reach only the later end listeners of the element and never the instance. To change the instance's variables, edit them on the Variables tab before completing the job."
+      }
     },
     "completeFormJob": {
       "title": "Complete Form",

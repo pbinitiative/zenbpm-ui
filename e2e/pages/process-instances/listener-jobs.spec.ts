@@ -9,7 +9,10 @@ import {
   START_LISTENER_FAILED_JOB_KEY,
   START_LISTENER_WAITING_INSTANCE_KEY,
   START_LISTENER_WAITING_JOB_KEY,
+  TASK_LISTENERS_ACTIVE_END_LISTENER_JOB_KEY,
+  TASK_LISTENERS_ACTIVE_START_LISTENER_JOB_KEY,
   TASK_LISTENERS_END_LISTENER_INSTANCE_KEY,
+  TASK_LISTENERS_START_LISTENER_INSTANCE_KEY,
   TASK_LISTENERS_USER_TASK_INSTANCE_KEY,
   TASK_LISTENERS_USER_TASK_LISTENER_INSTANCE_KEY,
   TASK_LISTENERS_USER_TASK_LISTENER_JOB_KEY,
@@ -78,13 +81,51 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await expect(page.getByRole('menuitem', { name: /assign/i })).toHaveCount(0);
   });
 
-  test('completes a listener job without variables and says where to change them', async ({ page }) => {
+  test('completes a start listener job with the variables entered and says that they stay in its element', async ({ page }) => {
+    await openJobsTab(page, TASK_LISTENERS_START_LISTENER_INSTANCE_KEY);
+    await jobRow(page, TASK_LISTENERS_ACTIVE_START_LISTENER_JOB_KEY).getByRole('button', { name: 'Complete' }).click();
+    const dialog = page.getByRole('dialog');
+
+    await expect(dialog.getByTestId('complete-job-listener-note')).toContainText('stay local to the element');
+    await expect(dialog.getByTestId('complete-job-listener-note')).toContainText("the element's own job receive them");
+    await expect(dialog.getByText('Variables (JSON)')).toBeVisible();
+    await enterVariables(page, '{"creditChecked": true}');
+
+    const request = page.waitForRequest(
+      (r) => r.method() === 'POST' && r.url().includes(`/jobs/${TASK_LISTENERS_ACTIVE_START_LISTENER_JOB_KEY}/complete`)
+    );
+    await dialog.getByRole('button', { name: 'Complete' }).click();
+
+    expect((await request).postDataJSON()).toEqual({ variables: { creditChecked: true } });
+    await expect(dialog).not.toBeVisible();
+  });
+
+  test('completes an end listener job with the variables entered and says that they never reach the instance', async ({ page }) => {
+    await openJobsTab(page, TASK_LISTENERS_END_LISTENER_INSTANCE_KEY);
+    await jobRow(page, TASK_LISTENERS_ACTIVE_END_LISTENER_JOB_KEY).getByRole('button', { name: 'Complete' }).click();
+    const dialog = page.getByRole('dialog');
+
+    await expect(dialog.getByTestId('complete-job-listener-note')).toContainText('only the later end listeners of the element and never the instance');
+    await expect(dialog.getByTestId('complete-job-listener-note')).toContainText('Variables tab');
+    await expect(dialog.getByText('Variables (JSON)')).toBeVisible();
+    await enterVariables(page, '{"notified": "by-mail"}');
+
+    const request = page.waitForRequest(
+      (r) => r.method() === 'POST' && r.url().includes(`/jobs/${TASK_LISTENERS_ACTIVE_END_LISTENER_JOB_KEY}/complete`)
+    );
+    await dialog.getByRole('button', { name: 'Complete' }).click();
+
+    expect((await request).postDataJSON()).toEqual({ variables: { notified: 'by-mail' } });
+    await expect(dialog).not.toBeVisible();
+  });
+
+  test('completes the listener job of a start event without variables when none are entered', async ({ page }) => {
     await openJobsTab(page, START_LISTENER_WAITING_INSTANCE_KEY);
     await jobRow(page, START_LISTENER_WAITING_JOB_KEY).getByRole('button', { name: 'Complete' }).click();
     const dialog = page.getByRole('dialog');
 
-    await expect(dialog.getByTestId('complete-job-listener-note')).toContainText('Variables tab');
-    await expect(dialog.getByText('Variables (JSON)')).toHaveCount(0);
+    // a start event takes end listeners only
+    await expect(dialog.getByTestId('complete-job-listener-note')).toContainText('never the instance');
 
     const request = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes(`/jobs/${START_LISTENER_WAITING_JOB_KEY}/complete`)
@@ -105,13 +146,21 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await expect(dialog.getByTestId('complete-job-listener-note')).toBeVisible();
     await expect(dialog.getByText('Complete Form')).toHaveCount(0);
     await expect(dialog.getByText('does not contain a valid form schema')).toHaveCount(0);
-    await expect(dialog.getByText('Variables (JSON)')).toHaveCount(0);
+    await expect(dialog.getByText('Variables (JSON)')).toBeVisible();
+  });
 
-    const request = page.waitForRequest(
-      (r) => r.method() === 'POST' && r.url().includes(`/jobs/${START_LISTENER_WAITING_JOB_KEY}/complete`)
-    );
-    await dialog.getByRole('button', { name: 'Complete' }).click();
-    expect((await request).postDataJSON()).toEqual({ variables: {} });
+  test("opens the form of a user task for the task's own job and not for the job of its start listener", async ({ page }) => {
+    // Both jobs carry the `ZEN_FORM` of the user task's input mapping.
+    await openJobsTab(page, TASK_LISTENERS_USER_TASK_LISTENER_INSTANCE_KEY);
+    await jobRow(page, TASK_LISTENERS_USER_TASK_LISTENER_JOB_KEY).getByRole('button', { name: 'Complete' }).click();
+    const listenerDialog = page.getByRole('dialog');
+    await expect(listenerDialog.getByRole('heading', { name: 'Complete Job' })).toBeVisible();
+    await expect(listenerDialog.getByTestId('complete-job-listener-note')).toContainText('stay local to the element');
+    await expect(listenerDialog.getByText('Complete Form')).toHaveCount(0);
+
+    await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    await jobRow(page, TASK_LISTENERS_USER_TASK_OWN_JOB_KEY).getByRole('button', { name: 'Complete' }).click();
+    await expect(page.getByRole('dialog', { name: /complete form/i })).toBeVisible();
   });
 
   test('links the start event in the history to its listener job', async ({ page }) => {
@@ -124,7 +173,7 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await expect(jobRow(page, START_LISTENER_WAITING_JOB_KEY)).toHaveCount(1);
   });
 
-  test('still offers variables when completing the job of a task', async ({ page }) => {
+  test('offers variables without a note when completing the job of an element', async ({ page }) => {
     await openJobsTab(page, SIMPLE_TASK_BACKOFF_INSTANCE_KEY);
     await jobRow(page, SIMPLE_TASK_BACKOFF_JOB_KEY).getByRole('button', { name: 'Complete' }).click();
     const dialog = page.getByRole('dialog');
@@ -181,6 +230,15 @@ function jobRow(page: Page, jobKey: string) {
 // The jobs of one element share its id and name, so a row is told by its job type.
 function jobRowOfType(page: Page, jobType: string) {
   return page.getByTestId('jobs-table').locator('tbody tr').filter({ has: page.getByText(jobType, { exact: true }) });
+}
+
+// Replaces the content of the variables editor of the open dialog.
+async function enterVariables(page: Page, json: string) {
+  await page.getByRole('dialog').locator('.monaco-editor').first().click();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.press('Delete');
+  // inserted in one piece, so that the editor closes no bracket or quote of its own
+  await page.keyboard.insertText(json);
 }
 
 async function openRowMenu(page: Page, jobKey: string) {
