@@ -23,6 +23,8 @@ import type { DefinitionInfo } from '@components/DiagramDetailLayout';
 import {
   findFocusedEventPage,
   findFocusedJobPage,
+  isFocusedJob,
+  jobFocusRequestKey,
   useInstanceData,
   type EventSubscriptionFilterState,
   type FocusedEventType,
@@ -80,6 +82,10 @@ export const ProcessInstanceDetailPage = () => {
   // Selected element from URL param (for diagram highlight)
   const selectedElement = searchParams.get('elementId') ?? undefined;
   const focusedElementInstanceKey = searchParams.get('focusElementInstanceKey') ?? undefined;
+  // Narrows the focus on the Jobs tab to one job of the element instance. The
+  // element instance alone does not name a job: the jobs of an element's
+  // execution listeners share it with the element's own job.
+  const focusedJobKey = searchParams.get('focusJobKey') ?? undefined;
   const eventTypeParam = searchParams.get('eventType');
   const eventType: FocusedEventType =
     eventTypeParam === 'timers' || eventTypeParam === 'errors' ? eventTypeParam : 'messages';
@@ -99,9 +105,10 @@ export const ProcessInstanceDetailPage = () => {
     jobSearchAbortRef.current?.abort();
     eventSearchAbortRef.current?.abort();
     if (focusedElementInstanceKey) {
-      const requestKey = `${processInstanceKey}:${focusedElementInstanceKey}`;
-      handledJobFocusesRef.current.delete(requestKey);
-      handledEventFocusesRef.current.delete(requestKey);
+      handledJobFocusesRef.current.delete(
+        jobFocusRequestKey(processInstanceKey, focusedElementInstanceKey, focusedJobKey)
+      );
+      handledEventFocusesRef.current.delete(`${processInstanceKey}:${focusedElementInstanceKey}`);
     }
     jobSearchAbortRef.current = null;
     eventSearchAbortRef.current = null;
@@ -112,7 +119,7 @@ export const ProcessInstanceDetailPage = () => {
       setPendingFocusKey(focusedElementInstanceKey);
     });
     return () => { cancelled = true; };
-  }, [focusedElementInstanceKey, processInstanceKey]);
+  }, [focusedElementInstanceKey, focusedJobKey, processInstanceKey]);
 
   useEffect(
     () => () => {
@@ -130,9 +137,14 @@ export const ProcessInstanceDetailPage = () => {
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  const handleFocusNavigation = useCallback((tab: 'jobs' | 'history', elementInstanceKey: string) => {
-    const requestKey = `${processInstanceKey}:${elementInstanceKey}`;
-    handledJobFocusesRef.current.delete(requestKey);
+  // Focuses a tab on an element instance, and the Jobs tab on one job of it
+  // where a job key is given; without one, every job of the element is focused.
+  const handleFocusNavigation = useCallback((
+    tab: 'jobs' | 'history',
+    elementInstanceKey: string,
+    jobKey?: string
+  ) => {
+    handledJobFocusesRef.current.delete(jobFocusRequestKey(processInstanceKey, elementInstanceKey, jobKey));
     jobSearchAbortRef.current?.abort();
     eventSearchAbortRef.current?.abort();
     setPendingFocusKey(elementInstanceKey);
@@ -140,6 +152,8 @@ export const ProcessInstanceDetailPage = () => {
     const next = new URLSearchParams(searchParams);
     next.set('tab', tab);
     next.set('focusElementInstanceKey', elementInstanceKey);
+    if (jobKey) next.set('focusJobKey', jobKey);
+    else next.delete('focusJobKey');
     setSearchParams(next);
   }, [processInstanceKey, searchParams, setSearchParams]);
 
@@ -153,6 +167,7 @@ export const ProcessInstanceDetailPage = () => {
     next.set('tab', 'events');
     next.set('eventType', 'messages');
     next.set('focusElementInstanceKey', elementInstanceKey);
+    next.delete('focusJobKey');
     setSearchParams(next);
   }, [processInstanceKey, searchParams, setSearchParams]);
 
@@ -346,7 +361,7 @@ export const ProcessInstanceDetailPage = () => {
 
     // The desired row may already be on the currently displayed server page.
     if (nodes.some((node) =>
-      node.jobs.some((job) => job.elementInstanceKey === focusedElementInstanceKey)
+      node.jobs.some((job) => isFocusedJob(job, focusedElementInstanceKey, focusedJobKey))
     )) {
       return;
     }
@@ -356,7 +371,7 @@ export const ProcessInstanceDetailPage = () => {
     const owner = nodes.find((node) =>
       node.history.some((history) => history.key === focusedElementInstanceKey)
     );
-    const requestKey = `${processInstanceKey}:${focusedElementInstanceKey}`;
+    const requestKey = jobFocusRequestKey(processInstanceKey, focusedElementInstanceKey, focusedJobKey);
 
     if (!owner || owner.jobsTotalCount === 0) {
       handledJobFocusesRef.current.add(requestKey);
@@ -378,6 +393,7 @@ export const ProcessInstanceDetailPage = () => {
     void findFocusedJobPage({
       processInstanceKey: owner.instance.key,
       elementInstanceKey: focusedElementInstanceKey,
+      jobKey: focusedJobKey,
       pageSize: jobsPageSize,
       totalCount: owner.jobsTotalCount,
       signal: controller.signal,
@@ -406,6 +422,7 @@ export const ProcessInstanceDetailPage = () => {
     activeTab,
     focusResolutionPending,
     focusedElementInstanceKey,
+    focusedJobKey,
     instanceTree,
     jobsPageSize,
     processInstanceKey,
@@ -820,6 +837,7 @@ export const ProcessInstanceDetailPage = () => {
               onElementIdClick={handleElementIdClick}
               onNavigateToHistory={(key) => handleFocusNavigation('history', key)}
               focusedElementInstanceKey={focusedElementInstanceKey}
+              focusedJobKey={focusedJobKey}
               autoScrollToFocusedRow={focusResolutionPending}
               onFocusedRowVisible={handleFocusedRowVisible}
               findingFocusedJob={findingFocusedJob}
@@ -852,7 +870,7 @@ export const ProcessInstanceDetailPage = () => {
               onRefetch={refetchAll}
               onShowNotification={showNotification}
               onElementIdClick={handleElementIdClick}
-              onNavigateToJob={(key) => handleFocusNavigation('jobs', key)}
+              onNavigateToJob={(elementInstanceKey, jobKey) => handleFocusNavigation('jobs', elementInstanceKey, jobKey)}
             />
           </TabPanel>
 

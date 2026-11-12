@@ -38,8 +38,8 @@ interface IncidentsTabProps {
   ) => void;
   /** Called when an element ID cell is clicked — used to highlight the element in the diagram. */
   onElementIdClick?: (elementId: string) => void;
-  /** Opens the Jobs tab focused on the element instance whose job raised an incident. */
-  onNavigateToJob?: (elementInstanceKey: string) => void;
+  /** Opens the Jobs tab focused on the job which raised an incident, among the jobs of its element instance. */
+  onNavigateToJob?: (elementInstanceKey: string, jobKey: string) => void;
 }
 
 export const IncidentsTab = ({
@@ -107,11 +107,13 @@ export const IncidentsTab = ({
 
   // The job of an incident shares its element instance: the engine raises a
   // job's incident on the job's own token. Only incidents carrying a `jobKey`
-  // were raised by a job, so only they link to one.
+  // were raised by a job, so only they link to one. The link names the job,
+  // because the element instance alone does not: the jobs of an element's
+  // execution listeners share it with the element's own job.
   const handleViewJob = useMemo(
     () => onNavigateToJob
       ? (incident: Incident) => {
-          if (incident.jobKey) onNavigateToJob(incident.elementInstanceKey);
+          if (incident.jobKey) onNavigateToJob(incident.elementInstanceKey, incident.jobKey);
         }
       : undefined,
     [onNavigateToJob]

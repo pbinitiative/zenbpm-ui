@@ -12,6 +12,9 @@ import {
   TASK_LISTENERS_ACTIVE_END_LISTENER_JOB_KEY,
   TASK_LISTENERS_ACTIVE_START_LISTENER_JOB_KEY,
   TASK_LISTENERS_END_LISTENER_INSTANCE_KEY,
+  TASK_LISTENERS_FAILED_END_LISTENER_INCIDENT_KEY,
+  TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY,
+  TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY,
   TASK_LISTENERS_START_LISTENER_INSTANCE_KEY,
   TASK_LISTENERS_USER_TASK_INSTANCE_KEY,
   TASK_LISTENERS_USER_TASK_LISTENER_INSTANCE_KEY,
@@ -31,7 +34,7 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await openJobsTab(page, TASK_LISTENERS_END_LISTENER_INSTANCE_KEY);
 
     // the four jobs of the service task so far, all on the same element
-    await expect(page.getByTestId('jobs-table').locator('tbody tr').filter({ hasText: 'ShipOrder' })).toHaveCount(4);
+    await expect(jobRows(page).filter({ hasText: 'ShipOrder' })).toHaveCount(4);
 
     for (const startListener of ['reserve-stock', 'check-credit']) {
       await expect(jobRowOfType(page, startListener).getByTestId('job-listener-chip')).toHaveText('Start listener');
@@ -163,6 +166,52 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await expect(page.getByRole('dialog', { name: /complete form/i })).toBeVisible();
   });
 
+  test('links an incident to exactly the failed listener job among the jobs of its element', async ({ page }) => {
+    await page.goto(`/process-instances/${TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY}?tab=incidents`);
+    await expect(page.getByTestId('incidents-tab')).toBeVisible({ timeout: 10000 });
+
+    await page
+      .getByTestId('incidents-tab')
+      .locator('tbody tr')
+      .filter({ hasText: TASK_LISTENERS_FAILED_END_LISTENER_INCIDENT_KEY })
+      .getByTestId('incident-job-link')
+      .click();
+
+    // the element instance alone would name all four jobs of the service task
+    await expect.poll(() => focusOf(page)).toEqual({
+      tab: 'jobs',
+      focusElementInstanceKey: `${TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY}002`,
+      focusJobKey: TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY,
+    });
+    await expect(jobRows(page).filter({ hasText: 'ShipOrder' })).toHaveCount(4);
+    await expect(jobRow(page, TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY)).toHaveAttribute('data-focused', 'true');
+    await expect(page.getByTestId('jobs-table').locator('tbody tr[data-focused="true"]')).toHaveCount(1);
+
+    // going on to the history focuses the element again, not one of its jobs
+    await openRowMenu(page, TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY);
+    await page.getByRole('menuitem', { name: 'View in history' }).click();
+    await expect.poll(() => focusOf(page)).toEqual({
+      tab: 'history',
+      focusElementInstanceKey: `${TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY}002`,
+      focusJobKey: null,
+    });
+  });
+
+  test('focuses every job of an element from its row in the history', async ({ page }) => {
+    await page.goto(`/process-instances/${TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY}?tab=history`);
+    const historyRow = page.getByTestId('history-table').locator('tbody tr').filter({ hasText: 'ShipOrder' });
+    await historyRow.getByRole('button', { name: 'Row actions' }).click();
+    await page.getByRole('menuitem', { name: 'View related job' }).click();
+
+    await expect.poll(() => focusOf(page)).toEqual({
+      tab: 'jobs',
+      focusElementInstanceKey: `${TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY}002`,
+      focusJobKey: null,
+    });
+    // two start listeners, the task's own job and the failed end listener
+    await expect(page.getByTestId('jobs-table').locator('tbody tr[data-focused="true"]')).toHaveCount(4);
+  });
+
   test('links the start event in the history to its listener job', async ({ page }) => {
     await page.goto(`/process-instances/${START_LISTENER_WAITING_INSTANCE_KEY}?tab=history`);
     const historyRow = page.getByTestId('history-table').locator('tbody tr').filter({ hasText: 'OrderReceived' });
@@ -223,13 +272,27 @@ async function openJobsTab(page: Page, processInstanceKey: string) {
   await expect(page.getByTestId('jobs-table')).toBeVisible({ timeout: 10000 });
 }
 
+function jobRows(page: Page) {
+  return page.getByTestId('jobs-table').locator('tbody tr');
+}
+
 function jobRow(page: Page, jobKey: string) {
-  return page.getByTestId('jobs-table').locator('tbody tr').filter({ hasText: jobKey });
+  return jobRows(page).filter({ hasText: jobKey });
+}
+
+// What the URL says the page is focused on.
+function focusOf(page: Page) {
+  const url = new URL(page.url());
+  return {
+    tab: url.searchParams.get('tab'),
+    focusElementInstanceKey: url.searchParams.get('focusElementInstanceKey'),
+    focusJobKey: url.searchParams.get('focusJobKey'),
+  };
 }
 
 // The jobs of one element share its id and name, so a row is told by its job type.
 function jobRowOfType(page: Page, jobType: string) {
-  return page.getByTestId('jobs-table').locator('tbody tr').filter({ has: page.getByText(jobType, { exact: true }) });
+  return jobRows(page).filter({ has: page.getByText(jobType, { exact: true }) });
 }
 
 // Replaces the content of the variables editor of the open dialog.

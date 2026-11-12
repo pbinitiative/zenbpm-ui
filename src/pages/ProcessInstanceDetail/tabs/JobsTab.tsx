@@ -79,6 +79,8 @@ interface JobsTabProps {
   onElementIdClick?: (elementId: string) => void;
   onNavigateToHistory?: (elementInstanceKey: string) => void;
   focusedElementInstanceKey?: string;
+  /** Narrows the focus to this job of the focused element instance. */
+  focusedJobKey?: string;
   autoScrollToFocusedRow?: boolean;
   onFocusedRowVisible?: () => void;
   findingFocusedJob?: boolean;
@@ -96,6 +98,7 @@ export const JobsTab = ({
   onElementIdClick,
   onNavigateToHistory,
   focusedElementInstanceKey,
+  focusedJobKey,
   autoScrollToFocusedRow = false,
   onFocusedRowVisible,
   findingFocusedJob = false,
@@ -551,8 +554,11 @@ export const JobsTab = ({
         totalCount={totalCount}
         loading={findingFocusedJob}
         onElementIdClick={onElementIdClick}
-        focusedRowKey={focusedElementInstanceKey}
-        getRowFocusKey={(row) => row.elementInstanceKey}
+        // The jobs of an element's execution listeners share its element instance
+        // with the element's own job: a focus by element instance marks them all,
+        // one which names a job marks that job alone.
+        focusedRowKey={focusedJobKey ?? focusedElementInstanceKey}
+        getRowFocusKey={(row) => (focusedJobKey ? row.key : row.elementInstanceKey)}
         autoScrollToFocusedRow={autoScrollToFocusedRow}
         onFocusedRowVisible={onFocusedRowVisible}
       />
