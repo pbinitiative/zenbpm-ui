@@ -9,23 +9,73 @@ import {
   START_LISTENER_FAILED_JOB_KEY,
   START_LISTENER_WAITING_INSTANCE_KEY,
   START_LISTENER_WAITING_JOB_KEY,
+  TASK_LISTENERS_END_LISTENER_INSTANCE_KEY,
+  TASK_LISTENERS_USER_TASK_INSTANCE_KEY,
+  TASK_LISTENERS_USER_TASK_LISTENER_INSTANCE_KEY,
+  TASK_LISTENERS_USER_TASK_LISTENER_JOB_KEY,
+  TASK_LISTENERS_USER_TASK_OWN_JOB_KEY,
 } from '../../../src/mocks/data/well-known-keys';
 
-// E2E coverage for the job of a start event's end execution listener: the
-// engine marks it with `listenerEventType`, refuses a BPMN error for it and
-// keeps the variables of its completion on the job only.
-test.describe('Process Instance Jobs - Start event listener', () => {
-  test('marks the job of a start event listener and no job of a task', async ({ page }) => {
-    await openJobsTab(page, START_LISTENER_WAITING_INSTANCE_KEY);
+// E2E coverage for the jobs of execution listeners. The engine runs the start
+// listeners of an element, then the element's own job, then its end listeners,
+// one job at a time. All of them carry the element's id, type and element
+// instance key; `listenerEventType` alone tells a listener's job from the
+// element's own. The mock process `task-listeners` has a service task with two
+// start and two end listeners and a user task with one start listener; the
+// mock process `start-listener` has an end listener on its start event.
+test.describe('Process Instance Jobs - Execution listeners', () => {
+  test('marks start and end listener jobs with their own chip and tooltip, and no job of an element itself', async ({ page }) => {
+    await openJobsTab(page, TASK_LISTENERS_END_LISTENER_INSTANCE_KEY);
 
-    const chip = jobRow(page, START_LISTENER_WAITING_JOB_KEY).getByTestId('job-listener-chip');
-    await expect(chip).toHaveText('End listener');
-    await chip.hover();
-    await expect(page.getByRole('tooltip')).toContainText('The token leaves the element once the jobs of all its end listeners are completed');
+    // the four jobs of the service task so far, all on the same element
+    await expect(page.getByTestId('jobs-table').locator('tbody tr').filter({ hasText: 'ShipOrder' })).toHaveCount(4);
+
+    for (const startListener of ['reserve-stock', 'check-credit']) {
+      await expect(jobRowOfType(page, startListener).getByTestId('job-listener-chip')).toHaveText('Start listener');
+    }
+    await expect(jobRowOfType(page, 'notify-customer').getByTestId('job-listener-chip')).toHaveText('End listener');
+    await expect(jobRowOfType(page, 'ship-order')).toHaveCount(1);
+    await expect(jobRowOfType(page, 'ship-order').getByTestId('job-listener-chip')).toHaveCount(0);
+
+    await jobRowOfType(page, 'reserve-stock').getByTestId('job-listener-chip').hover();
+    await expect(page.getByRole('tooltip')).toContainText(
+      "The element's own work begins once the jobs of all its start listeners are completed"
+    );
+    await page.mouse.move(0, 0);
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+
+    await jobRowOfType(page, 'notify-customer').getByTestId('job-listener-chip').hover();
+    await expect(page.getByRole('tooltip')).toContainText(
+      'The token leaves the element once the jobs of all its end listeners are completed'
+    );
+  });
+
+  test('marks the job of a start event listener and no job of a task without listeners', async ({ page }) => {
+    await openJobsTab(page, START_LISTENER_WAITING_INSTANCE_KEY);
+    await expect(jobRow(page, START_LISTENER_WAITING_JOB_KEY).getByTestId('job-listener-chip')).toHaveText('End listener');
 
     await openJobsTab(page, SIMPLE_TASK_ACTIVE_INSTANCE_KEY);
     await expect(jobRow(page, SIMPLE_TASK_ACTIVE_JOB_KEY)).toHaveCount(1);
     await expect(page.getByTestId('job-listener-chip')).toHaveCount(0);
+  });
+
+  test("offers Assign for a user task's own job and not for the job of its start listener", async ({ page }) => {
+    // While the start listener's job waits, the user task has no job of its own yet.
+    await openJobsTab(page, TASK_LISTENERS_USER_TASK_LISTENER_INSTANCE_KEY);
+    await openRowMenu(page, TASK_LISTENERS_USER_TASK_LISTENER_JOB_KEY);
+    await expect(page.getByRole('menuitem', { name: /update retries/i })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: /assign/i })).toHaveCount(0);
+
+    // Both jobs carry the element type USER_TASK; only the one without a listener event type is assigned.
+    await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    await expect(jobRowOfType(page, 'prepare-confirmation').getByTestId('job-listener-chip')).toHaveText('Start listener');
+    await openRowMenu(page, TASK_LISTENERS_USER_TASK_OWN_JOB_KEY);
+    await expect(page.getByRole('menuitem', { name: /assign/i })).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    await jobRowOfType(page, 'prepare-confirmation').getByRole('button', { name: 'Row actions' }).click();
+    await expect(page.getByRole('menuitem', { name: /view in history/i })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: /assign/i })).toHaveCount(0);
   });
 
   test('completes a listener job without variables and says where to change them', async ({ page }) => {
@@ -128,10 +178,19 @@ function jobRow(page: Page, jobKey: string) {
   return page.getByTestId('jobs-table').locator('tbody tr').filter({ hasText: jobKey });
 }
 
-async function openDialogFromMenu(page: Page, jobKey: string, menuItem: RegExp) {
+// The jobs of one element share its id and name, so a row is told by its job type.
+function jobRowOfType(page: Page, jobType: string) {
+  return page.getByTestId('jobs-table').locator('tbody tr').filter({ has: page.getByText(jobType, { exact: true }) });
+}
+
+async function openRowMenu(page: Page, jobKey: string) {
   const row = jobRow(page, jobKey);
   await expect(row).toHaveCount(1);
   await row.getByRole('button', { name: 'Row actions' }).click();
+}
+
+async function openDialogFromMenu(page: Page, jobKey: string, menuItem: RegExp) {
+  await openRowMenu(page, jobKey);
   await page.getByRole('menuitem', { name: menuItem }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();

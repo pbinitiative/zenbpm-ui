@@ -3,6 +3,7 @@
 
 import * as simpleTask from './bpmn/simple-task';
 import * as startListener from './bpmn/start-listener';
+import * as taskListeners from './bpmn/task-listeners';
 import * as showcaseProcess from './bpmn/showcase-process';
 import * as simpleUserTask from './bpmn/simple-user-task';
 import * as simpleBusinessRuleTaskExternal from './bpmn/simple-business-rule-task-external';
@@ -230,6 +231,7 @@ export const jobs: MockJob[] = [
   ...legacyJobs,
   ...(simpleTask.jobs as MockJob[]),
   ...startListener.jobs,
+  ...taskListeners.jobs,
   ...(showcaseProcess.jobs as MockJob[]),
   ...(simpleUserTask.jobs as MockJob[]),
   ...(simpleBusinessRuleTaskExternal.jobs as MockJob[]),
@@ -241,6 +243,7 @@ export const jobs: MockJob[] = [
 export const jobFailures: MockJobFailure[] = [
   ...(simpleTask.jobFailures as MockJobFailure[]),
   ...startListener.jobFailures,
+  ...taskListeners.jobFailures,
   ...(showcaseProcess.jobFailures as MockJobFailure[]),
 ];
 

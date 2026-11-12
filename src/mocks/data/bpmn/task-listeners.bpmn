@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zenbpm="http://zenbpm.pbinitiative.org/1.0" id="Definitions_task-listeners" targetNamespace="http://bpmn.io/schema/bpmn" exporter="ZenBPM Modeler" exporterVersion="1.0.0">
+  <bpmn:process id="task-listeners" name="Task Listeners" isExecutable="true">
+    <bpmn:startEvent id="OrderReceived" name="Order received">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="OrderReceived" targetRef="ShipOrder" />
+    <bpmn:serviceTask id="ShipOrder" name="Ship order">
+      <bpmn:extensionElements>
+        <zenbpm:taskDefinition type="ship-order" />
+        <zenbpm:executionListeners>
+          <zenbpm:executionListener eventType="start" type="reserve-stock" />
+          <zenbpm:executionListener eventType="start" type="check-credit" />
+          <zenbpm:executionListener eventType="end" type="notify-customer" retries="2" />
+          <zenbpm:executionListener eventType="end" type="archive-order" />
+        </zenbpm:executionListeners>
+        <zenbpm:ioMapping>
+          <zenbpm:output source="=reserved" target="stockReserved" />
+        </zenbpm:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="ShipOrder" targetRef="ConfirmDelivery" />
+    <bpmn:userTask id="ConfirmDelivery" name="Confirm delivery">
+      <bpmn:extensionElements>
+        <zenbpm:taskDefinition type="confirm-delivery" />
+        <zenbpm:executionListeners>
+          <zenbpm:executionListener eventType="start" type="prepare-confirmation" />
+        </zenbpm:executionListeners>
+        <zenbpm:ioMapping>
+          <zenbpm:input source="=deliveryForm" target="ZEN_FORM" />
+        </zenbpm:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="ConfirmDelivery" targetRef="OrderDelivered" />
+    <bpmn:endEvent id="OrderDelivered" name="Order delivered">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="task-listeners">
+      <bpmndi:BPMNShape id="OrderReceived_di" bpmnElement="OrderReceived">
+        <dc:Bounds x="160" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="142" y="145" width="73" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ShipOrder_di" bpmnElement="ShipOrder">
+        <dc:Bounds x="256" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ConfirmDelivery_di" bpmnElement="ConfirmDelivery">
+        <dc:Bounds x="416" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OrderDelivered_di" bpmnElement="OrderDelivered">
+        <dc:Bounds x="576" y="102" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="557" y="145" width="75" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="196" y="120" />
+        <di:waypoint x="256" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="356" y="120" />
+        <di:waypoint x="416" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="516" y="120" />
+        <di:waypoint x="576" y="120" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

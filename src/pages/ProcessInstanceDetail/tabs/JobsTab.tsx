@@ -125,12 +125,14 @@ export const JobsTab = ({
   // `elementType: "USER_TASK"`) is correctly classified even though its routing
   // type is not `user-task-type`. Definitions don't need to be loaded for this to
   // work — the value arrives with the job itself.
+  // The job of an execution listener on a User Task carries the same element
+  // kind, yet nobody is assigned to it: only the User Task's own job is one.
   const userTaskJobKeys = useMemo(() => {
     const keys = new Set<string>();
     if (!instanceTree) return keys;
     for (const node of collectNodes(instanceTree)) {
       for (const job of node.jobs) {
-        if (job.elementType === 'USER_TASK') keys.add(job.key);
+        if (job.elementType === 'USER_TASK' && !isListenerJob(job)) keys.add(job.key);
       }
     }
     return keys;

@@ -64,3 +64,24 @@ export const START_LISTENER_WAITING_JOB_KEY = '5000000000000000040';
 export const START_LISTENER_FAILED_INSTANCE_KEY = '3100000000000000311';
 export const START_LISTENER_FAILED_JOB_KEY = '5000000000000000041';
 export const START_LISTENER_FAILED_JOB_INCIDENT_KEY = '3097302186542891020';
+
+// Execution listeners of tasks: a service task with two start and two end listeners, then a
+// user task with one start listener. Each instance waits behind another job of the chain.
+export const TASK_LISTENERS_PROCESS_DEFINITION_KEY = '3000000000000000095';
+// The service task waits behind its second start listener; the first one is completed.
+export const TASK_LISTENERS_START_LISTENER_INSTANCE_KEY = '3100000000000000312';
+export const TASK_LISTENERS_COMPLETED_START_LISTENER_JOB_KEY = '5000000000000000042';
+export const TASK_LISTENERS_ACTIVE_START_LISTENER_JOB_KEY = '5000000000000000043';
+// The service task did its own work and waits behind its first end listener.
+export const TASK_LISTENERS_END_LISTENER_INSTANCE_KEY = '3100000000000000313';
+export const TASK_LISTENERS_ACTIVE_END_LISTENER_JOB_KEY = '5000000000000000047';
+// The first end listener spent its retries: its incident stands on the service task.
+export const TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY = '3100000000000000314';
+export const TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY = '5000000000000000051';
+export const TASK_LISTENERS_FAILED_END_LISTENER_INCIDENT_KEY = '3097302186542891021';
+// The user task waits behind its start listener; its own job does not exist yet.
+export const TASK_LISTENERS_USER_TASK_LISTENER_INSTANCE_KEY = '3100000000000000315';
+export const TASK_LISTENERS_USER_TASK_LISTENER_JOB_KEY = '5000000000000000057';
+// The user task waits behind its own job; the job of its start listener is completed.
+export const TASK_LISTENERS_USER_TASK_INSTANCE_KEY = '3100000000000000316';
+export const TASK_LISTENERS_USER_TASK_OWN_JOB_KEY = '5000000000000000064';
