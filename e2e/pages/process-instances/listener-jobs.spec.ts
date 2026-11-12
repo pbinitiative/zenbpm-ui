@@ -206,7 +206,7 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await page.goto(`/process-instances/${TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY}?tab=history`);
     const historyRow = page.getByTestId('history-table').locator('tbody tr').filter({ hasText: 'ShipOrder' });
     await historyRow.getByRole('button', { name: 'Row actions' }).click();
-    await page.getByRole('menuitem', { name: 'View related job' }).click();
+    await page.getByRole('menuitem', { name: 'View related jobs' }).click();
 
     await expect.poll(() => focusOf(page)).toEqual({
       tab: 'jobs',
@@ -221,7 +221,7 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await page.goto(`/process-instances/${START_LISTENER_WAITING_INSTANCE_KEY}?tab=history`);
     const historyRow = page.getByTestId('history-table').locator('tbody tr').filter({ hasText: 'OrderReceived' });
     await historyRow.getByRole('button', { name: 'Row actions' }).click();
-    await page.getByRole('menuitem', { name: 'View related job' }).click();
+    await page.getByRole('menuitem', { name: 'View related jobs' }).click();
 
     await expect(page.getByTestId('jobs-table')).toBeVisible();
     await expect(jobRow(page, START_LISTENER_WAITING_JOB_KEY)).toHaveCount(1);

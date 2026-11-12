@@ -94,7 +94,7 @@
     "trigger": "Trigger",
     "viewInputOutput": "View Inputs & Outputs",
     "rowActions": "Row actions",
-    "viewRelatedJob": "View related job",
+    "viewRelatedJob": "View related jobs",
     "viewRelatedEvent": "View related event",
     "viewInHistory": "View in history",
     "viewFailures": "Failure history"

@@ -9,8 +9,8 @@ const LISTENER_TYPE = 'order-started';
 const parseWithKeys = JSONBigInt({ storeAsString: true });
 
 // The engine holds the token at a start event with an end execution listener
-// until a worker completes the listener's job. The UI marks that job and
-// completes it without variables, which the engine would keep on the job only.
+// until a worker completes the listener's job. The UI marks that job and says
+// that what it is completed with never reaches the instance.
 test('a start event listener holds the token until the UI completes its job', async ({ page }) => {
   await createProcess(page);
   await appendElement(page, 'Start', 'Append end event', 'End');
