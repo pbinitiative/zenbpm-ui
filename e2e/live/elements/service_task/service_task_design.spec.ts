@@ -1,4 +1,4 @@
-import { test, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import {
   appendTaskToNewProcess,
@@ -8,7 +8,14 @@ import {
   downloadBpmnXml,
   expectPropertiesRoundTrip,
 } from '../../helpers/processDesigner';
-import { openGroup, fillEntry, expectPropertyGroups } from '../../helpers/propertiesPanel';
+import { openGroup, entry, fillEntry, expectPropertyGroups } from '../../helpers/propertiesPanel';
+import {
+  EXECUTION_LISTENER_GROUP,
+  addListener,
+  expectListenersXml,
+  listenerEntry,
+  type DesignedListener,
+} from '../../helpers/executionListeners';
 import {
   COMMON_PROPERTY_GROUPS,
   editMetadata,
@@ -23,11 +30,18 @@ import { expectXmlElements, expectValidBpmnXml } from '../../helpers/bpmnAsserti
 import { deployProcess, expectDeploymentRejected, expectDeploymentSaved } from '../../helpers/processDeployment';
 
 const ELEMENT_ID = 'Element_under_test';
+// The groups of every variant. A service task which is no multi-instance
+// activity runs execution listeners, so it offers their group as well.
 const PROPERTY_GROUPS = [
   ...COMMON_PROPERTY_GROUPS,
   'zenbpm-ioMapping-inputs',
   'zenbpm-ioMapping-outputs',
   'zenbpm-taskDefinition',
+];
+// The engine runs the start listener before the task's own job and the end listener after it.
+const LISTENERS: DesignedListener[] = [
+  { eventType: 'start', type: 'reserve-stock', retries: '3' },
+  { eventType: 'end', type: 'notify-customer' },
 ];
 
 test.describe('Service task', () => {
@@ -44,7 +58,7 @@ test.describe('Service task', () => {
   test('shows, edits and persists properties through XML import', async ({ page }) => {
     const editedId = await editServiceTaskProperties(page);
     await configureServiceTask(page);
-    await expectPropertyGroups(page, PROPERTY_GROUPS);
+    await expectPropertyGroups(page, [...PROPERTY_GROUPS, EXECUTION_LISTENER_GROUP]);
     const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
     expectMetadataXml(xml);
     await expectDesign(page, xml, editedId);
@@ -175,7 +189,7 @@ test.describe('Service task — standard loop', () => {
   test('shows, edits and persists properties through XML import', async ({ page }) => {
     const editedId = await editServiceTaskProperties(page);
     await configureServiceTask(page);
-    await expectPropertyGroups(page, PROPERTY_GROUPS);
+    await expectPropertyGroups(page, [...PROPERTY_GROUPS, EXECUTION_LISTENER_GROUP]);
     const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
     expectMetadataXml(xml);
     await expectDesign(page, xml, editedId);
@@ -193,6 +207,69 @@ test.describe('Service task — standard loop', () => {
         await expectServiceTaskXml(page, xml, id);
         await expectXmlElements(page, xml, `[id="${id}"] > :is(multiInstanceLoopCharacteristics, standardLoopCharacteristics)`, [{ name: 'standardLoopCharacteristics' }]);
     }
+});
+
+test.describe('Service task with execution listeners', () => {
+  test.beforeEach(async ({ page }) => {
+    await appendTaskToNewProcess(page, ELEMENT_ID);
+    await changeElement(page, 'Service task');
+  });
+
+  test('designs a start and an end listener and exports them in the order of the model', async ({ page }) => {
+    await configureServiceTask(page);
+    await designListeners(page, ELEMENT_ID);
+    const xml = await downloadBpmnXml(page);
+    await expectServiceTaskXml(page, xml, ELEMENT_ID);
+    await expectListenersXml(page, xml, ELEMENT_ID, LISTENERS);
+  });
+
+  test('shows, edits and persists properties through XML import', async ({ page }) => {
+    const editedId = await editServiceTaskProperties(page);
+    await configureServiceTask(page);
+    await designListeners(page, editedId);
+    await expectPropertyGroups(page, [...PROPERTY_GROUPS, EXECUTION_LISTENER_GROUP]);
+    const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
+    expectMetadataXml(xml);
+    await expectServiceTaskXml(page, xml, editedId);
+    await expectListenersXml(page, xml, editedId, LISTENERS);
+  });
+
+  test('deploys the designed process and reads back its BPMN XML', async ({ page }) => {
+    await configureServiceTask(page);
+    await designListeners(page, ELEMENT_ID);
+    const xml = await downloadBpmnXml(page);
+    await expectListenersXml(page, xml, ELEMENT_ID, LISTENERS);
+    const response = await deployProcess(page);
+    await expectDeploymentSaved(page, response, xml);
+  });
+
+  test('flags two start listeners of one type, which the engine refuses at deployment', async ({ page }) => {
+    await configureServiceTask(page);
+    const first = await addListener(page, ELEMENT_ID, { eventType: 'start', type: 'audit' });
+    const second = await addListener(page, ELEMENT_ID, { eventType: 'start', type: 'audit' });
+    for (const index of [first, second]) {
+      await expect(entry(page, listenerEntry(ELEMENT_ID, index, 'type')).locator('.bio-properties-panel-error'))
+        .toContainText('two listeners of one event type need different types');
+    }
+    const response = await deployProcess(page);
+    await expectDeploymentRejected(page, response, 'has two execution listeners with eventType="start" and type="audit"');
+  });
+
+  test('accepts the same type once on a start and once on an end listener', async ({ page }) => {
+    await configureServiceTask(page);
+    const start = await addListener(page, ELEMENT_ID, { eventType: 'start', type: 'audit' });
+    const end = await addListener(page, ELEMENT_ID, { eventType: 'end', type: 'audit' });
+    for (const index of [start, end]) {
+      await expect(entry(page, listenerEntry(ELEMENT_ID, index, 'type')).locator('.bio-properties-panel-error')).toHaveCount(0);
+    }
+    const xml = await downloadBpmnXml(page);
+    const response = await deployProcess(page);
+    await expectDeploymentSaved(page, response, xml);
+  });
+
+  async function designListeners(page: Page, id: string): Promise<void> {
+    for (const listener of LISTENERS) await addListener(page, id, listener);
+  }
 });
 
 async function configureServiceTask(page: Page): Promise<void> {

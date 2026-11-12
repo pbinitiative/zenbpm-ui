@@ -9,6 +9,7 @@ import {
     expectPropertiesRoundTrip,
 } from '../../helpers/processDesigner';
 import {openGroup, entry, fillEntry, expectPropertyGroups} from '../../helpers/propertiesPanel';
+import {EXECUTION_LISTENER_GROUP} from '../../helpers/executionListeners';
 import {
     COMMON_PROPERTY_GROUPS,
     editMetadata,
@@ -114,7 +115,8 @@ test.describe('Business rule task — jobWorker / latest', () => {
     test('shows, edits and persists properties through XML import', async ({page}) => {
         const editedId = await editBusinessRuleTaskProperties(page);
         await configureJobWorker(page);
-        await expectPropertyGroups(page, [...PROPERTY_GROUPS, 'zenbpm-taskDefinition']);
+        // done by a job worker, the task runs execution listeners; one which calls a decision runs none
+        await expectPropertyGroups(page, [...PROPERTY_GROUPS, 'zenbpm-taskDefinition', EXECUTION_LISTENER_GROUP]);
         const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
         expectMetadataXml(xml);
         await expectDesign(page, xml, editedId);

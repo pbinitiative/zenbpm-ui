@@ -23,15 +23,15 @@ import {expectXmlElements, expectEventDefinitions, expectValidBpmnXml} from '../
 import {deployProcess, expectDeploymentRejected, expectDeploymentSaved} from '../../helpers/processDeployment';
 
 const ELEMENT_ID = 'Element_under_test';
-// Every start event of this spec sits directly under the process, the one
-// place the engine runs an execution listener, so each offers the group.
+// Every start event of this spec sits directly under the process, where the
+// engine runs its end execution listeners, so each offers the group.
 const PROPERTY_GROUPS = [
     ...COMMON_PROPERTY_GROUPS,
     'zenbpm-ioMapping-outputs',
     'zenbpm-executionListener',
 ];
 const LISTENER_GROUP = 'zenbpm-executionListener';
-// The entry of a field of the start event's only listener.
+// The entry of a field of the start event's first listener.
 const listenerEntry = (id: string, field: 'eventType' | 'type' | 'retries') =>
     `${id}-zenbpm-executionListener-0-${field}`;
 
@@ -345,7 +345,9 @@ test.describe('Start event with an execution listener', () => {
     }
 });
 
-// Creates the start event's listener unless it has one, then enters its fields.
+// Creates the start event's first listener unless it has one, then enters its
+// fields. A start event takes end listeners only, so the panel offers no other
+// event type there.
 async function editListener(page: Page, id: string, type: string, retries?: string): Promise<void> {
     const group = await openGroup(page, LISTENER_GROUP);
     if (await entry(page, listenerEntry(id, 'type')).count() === 0) {

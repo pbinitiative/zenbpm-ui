@@ -9,6 +9,7 @@ import {
     expectPropertiesRoundTrip,
 } from '../../helpers/processDesigner';
 import {openGroup, fillEntry, expectPropertyGroups} from '../../helpers/propertiesPanel';
+import {EXECUTION_LISTENER_GROUP} from '../../helpers/executionListeners';
 import {
     COMMON_PROPERTY_GROUPS,
     editMetadata,
@@ -44,7 +45,7 @@ test.describe('Send task', () => {
     test('shows, edits and persists properties through XML import', async ({page}) => {
         const editedId = await editSendTaskProperties(page);
         await configureSendTask(page);
-        await expectPropertyGroups(page, PROPERTY_GROUPS);
+        await expectPropertyGroups(page, [...PROPERTY_GROUPS, EXECUTION_LISTENER_GROUP]);
         const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
         expectMetadataXml(xml);
         await expectDesign(page, xml, editedId);
@@ -155,7 +156,7 @@ test.describe('Send task — standard loop', () => {
     test('shows, edits and persists properties through XML import', async ({page}) => {
         const editedId = await editSendTaskProperties(page);
         await configureSendTask(page);
-        await expectPropertyGroups(page, PROPERTY_GROUPS);
+        await expectPropertyGroups(page, [...PROPERTY_GROUPS, EXECUTION_LISTENER_GROUP]);
         const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
         expectMetadataXml(xml);
         await expectDesign(page, xml, editedId);
