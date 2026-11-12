@@ -29,8 +29,8 @@ export interface MockJob {
    * Independent from the configurable worker-routing `type` value above.
    */
   elementType: string;
-  /** Event type of the execution listener whose job this is; absent for the job of a task. */
-  listenerEventType?: 'end';
+  /** Event type of the execution listener whose job this is; absent for the job of an element. */
+  listenerEventType?: 'start' | 'end';
   processInstanceKey: string;
   processDefinitionKey: string;
   state: 'active' | 'activatable' | 'activated' | 'completed' | 'failed' | 'canceled';

@@ -21,7 +21,7 @@ test.describe('Process Instance Jobs - Start event listener', () => {
     const chip = jobRow(page, START_LISTENER_WAITING_JOB_KEY).getByTestId('job-listener-chip');
     await expect(chip).toHaveText('End listener');
     await chip.hover();
-    await expect(page.getByRole('tooltip')).toContainText('The token leaves the element when this job is completed');
+    await expect(page.getByRole('tooltip')).toContainText('The token leaves the element once the jobs of all its end listeners are completed');
 
     await openJobsTab(page, SIMPLE_TASK_ACTIVE_INSTANCE_KEY);
     await expect(jobRow(page, SIMPLE_TASK_ACTIVE_JOB_KEY)).toHaveCount(1);

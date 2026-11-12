@@ -136,10 +136,12 @@
   },
   "listenerJob": {
     "chip": {
+      "start": "Start listener",
       "end": "End listener"
     },
     "tooltip": {
-      "end": "Job of the element's end execution listener. The token leaves the element when this job is completed."
+      "start": "Job of a start execution listener of this element. The element's own work begins once the jobs of all its start listeners are completed.",
+      "end": "Job of an end execution listener of this element. The token leaves the element once the jobs of all its end listeners are completed."
     }
   },
   "dialogs": {
