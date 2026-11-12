@@ -210,7 +210,9 @@ export const FailJobDialog = ({
                 helperText={
                   backoffInvalid
                     ? t('processInstance:dialogs.failJob.retryBackoffInvalid')
-                    : t('processInstance:dialogs.failJob.retryBackoffHelp')
+                    : isListener
+                      ? t('processInstance:dialogs.failJob.retryBackoffHelpListener')
+                      : t('processInstance:dialogs.failJob.retryBackoffHelp')
                 }
                 fullWidth
                 size="small"

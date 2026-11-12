@@ -2,6 +2,8 @@ import { test, expect, type Page } from '@playwright/test';
 import {
   SIMPLE_TASK_ACTIVE_INSTANCE_KEY,
   SIMPLE_TASK_ACTIVE_JOB_KEY,
+  SIMPLE_TASK_FAILED_INSTANCE_KEY,
+  SIMPLE_TASK_FAILED_JOB_KEY,
   SIMPLE_TASK_BACKOFF_INSTANCE_KEY,
   SIMPLE_TASK_BACKOFF_JOB_KEY,
   START_LISTENER_FAILED_INSTANCE_KEY,
@@ -11,6 +13,9 @@ import {
   START_LISTENER_WAITING_JOB_KEY,
   TASK_LISTENERS_ACTIVE_END_LISTENER_JOB_KEY,
   TASK_LISTENERS_ACTIVE_START_LISTENER_JOB_KEY,
+  TASK_LISTENERS_ELEMENT_INCIDENT_INSTANCE_KEY,
+  TASK_LISTENERS_ELEMENT_INCIDENT_KEY,
+  TASK_LISTENERS_ELEMENT_INCIDENT_LISTENER_JOB_KEY,
   TASK_LISTENERS_END_LISTENER_INSTANCE_KEY,
   TASK_LISTENERS_FAILED_END_LISTENER_INCIDENT_KEY,
   TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY,
@@ -264,6 +269,59 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await expect(page.getByText('Job handed back to its workers')).toBeVisible();
     // the listener's retries="3" come back with the resolution
     await expect(jobRow(page, START_LISTENER_FAILED_JOB_KEY).getByTestId('job-retries-cell').locator('p').first()).toHaveText('3');
+  });
+
+  test('retries a failed listener job of a task with the retries of its listener, and names the listener', async ({ page }) => {
+    await openJobsTab(page, TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY);
+    const dialog = await openDialogFromMenu(page, TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY, /^retry$/i);
+
+    await expect(dialog.getByTestId('job-retries-resolve-only-hint')).toContainText('restores the retries of the listener');
+
+    const resolve = page.waitForRequest(
+      (r) => r.method() === 'POST' && r.url().includes(`/incidents/${TASK_LISTENERS_FAILED_END_LISTENER_INCIDENT_KEY}/resolve`)
+    );
+    await dialog.getByRole('button', { name: 'Retry' }).click();
+
+    await resolve;
+    await expect(dialog).not.toBeVisible();
+    // the listener's retries="2", not the one retry of the task's own job
+    await expect(
+      jobRow(page, TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY).getByTestId('job-retries-cell').locator('p').first()
+    ).toHaveText('2');
+  });
+
+  test('names the task definition for the retries of an element\'s own job', async ({ page }) => {
+    await openJobsTab(page, SIMPLE_TASK_FAILED_INSTANCE_KEY);
+    const dialog = await openDialogFromMenu(page, SIMPLE_TASK_FAILED_JOB_KEY, /^retry$/i);
+
+    await expect(dialog.getByTestId('job-retries-resolve-only-hint')).toContainText('restores the retries of the task definition');
+  });
+
+  test('says where the backoff of a failure comes from: the listener for its job, the task definition otherwise', async ({ page }) => {
+    await openJobsTab(page, TASK_LISTENERS_END_LISTENER_INSTANCE_KEY);
+    const listenerDialog = await openDialogFromMenu(page, TASK_LISTENERS_ACTIVE_END_LISTENER_JOB_KEY, /fail job/i);
+    await expect(listenerDialog.getByText("overriding the listener's backoff")).toBeVisible();
+
+    await openJobsTab(page, SIMPLE_TASK_ACTIVE_INSTANCE_KEY);
+    const taskDialog = await openDialogFromMenu(page, SIMPLE_TASK_ACTIVE_JOB_KEY, /fail job/i);
+    await expect(taskDialog.getByText("overriding the task definition's backoff")).toBeVisible();
+  });
+
+  test('takes no incident of the element itself for the incident of a listener job', async ({ page }) => {
+    // The only open incident on the service task names no job. Resolving it would not hand the listener's job out.
+    let resolved = false;
+    page.on('request', (request) => {
+      if (request.method() === 'POST' && request.url().includes(`/incidents/${TASK_LISTENERS_ELEMENT_INCIDENT_KEY}/resolve`)) {
+        resolved = true;
+      }
+    });
+    await openJobsTab(page, TASK_LISTENERS_ELEMENT_INCIDENT_INSTANCE_KEY);
+    const dialog = await openDialogFromMenu(page, TASK_LISTENERS_ELEMENT_INCIDENT_LISTENER_JOB_KEY, /^retry$/i);
+
+    await dialog.getByRole('button', { name: 'Retry' }).click();
+
+    await expect(dialog.getByTestId('job-retries-error')).toContainText('The job has no open incident');
+    expect(resolved, 'the incident of the element').toBe(false);
   });
 });
 

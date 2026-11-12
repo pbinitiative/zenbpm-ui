@@ -79,6 +79,11 @@ export const TASK_LISTENERS_ACTIVE_END_LISTENER_JOB_KEY = '5000000000000000047';
 export const TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY = '3100000000000000314';
 export const TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY = '5000000000000000051';
 export const TASK_LISTENERS_FAILED_END_LISTENER_INCIDENT_KEY = '3097302186542891021';
+// A row gone stale: the second start listener's job still reads failed, although its incident
+// is resolved, and the only open incident on the service task names no job: it is the task's own.
+export const TASK_LISTENERS_ELEMENT_INCIDENT_INSTANCE_KEY = '3100000000000000317';
+export const TASK_LISTENERS_ELEMENT_INCIDENT_LISTENER_JOB_KEY = '5000000000000000066';
+export const TASK_LISTENERS_ELEMENT_INCIDENT_KEY = '3097302186542891022';
 // The user task waits behind its start listener; its own job does not exist yet.
 export const TASK_LISTENERS_USER_TASK_LISTENER_INSTANCE_KEY = '3100000000000000315';
 export const TASK_LISTENERS_USER_TASK_LISTENER_JOB_KEY = '5000000000000000057';

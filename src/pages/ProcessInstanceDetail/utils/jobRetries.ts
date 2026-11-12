@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { GetIncidentsState, getIncidents } from '@base/openapi';
 import type { Incident, Job } from '../types';
+import { isListenerJob } from './listenerJobs';
 
 /** Page size used while looking up the open incident of a failed job. */
 const INCIDENT_LOOKUP_PAGE_SIZE = 100;
@@ -154,12 +155,19 @@ async function findOpenIncident(
  * engine carry the job's key; an incident created before they did is matched
  * by its element instance instead, but only when no incident on any page
  * carries the job's key.
+ *
+ * A listener job is matched by its key alone. The engine named the job on
+ * every incident long before it ran listeners, and an incident without a job
+ * on the element of a listener is the element's own, such as input mappings
+ * which no longer evaluate: resolving that one would not hand the job out.
  */
 export function findOpenIncidentOfJob(job: Job): Promise<Incident | undefined> {
   return findOpenIncident(
     job.processInstanceKey,
     (candidate) => candidate.jobKey === job.key,
-    (candidate) => !candidate.jobKey && candidate.elementInstanceKey === job.elementInstanceKey
+    isListenerJob(job)
+      ? undefined
+      : (candidate) => !candidate.jobKey && candidate.elementInstanceKey === job.elementInstanceKey
   );
 }
 

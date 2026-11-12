@@ -13,6 +13,9 @@ import {
   TASK_LISTENERS_ACTIVE_END_LISTENER_JOB_KEY,
   TASK_LISTENERS_ACTIVE_START_LISTENER_JOB_KEY,
   TASK_LISTENERS_COMPLETED_START_LISTENER_JOB_KEY,
+  TASK_LISTENERS_ELEMENT_INCIDENT_INSTANCE_KEY,
+  TASK_LISTENERS_ELEMENT_INCIDENT_KEY,
+  TASK_LISTENERS_ELEMENT_INCIDENT_LISTENER_JOB_KEY,
   TASK_LISTENERS_END_LISTENER_INSTANCE_KEY,
   TASK_LISTENERS_FAILED_END_LISTENER_INCIDENT_KEY,
   TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY,
@@ -91,6 +94,7 @@ const endListenerCreatedAt = hoursAgo(2);
 const failedEndListenerCreatedAt = hoursAgo(3);
 const userTaskListenerCreatedAt = hoursAgo(4);
 const userTaskCreatedAt = hoursAgo(5);
+const elementIncidentCreatedAt = hoursAgo(6);
 
 const scenarios: Scenario[] = [
   // ShipOrder waits behind its second start listener.
@@ -118,6 +122,16 @@ const scenarios: Scenario[] = [
     createdAt: failedEndListenerCreatedAt,
     partition: 3,
     jobKeys: ['5000000000000000048', '5000000000000000049', '5000000000000000050', TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY],
+    lastJobState: 'failed',
+  },
+  // A row gone stale, which the engine never serves and a slow page can still show: the second
+  // start listener's job reads failed, while the only open incident on ShipOrder is the task's own.
+  {
+    instanceKey: TASK_LISTENERS_ELEMENT_INCIDENT_INSTANCE_KEY,
+    orderId: 'ORD-7106',
+    createdAt: elementIncidentCreatedAt,
+    partition: 3,
+    jobKeys: ['5000000000000000065', TASK_LISTENERS_ELEMENT_INCIDENT_LISTENER_JOB_KEY],
     lastJobState: 'failed',
   },
   // ConfirmDelivery waits behind its start listener: the user task's own job does not exist yet.
@@ -257,6 +271,17 @@ export const incidents: MockIncident[] = [
     createdAt: addMinutes(failedEndListenerCreatedAt, 7),
     executionToken: '7100000000000223491',
     jobKey: TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY,
+  },
+  // An incident of the element itself names no job.
+  {
+    key: TASK_LISTENERS_ELEMENT_INCIDENT_KEY,
+    elementInstanceKey: shipOrderKey(TASK_LISTENERS_ELEMENT_INCIDENT_INSTANCE_KEY),
+    elementId: 'ShipOrder',
+    processInstanceKey: TASK_LISTENERS_ELEMENT_INCIDENT_INSTANCE_KEY,
+    processDefinitionKey: TASK_LISTENERS_PROCESS_DEFINITION_KEY,
+    message: 'failed to evaluate the input mappings of SERVICE_TASK ShipOrder',
+    createdAt: addMinutes(elementIncidentCreatedAt, 4),
+    executionToken: '7100000000000223492',
   },
 ];
 
