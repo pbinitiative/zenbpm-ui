@@ -316,6 +316,8 @@ test.describe('Start event with an execution listener', () => {
             name: 'executionListener',
             attributes: {eventType: 'end', retries: '3'},
         }]);
+        // the listener is matched by the attributes it keeps, which says nothing of the one it lost
+        expect(xml, 'The exported listener names no type').not.toContain(LISTENER.type);
     });
 
     test('removes the listener with its delete button', async ({page}) => {
