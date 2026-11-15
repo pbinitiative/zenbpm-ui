@@ -79,8 +79,9 @@ event to the task, and change the task to a **Service task**.
 2. Select the end event: no such group. The same holds for a gateway, a sub-process, a call
    activity, a receive task, a script task, and a start event inside a sub-process.
 3. Change the task to a **Send task**, then a **User task**: the group stays. Change it to a
-   **Business rule task**: the group is gone while **Implementation** is *DMN decision*, and comes
-   back with *Job worker*. Change it back to a **Service task**.
+   **Business rule task**: the group is gone while **Implementation** is *DMN decision*. Choose
+   *Job worker*: it is still gone, and comes back once the task definition has a **Type**. Without
+   one the engine does not take the task for a job worker's. Change it back to a **Service task**.
 
 **A chain on a task**
 
@@ -88,7 +89,9 @@ event to the task, and change the task to a **Service task**.
    an empty **Type** flagged *Enter the job type of the listener*, and **Retries**. The Type's
    description says a worker completes the job *before the element's own work starts*. The list
    item is labelled `Start: <no type>`.
-5. Enter `reserve-stock` in Type and `3` in Retries. The item is labelled `Start: reserve-stock`.
+5. While the Type is missing, the number beside the group's name is red, and stays red with the
+   group collapsed. Enter `reserve-stock` in Type and `3` in Retries. The item is labelled
+   `Start: reserve-stock`, and the number is no longer red.
 6. Click **Create** again: a second listener appears behind the first, open. Set its Event type
    to *End* and its Type to `notify-customer`. Its description now says *before the token leaves
    the element*, and it is labelled `End: notify-customer`. **Create** is still offered.
@@ -108,7 +111,8 @@ event to the task, and change the task to a **Service task**.
    Delete the third listener with the delete button of its list item.
 10. Enter `=jobType` in a Type: *Enter the job type as a literal: a listener takes no FEEL
     expression*. Enter `-1`, `1.5` and `2147483648` in Retries, one after another: each shows
-    *Enter a whole number from 0 to 2147483647*. Restore the values.
+    *Enter a whole number from 0 to 2147483647*. `+3` shows no error: the engine reads a sign.
+    Restore the values.
 11. Clear a Type. The listener stays with its Retries, and Type is flagged again. Restore it.
 12. Give the task the **Parallel multi-instance** marker (in the task's **Change element** menu,
     the wrench). The group loses
@@ -117,24 +121,42 @@ event to the task, and change the task to a **Service task**.
     *execution listener eventType="start" on service task id="…" is not supported: execution
     listeners run on a service, send or user task, …, none of them multi-instance …*. Remove the
     marker again.
-13. Delete the sequence flow behind the task and select the task again. Each Event type says
-    *Connect an outgoing sequence flow: the token could not leave the element once the
-    listener's job is completed*. Draw the flow again; the error is gone when the task is
-    selected next.
+13. Select the task and open one of its listeners, then delete the sequence flow behind the
+    task with the task still selected (select the flow, delete it, and select the task again
+    only if the modeler moved the selection). Each Event type says *Connect an outgoing sequence
+    flow: the token could not leave the element once the listener's job is completed*. Press
+    Ctrl+Z: the flow is back and the error is gone at once, without selecting the task again.
+14. Open the first listener of the task, then delete it with its delete button. The listener
+    which moves up stays closed: an item keeps its state, whatever its position.
 
 **A start event**
 
-14. Select the start event and click **Create**. The listener's Event type is *End*, and *End* is
+15. Select the start event and click **Create**. The listener's Event type is *End*, and *End* is
     the only option: a start event takes end listeners only. Give it the Type `order-started`.
     **Create** stays, so a start event can carry several end listeners.
-15. In the XML view, change that listener to `eventType="start"`, switch back and select the
+16. In the XML view, change that listener to `eventType="start"`, switch back and select the
     start event. The Event type reads *Start* and says *Choose End: a start event takes only end
     listeners*. Deploy: *execution listener eventType="start" on start event id="…" is not
     supported: a start event takes listeners with eventType="end"*. Choose *End*.
-16. Add an expanded sub-process, drag the start event with its listener into it and select it.
+17. Add an expanded sub-process, drag the start event with its listener into it and select it.
     The group is still shown, without **Create**; Event type says *Remove this listener: the
     engine runs a listener on a start event only directly under the process*. Delete the
     listener, and the group disappears. Undo (Ctrl+Z) both steps.
+
+**What an imported model can carry**
+
+18. In the XML view, give the task a second `<zenbpm:executionListeners>` element beside the
+    first, with one listener in it, and switch back. The group lists the listeners of both
+    elements in their order. Delete the only listener of the first element: the one of the
+    second stays, in the list and in the XML.
+19. In the XML view, add `retryBackoff="=backoff"` to a listener and switch back. The listener
+    shows a **Retry backoff** field, flagged *Enter the retry backoff as a literal*, and the
+    number of the group is red. Enter `P1M`: *Enter the retry backoff in weeks, days, hours,
+    minutes or seconds*. Enter `PT10S,PT1M`: no error. A listener without the attribute shows no
+    such field.
+20. Draw a pool around the process (or import a model with one) whose `<bpmn:process>` carries
+    an `executionListeners` element. Select the pool: the group lists the listener with *Remove
+    this listener: the engine runs no listener on the process itself*, and it can be removed.
 
 ### L2. A start event's listener waits, and completing it moves the token on
 
@@ -212,6 +234,14 @@ two start listeners and its own job are completed.
 2. History tab → row of *Ship order* → row menu → **View related jobs**. The Jobs tab opens with
    all four jobs of *Ship order* highlighted, and not the job of *Order received*.
 3. Row menu of any of the four → **View in history** highlights the one row of *Ship order*.
+4. On the Jobs tab, set **Rows per page** to 5. The instance has five jobs, one page. Open the
+   L8 link instead, which has seven: with five rows to a page, the jobs of *Ship order* lie on
+   both pages. History → *Ship order* → **View related jobs**: the jobs of *Ship order* on the
+   page shown are highlighted, and a message says *Jobs of this element are also on other pages
+   of the Jobs tab: 2*.
+5. Still on L8 with five rows to a page, go to page 2 of the Jobs tab, then History → *Order
+   received* → row menu. **View related jobs** is offered although the listener job of the
+   start event is on page 1, and leads there.
 
 ### L7. An incident of a task's listener leads to exactly its job
 
