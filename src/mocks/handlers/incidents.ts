@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { findIncidentByKey } from '../data/incidents';
 import {
   definitionRetriesNotEvaluable,
+  jobChangedWhileResolving,
   incidentAlreadyResolved,
   incidentWithoutJobRefusesRetries,
   jobNoLongerWaitsRefusal,
@@ -98,6 +99,10 @@ export const incidentHandlers = [
         : undefined;
       if (refusal !== undefined) {
         return HttpResponse.json({ code: 'CONFLICT', message: refusal }, { status: 409 });
+      }
+      // another request changes the job while the incident is being resolved
+      if (job && hasScenario(request, 'jobChangedWhileResolving')) {
+        return HttpResponse.json({ code: 'CONFLICT', message: jobChangedWhileResolving(incident) }, { status: 409 });
       }
 
       if (job && body.retries !== undefined) {

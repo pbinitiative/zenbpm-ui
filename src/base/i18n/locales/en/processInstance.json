@@ -123,6 +123,7 @@
     "messageSent": "Message sent successfully",
     "messageSendFailed": "Failed to send message",
     "relatedJobNotFound": "No related job was found",
+    "relatedJobsOnOtherPages": "Jobs of this element are also on other pages of the Jobs tab: {{pages}}",
     "relatedJobSearchFailed": "Failed to find the related job",
     "relatedEventNotFound": "No related event subscription was found",
     "relatedEventSearchFailed": "Failed to find the related event subscription",

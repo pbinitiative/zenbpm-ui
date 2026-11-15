@@ -65,8 +65,9 @@ export const START_LISTENER_FAILED_INSTANCE_KEY = '3100000000000000311';
 export const START_LISTENER_FAILED_JOB_KEY = '5000000000000000041';
 export const START_LISTENER_FAILED_JOB_INCIDENT_KEY = '3097302186542891020';
 
-// Execution listeners of tasks: a service task with two start and two end listeners, then a
-// user task with one start listener. Each instance waits behind another job of the chain.
+// Execution listeners of tasks: a start event with an end listener, a service task with two
+// start and two end listeners, then a user task with one start listener. Each instance waits
+// behind another job of the chain.
 export const TASK_LISTENERS_PROCESS_DEFINITION_KEY = '3000000000000000095';
 // The service task waits behind its second start listener; the first one is completed.
 export const TASK_LISTENERS_START_LISTENER_INSTANCE_KEY = '3100000000000000312';
@@ -87,6 +88,9 @@ export const TASK_LISTENERS_ELEMENT_INCIDENT_KEY = '3097302186542891022';
 // The user task waits behind its start listener; its own job does not exist yet.
 export const TASK_LISTENERS_USER_TASK_LISTENER_INSTANCE_KEY = '3100000000000000315';
 export const TASK_LISTENERS_USER_TASK_LISTENER_JOB_KEY = '5000000000000000057';
-// The user task waits behind its own job; the job of its start listener is completed.
+// The user task waits behind its own job; the job of its start listener is completed. The
+// instance has eight jobs: at five to a page, the start event's listener job is on the first
+// page, the user task's on the second, and the service task's on both.
 export const TASK_LISTENERS_USER_TASK_INSTANCE_KEY = '3100000000000000316';
+export const TASK_LISTENERS_START_EVENT_LISTENER_JOB_KEY = '5000000000000000071';
 export const TASK_LISTENERS_USER_TASK_OWN_JOB_KEY = '5000000000000000064';

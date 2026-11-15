@@ -1,6 +1,6 @@
 import { getProcessInstanceJobs } from '@base/openapi';
 
-interface FindFocusedJobPageOptions {
+interface FindFocusedJobPagesOptions {
   processInstanceKey: string;
   elementInstanceKey: string;
   /** Narrows the search to this job of the element instance. */
@@ -9,6 +9,9 @@ interface FindFocusedJobPageOptions {
   totalCount: number;
   signal?: AbortSignal;
 }
+
+/** The zero-based UI pages of the Jobs tab which hold a focused job, in ascending order; never empty. */
+export type FocusedJobPages = [number, ...number[]];
 
 /**
  * Whether a job is one the Jobs tab is focused on. An element instance has
@@ -34,20 +37,23 @@ export function jobFocusRequestKey(
 }
 
 /**
- * Find the zero-based UI page containing a focused Job: the given one, or the
- * first of the element instance where no job is named.
+ * Find the pages of the Jobs tab which hold a focused job. A named job is on
+ * one page, so the search ends there. The jobs of an element instance can lie
+ * on several, so every page is looked through: the table shows one page, and
+ * its user has to be told where the others are.
  * Requests are intentionally sequential so the engine endpoint is not flooded.
  */
-export async function findFocusedJobPage({
+export async function findFocusedJobPages({
   processInstanceKey,
   elementInstanceKey,
   jobKey,
   pageSize,
   totalCount,
   signal,
-}: FindFocusedJobPageOptions): Promise<number | undefined> {
+}: FindFocusedJobPagesOptions): Promise<FocusedJobPages | undefined> {
   if (pageSize <= 0) return undefined;
   let totalPages = Math.ceil(totalCount / pageSize);
+  const pages: number[] = [];
 
   for (let page = 1; page <= totalPages; page++) {
     const response = await getProcessInstanceJobs(
@@ -58,7 +64,8 @@ export async function findFocusedJobPage({
     );
 
     if (response.items?.some((job) => isFocusedJob(job, elementInstanceKey, jobKey))) {
-      return page - 1;
+      pages.push(page - 1);
+      if (jobKey) break;
     }
 
     if (response.totalCount !== undefined) {
@@ -66,5 +73,5 @@ export async function findFocusedJobPage({
     }
   }
 
-  return undefined;
+  return pages.length > 0 ? (pages as FocusedJobPages) : undefined;
 }

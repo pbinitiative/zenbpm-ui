@@ -35,6 +35,11 @@ interface HistoryTabProps {
   onElementIdClick?: (elementId: string) => void;
   onNavigateToJobs?: (elementInstanceKey: string) => void;
   onNavigateToEvents?: (elementInstanceKey: string) => void;
+  /**
+   * Ids of the elements which have jobs although their element type does not
+   * say so, as the model of the instance tells it.
+   */
+  elementIdsWithJobs?: ReadonlySet<string>;
   focusedElementInstanceKey?: string;
   autoNavigateToFocusedRow?: boolean;
   onFocusedRowVisible?: () => void;
@@ -70,6 +75,7 @@ export const HistoryTab = ({
   onElementIdClick,
   onNavigateToJobs,
   onNavigateToEvents,
+  elementIdsWithJobs,
   focusedElementInstanceKey,
   autoNavigateToFocusedRow = false,
   onFocusedRowVisible,
@@ -87,9 +93,10 @@ export const HistoryTab = ({
     [showSequenceFlows],
   );
   // An element of another type has a job too when it carries an execution
-  // listener, such as a start event held by its listener's job. Such a row
-  // links to the job when the job is among the loaded ones, the current page
-  // of the Jobs tab, so that no row offers a job that does not exist.
+  // listener, such as a start event held by its listener's job. The model
+  // names those elements, whatever page of the Jobs tab is loaded. Where the
+  // model does not tell, such a row still links to a job which is among the
+  // loaded ones, so that no row offers a job that does not exist.
   const loadedJobElementInstanceKeys = useMemo(
     () => new Set(
       instanceTree
@@ -99,8 +106,11 @@ export const HistoryTab = ({
     [instanceTree],
   );
   const canLinkToJob = useCallback(
-    (row: FlowElementHistory) => isJobElementType(row) || loadedJobElementInstanceKeys.has(row.key),
-    [loadedJobElementInstanceKeys],
+    (row: FlowElementHistory) =>
+      isJobElementType(row) ||
+      elementIdsWithJobs?.has(row.elementId) === true ||
+      loadedJobElementInstanceKeys.has(row.key),
+    [elementIdsWithJobs, loadedJobElementInstanceKeys],
   );
 
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);

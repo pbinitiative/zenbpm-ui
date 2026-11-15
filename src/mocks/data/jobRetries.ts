@@ -206,7 +206,8 @@ export const definitionRetriesNotEvaluable = (
   incident: MockIncident,
   job: MockJob | undefined
 ): string | undefined => {
-  if (job?.state !== 'failed' || job.retriesSetByOperator) return undefined;
+  // the retries of a listener are literals, which always evaluate
+  if (job?.state !== 'failed' || job.retriesSetByOperator || job.listenerEventType) return undefined;
   return leaderCallFailure(
     'resolve incident',
     `incident cannot be resolved as things stand: the retries of job ${job.key} no longer evaluate ` +
@@ -215,6 +216,18 @@ export const definitionRetriesNotEvaluable = (
       `given ("retries" in the body of POST /v1/incidents/${incident.key}/resolve)`
   );
 };
+
+/**
+ * The engine's refusal to resolve an incident while the job the resolution
+ * would leave waiting is being changed by another request, such as a
+ * completion which arrives at the same time. Nothing was changed.
+ */
+export const jobChangedWhileResolving = (incident: MockIncident): string =>
+  leaderCallFailure(
+    'resolve incident',
+    `incident cannot be resolved as things stand: the job incident ${incident.key} leaves waiting changed ` +
+      'while the incident was being resolved; resolve it again'
+  );
 
 /** States of a job the engine still waits on, the legacy fixtures' waiting states included. */
 const PENDING_STATES = new Set<MockJob['state']>(['active', 'activatable', 'activated', 'failed']);

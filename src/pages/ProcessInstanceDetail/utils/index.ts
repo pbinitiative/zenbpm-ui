@@ -15,3 +15,4 @@ export {
 } from './jobRetries';
 export { collectNodes, compareByProcessType } from './instanceTree';
 export { isListenerJob } from './listenerJobs';
+export { elementIdsWithJobsTheirTypeDoesNotTell } from './jobElements';

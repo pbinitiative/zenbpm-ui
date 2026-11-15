@@ -20,6 +20,7 @@ import {
   TASK_LISTENERS_FAILED_END_LISTENER_INCIDENT_KEY,
   TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY,
   TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY,
+  TASK_LISTENERS_START_EVENT_LISTENER_JOB_KEY,
   TASK_LISTENERS_START_LISTENER_INSTANCE_KEY,
   TASK_LISTENERS_USER_TASK_INSTANCE_KEY,
   TASK_LISTENERS_USER_TASK_LISTENER_INSTANCE_KEY,
@@ -32,8 +33,9 @@ import {
 // one job at a time. All of them carry the element's id, type and element
 // instance key; `listenerEventType` alone tells a listener's job from the
 // element's own. The mock process `task-listeners` has a service task with two
-// start and two end listeners and a user task with one start listener; the
-// mock process `start-listener` has an end listener on its start event.
+// start and two end listeners and a user task with one start listener, behind
+// a start event with an end listener; the mock process `start-listener` has an
+// end listener on its start event alone.
 test.describe('Process Instance Jobs - Execution listeners', () => {
   test('marks start and end listener jobs with their own chip and tooltip, and no job of an element itself', async ({ page }) => {
     await openJobsTab(page, TASK_LISTENERS_END_LISTENER_INSTANCE_KEY);
@@ -190,7 +192,7 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     });
     await expect(jobRows(page).filter({ hasText: 'ShipOrder' })).toHaveCount(4);
     await expect(jobRow(page, TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY)).toHaveAttribute('data-focused', 'true');
-    await expect(page.getByTestId('jobs-table').locator('tbody tr[data-focused="true"]')).toHaveCount(1);
+    await expect(focusedJobRows(page)).toHaveCount(1);
 
     // going on to the history focuses the element again, not one of its jobs
     await openRowMenu(page, TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY);
@@ -214,7 +216,80 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
       focusJobKey: null,
     });
     // two start listeners, the task's own job and the failed end listener
-    await expect(page.getByTestId('jobs-table').locator('tbody tr[data-focused="true"]')).toHaveCount(4);
+    await expect(focusedJobRows(page)).toHaveCount(4);
+    // all of them are in view, so nothing is said about other pages
+    await expect(page.getByText('Jobs of this element are also on other pages')).toHaveCount(0);
+  });
+
+  test('says on which other pages the jobs of an element are, where a page boundary parts them', async ({ page }) => {
+    // Eight jobs at five to a page: four jobs of the service task on the first page, its last one on the second.
+    await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    await showFiveJobsToAPage(page);
+
+    await viewRelatedJobsOf(page, 'ShipOrder');
+    await expect(focusedJobRows(page)).toHaveCount(4);
+    await expect(page.getByText('Jobs of this element are also on other pages of the Jobs tab: 2')).toBeVisible();
+
+    // from the second page, which holds the last job of the service task
+    await page.getByRole('button', { name: 'Close' }).click();
+    await goToJobsPage(page, 2);
+    await expect(jobRowOfType(page, 'archive-order')).toHaveAttribute('data-focused', 'true');
+    await viewRelatedJobsOf(page, 'ShipOrder');
+    await expect(focusedJobRows(page)).toHaveCount(1);
+    await expect(page.getByText('Jobs of this element are also on other pages of the Jobs tab: 1')).toBeVisible();
+  });
+
+  test('links a start event in the history to its listener job, whatever page of the jobs is loaded', async ({ page }) => {
+    await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    await showFiveJobsToAPage(page);
+    await goToJobsPage(page, 2);
+    // the listener job of the start event is the oldest job, on the first page
+    await expect(jobRowOfType(page, 'confirm-delivery')).toHaveCount(1);
+    await expect(jobRow(page, TASK_LISTENERS_START_EVENT_LISTENER_JOB_KEY)).toHaveCount(0);
+
+    // the model says that the start event carries a listener, so its row links to the jobs
+    await viewRelatedJobsOf(page, 'OrderReceived');
+
+    await expect(jobRow(page, TASK_LISTENERS_START_EVENT_LISTENER_JOB_KEY)).toHaveAttribute('data-focused', 'true');
+    await expect(page.getByTestId('jobs-table').getByRole('button', { name: 'page 1' })).toHaveAttribute('aria-current', 'page');
+    // its only job is in view, so nothing is said about other pages
+    await expect(page.getByText('Jobs of this element are also on other pages')).toHaveCount(0);
+  });
+
+  test('offers no link to jobs for the end event, which has none', async ({ page }) => {
+    await page.goto(`/process-instances/${START_LISTENER_WAITING_INSTANCE_KEY}?tab=history`);
+    await expect(page.getByTestId('history-table').locator('tbody tr').filter({ hasText: 'OrderReceived' })).toHaveCount(1);
+    await expect(page.getByTestId('history-table').locator('tbody tr').filter({ hasText: 'OrderReceived' })
+      .getByRole('button', { name: 'Row actions' })).toHaveCount(1);
+
+    // a start event without a listener has no job, and its row no menu
+    await page.goto(`/process-instances/${SIMPLE_TASK_ACTIVE_INSTANCE_KEY}?tab=history`);
+    const startRow = page.getByTestId('history-table').locator('tbody tr').filter({ hasText: `${SIMPLE_TASK_ACTIVE_INSTANCE_KEY}001` });
+    await expect(startRow).toHaveCount(1);
+    await expect(startRow.getByRole('button', { name: 'Row actions' })).toHaveCount(0);
+  });
+
+  test('treats an empty job key in the address as none and focuses every job of the element', async ({ page }) => {
+    await page.goto(
+      `/process-instances/${TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY}?tab=jobs` +
+        `&focusElementInstanceKey=${TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY}002&focusJobKey=`
+    );
+
+    await expect(focusedJobRows(page)).toHaveCount(4);
+  });
+
+  test('scrolls to the newest of several focused jobs, the one the element waits behind', async ({ page }) => {
+    // a window too low to show the five jobs of the service task at once
+    await page.setViewportSize({ width: 1280, height: 420 });
+    await page.goto(`/process-instances/${TASK_LISTENERS_USER_TASK_INSTANCE_KEY}?tab=history`);
+
+    await viewRelatedJobsOf(page, 'ShipOrder');
+
+    // the table lists the newest job first: the last end listener leads the five
+    await expect(focusedJobRows(page)).toHaveCount(5);
+    await expect(focusedJobRows(page).first()).toContainText('archive-order');
+    // most of the row is in view; the header of the table lies over its upper edge
+    await expect(focusedJobRows(page).first()).toBeInViewport({ ratio: 0.5 });
   });
 
   test('links the start event in the history to its listener job', async ({ page }) => {
@@ -307,6 +382,21 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await expect(taskDialog.getByText("overriding the task definition's backoff")).toBeVisible();
   });
 
+  test('reports why the engine refused to resolve the incident of a listener job, and blames no task definition', async ({ page }) => {
+    // The retries of a listener are literals, so a refusal is never about retries which do not evaluate.
+    await openJobsTab(page, TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY, 'jobChangedWhileResolving');
+    const dialog = await openDialogFromMenu(page, TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY, /^retry$/i);
+
+    await dialog.getByRole('button', { name: 'Retry' }).click();
+
+    const error = dialog.getByTestId('job-retries-error');
+    await expect(error).toContainText('leaves waiting changed while the incident was being resolved; resolve it again');
+    await expect(error).not.toContainText('task definition');
+    await expect(error).not.toContainText('client call to');
+    // nothing about the listener's retries is wrong, so the dialog stays with them
+    await expect(dialog.getByRole('radio', { name: /resolve the incident only/i })).toBeChecked();
+  });
+
   test('takes no incident of the element itself for the incident of a listener job', async ({ page }) => {
     // The only open incident on the service task names no job. Resolving it would not hand the listener's job out.
     let resolved = false;
@@ -325,9 +415,35 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
   });
 });
 
-async function openJobsTab(page: Page, processInstanceKey: string) {
-  await page.goto(`/process-instances/${processInstanceKey}`);
+// `scenario` names a behaviour of the mocked engine, as `src/mocks/handlers/scenarios.ts` reads it.
+async function openJobsTab(page: Page, processInstanceKey: string, scenario?: string) {
+  await page.goto(`/process-instances/${processInstanceKey}${scenario ? `?jobRetriesScenario=${scenario}` : ''}`);
   await expect(page.getByTestId('jobs-table')).toBeVisible({ timeout: 10000 });
+}
+
+async function showFiveJobsToAPage(page: Page) {
+  await page.getByTestId('jobs-table').getByRole('combobox').click();
+  await page.getByRole('option', { name: '5', exact: true }).click();
+  await expect(jobRows(page)).toHaveCount(5);
+}
+
+async function goToJobsPage(page: Page, number: number) {
+  await page.getByTestId('jobs-table').getByRole('button', { name: `Go to page ${number}` }).click();
+  await expect(page.getByTestId('jobs-table').getByRole('button', { name: `page ${number}`, exact: true }))
+    .toHaveAttribute('aria-current', 'page');
+}
+
+// From wherever the page is: the History tab, the row of the element, its link to the jobs.
+async function viewRelatedJobsOf(page: Page, elementId: string) {
+  await page.getByRole('tab', { name: /History/i }).click();
+  const historyRow = page.getByTestId('history-table').locator('tbody tr').filter({ hasText: elementId });
+  await historyRow.getByRole('button', { name: 'Row actions' }).click();
+  await page.getByRole('menuitem', { name: 'View related jobs' }).click();
+  await expect(page.getByTestId('jobs-table')).toBeVisible();
+}
+
+function focusedJobRows(page: Page) {
+  return page.getByTestId('jobs-table').locator('tbody tr[data-focused="true"]');
 }
 
 function jobRows(page: Page) {

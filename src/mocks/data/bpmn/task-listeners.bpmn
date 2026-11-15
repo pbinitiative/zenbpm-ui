@@ -2,6 +2,11 @@
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:zenbpm="http://zenbpm.pbinitiative.org/1.0" id="Definitions_task-listeners" targetNamespace="http://bpmn.io/schema/bpmn" exporter="ZenBPM Modeler" exporterVersion="1.0.0">
   <bpmn:process id="task-listeners" name="Task Listeners" isExecutable="true">
     <bpmn:startEvent id="OrderReceived" name="Order received">
+      <bpmn:extensionElements>
+        <zenbpm:executionListeners>
+          <zenbpm:executionListener eventType="end" type="order-started" retries="3" />
+        </zenbpm:executionListeners>
+      </bpmn:extensionElements>
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:sequenceFlow id="Flow_1" sourceRef="OrderReceived" targetRef="ShipOrder" />

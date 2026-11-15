@@ -224,7 +224,10 @@ export const JobsTab = ({
           return;
         }
       }
-      if (request.retries === undefined && isResolutionRefused(err)) {
+      // The retries of a listener are literals, which always evaluate: the
+      // engine refused the resolution of a listener job for another reason,
+      // which its own message names.
+      if (request.retries === undefined && isResolutionRefused(err) && !isListenerJob(job)) {
         throw new DefinitionRetriesNotEvaluableError(
           t('processInstance:dialogs.retryJob.definitionRetriesNotEvaluable', {
             reason: apiErrorMessage(err) ?? t('processInstance:messages.incidentResolveFailed'),
