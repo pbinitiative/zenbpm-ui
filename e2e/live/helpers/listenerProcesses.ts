@@ -81,19 +81,26 @@ export async function completeJob(page: Page, dialog: Locator): Promise<void> {
 }
 
 export async function jobsOf(page: Page, instanceKey: string): Promise<EngineJob[]> {
-  const response = await page.request.get(`/v1/process-instances/${instanceKey}/jobs`);
-  const { items } = parseWithKeys.parse(await response.text()) as { items?: EngineJob[] };
+  const { items } = await readFromEngine<{ items?: EngineJob[] }>(page, `/v1/process-instances/${instanceKey}/jobs`);
   return items ?? [];
 }
 
 export async function instanceState(page: Page, instanceKey: string): Promise<string> {
-  const response = await page.request.get(`/v1/process-instances/${instanceKey}`);
-  const instance = parseWithKeys.parse(await response.text()) as { state: string };
+  const instance = await readFromEngine<{ state: string }>(page, `/v1/process-instances/${instanceKey}`);
   return instance.state;
 }
 
 export async function instanceVariables(page: Page, instanceKey: string): Promise<Record<string, unknown>> {
-  const response = await page.request.get(`/v1/process-instances/${instanceKey}`);
-  const instance = parseWithKeys.parse(await response.text()) as { variables?: Record<string, unknown> };
-  return instance.variables ?? {};
+  const { variables } = await readFromEngine<{ variables?: Record<string, unknown> }>(page, `/v1/process-instances/${instanceKey}`);
+  // the engine always names the variables of an instance: without them, a test
+  // that a variable is absent would pass on an answer which says nothing
+  if (variables === undefined) throw new Error(`The engine named no variables of instance ${instanceKey}`);
+  return variables;
+}
+
+/** What the engine answers to the read. A refused read fails the test, so that no assertion passes on an error's body. */
+async function readFromEngine<T>(page: Page, path: string): Promise<T> {
+  const response = await page.request.get(path);
+  expect(response.ok(), `GET ${path} returned ${response.status()}`).toBe(true);
+  return parseWithKeys.parse(await response.text()) as T;
 }
