@@ -101,11 +101,18 @@ export const ProcessInstanceDetailPage = () => {
   const [pendingFocusKey, setPendingFocusKey] = useState<string | undefined>(
     focusedElementInstanceKey
   );
-  // The tab a focus navigation leads to. Until the page shows that tab, the one
-  // left behind is still on screen, and may show a focused row of its own: the
-  // row of the element whose jobs are asked for. That row being visible is no
-  // answer to the navigation.
+  // The tab a focus navigation leads to, while the navigation is under way.
+  // Until the page shows that tab, the one left behind is still on screen, and
+  // may show a focused row of its own: the row of the element whose jobs are
+  // asked for. That row being visible is no answer to the navigation.
   const pendingFocusTabRef = useRef<FocusTab | undefined>(undefined);
+  // The navigation has arrived once the address names its tab. From then on
+  // only that tab is on screen, and a focus the address brings later, such as
+  // one the browser goes back to, leads to whatever tab the address names.
+  // Looked at after every render: the tab is set outside of rendering.
+  useEffect(() => {
+    if (pendingFocusTabRef.current === tabParam) pendingFocusTabRef.current = undefined;
+  });
   const [findingFocusedJob, setFindingFocusedJob] = useState(false);
   const handledJobFocusesRef = useRef(new Set<string>());
   const handledEventFocusesRef = useRef(new Set<string>());

@@ -459,6 +459,38 @@ test.describe('Process Instance Detail - cross-tab focus', () => {
       .toHaveAttribute('aria-current', 'page');
   });
 
+  test('browser back to a focused History row leaves the History pages free to turn', async ({ page }) => {
+    const firstFocusedKey = `${MULTI_INSTANCE_CHILD_B_KEY}002`;
+    const elementWithJobKey = `${MULTI_INSTANCE_CHILD_B_KEY}006`;
+
+    await page.goto(
+      `/process-instances/${MULTI_INSTANCE_PARENT_KEY}?tab=history&focusElementInstanceKey=${firstFocusedKey}`
+    );
+    const historyTable = page.getByTestId('history-table');
+    const historyRow = (key: string) => historyTable.locator('tbody tr').filter({ hasText: key });
+    await expect(historyRow(firstFocusedKey)).toHaveAttribute('data-focused', 'true');
+
+    // on to the jobs of another element: this navigation leads to the Jobs tab
+    await historyRow(elementWithJobKey).getByRole('button', { name: /row actions/i }).click();
+    await page.getByRole('menuitem', { name: /view related job/i }).click();
+    await expect(page.getByTestId('jobs-table').locator('tbody tr[data-focused="true"]')).toHaveCount(1);
+
+    // back to the focus the address held before, which leads to the History tab
+    await page.goBack();
+    await expect(historyRow(firstFocusedKey)).toHaveAttribute('data-focused', 'true');
+
+    // the focus is settled by its row being shown, so the table follows the user to another page
+    await historyTable.getByRole('combobox').click();
+    await page.getByRole('option', { name: '5', exact: true }).click();
+    await expect(historyRow(firstFocusedKey)).toBeVisible();
+    await historyTable.getByRole('button', { name: 'Go to page 2' }).click();
+
+    await expect(historyRow(elementWithJobKey)).toBeVisible();
+    await expect(historyRow(firstFocusedKey)).toHaveCount(0);
+    await expect(historyTable.getByRole('button', { name: 'page 2', exact: true }))
+      .toHaveAttribute('aria-current', 'page');
+  });
+
   test('manual Jobs page-size changes are not overwritten by an in-flight focus scan', async ({ page }) => {
     const targetElementInstanceKey = `${MULTI_INSTANCE_CHILD_B_KEY}006`;
     let page2Requested = false;
