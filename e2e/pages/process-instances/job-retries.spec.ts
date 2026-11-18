@@ -695,6 +695,55 @@ test.describe('Process Instance Jobs - Retries', () => {
     await expectJobRow(page, SIMPLE_TASK_FAILED_JOB_KEY, { state: 'Active', retries: '4', waiting: false });
   });
 
+  test("shows the engine's reason alone when the input mappings of the task of a failed job no longer evaluate", async ({ page }) => {
+    const posts = recordJobRetryPosts(page);
+    await openJobsTab(page, SIMPLE_TASK_FAILED_INSTANCE_KEY, 'inputMappingsDoNotEvaluate');
+    const dialog = await openDialogFromMenu(page, SIMPLE_TASK_FAILED_JOB_KEY, /^retry$/i);
+
+    await dialog.getByRole('button', { name: 'Retry' }).click();
+
+    const error = dialog.getByTestId('job-retries-error');
+    await expect(error).toContainText('failed to evaluate the input mappings of SERVICE_TASK');
+    await expect(error).toContainText('correct the variables they read and resolve the incident again');
+    // New retries do not get past input mappings which fail, so nothing says they would.
+    await expect(error).not.toContainText('the retries of the task definition no longer evaluate');
+    await expect(error).not.toContainText('Set new retries above');
+    await expect(error).not.toContainText('client call to');
+    await expect(dialog.getByRole('radio', { name: /resolve the incident only/i })).toBeChecked();
+    await expect(dialog.getByLabel('Retries left from now on')).toHaveCount(0);
+    expect(posts).toEqual(['resolve']);
+    await expectJobRow(page, SIMPLE_TASK_FAILED_JOB_KEY, { state: 'Failed', retries: '0', waiting: false });
+  });
+
+  test('blames no retries when the engine refused to resolve the incident because the job changed meanwhile', async ({ page }) => {
+    await openJobsTab(page, SIMPLE_TASK_FAILED_INSTANCE_KEY, 'jobChangedWhileResolving');
+    const dialog = await openDialogFromMenu(page, SIMPLE_TASK_FAILED_JOB_KEY, /^retry$/i);
+
+    await dialog.getByRole('button', { name: 'Retry' }).click();
+
+    const error = dialog.getByTestId('job-retries-error');
+    await expect(error).toContainText('leaves waiting changed while the incident was being resolved; resolve it again');
+    await expect(error).not.toContainText('the retries of the task definition no longer evaluate');
+    await expect(error).not.toContainText('Set new retries above');
+    // the way out is to resolve again as it is, so the dialog stays as it was
+    await expect(dialog.getByRole('radio', { name: /resolve the incident only/i })).toBeChecked();
+  });
+
+  test('advises no retries in the Incidents tab when the input mappings of the element no longer evaluate', async ({ page }) => {
+    const row = await openIncidentRow(page, 'inputMappingsDoNotEvaluate');
+
+    const resolve = waitForResolve(page, SIMPLE_TASK_FAILED_JOB_INCIDENT_KEY);
+    await row.getByRole('button', { name: 'Resolve' }).click();
+    await resolve;
+
+    const refusal = page.getByRole('alert').filter({ hasText: 'The incident was not resolved' });
+    await expect(refusal).toContainText('failed to evaluate the input mappings of SERVICE_TASK');
+    await expect(refusal).toContainText('correct the variables they read and resolve the incident again');
+    await expect(refusal).not.toContainText('retries of your own');
+    await expect(refusal).not.toContainText('client call to');
+    await expect(row.getByRole('button', { name: 'Resolve' })).toBeVisible();
+  });
+
   test('tells why the engine refused to resolve an incident in the Incidents tab and leaves it open', async ({ page }) => {
     await page.clock.install();
     const row = await openIncidentRow(page, 'definitionRetriesNotEvaluable');

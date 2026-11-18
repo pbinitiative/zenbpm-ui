@@ -368,10 +368,10 @@ reads is the other way out.
 
 1. Open H2 → **Incidents** tab → **Resolve** on the incident.
 2. A red toast says "The incident was not resolved: incident cannot be resolved as things stand:
-   the retries of job … no longer evaluate (retries expression "=attemptsAllowed + 1": …)… For the
-   incident of a job, open the job in the Jobs tab and retry it with retries of your own." The
-   incident stays **Unresolved** and keeps its **Resolve** button. (Before this change the click
-   showed nothing.)
+   the retries of job … no longer evaluate (retries expression "=attemptsAllowed + 1": …)… To
+   resolve it, open the job in the Jobs tab and retry it with retries of your own." The incident
+   stays **Unresolved** and keeps its **Resolve** button. (Before this change the click showed
+   nothing.)
    - Wait 10 seconds and click somewhere else on the page: the toast stays. Close it with its ×.
    - ⓘ View Details → **Resolve** in the modal shows the same toast.
 3. **Variables** tab: `attemptsAllowed` is `"many"`. Click the edit icon, change **Type** to
@@ -401,6 +401,18 @@ instead (`pnpm test:e2e -- e2e/pages/process-instances/job-retries.spec.ts`):
   Start the UI the same way and open
   `http://localhost:3000/process-instances/3100000000000000038?jobRetriesScenario=definitionRetriesNotEvaluable`
   (append `&tab=incidents` for the Incidents tab). The mock has no way to correct the variable.
+- **A resolution refused for another reason than the retries.** New retries are the way out only
+  where the retries of the task definition no longer evaluate, so only then does the UI speak of
+  them. In the same mock mode, open
+  `http://localhost:3000/process-instances/3100000000000000038?jobRetriesScenario=inputMappingsDoNotEvaluate`,
+  then ⋮ → **Retry** → **Retry**. A red box shows the engine's reason alone: "incident cannot be
+  resolved as things stand: failed to rebuild the variables of job …: failed to evaluate the input
+  mappings of SERVICE_TASK …; correct the variables they read and resolve the incident again". It
+  says nothing about the retries of the task definition, and **Resolve the incident only** stays
+  selected. With `&tab=incidents`, **Resolve** shows a red toast "The incident was not resolved:
+  …" with the same reason and without the sentence about retries of your own.
+  `jobRetriesScenario=jobChangedWhileResolving` shows the same for a job which another request
+  changed while the incident was being resolved: "… resolve it again".
 - **Other errors of Resolve in the Incidents tab**, in the same mock mode with `&tab=incidents`:
   - `jobRetriesScenario=resolveIncidentFailsOnce`: the engine could not save the resolution. A red
     toast "The incident is still open. The engine said: failed to resolve incident …" stays until

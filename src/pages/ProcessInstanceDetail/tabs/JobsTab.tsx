@@ -55,6 +55,7 @@ import {
   formatDateTimeWithSeconds,
   isIncidentOpen,
   isBadRequest,
+  isRefusedForRetriesWhichNoLongerEvaluate,
   isResolutionRefused,
   isListenerJob,
   isWaitingOutBackoff,
@@ -224,10 +225,12 @@ export const JobsTab = ({
           return;
         }
       }
-      // The retries of a listener are literals, which always evaluate: the
-      // engine refused the resolution of a listener job for another reason,
-      // which its own message names.
-      if (request.retries === undefined && isResolutionRefused(err) && !isListenerJob(job)) {
+      // Retries of the operator's own are the way out of one refusal only:
+      // the retries of the task definition no longer evaluate. Every other
+      // reason, such as input mappings which no longer evaluate, is the
+      // engine's to name, and its message says what to change. The retries of
+      // a listener are literals, so its job is never refused for them.
+      if (request.retries === undefined && isRefusedForRetriesWhichNoLongerEvaluate(err)) {
         throw new DefinitionRetriesNotEvaluableError(
           t('processInstance:dialogs.retryJob.definitionRetriesNotEvaluable', {
             reason: apiErrorMessage(err) ?? t('processInstance:messages.incidentResolveFailed'),

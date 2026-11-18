@@ -40,12 +40,33 @@ export class DefinitionRetriesNotEvaluableError extends Error {
  * True when the engine refused a resolution because it conflicts with the
  * state of the incident or its job (`409`). Nothing was changed, unlike after
  * other errors, which may follow a resolution that succeeded and raised a new
- * incident. The incident is either still open, when the retries of the task
- * definition no longer evaluate for the job the resolution would hand out
- * again, or it was resolved already, by somebody else or by an earlier attempt.
+ * incident. The incident was either resolved already, by somebody else or by
+ * an earlier attempt, or it is still open for a reason the message names: the
+ * retries of the task definition no longer evaluate for the job the
+ * resolution would hand out again, the input mappings of the element no
+ * longer evaluate, or the job changed while the incident was being resolved.
  */
 export function isResolutionRefused(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 409;
+}
+
+/**
+ * How the engine words the one refusal of a resolution which retries of the
+ * operator's own lift: `the retries of job 42 no longer evaluate (...)`. The
+ * API answers every refusal with `409` and code `CONFLICT`, so its message is
+ * all that tells this reason from the others.
+ */
+const RETRIES_NO_LONGER_EVALUATE = /the retries of job \d+ no longer evaluate/;
+
+/**
+ * True when the engine refused a resolution because the retries of the task
+ * definition no longer evaluate for the job it would hand out again. Retries
+ * given with the resolution are the way out of this refusal, and of no other:
+ * they change nothing about input mappings which fail, or about a job which
+ * changed meanwhile.
+ */
+export function isRefusedForRetriesWhichNoLongerEvaluate(error: unknown): boolean {
+  return isResolutionRefused(error) && RETRIES_NO_LONGER_EVALUATE.test(apiErrorMessage(error) ?? '');
 }
 
 /**

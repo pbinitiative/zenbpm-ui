@@ -17,6 +17,7 @@ import {
   collectNodes,
   compareByProcessType,
   isIncidentOpen,
+  isRefusedForRetriesWhichNoLongerEvaluate,
   isResolutionRefused,
 } from '../utils';
 
@@ -87,7 +88,14 @@ export const IncidentsTab = ({
           onShowNotification?.(t('incidents:messages.alreadyResolved'), 'success');
           return;
         }
-        onShowNotification?.(t('incidents:messages.resolveRefused', { reason }), 'error', { persist: true });
+        // retries of the operator's own lift one refusal only, so only that one is told about them
+        onShowNotification?.(
+          isRefusedForRetriesWhichNoLongerEvaluate(err)
+            ? t('incidents:messages.resolveRefusedForRetries', { reason })
+            : t('incidents:messages.resolveRefused', { reason }),
+          'error',
+          { persist: true }
+        );
         return;
       }
       // Any other error may follow a resolution which succeeded and then

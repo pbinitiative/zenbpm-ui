@@ -229,6 +229,25 @@ export const jobChangedWhileResolving = (incident: MockIncident): string =>
       'while the incident was being resolved; resolve it again'
   );
 
+/**
+ * The engine's refusal to resolve an incident while the input mappings of its
+ * element fail when they are evaluated again: the token would only raise the
+ * incident anew, and a job would be handed out without the variables of its
+ * task. It holds for an element's own job, for the job of a listener and for
+ * an incident which leaves no job waiting, with or without retries given.
+ */
+export const inputMappingsDoNotEvaluate = (incident: MockIncident, job: MockJob | undefined): string => {
+  const mappings =
+    `failed to evaluate the input mappings of ${job?.elementType ?? 'SERVICE_TASK'} ${job?.elementId ?? incident.elementId}: ` +
+    'failed to evaluate expression "=order.total * taxRate": taxRate is not a number';
+  return leaderCallFailure(
+    'resolve incident',
+    'incident cannot be resolved as things stand: ' +
+      (job ? `failed to rebuild the variables of job ${job.key}: ` : '') +
+      `${mappings}; correct the variables they read and resolve the incident again`
+  );
+};
+
 /** States of a job the engine still waits on, the legacy fixtures' waiting states included. */
 const PENDING_STATES = new Set<MockJob['state']>(['active', 'activatable', 'activated', 'failed']);
 
