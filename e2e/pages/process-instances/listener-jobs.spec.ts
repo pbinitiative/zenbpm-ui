@@ -110,13 +110,13 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await expect(dialog).not.toBeVisible();
   });
 
-  test('completes an end listener job with the variables entered and says that they never reach the instance', async ({ page }) => {
+  test('completes an end listener job with the variables entered and says that they are written to the instance', async ({ page }) => {
     await openJobsTab(page, TASK_LISTENERS_END_LISTENER_INSTANCE_KEY);
     await jobRow(page, TASK_LISTENERS_ACTIVE_END_LISTENER_JOB_KEY).getByRole('button', { name: 'Complete' }).click();
     const dialog = page.getByRole('dialog');
 
-    await expect(dialog.getByTestId('complete-job-listener-note')).toContainText('only the later end listeners of the element and never the instance');
-    await expect(dialog.getByTestId('complete-job-listener-note')).toContainText('Variables tab');
+    await expect(dialog.getByTestId('complete-job-listener-note')).toContainText('written to the instance as they are, without an output mapping');
+    await expect(dialog.getByTestId('complete-job-listener-note')).toContainText('the later end listeners of the element receive them too');
     await expect(dialog.getByText('Variables (JSON)')).toBeVisible();
     await enterVariables(page, '{"notified": "by-mail"}');
 
@@ -135,7 +135,7 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     const dialog = page.getByRole('dialog');
 
     // a start event takes end listeners only
-    await expect(dialog.getByTestId('complete-job-listener-note')).toContainText('never the instance');
+    await expect(dialog.getByTestId('complete-job-listener-note')).toContainText('written to the instance');
 
     const request = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes(`/jobs/${START_LISTENER_WAITING_JOB_KEY}/complete`)

@@ -153,7 +153,7 @@
       "variablesHelp": "Enter variables as JSON object",
       "listenerNote": {
         "start": "This is the job of a start execution listener. Its variables stay local to the element: the later start listeners and the element's own job receive them, and they reach the instance only where an output mapping of the element names them.",
-        "end": "This is the job of an end execution listener. Its variables reach only the later end listeners of the element and never the instance. To change the instance's variables, edit them on the Variables tab before completing the job."
+        "end": "This is the job of an end execution listener. Its variables are written to the instance as they are, without an output mapping: they replace variables of the instance with the same name, and the later end listeners of the element receive them too."
       }
     },
     "completeFormJob": {

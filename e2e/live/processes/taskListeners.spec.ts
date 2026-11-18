@@ -71,12 +71,17 @@ test('a service task runs its start listener, its own job and its end listener, 
   // the token is still in the task: the instance ends only behind its end listener
   expect(await instanceState(page, instanceKey)).toBe('active');
 
+  // what an end listener is completed with is written to the instance, named by no output mapping
   await endListener.getByRole('button', { name: 'Complete' }).click();
   const endDialog = page.getByRole('dialog');
-  await expect(endDialog.getByTestId('complete-job-listener-note')).toContainText('never the instance');
+  await expect(endDialog.getByTestId('complete-job-listener-note')).toContainText('written to the instance');
+  await enterVariables(page, '{"notifiedBy": "the end listener"}');
   await completeJob(page, endDialog);
 
   await expect.poll(async () => instanceState(page, instanceKey), { timeout: 15_000 }).toBe('completed');
+  const variables = await instanceVariables(page, instanceKey);
+  expect(variables).toMatchObject({ notifiedBy: 'the end listener' });
+  expect(variables, 'the start listener\'s variable ended with the task').not.toHaveProperty('reservedBy');
 });
 
 // The job of a listener on a user task carries the element type USER_TASK, as
