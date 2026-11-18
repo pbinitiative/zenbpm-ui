@@ -91,11 +91,14 @@ export async function instanceState(page: Page, instanceKey: string): Promise<st
 }
 
 export async function instanceVariables(page: Page, instanceKey: string): Promise<Record<string, unknown>> {
-  const { variables } = await readFromEngine<{ variables?: Record<string, unknown> }>(page, `/v1/process-instances/${instanceKey}`);
-  // the engine always names the variables of an instance: without them, a test
-  // that a variable is absent would pass on an answer which says nothing
-  if (variables === undefined) throw new Error(`The engine named no variables of instance ${instanceKey}`);
-  return variables;
+  const { variables } = await readFromEngine<{ variables?: unknown }>(page, `/v1/process-instances/${instanceKey}`);
+  // the engine always names the variables of an instance, as an object which
+  // may be empty: on anything else, a test that a variable is absent would
+  // pass on an answer which says nothing
+  if (typeof variables !== 'object' || variables === null || Array.isArray(variables)) {
+    throw new Error(`The engine named no variables of instance ${instanceKey}: ${JSON.stringify(variables)}`);
+  }
+  return variables as Record<string, unknown>;
 }
 
 /** What the engine answers to the read. A refused read fails the test, so that no assertion passes on an error's body. */
