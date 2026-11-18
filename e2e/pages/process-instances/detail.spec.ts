@@ -605,16 +605,18 @@ test.describe('Process Instance Detail - cross-tab focus', () => {
     expect(page2RequestCount).toBe(requestCountAfterInitialScan);
   });
 
-  test('looks at no other Jobs page for a task without listeners whose job is in view', async ({ page }) => {
+  test('asks for no Jobs page for a task without listeners whose job is in view', async ({ page }) => {
     // Eleven jobs at ten to a page; the job of the focused task is on the first page, which is shown.
     const inViewElementInstanceKey = `${MULTI_INSTANCE_CHILD_B_KEY}002`;
-    const requestedJobPages = recordRequestedJobPages(page, MULTI_INSTANCE_CHILD_B_KEY);
 
     await page.goto(`/process-instances/${MULTI_INSTANCE_PARENT_KEY}?tab=history`);
     const historyRow = page
       .getByTestId('history-table')
       .locator('tbody tr')
       .filter({ hasText: inViewElementInstanceKey });
+    await expect(historyRow).toBeVisible();
+    await keepFromRefreshing(page);
+    const requestedJobPages = recordRequestedJobPages(page, MULTI_INSTANCE_CHILD_B_KEY);
     await historyRow.getByRole('button', { name: /row actions/i }).click();
     await page.getByRole('menuitem', { name: /view related job/i }).click();
 
@@ -622,8 +624,9 @@ test.describe('Process Instance Detail - cross-tab focus', () => {
     await expect(jobsTable.locator('tbody tr[data-focused="true"]').first()).toBeVisible();
     // Let a search which should not have started show itself.
     await page.waitForTimeout(500);
-    // the model says that the task carries no listener: its one job is the one in view
-    expect(requestedJobPages).not.toContain('2');
+    // the model says that the task carries no listener: its one job is the one in view, and a search would ask
+    // for the first page before any other
+    expect(requestedJobPages).toEqual([]);
   });
 
   test('takes no row of the Jobs page shown before for the job in view, while the page selected is on its way', async ({ page }) => {

@@ -243,23 +243,22 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     // Eight jobs at five to a page: four jobs of the service task on the first page, its last one on the second.
     await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
     await showFiveJobsToAPage(page);
-    // slow answers, so that the page is turned while the other pages are looked through
-    const devtools = await page.context().newCDPSession(page);
-    await devtools.send('Network.enable');
-    await devtools.send('Network.emulateNetworkConditions', {
-      offline: false,
-      latency: 600,
-      downloadThroughput: -1,
-      uploadThroughput: -1,
-    });
+    const lookedThrough = jobsPagesAskedFor(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
 
+    // the engine takes its time, so that the page is turned while the other pages are looked through
+    await answerAfter(page, SLOWLY);
     await viewRelatedJobsOf(page, 'ShipOrder');
     await expect(focusedJobRows(page)).toHaveCount(4);
+    // the four rows were loaded before: only a request tells that the other pages are being looked through
+    await expect.poll(() => lookedThrough.length).toBeGreaterThan(0);
+    await answerAfter(page, 'real');
     await goToJobsPage(page, 2);
     await expect(jobRowOfType(page, 'archive-order')).toBeVisible();
 
-    // Turning the page ended the search: a hint counted from the first page would name the page now shown.
-    await page.waitForTimeout(1500);
+    // Turning the page ended the search, whose request was still without an answer.
+    await expect.poll(() => wasGivenUp(lookedThrough)).toBe(true);
+    // A hint counted from the first page would name the page now shown.
+    await page.waitForTimeout(SLOWLY + 1000);
     await expect(page.getByText('Jobs of this element are also on other pages')).toHaveCount(0);
   });
 
