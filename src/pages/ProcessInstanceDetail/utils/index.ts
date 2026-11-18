@@ -13,6 +13,6 @@ export {
   type JobRetriesRequest,
   type UpdateJobRetriesRequest,
 } from './jobRetries';
-export { collectNodes, compareByProcessType } from './instanceTree';
+export { collectNodes, compareByProcessType, holdsJobsOfPage } from './instanceTree';
 export { isListenerJob } from './listenerJobs';
 export { elementIdsWithExecutionListeners, elementIdsWithJobsTheirTypeDoesNotTell } from './jobElements';

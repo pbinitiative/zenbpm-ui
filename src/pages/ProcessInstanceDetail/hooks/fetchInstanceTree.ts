@@ -159,6 +159,8 @@ function makeNode(
     callElementId,
     callPath: callElementId ? [...parentCallPath, callElementId] : [],
     jobs: [],
+    jobsPage: 1,
+    jobsPageSize: JOBS_PAGE_SIZE,
     jobsTotalCount: 0,
     activeJobsTotalCount: 0,
     incidents: [],
@@ -355,6 +357,8 @@ async function fetchNodeDatasets(
   if (jobsResult.status === 'fulfilled' && jobsResult.value) {
     const v = jobsResult.value as Awaited<ReturnType<typeof getProcessInstanceJobs>>;
     node.jobs = (v.items ?? []) as Job[];
+    node.jobsPage = opts.jobsPage;
+    node.jobsPageSize = opts.jobsPageSize;
     node.jobsTotalCount = v.totalCount ?? 0;
   }
 
@@ -572,6 +576,8 @@ export async function fetchInstanceTree(
       const cached = terminalCache.get(node.instance.key);
       if (cached) {
         node.jobs = cached.jobs;
+        node.jobsPage = cached.jobsPage;
+        node.jobsPageSize = cached.jobsPageSize;
         node.jobsTotalCount = cached.jobsTotalCount;
         node.activeJobsTotalCount = cached.activeJobsTotalCount;
         node.incidents = cached.incidents;
@@ -651,6 +657,8 @@ export async function refetchNodeJobs(
   try {
     const data = await getProcessInstanceJobs(node.instance.key, { page, size });
     node.jobs = (data.items ?? []) as Job[];
+    node.jobsPage = page;
+    node.jobsPageSize = size;
     // Preserve a previously-established non-zero total — some APIs return
     // totalCount=0 for pages beyond the last item rather than the real total.
     const newTotal = data.totalCount ?? 0;

@@ -34,3 +34,14 @@ export function compareByProcessType(a: ProcessInstanceNode, b: ProcessInstanceN
   if (orderA !== orderB) return orderA - orderB;
   return a.instance.key.localeCompare(b.instance.key);
 }
+
+/**
+ * Whether the jobs the node holds are those of the page the Jobs tab has
+ * selected. They are not while that page is on its way from the engine: until
+ * it is there, the node still holds the page selected before.
+ *
+ * @param page the selected page, which the table counts from 0
+ */
+export function holdsJobsOfPage(node: ProcessInstanceNode, page: number, pageSize: number): boolean {
+  return node.jobsPage === page + 1 && node.jobsPageSize === pageSize;
+}

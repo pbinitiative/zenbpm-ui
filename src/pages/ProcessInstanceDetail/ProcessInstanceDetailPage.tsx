@@ -30,7 +30,12 @@ import {
   type FocusedEventType,
 } from './hooks';
 import { JobsTab, VariablesTab, IncidentsTab, HistoryTab, ChildProcessesTab, DecisionInstancesTab, EventSubscriptionsTab } from './tabs';
-import { elementIdsWithExecutionListeners, elementIdsWithJobsTheirTypeDoesNotTell } from './utils';
+import {
+  collectNodes,
+  elementIdsWithExecutionListeners,
+  elementIdsWithJobsTheirTypeDoesNotTell,
+  holdsJobsOfPage,
+} from './utils';
 import type { NotificationOptions } from './types';
 
 // Tab panel component
@@ -377,7 +382,23 @@ export const ProcessInstanceDetailPage = () => {
       current === focusedElementInstanceKey ? undefined : current
     );
   }, [focusedElementInstanceKey]);
-  const handleFocusedJobVisible = useCallback(() => settleFocusOn('jobs'), [settleFocusOn]);
+  // The Jobs table shows the rows it has until the page selected is there, so
+  // a focused row can be one of the page selected before, about to go. Only a
+  // job on the page selected is in view, and only its row settles the focus.
+  const focusedJobIsInView = useMemo(
+    () =>
+      instanceTree !== null &&
+      focusedElementInstanceKey !== undefined &&
+      collectNodes(instanceTree).some(
+        (node) =>
+          holdsJobsOfPage(node, jobsPage, jobsPageSize) &&
+          node.jobs.some((job) => isFocusedJob(job, focusedElementInstanceKey, focusedJobKey))
+      ),
+    [focusedElementInstanceKey, focusedJobKey, instanceTree, jobsPage, jobsPageSize]
+  );
+  const handleFocusedJobVisible = useCallback(() => {
+    if (focusedJobIsInView) settleFocusOn('jobs');
+  }, [focusedJobIsInView, settleFocusOn]);
   const handleFocusedHistoryRowVisible = useCallback(() => settleFocusOn('history'), [settleFocusOn]);
   const handleFocusedEventVisible = useCallback(() => settleFocusOn('events'), [settleFocusOn]);
 
@@ -391,14 +412,7 @@ export const ProcessInstanceDetailPage = () => {
       return;
     }
 
-    const nodes: typeof instanceTree[] = [];
-    const queue: typeof instanceTree[] = [instanceTree];
-    while (queue.length > 0) {
-      const node = queue.shift();
-      if (!node) continue;
-      nodes.push(node);
-      queue.push(...node.children);
-    }
+    const nodes = collectNodes(instanceTree);
 
     // Full History is client-side, so it identifies the exact process node whose
     // server-paginated Jobs endpoint needs to be scanned.
@@ -422,13 +436,11 @@ export const ProcessInstanceDetailPage = () => {
       !elementIdsWithListeners.has(focusedElementId);
     const mayHaveSeveralJobs = !focusedJobKey && !modelTellsNoListener;
 
-    // The desired row may already be on the currently displayed server page.
+    // The desired row may already be on the page of jobs which is selected.
     // That settles a focus on one job, named or the only one of its element.
     // Several jobs are all in view only where the jobs of their process
     // instance fit on one page: a page boundary can part them.
-    const inView = nodes.some((node) =>
-      node.jobs.some((job) => isFocusedJob(job, focusedElementInstanceKey, focusedJobKey))
-    );
+    const inView = focusedJobIsInView;
     const mayHaveJobsOnOtherPages =
       mayHaveSeveralJobs && owner !== undefined && owner.jobsTotalCount > jobsPageSize;
     if (inView && !mayHaveJobsOnOtherPages) return;
@@ -499,6 +511,7 @@ export const ProcessInstanceDetailPage = () => {
     elementIdsWithListeners,
     focusResolutionPending,
     focusedElementInstanceKey,
+    focusedJobIsInView,
     focusedJobKey,
     instanceTree,
     jobsPage,

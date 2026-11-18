@@ -67,6 +67,14 @@ export interface ProcessInstanceNode {
 
   // --- Jobs (server-paginated) ---
   jobs: Job[];
+  /**
+   * The page `jobs` holds, as the engine counts pages: from 1. A page the
+   * Jobs tab selects is asked for and takes its time to come: until then
+   * `jobs` still holds the page selected before, and this tells which.
+   */
+  jobsPage: number;
+  /** The page size `jobs` was asked for with. */
+  jobsPageSize: number;
   jobsTotalCount: number;
   activeJobsTotalCount: number;
 

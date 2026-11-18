@@ -626,6 +626,51 @@ test.describe('Process Instance Detail - cross-tab focus', () => {
     expect(requestedJobPages).not.toContain('2');
   });
 
+  test('takes no row of the Jobs page shown before for the job in view, while the page selected is on its way', async ({ page }) => {
+    // Eleven jobs at ten to a page; the job of the focused task is on the first page.
+    const elementInstanceKey = `${MULTI_INSTANCE_CHILD_B_KEY}002`;
+    const jobOnTheFirstPage = '7000000000000000001';
+    const slowly = 3000;
+    let secondPageAnswered = false;
+    page.on('response', (response) => {
+      const url = new URL(response.url());
+      if (
+        url.pathname === `/v1/process-instances/${MULTI_INSTANCE_CHILD_B_KEY}/jobs` &&
+        url.searchParams.get('page') === '2'
+      ) {
+        secondPageAnswered = true;
+      }
+    });
+
+    await page.goto(`/process-instances/${MULTI_INSTANCE_PARENT_KEY}?tab=jobs`);
+    const jobsTable = page.getByTestId('jobs-table');
+    const jobRow = jobsTable.locator('tbody tr').filter({ hasText: jobOnTheFirstPage });
+    await expect(jobRow).toBeVisible({ timeout: 10000 });
+    // a refresh would bring the rows of the page selected by itself
+    await keepFromRefreshing(page);
+
+    // the engine takes its time, so that the table still shows the first page while the second one is selected
+    await answerAfter(page, slowly);
+    await jobsTable.getByRole('button', { name: 'Go to page 2' }).click();
+    await page.getByRole('tab', { name: /History/i }).click();
+    const historyRow = page
+      .getByTestId('history-table')
+      .locator('tbody tr')
+      .filter({ hasText: elementInstanceKey });
+    await historyRow.getByRole('button', { name: /row actions/i }).click();
+    await page.getByRole('menuitem', { name: /view related job/i }).click();
+    // the Jobs tab is back with the rows of the first page, the job among them, under a second page selected
+    await expect(jobRow).toBeVisible();
+    expect(secondPageAnswered, 'the second page answered before the job was asked for').toBe(false);
+
+    // Those rows go once the second page is there, so the job is looked for, and found on the first page.
+    await expect.poll(() => secondPageAnswered).toBe(true);
+    await answerAfter(page, 'real');
+    await expect(jobsTable.getByRole('button', { name: 'page 1', exact: true }))
+      .toHaveAttribute('aria-current', 'page', { timeout: 10000 });
+    await expect(jobRow).toHaveAttribute('data-focused', 'true');
+  });
+
   test('ends the search for the job of a task without listeners at the first page which holds it', async ({ page }) => {
     // Eleven jobs at five to a page. The third page shows none of the focused task, the first one does.
     const elementInstanceKey = `${MULTI_INSTANCE_CHILD_B_KEY}002`;
@@ -947,6 +992,21 @@ test.describe('Process Instance Detail - Include Child Processes Filter', () => 
     await expect(page.getByText('Include child processes')).not.toBeVisible();
   });
 });
+
+// The page asks for its data anew every few seconds, but only while its browser tab is in view. Out of view, it
+// asks for a page of jobs only where what its user does calls for one.
+async function keepFromRefreshing(page: Page) {
+  await page.evaluate(() => Object.defineProperty(document, 'hidden', { get: () => true }));
+}
+
+// The mocked engine answers every request it receives from here on after so many milliseconds; `real` is its
+// usual pace, a fraction of a second. An answer already on its way keeps the pace it was asked at.
+async function answerAfter(page: Page, delay: number | 'real') {
+  await page.evaluate(
+    (delay) => (window as unknown as { __setMockDelay: (delay: number | 'real') => void }).__setMockDelay(delay),
+    delay
+  );
+}
 
 // The pages of the jobs of a process instance which the page asks the engine for from now on.
 function recordRequestedJobPages(page: Page, processInstanceKey: string): string[] {
