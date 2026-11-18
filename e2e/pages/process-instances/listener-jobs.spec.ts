@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Request } from '@playwright/test';
 import {
   SIMPLE_TASK_ACTIVE_INSTANCE_KEY,
   SIMPLE_TASK_ACTIVE_JOB_KEY,
@@ -263,6 +263,36 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await expect(page.getByText('Jobs of this element are also on other pages')).toHaveCount(0);
   });
 
+  test('ends the search for the jobs of an element once the browser goes back to its row in the history', async ({ page }) => {
+    // Eight jobs at five to a page: four jobs of the service task on the first page, its last one on the second.
+    await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    await showFiveJobsToAPage(page);
+    // on to the row of the service task in the history, which the address then names as focused
+    await jobRowOfType(page, 'ship-order').getByRole('button', { name: 'Row actions' }).click();
+    await page.getByRole('menuitem', { name: 'View in history' }).click();
+    const historyRow = page.getByTestId('history-table').locator('tbody tr').filter({ hasText: 'ShipOrder' });
+    await expect(historyRow).toHaveAttribute('data-focused', 'true');
+    const lookedThrough = jobsPagesAskedFor(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+
+    // the engine takes its time, so that the browser goes back while the other pages are looked through
+    await answerAfter(page, SLOWLY);
+    await historyRow.getByRole('button', { name: 'Row actions' }).click();
+    await page.getByRole('menuitem', { name: 'View related jobs' }).click();
+    await expect(focusedJobRows(page)).toHaveCount(4);
+    await expect.poll(() => lookedThrough.length).toBeGreaterThan(0);
+    await answerAfter(page, 'real');
+
+    // Both addresses name the same element and no job, so only the tab tells them apart.
+    await page.goBack();
+    await expect(historyRow).toHaveAttribute('data-focused', 'true');
+
+    // Leaving the Jobs tab ended the search, whose request was still without an answer.
+    await expect.poll(() => wasGivenUp(lookedThrough)).toBe(true);
+    // Its answer would speak of the pages of the Jobs tab over the history.
+    await page.waitForTimeout(SLOWLY + 1000);
+    await expect(page.getByText('Jobs of this element are also on other pages')).toHaveCount(0);
+  });
+
   test('links a start event in the history to its listener job, whatever page of the jobs is loaded', async ({ page }) => {
     await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
     await showFiveJobsToAPage(page);
@@ -455,6 +485,33 @@ async function goToJobsPage(page: Page, number: number) {
   await page.getByTestId('jobs-table').getByRole('button', { name: `Go to page ${number}` }).click();
   await expect(page.getByTestId('jobs-table').getByRole('button', { name: `page ${number}`, exact: true }))
     .toHaveAttribute('aria-current', 'page');
+}
+
+// Long enough for a test to act while an answer of the mocked engine is on its way.
+const SLOWLY = 1500;
+
+// The mocked engine answers every request it receives from here on after so many milliseconds; `real` is its
+// usual pace, a fraction of a second. An answer already on its way keeps the pace it was asked at.
+async function answerAfter(page: Page, delay: number | 'real') {
+  await page.evaluate(
+    (delay) => (window as unknown as { __setMockDelay: (delay: number | 'real') => void }).__setMockDelay(delay),
+    delay
+  );
+}
+
+// The requests for a page of the jobs of the instance from here on, in the order they are sent.
+function jobsPagesAskedFor(page: Page, processInstanceKey: string): Request[] {
+  const requests: Request[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === `/v1/process-instances/${processInstanceKey}/jobs`) requests.push(request);
+  });
+  return requests;
+}
+
+// Whether one of the requests was given up before its answer came. The periodic refresh of the page asks for the
+// jobs too, and waits for every answer: a request given up is one of a search which was ended.
+function wasGivenUp(requests: Request[]): boolean {
+  return requests.some((request) => request.failure() !== null);
 }
 
 // From wherever the page is: the History tab, the row of the element, its link to the jobs.

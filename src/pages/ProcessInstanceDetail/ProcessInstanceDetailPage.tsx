@@ -403,14 +403,23 @@ export const ProcessInstanceDetailPage = () => {
   const handleFocusedEventVisible = useCallback(() => settleFocusOn('events'), [settleFocusOn]);
 
   useEffect(() => {
-    if (
-      activeTab !== TAB_MAP.jobs ||
-      !focusResolutionPending ||
-      !focusedElementInstanceKey ||
-      !instanceTree
-    ) {
+    // A search for the focused job leads to the Jobs tab and nowhere else. The
+    // address can come to name another tab while one is under way and still
+    // name the same focus, as it does when the browser goes back to the row of
+    // the History tab the search was started from. Nothing else ends the
+    // search then, and its answer would turn the Jobs page, or speak of jobs
+    // over a tab which shows none. Ended here, it starts anew should the Jobs
+    // tab come back with the focus still open.
+    if (activeTab !== TAB_MAP.jobs) {
+      if (jobSearchAbortRef.current && focusedElementInstanceKey) {
+        jobSearchAbortRef.current.abort();
+        handledJobFocusesRef.current.delete(
+          jobFocusRequestKey(processInstanceKey, focusedElementInstanceKey, focusedJobKey)
+        );
+      }
       return;
     }
+    if (!focusResolutionPending || !focusedElementInstanceKey || !instanceTree) return;
 
     const nodes = collectNodes(instanceTree);
 
