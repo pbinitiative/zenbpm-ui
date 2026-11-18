@@ -1,9 +1,10 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Request } from '@playwright/test';
 import { instanceKeys } from '../../fixtures/instance-keys';
 import {
   MULTI_INSTANCE_CHILD_B_KEY,
   MULTI_INSTANCE_PARENT_KEY,
   SIMPLE_USER_TASK_DEFAULT_TYPE_INSTANCE_KEY,
+  TASK_LISTENERS_USER_TASK_INSTANCE_KEY,
 } from '../../../src/mocks/data/well-known-keys';
 
 const { ACTIVE_INSTANCE_KEY, COMPLETED_INSTANCE_KEY, TERMINATED_INSTANCE_KEY } = instanceKeys;
@@ -711,6 +712,74 @@ test.describe('Process Instance Detail - cross-tab focus', () => {
   });
 });
 
+test.describe('Process Instance Detail - Jobs pages', () => {
+  const slowly = 2000;
+
+  test('keeps the rows of the Jobs page selected when the answer for a page left before arrives late', async ({ page }) => {
+    // Eleven jobs at ten to a page: one of them is shown on the first page only, another on the second only.
+    const jobOnTheFirstPage = '7000000000000000001';
+    const jobOnTheSecondPage = '7000000000000000011';
+    const engineAtRest = watchRequestsToTheEngine(page);
+    await page.goto(`/process-instances/${MULTI_INSTANCE_PARENT_KEY}?tab=jobs`);
+    const jobsTable = page.getByTestId('jobs-table');
+    const rowOfTheFirstPage = jobsTable.locator('tbody tr').filter({ hasText: jobOnTheFirstPage });
+    const rowOfTheSecondPage = jobsTable.locator('tbody tr').filter({ hasText: jobOnTheSecondPage });
+    await expect(rowOfTheFirstPage).toBeVisible({ timeout: 10000 });
+
+    // The second page is asked for and left again before its answer is there; the first page answers at once.
+    await answerAfter(page, slowly);
+    const secondPageAskedFor = page.waitForRequest((request) => isJobsPage(request, MULTI_INSTANCE_CHILD_B_KEY, '2'));
+    await jobsTable.getByRole('button', { name: 'Go to page 2' }).click();
+    await secondPageAskedFor;
+    await answerAfter(page, 0);
+    await jobsTable.getByRole('button', { name: 'Go to page 1' }).click();
+    await expect(jobsTable.getByRole('button', { name: 'page 1', exact: true }))
+      .toHaveAttribute('aria-current', 'page');
+
+    // The answer for the second page arrives last, and it is not the page selected any more. The instance has
+    // ended, so no refresh follows which would bring the rows of the page selected by itself.
+    await engineAtRest();
+    await expect(rowOfTheFirstPage).toBeVisible();
+    await expect(rowOfTheSecondPage).toHaveCount(0);
+  });
+
+  test('shows the Jobs page selected after a refresh which had begun on the page before', async ({ page }) => {
+    // A running instance, which the page refreshes every few seconds. Eight jobs at five to a page: one of them
+    // is shown on the first page only, another on the second only.
+    const engineAtRest = watchRequestsToTheEngine(page);
+    await page.goto(`/process-instances/${TASK_LISTENERS_USER_TASK_INSTANCE_KEY}?tab=jobs`);
+    const jobsTable = page.getByTestId('jobs-table');
+    const rowOfTheFirstPage = jobsTable.locator('tbody tr').filter({ has: page.getByText('reserve-stock', { exact: true }) });
+    const rowOfTheSecondPage = jobsTable.locator('tbody tr').filter({ has: page.getByText('archive-order', { exact: true }) });
+    await expect(rowOfTheFirstPage).toBeVisible({ timeout: 10000 });
+    await jobsTable.getByRole('combobox').click();
+    await page.getByRole('option', { name: '5', exact: true }).click();
+    await expect(rowOfTheSecondPage).toHaveCount(0);
+    await engineAtRest();
+
+    // The next refresh asks for the first page, which is the one selected, and has to wait for its answer.
+    await answerAfter(page, slowly);
+    await page.waitForRequest(
+      (request) => isJobsPage(request, TASK_LISTENERS_USER_TASK_INSTANCE_KEY, '1'),
+      { timeout: 20000 }
+    );
+    // no refresh after this one, which would bring the rows of the page selected by itself
+    await keepFromRefreshing(page);
+
+    // Meanwhile the second page is selected, and is there at once.
+    await answerAfter(page, 0);
+    await jobsTable.getByRole('button', { name: 'Go to page 2' }).click();
+    await expect(rowOfTheSecondPage).toBeVisible();
+
+    // The refresh ends with the rows of the first page, which is not the page selected any more.
+    await engineAtRest();
+    await expect(jobsTable.getByRole('button', { name: 'page 2', exact: true }))
+      .toHaveAttribute('aria-current', 'page');
+    await expect(rowOfTheSecondPage).toBeVisible();
+    await expect(rowOfTheFirstPage).toHaveCount(0);
+  });
+});
+
 test.describe('Process Instance Detail - Breadcrumb Highlighting', () => {
   const callActivityInstanceKey = '3100000000000000066';
 
@@ -1021,4 +1090,32 @@ function recordRequestedJobPages(page: Page, processInstanceKey: string): string
     }
   });
   return requestedPages;
+}
+
+// Whether a request asks the engine for that page of the jobs of a process instance.
+function isJobsPage(request: Request, processInstanceKey: string, jobsPage: string): boolean {
+  const url = new URL(request.url());
+  return url.pathname === `/v1/process-instances/${processInstanceKey}/jobs` && url.searchParams.get('page') === jobsPage;
+}
+
+// Watches what the page asks the engine for from now on. The function returned waits until every such request
+// has its answer and none has followed for a moment, so that the page shows what those answers made of it.
+function watchRequestsToTheEngine(page: Page): () => Promise<void> {
+  const withoutAnswer = new Set<Request>();
+  let lastChange = Date.now();
+  page.on('request', (request) => {
+    if (!new URL(request.url()).pathname.startsWith('/v1/')) return;
+    withoutAnswer.add(request);
+    lastChange = Date.now();
+  });
+  const answered = (request: Request) => {
+    if (withoutAnswer.delete(request)) lastChange = Date.now();
+  };
+  page.on('requestfinished', answered);
+  page.on('requestfailed', answered);
+  return async () => {
+    await expect
+      .poll(() => withoutAnswer.size === 0 && Date.now() - lastChange >= 500, { timeout: 20000 })
+      .toBe(true);
+  };
 }

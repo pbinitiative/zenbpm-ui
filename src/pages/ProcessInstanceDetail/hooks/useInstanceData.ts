@@ -9,7 +9,7 @@ import { transformStatisticsToElementStatistics } from '@components/BpmnDiagram'
 import type { ElementStatistics } from '@components/BpmnDiagram';
 import type { ProcessDefinition, ProcessInstance } from '../types';
 import type { ProcessInstanceNode } from '../types/tree';
-import { collectNodes } from '../utils';
+import { collectNodes, holdsJobsOfPage } from '../utils';
 import {
   fetchInstanceTree,
   refetchNodeJobs as doRefetchNodeJobs,
@@ -416,6 +416,27 @@ export const useInstanceData = (
       });
 
       if (!isCurrentFetch()) return;
+
+      // The Jobs page may have been turned while the tree was fetched, and a
+      // node copied from the terminal cache holds the page its original held
+      // at that moment. Shown like this, the tree would put rows of another
+      // page under the page selected: until the next refresh for a running
+      // instance, for good for an ended one, which is never refreshed.
+      for (;;) {
+        const selectedPage = jobsPageRef.current;
+        const selectedPageSize = jobsPageSizeRef.current;
+        const nodesOfAnotherPage = collectNodes(root).filter(
+          (node) => !holdsJobsOfPage(node, selectedPage, selectedPageSize),
+        );
+        await runConcurrently(nodesOfAnotherPage, CONCURRENT_FETCH_LIMIT, (node) =>
+          doRefetchNodeJobs(node, selectedPage + 1, selectedPageSize),
+        );
+        if (!isCurrentFetch()) return;
+        // One attempt for each page selected: a node whose request failed
+        // keeps its rows, and asking again would never end.
+        if (jobsPageRef.current === selectedPage && jobsPageSizeRef.current === selectedPageSize) break;
+      }
+
       setInstanceTree(root);
       if (isCurrentFetch()) setError(null); // tree fetched OK — drop any stale error from a previous attempt
       // Pass the current key so the subprocess fetch can guard against navigation while its requests are in flight.
@@ -606,8 +627,20 @@ export const useInstanceData = (
     const tree = instanceTreeRef.current;
     if (!tree) return;
     const nodes = collectNodes(tree);
-    void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) => doRefetchNodeJobs(node, jobsPage + 1, jobsPageSize))
-      .then(() => setInstanceTree((prev) => (prev ? { ...prev } : prev)));
+    // Once another page is selected, the answers for this one are stale: one
+    // of them arriving after the answers for the page selected would put its
+    // rows under that page.
+    let anotherPageSelected = false;
+    const isStale = () => anotherPageSelected;
+    void runConcurrently(nodes, CONCURRENT_FETCH_LIMIT, (node) =>
+      doRefetchNodeJobs(node, jobsPage + 1, jobsPageSize, isStale),
+    ).then(() => {
+      if (isStale()) return;
+      setInstanceTree((prev) => (prev ? { ...prev } : prev));
+    });
+    return () => {
+      anotherPageSelected = true;
+    };
     // instanceTreeRef is a stable ref (created via useLatestRef).
   }, [jobsPage, jobsPageSize, instanceTreeRef]);
 
