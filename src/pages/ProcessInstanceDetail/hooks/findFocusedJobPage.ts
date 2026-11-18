@@ -5,6 +5,11 @@ interface FindFocusedJobPagesOptions {
   elementInstanceKey: string;
   /** Narrows the search to this job of the element instance. */
   jobKey?: string;
+  /**
+   * Whether the element instance may have several jobs, as one of an element
+   * with execution listeners has. Ignored where a job is named.
+   */
+  mayHaveSeveralJobs: boolean;
   pageSize: number;
   totalCount: number;
   signal?: AbortSignal;
@@ -38,15 +43,17 @@ export function jobFocusRequestKey(
 
 /**
  * Find the pages of the Jobs tab which hold a focused job. A named job is on
- * one page, so the search ends there. The jobs of an element instance can lie
- * on several, so every page is looked through: the table shows one page, and
- * its user has to be told where the others are.
+ * one page, and so is the one job of an element without execution listeners:
+ * the search ends at the first page which holds it. The jobs of an element
+ * with listeners can lie on several pages, so every page is looked through:
+ * the table shows one page, and its user has to be told where the others are.
  * Requests are intentionally sequential so the engine endpoint is not flooded.
  */
 export async function findFocusedJobPages({
   processInstanceKey,
   elementInstanceKey,
   jobKey,
+  mayHaveSeveralJobs,
   pageSize,
   totalCount,
   signal,
@@ -54,6 +61,7 @@ export async function findFocusedJobPages({
   if (pageSize <= 0) return undefined;
   let totalPages = Math.ceil(totalCount / pageSize);
   const pages: number[] = [];
+  const onOnePage = jobKey !== undefined || !mayHaveSeveralJobs;
 
   for (let page = 1; page <= totalPages; page++) {
     const response = await getProcessInstanceJobs(
@@ -65,7 +73,7 @@ export async function findFocusedJobPages({
 
     if (response.items?.some((job) => isFocusedJob(job, elementInstanceKey, jobKey))) {
       pages.push(page - 1);
-      if (jobKey) break;
+      if (onOnePage) break;
     }
 
     if (response.totalCount !== undefined) {

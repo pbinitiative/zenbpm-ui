@@ -239,6 +239,30 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await expect(page.getByText('Jobs of this element are also on other pages of the Jobs tab: 1')).toBeVisible();
   });
 
+  test('says nothing about other pages once the page is turned while they are looked through', async ({ page }) => {
+    // Eight jobs at five to a page: four jobs of the service task on the first page, its last one on the second.
+    await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    await showFiveJobsToAPage(page);
+    // slow answers, so that the page is turned while the other pages are looked through
+    const devtools = await page.context().newCDPSession(page);
+    await devtools.send('Network.enable');
+    await devtools.send('Network.emulateNetworkConditions', {
+      offline: false,
+      latency: 600,
+      downloadThroughput: -1,
+      uploadThroughput: -1,
+    });
+
+    await viewRelatedJobsOf(page, 'ShipOrder');
+    await expect(focusedJobRows(page)).toHaveCount(4);
+    await goToJobsPage(page, 2);
+    await expect(jobRowOfType(page, 'archive-order')).toBeVisible();
+
+    // Turning the page ended the search: a hint counted from the first page would name the page now shown.
+    await page.waitForTimeout(1500);
+    await expect(page.getByText('Jobs of this element are also on other pages')).toHaveCount(0);
+  });
+
   test('links a start event in the history to its listener job, whatever page of the jobs is loaded', async ({ page }) => {
     await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
     await showFiveJobsToAPage(page);

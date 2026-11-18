@@ -30,7 +30,7 @@ import {
   type FocusedEventType,
 } from './hooks';
 import { JobsTab, VariablesTab, IncidentsTab, HistoryTab, ChildProcessesTab, DecisionInstancesTab, EventSubscriptionsTab } from './tabs';
-import { elementIdsWithJobsTheirTypeDoesNotTell } from './utils';
+import { elementIdsWithExecutionListeners, elementIdsWithJobsTheirTypeDoesNotTell } from './utils';
 import type { NotificationOptions } from './types';
 
 // Tab panel component
@@ -358,6 +358,14 @@ export const ProcessInstanceDetailPage = () => {
     [processDefinition?.bpmnData]
   );
 
+  // The same model tells which elements carry execution listeners, and so
+  // which element instances may have several jobs.
+  const elementIdsWithListeners = useMemo(
+    () => elementIdsWithExecutionListeners(processDefinition?.bpmnData),
+    [processDefinition?.bpmnData]
+  );
+  const modelDefinitionKey = processDefinition?.key;
+
   const focusResolutionPending =
     focusedElementInstanceKey !== undefined && pendingFocusKey === focusedElementInstanceKey;
 
@@ -399,16 +407,30 @@ export const ProcessInstanceDetailPage = () => {
     );
     const requestKey = jobFocusRequestKey(processInstanceKey, focusedElementInstanceKey, focusedJobKey);
 
+    // A focus on an element instance means every job of it. There are several
+    // only where the element carries execution listeners, which the model
+    // tells; where it does not tell, because it is not loaded or the instance
+    // runs another definition, several jobs are taken for possible.
+    const focusedElementId = owner?.history.find(
+      (history) => history.key === focusedElementInstanceKey
+    )?.elementId;
+    const modelTellsNoListener =
+      owner !== undefined &&
+      owner.instance.processDefinitionKey === modelDefinitionKey &&
+      elementIdsWithListeners !== undefined &&
+      focusedElementId !== undefined &&
+      !elementIdsWithListeners.has(focusedElementId);
+    const mayHaveSeveralJobs = !focusedJobKey && !modelTellsNoListener;
+
     // The desired row may already be on the currently displayed server page.
-    // That settles a focus on one job. A focus on an element instance means
-    // every job of it, and they are all in view only where the jobs of its
-    // process instance fit on one page: an element with execution listeners
-    // has several jobs, which a page boundary can part.
+    // That settles a focus on one job, named or the only one of its element.
+    // Several jobs are all in view only where the jobs of their process
+    // instance fit on one page: a page boundary can part them.
     const inView = nodes.some((node) =>
       node.jobs.some((job) => isFocusedJob(job, focusedElementInstanceKey, focusedJobKey))
     );
     const mayHaveJobsOnOtherPages =
-      !focusedJobKey && owner !== undefined && owner.jobsTotalCount > jobsPageSize;
+      mayHaveSeveralJobs && owner !== undefined && owner.jobsTotalCount > jobsPageSize;
     if (inView && !mayHaveJobsOnOtherPages) return;
 
     if (!owner || owner.jobsTotalCount === 0) {
@@ -433,6 +455,7 @@ export const ProcessInstanceDetailPage = () => {
       processInstanceKey: owner.instance.key,
       elementInstanceKey: focusedElementInstanceKey,
       jobKey: focusedJobKey,
+      mayHaveSeveralJobs,
       pageSize: jobsPageSize,
       totalCount: owner.jobsTotalCount,
       signal: controller.signal,
@@ -445,6 +468,7 @@ export const ProcessInstanceDetailPage = () => {
           showNotification(t('processInstance:messages.relatedJobNotFound'), 'error');
           return;
         }
+        // the page is the one the search started on: turning it ends the search
         const shownPage = inView ? jobsPage : pages[0];
         if (!inView) setJobsPage(shownPage);
         // the table shows one page: say where the other jobs of the element are
@@ -472,12 +496,14 @@ export const ProcessInstanceDetailPage = () => {
       });
   }, [
     activeTab,
+    elementIdsWithListeners,
     focusResolutionPending,
     focusedElementInstanceKey,
     focusedJobKey,
     instanceTree,
     jobsPage,
     jobsPageSize,
+    modelDefinitionKey,
     processInstanceKey,
     setJobsPage,
     showNotification,

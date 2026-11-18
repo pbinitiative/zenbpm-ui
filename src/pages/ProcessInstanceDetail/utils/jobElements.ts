@@ -17,6 +17,18 @@ function carriesAnExecutionListener(element: Element): boolean {
   );
 }
 
+/** Reads the model of a definition; undefined where there is none or it cannot be read. */
+function modelOf(bpmnData: string | undefined): Document | undefined {
+  if (!bpmnData) return undefined;
+  try {
+    const model = new DOMParser().parseFromString(xmlOf(bpmnData), 'text/xml');
+    // XML which does not parse comes back as a document which says so
+    return model.getElementsByTagName('parsererror').length > 0 ? undefined : model;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * The ids of the elements of a process model which have jobs although their
  * element type alone does not say so: a start event of the process which
@@ -29,14 +41,9 @@ function carriesAnExecutionListener(element: Element): boolean {
  */
 export function elementIdsWithJobsTheirTypeDoesNotTell(bpmnData: string | undefined): ReadonlySet<string> {
   const ids = new Set<string>();
-  if (!bpmnData) return ids;
-  let model: Document;
-  try {
-    model = new DOMParser().parseFromString(xmlOf(bpmnData), 'text/xml');
-  } catch {
-    // no model, no element known to have jobs: the caller goes by the element types alone
-    return ids;
-  }
+  const model = modelOf(bpmnData);
+  // no model, no element known to have jobs: the caller goes by the element types alone
+  if (!model) return ids;
   for (const event of Array.from(model.getElementsByTagNameNS('*', 'startEvent'))) {
     // the engine runs the listeners of a start event only directly under the process
     if (event.parentElement?.localName === 'process' && carriesAnExecutionListener(event) && event.id) {
@@ -45,6 +52,25 @@ export function elementIdsWithJobsTheirTypeDoesNotTell(bpmnData: string | undefi
   }
   for (const event of Array.from(model.getElementsByTagNameNS('*', 'intermediateThrowEvent'))) {
     if (childrenNamed(event, 'messageEventDefinition').length > 0 && event.id) ids.add(event.id);
+  }
+  return ids;
+}
+
+/**
+ * The ids of the elements of a process model which carry execution listeners,
+ * or undefined where the model does not tell.
+ *
+ * An element instance has one job, unless its element carries listeners: then
+ * their jobs and the element's own share it. So this tells whether the jobs
+ * of an element instance may lie on several pages of the Jobs tab.
+ */
+export function elementIdsWithExecutionListeners(bpmnData: string | undefined): ReadonlySet<string> | undefined {
+  const model = modelOf(bpmnData);
+  if (!model) return undefined;
+  const ids = new Set<string>();
+  for (const listeners of Array.from(model.getElementsByTagNameNS('*', 'executionListeners'))) {
+    const element = listeners.parentElement?.parentElement;
+    if (element?.id && carriesAnExecutionListener(element)) ids.add(element.id);
   }
   return ids;
 }

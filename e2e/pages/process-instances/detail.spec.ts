@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { instanceKeys } from '../../fixtures/instance-keys';
 import {
   MULTI_INSTANCE_CHILD_B_KEY,
@@ -604,6 +604,63 @@ test.describe('Process Instance Detail - cross-tab focus', () => {
     await page.waitForTimeout(500);
     expect(page2RequestCount).toBe(requestCountAfterInitialScan);
   });
+
+  test('looks at no other Jobs page for a task without listeners whose job is in view', async ({ page }) => {
+    // Eleven jobs at ten to a page; the job of the focused task is on the first page, which is shown.
+    const inViewElementInstanceKey = `${MULTI_INSTANCE_CHILD_B_KEY}002`;
+    const requestedJobPages = recordRequestedJobPages(page, MULTI_INSTANCE_CHILD_B_KEY);
+
+    await page.goto(`/process-instances/${MULTI_INSTANCE_PARENT_KEY}?tab=history`);
+    const historyRow = page
+      .getByTestId('history-table')
+      .locator('tbody tr')
+      .filter({ hasText: inViewElementInstanceKey });
+    await historyRow.getByRole('button', { name: /row actions/i }).click();
+    await page.getByRole('menuitem', { name: /view related job/i }).click();
+
+    const jobsTable = page.getByTestId('jobs-table');
+    await expect(jobsTable.locator('tbody tr[data-focused="true"]').first()).toBeVisible();
+    // Let a search which should not have started show itself.
+    await page.waitForTimeout(500);
+    // the model says that the task carries no listener: its one job is the one in view
+    expect(requestedJobPages).not.toContain('2');
+  });
+
+  test('ends the search for the job of a task without listeners at the first page which holds it', async ({ page }) => {
+    // Eleven jobs at five to a page. The third page shows none of the focused task, the first one does.
+    const elementInstanceKey = `${MULTI_INSTANCE_CHILD_B_KEY}002`;
+    const jobOnTheFirstPage = '7000000000000000001';
+    const jobOnTheThirdPage = '7000000000000000011';
+
+    await page.goto(`/process-instances/${MULTI_INSTANCE_PARENT_KEY}?tab=jobs`);
+    const jobsTable = page.getByTestId('jobs-table');
+    await expect(jobsTable).toBeVisible({ timeout: 10000 });
+    await jobsTable.getByRole('combobox').click();
+    await page.getByRole('option', { name: '5', exact: true }).click();
+    await jobsTable.getByRole('button', { name: 'Go to page 3' }).click();
+    await expect(jobsTable.getByRole('button', { name: 'page 3', exact: true }))
+      .toHaveAttribute('aria-current', 'page');
+    await expect(jobsTable.locator('tbody tr').filter({ hasText: jobOnTheThirdPage })).toBeVisible();
+    await expect(jobsTable.locator('tbody tr').filter({ hasText: jobOnTheFirstPage })).toHaveCount(0);
+
+    await page.getByRole('tab', { name: /History/i }).click();
+    const historyRow = page
+      .getByTestId('history-table')
+      .locator('tbody tr')
+      .filter({ hasText: elementInstanceKey });
+    await expect(historyRow).toBeVisible();
+    const requestedJobPages = recordRequestedJobPages(page, MULTI_INSTANCE_CHILD_B_KEY);
+    await historyRow.getByRole('button', { name: /row actions/i }).click();
+    await page.getByRole('menuitem', { name: /view related job/i }).click();
+
+    await expect(jobsTable.locator('tbody tr').filter({ hasText: jobOnTheFirstPage }))
+      .toHaveAttribute('data-focused', 'true');
+    await expect(jobsTable.getByRole('button', { name: 'page 1', exact: true }))
+      .toHaveAttribute('aria-current', 'page');
+    // Let a search which should have ended show itself.
+    await page.waitForTimeout(500);
+    expect(requestedJobPages).not.toContain('2');
+  });
 });
 
 test.describe('Process Instance Detail - Breadcrumb Highlighting', () => {
@@ -890,3 +947,15 @@ test.describe('Process Instance Detail - Include Child Processes Filter', () => 
     await expect(page.getByText('Include child processes')).not.toBeVisible();
   });
 });
+
+// The pages of the jobs of a process instance which the page asks the engine for from now on.
+function recordRequestedJobPages(page: Page, processInstanceKey: string): string[] {
+  const requestedPages: string[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === `/v1/process-instances/${processInstanceKey}/jobs`) {
+      requestedPages.push(url.searchParams.get('page') ?? '');
+    }
+  });
+  return requestedPages;
+}
