@@ -190,7 +190,7 @@ event to the task, and change the task to a **Service task**.
     supported: a start event takes listeners with eventType="end"*. Now change it to
     `eventType="End"`, with a capital E, and switch back. The engine compares the event type as
     it is written, so this is another than the *End* it runs: the Event type shows it in quotes,
-    `"End"`, as a third option beside *End*, the item is labelled `⚠ "End": order-started`, and
+    `"End"`, as one more option beside *End*, the item is labelled `⚠ "End": order-started`, and
     the message is the same *Choose End: …*. Choose *End*.
 17. Add an expanded sub-process, drag the start event with its listener into it and select it.
     The group is still shown, without **Create**; Event type says *Remove this listener: the
@@ -215,23 +215,31 @@ event to the task, and change the task to a **Service task**.
     type says *Draw the outgoing sequence flow again: the model does not name it as outgoing of
     this element, which is what the engine follows*. Delete the flow and draw it again: the
     message is gone.
-21. Draw a pool around the process (or import a model with one) whose `<bpmn:process>` carries
-    an `executionListeners` element. Select the pool: the group lists the listener, and does not
-    flag it: no ⚠, no red number, and the group does not open by itself. Open the listener: under
-    Event type a note says *The engine runs no listener on the process itself and ignores this
-    one. It can be removed.* Its delete button removes it.
-    `models/listener-demo-process-listener.bpmn` is a model with such a listener, without a pool.
+21. Click **Import** and choose `models/listener-demo-process-listener.bpmn`, whose
+    `<bpmn:process>` carries an `executionListeners` element. Click the empty canvas beside the
+    diagram, which selects the process. The group lists the listener as `Start:
+    listener-demo-never-run` and does not flag it: no ⚠ and no red number. Open the listener:
+    under Event type a note says *The engine runs no listener on the process itself and ignores
+    this one. It can be removed.* Its delete button removes it, and there is no **Create**. In a
+    model with a pool around the process, the pool shows the same.
 22. Click **Import** and choose `models/refused/09-task-listener.bpmn`, a user task with a task
-    listener, which this engine does not run. Select the user task. The group opens by itself and
-    lists `⚠ Task listener "completing": listener-demo-refused`. Open the item: it has nothing to
-    edit, only the reason *Remove this listener: the engine runs no task listener*. **Create** is
-    still offered, for an execution listener. Delete the item with its delete button: the task
-    listener leaves the list and the XML.
+    listener, which this engine does not run. Select the user task. The group lists
+    `⚠ Task listener "completing": listener-demo-refused` with a red number. Open the item: it has
+    nothing to edit, only the reason *Remove this listener: the engine runs no task listener*.
+    **Create** is still offered, for an execution listener. Delete the item with its delete
+    button: the task listener leaves the list and the XML.
 23. Click **Import** and choose `models/refused/13-camunda-7-shape.bpmn`, whose service task
     carries a `camunda:executionListener` directly in its extension elements, as Camunda 7 writes
-    one. Select the service task. The group opens by itself and lists
+    one. Select the service task. The group lists
     `⚠ Listener outside executionListeners: org.example.ReserveStock` with the reason *Remove this
     listener: the engine refuses an execution listener outside an executionListeners element*.
+24. Reload the page (confirm, should the browser ask whether to leave it), so that the panel
+    forgets which groups you opened, and import
+    `models/refused/09-task-listener.bpmn` once more. Select the user task: the group opens by
+    itself, because it holds a flagged listener. Reload again, import
+    `models/listener-demo-process-listener.bpmn` and click the empty canvas: the group stays
+    closed, because the listener on the process is not flagged. A group which was opened once,
+    by itself or by you, stays open on the elements you select afterwards until you close it.
 
 ### U2. A start event's listener waits, and completing it moves the token on
 
