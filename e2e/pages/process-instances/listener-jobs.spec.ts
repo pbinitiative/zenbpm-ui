@@ -69,6 +69,25 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     );
   });
 
+  test('shows the tooltip of a listener chip to the keyboard too, and leaves the chip the name it shows', async ({ page }) => {
+    await openJobsTab(page, TASK_LISTENERS_END_LISTENER_INSTANCE_KEY);
+    const row = jobRowOfType(page, 'notify-customer');
+    const chip = row.getByTestId('job-listener-chip');
+
+    // from the link of the element, the chip is the next stop of the Tab key
+    await row.getByRole('button', { name: 'Ship order' }).focus();
+    await page.keyboard.press('Tab');
+
+    await expect(chip).toBeFocused();
+    await expect(page.getByRole('tooltip')).toContainText(
+      'The token leaves the element once the jobs of all its end listeners are completed'
+    );
+    // the tooltip describes the chip; it does not take the place of "End listener" as its name
+    await expect(chip).toHaveAccessibleDescription(/Job of an end execution listener of this element/);
+    await expect(chip).not.toHaveAttribute('aria-label');
+    await expect(chip).toHaveText('End listener');
+  });
+
   test('marks the job of a start event listener and no job of a task without listeners', async ({ page }) => {
     await openJobsTab(page, START_LISTENER_WAITING_INSTANCE_KEY);
     await expect(jobRow(page, START_LISTENER_WAITING_JOB_KEY).getByTestId('job-listener-chip')).toHaveText('End listener');
@@ -104,6 +123,8 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
 
     await expect(dialog.getByTestId('complete-job-listener-note')).toContainText('stay local to the element');
     await expect(dialog.getByTestId('complete-job-listener-note')).toContainText("the element's own job receive them");
+    // information which is there from the start, not an alert which breaks in on a screen reader
+    await expect(dialog.getByTestId('complete-job-listener-note')).toHaveRole('note');
     await expect(dialog.getByText('Variables (JSON)')).toBeVisible();
     await enterVariables(page, '{"creditChecked": true}');
 
@@ -395,7 +416,8 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await expect(page.getByText('Jobs of this element are also on other pages')).toHaveCount(0);
   });
 
-  test('offers no link to jobs for the end event, which has none', async ({ page }) => {
+  test('links a start event in the history to jobs only where it carries a listener', async ({ page }) => {
+    // with a listener, its row has the menu which leads to the jobs
     await page.goto(`/process-instances/${START_LISTENER_WAITING_INSTANCE_KEY}?tab=history`);
     await expect(page.getByTestId('history-table').locator('tbody tr').filter({ hasText: 'OrderReceived' })).toHaveCount(1);
     await expect(page.getByTestId('history-table').locator('tbody tr').filter({ hasText: 'OrderReceived' })
@@ -455,8 +477,18 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     const dialog = await openDialogFromMenu(page, START_LISTENER_WAITING_JOB_KEY, /fail job/i);
 
     await expect(dialog.getByTestId('fail-job-listener-note')).toContainText('cannot throw a BPMN error');
+    await expect(dialog.getByTestId('fail-job-listener-note')).toHaveRole('note');
     await expect(dialog.getByLabel('Error Code')).toHaveCount(0);
-    await expect(dialog.getByTestId('fail-job-outcome')).toContainText('spends one attempt and leaves 2 retries');
+    await expect(dialog.getByTestId('fail-job-outcome')).toContainText('The failure spends one attempt and leaves 2 retries');
+    // the dialog of a listener job has no field for an error code to speak of
+    await expect(dialog.getByTestId('fail-job-outcome')).not.toContainText('error code');
+    await dialog.getByLabel('Retries left after this failure').fill('0');
+    await expect(dialog.getByTestId('fail-job-outcome')).toContainText('This failure leaves no retries');
+    await expect(dialog.getByTestId('fail-job-outcome')).not.toContainText('error code');
+    await dialog.getByLabel('Retries left after this failure').fill('5');
+    await expect(dialog.getByTestId('fail-job-outcome')).toContainText('leaves the 5 retries entered');
+    await expect(dialog.getByTestId('fail-job-outcome')).not.toContainText('error code');
+    await dialog.getByLabel('Retries left after this failure').fill('');
     await dialog.getByLabel('Message').fill('order service unavailable');
 
     const request = page.waitForRequest(
@@ -467,6 +499,37 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     expect((await request).postDataJSON()).toEqual({ message: 'order service unavailable' });
     await expect(dialog).not.toBeVisible();
     await expect(jobRow(page, START_LISTENER_WAITING_JOB_KEY).getByTestId('job-retries-cell')).toContainText('1 failed');
+  });
+
+  test('the mocked engine refuses an error code for a listener job, as the engine does', async ({ page }) => {
+    // The dialog of a listener job offers no error code, so no request of the page carries one for such a job.
+    // This one is sent past the page, to hold the mocks to what the engine answers.
+    await openJobsTab(page, START_LISTENER_WAITING_INSTANCE_KEY);
+    const refusal = await page.evaluate(async (jobKey) => {
+      const response = await fetch(`/v1/jobs/${jobKey}/fail`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ errorCode: 'ORDER_FAILED' }),
+      });
+      return { status: response.status, body: (await response.json()) as { code: string; message: string } };
+    }, START_LISTENER_WAITING_JOB_KEY);
+
+    expect(refusal.status).toBe(400);
+    expect(refusal.body.message).toContain('a listener job cannot throw a BPMN error: fail it without an error code');
+  });
+
+  test('hands an end listener job the instance as the output mapping of its element left it', async ({ page }) => {
+    // The output mapping of the service task writes `stockReserved` once the task's own job is completed.
+    await openJobsTab(page, TASK_LISTENERS_END_LISTENER_INSTANCE_KEY);
+
+    const row = jobRowOfType(page, 'notify-customer');
+    // orderId and deliveryForm of the instance, stockReserved of the output mapping, the two variables of the
+    // start listeners and the one of the task's own job
+    await expect(row.getByTestId('variables-in-badge')).toHaveText('In 6');
+    await row.locator('[data-testid="cell-variables"] [role="button"]').click();
+    const variables = page.getByRole('dialog');
+    await expect(variables).toContainText('stockReserved');
+    await expect(variables).toContainText('trackingId');
   });
 
   test('retries a failed listener job by resolving the incident on its start event', async ({ page }) => {

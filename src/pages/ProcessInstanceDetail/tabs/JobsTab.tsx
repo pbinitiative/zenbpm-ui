@@ -358,14 +358,23 @@ export const JobsTab = ({
               </Typography>
             )}
             {isListenerJob(row) && (
-              <Tooltip title={t(`processInstance:listenerJob.tooltip.${row.listenerEventType}`)}>
+              // The tooltip describes the chip, whose name stays the label it
+              // shows. The chip takes the focus, so that the tooltip is there
+              // for the keyboard as it is for the mouse.
+              <Tooltip describeChild title={t(`processInstance:listenerJob.tooltip.${row.listenerEventType}`)}>
                 <Chip
                   label={t(`processInstance:listenerJob.chip.${row.listenerEventType}`)}
                   size="small"
                   color="info"
                   variant="outlined"
+                  tabIndex={0}
                   data-testid="job-listener-chip"
-                  sx={{ mt: 0.5, fontSize: 'caption.fontSize', height: 20 }}
+                  sx={{
+                    mt: 0.5,
+                    fontSize: 'caption.fontSize',
+                    height: 20,
+                    '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 1 },
+                  }}
                 />
               </Tooltip>
             )}

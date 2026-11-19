@@ -132,14 +132,22 @@ export const FailJobDialog = ({
   // none fails the job with an incident. With one it throws a BPMN error.
   // Named retries above jobs.maxRetries are capped, and the UI cannot read
   // that limit, so the outcome promises them only as an upper bound.
+  // The dialog of a listener's job has no field for an error code, so its
+  // outcome does not speak of one.
   const remaining = retriesLeft ?? Math.max((job.retries ?? 1) - 1, 0);
   const outcome = isBpmnError
     ? t('processInstance:dialogs.failJob.outcomeBpmnError')
     : remaining === 0
-      ? t('processInstance:dialogs.failJob.outcomeIncident')
+      ? isListener
+        ? t('processInstance:dialogs.failJob.outcomeIncidentListener')
+        : t('processInstance:dialogs.failJob.outcomeIncident')
       : retriesLeft !== undefined
-        ? t('processInstance:dialogs.failJob.outcomeRetryRequested', { retries: remaining })
-        : t('processInstance:dialogs.failJob.outcomeRetry', { retries: remaining });
+        ? isListener
+          ? t('processInstance:dialogs.failJob.outcomeRetryRequestedListener', { retries: remaining })
+          : t('processInstance:dialogs.failJob.outcomeRetryRequested', { retries: remaining })
+        : isListener
+          ? t('processInstance:dialogs.failJob.outcomeRetryListener', { retries: remaining })
+          : t('processInstance:dialogs.failJob.outcomeRetry', { retries: remaining });
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -156,7 +164,7 @@ export const FailJobDialog = ({
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 0.5 }}>
           {isListener ? (
-            <Alert severity="info" data-testid="fail-job-listener-note">
+            <Alert severity="info" role="note" data-testid="fail-job-listener-note">
               {t('processInstance:dialogs.failJob.listenerNote')}
             </Alert>
           ) : (
