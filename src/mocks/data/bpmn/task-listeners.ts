@@ -195,17 +195,22 @@ const instanceVariables = (orderId: string) => ({ orderId, deliveryForm: TEST_ZE
 // the task's own job is completed.
 const shipOrderDidItsOwnWork = (scenario: Scenario) => scenario.jobKeys.length > SHIP_ORDER_OWN_JOB_INDEX + 1;
 
-// What a job sees: the instance's variables, the results of its element's input mappings, and
-// what the earlier jobs of its element were completed with.
+// What a job sees: the instance's variables as they are when the job is created, the results of
+// its element's input mappings, and what the earlier jobs of its element were completed with. An
+// end listener of ShipOrder is created after the output mapping wrote `stockReserved`, and so is
+// every job of ConfirmDelivery.
 const variablesOfJob = (scenario: Scenario, index: number): Record<string, unknown> => {
-  const { element } = JOBS_OF_THE_MODEL[index];
+  const { element, listenerEventType } = JOBS_OF_THE_MODEL[index];
   const completedBefore = JOBS_OF_THE_MODEL
     .slice(0, index)
     .filter((earlier) => earlier.element === element)
     .reduce<Record<string, unknown>>((variables, earlier) => ({ ...variables, ...earlier.completedWith }), {});
+  const createdAfterTheOutputMapping =
+    element === CONFIRM_DELIVERY || (element === SHIP_ORDER && listenerEventType === 'end');
   return {
     ...instanceVariables(scenario.orderId),
-    ...(element === CONFIRM_DELIVERY ? { stockReserved: true, ZEN_FORM: TEST_ZEN_FORM } : {}),
+    ...(createdAfterTheOutputMapping ? { stockReserved: true } : {}),
+    ...(element === CONFIRM_DELIVERY ? { ZEN_FORM: TEST_ZEN_FORM } : {}),
     ...completedBefore,
   };
 };
@@ -294,7 +299,8 @@ export const incidents: MockIncident[] = [
     elementId: SHIP_ORDER.id,
     processInstanceKey: TASK_LISTENERS_FAILED_END_LISTENER_INSTANCE_KEY,
     processDefinitionKey: TASK_LISTENERS_PROCESS_DEFINITION_KEY,
-    message: 'mail server unavailable',
+    // as the engine words the incident of a job whose retries are exhausted
+    message: `mail server unavailable (job ${TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY}: 2 attempts, retries exhausted)`,
     createdAt: addMinutes(failedEndListenerCreatedAt, 7),
     executionToken: '7100000000000223491',
     jobKey: TASK_LISTENERS_FAILED_END_LISTENER_JOB_KEY,

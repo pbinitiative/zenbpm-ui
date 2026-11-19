@@ -72,7 +72,8 @@ export const incidents: MockIncident[] = [
     elementId: 'OrderReceived',
     processInstanceKey: START_LISTENER_FAILED_INSTANCE_KEY,
     processDefinitionKey: START_LISTENER_PROCESS_DEFINITION_KEY,
-    message: 'order service unavailable',
+    // as the engine words the incident of a job whose retries are exhausted
+    message: `order service unavailable (job ${START_LISTENER_FAILED_JOB_KEY}: 3 attempts, retries exhausted)`,
     createdAt: addMinutes(failedCreatedAt, 3),
     executionToken: '7100000000000223490',
     jobKey: START_LISTENER_FAILED_JOB_KEY,
