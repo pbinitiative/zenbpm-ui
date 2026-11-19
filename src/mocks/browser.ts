@@ -3,6 +3,7 @@ import { setupWorker } from 'msw/browser';
 import { http, HttpResponse, passthrough, type RequestHandler } from 'msw';
 import { handlers } from './handlers';
 import { findMockFailure } from './failures';
+import { untilReleased } from './holds';
 import {
   apiStrategyConfig,
   shouldMockRequest,
@@ -90,11 +91,20 @@ const failureHandler = http.all('/v1/*', ({ request }) => {
 });
 
 /**
+ * Keeps the requests configured in `mockHolds` waiting until a test releases
+ * them. Returns nothing, so that the next handler answers them then.
+ */
+const holdHandler = http.all('/v1/*', async ({ request }) => {
+  await untilReleased(new URL(request.url));
+  return undefined;
+});
+
+/**
  * Create the MSW worker with filtered handlers based on API strategy, after
- * the handler injecting the failures tests ask for
+ * the handlers which hold back and fail the requests tests ask for
  */
 export function createWorker() {
-  const filteredHandlers = [failureHandler, ...getFilteredHandlers(apiStrategyConfig)];
+  const filteredHandlers = [holdHandler, failureHandler, ...getFilteredHandlers(apiStrategyConfig)];
 
   if (import.meta.env.DEV) {
     logApiStrategyConfig(apiStrategyConfig);
