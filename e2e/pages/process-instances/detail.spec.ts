@@ -7,6 +7,7 @@ import {
   releaseMockAnswers,
   watchRequestsToTheEngine,
 } from '../../fixtures/mock-answers';
+import { clearMockFailures, failMockRequests, navigateInApp } from '../../fixtures/version-history';
 import {
   MULTI_INSTANCE_CHILD_B_KEY,
   MULTI_INSTANCE_PARENT_KEY,
@@ -801,6 +802,53 @@ test.describe('Process Instance Detail - Jobs pages', () => {
       .toHaveAttribute('aria-current', 'page');
     await expect(rowOfTheSecondPage).toBeVisible();
     await expect(rowOfTheFirstPage).toHaveCount(0);
+  });
+
+  test('keeps the rows of the Jobs page selected when a refresh fails to bring them itself', async ({ page }) => {
+    const { jobsTable, rowOfTheFirstPage, rowOfTheSecondPage, engineAtRest } = await turnTheJobsPageDuringARefresh(page);
+
+    // The refresh ends with the rows of the first page and asks for those of the second, which the engine refuses.
+    await failMockRequests(page, {
+      path: `/v1/process-instances/${TASK_LISTENERS_USER_TASK_INSTANCE_KEY}/jobs`,
+      params: { page: '2', size: '5' },
+      status: 503,
+    });
+    const secondPageRefused = page.waitForResponse(
+      (response) =>
+        isJobsPage(response.request(), TASK_LISTENERS_USER_TASK_INSTANCE_KEY, '2', '5') && response.status() === 503
+    );
+    await releaseMockAnswers(page, 'refresh');
+    await secondPageRefused;
+    await engineAtRest();
+    await clearMockFailures(page);
+
+    // The rows shown before were those of the page selected, and stay; those of the first page do not replace them.
+    await expect(jobsTable.getByRole('button', { name: 'page 2', exact: true }))
+      .toHaveAttribute('aria-current', 'page');
+    await expect(rowOfTheSecondPage).toBeVisible();
+    await expect(rowOfTheFirstPage).toHaveCount(0);
+  });
+
+  test('asks once more for the jobs of an ended instance whose first request failed', async ({ page }) => {
+    // The instance has ended, so nothing refreshes it: the jobs it shows are those of its first load.
+    const jobOnTheFirstPage = '7000000000000000001';
+    await page.goto('/');
+    // the mocks take the failure once they are loaded
+    await page.waitForFunction(() => '__mockFailures' in window);
+    await failMockRequests(page, {
+      path: `/v1/process-instances/${MULTI_INSTANCE_CHILD_B_KEY}/jobs`,
+      params: { page: '1' },
+      status: 503,
+      times: 1,
+    });
+    const refused = page.waitForResponse(
+      (response) => isJobsPage(response.request(), MULTI_INSTANCE_CHILD_B_KEY, '1') && response.status() === 503
+    );
+    await navigateInApp(page, `/process-instances/${MULTI_INSTANCE_PARENT_KEY}?tab=jobs`);
+    await refused;
+
+    await expect(page.getByTestId('jobs-table').locator('tbody tr').filter({ hasText: jobOnTheFirstPage }))
+      .toBeVisible({ timeout: 10000 });
   });
 });
 

@@ -71,6 +71,9 @@ export interface ProcessInstanceNode {
    * The page `jobs` holds, as the engine counts pages: from 1. A page the
    * Jobs tab selects is asked for and takes its time to come: until then
    * `jobs` still holds the page selected before, and this tells which.
+   * 0 while `jobs` holds no page at all: none was read yet, or reading it
+   * failed. No page the Jobs tab selects is page 0, so such a node is asked
+   * for its jobs again.
    */
   jobsPage: number;
   /** The page size `jobs` was asked for with. */

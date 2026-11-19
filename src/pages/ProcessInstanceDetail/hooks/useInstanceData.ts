@@ -432,9 +432,28 @@ export const useInstanceData = (
           doRefetchNodeJobs(node, selectedPage + 1, selectedPageSize),
         );
         if (!isCurrentFetch()) return;
-        // One attempt for each page selected: a node whose request failed
-        // keeps its rows, and asking again would never end.
+        // One attempt for each page selected: asking a node whose request
+        // failed again and again would never end.
         if (jobsPageRef.current === selectedPage && jobsPageSizeRef.current === selectedPageSize) break;
+      }
+
+      // A node whose request failed still holds the rows of another page, or
+      // none. Rows of another page are not shown under the page selected: the
+      // node keeps the rows shown for it until now where those are of the
+      // page selected, and shows none otherwise. Its jobs are asked for again
+      // with the next refresh, or when the page is turned.
+      const shownNodes = new Map(
+        instanceTreeRef.current
+          ? collectNodes(instanceTreeRef.current).map((node) => [node.instance.key, node])
+          : [],
+      );
+      for (const node of collectNodes(root)) {
+        if (holdsJobsOfPage(node, jobsPageRef.current, jobsPageSizeRef.current)) continue;
+        const shown = shownNodes.get(node.instance.key);
+        const keepsRowsShown = shown !== undefined && holdsJobsOfPage(shown, jobsPageRef.current, jobsPageSizeRef.current);
+        node.jobs = keepsRowsShown ? shown.jobs : [];
+        node.jobsPage = keepsRowsShown ? shown.jobsPage : 0;
+        node.jobsPageSize = keepsRowsShown ? shown.jobsPageSize : node.jobsPageSize;
       }
 
       setInstanceTree(root);

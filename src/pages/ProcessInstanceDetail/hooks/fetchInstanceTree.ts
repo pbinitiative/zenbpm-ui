@@ -159,7 +159,7 @@ function makeNode(
     callElementId,
     callPath: callElementId ? [...parentCallPath, callElementId] : [],
     jobs: [],
-    jobsPage: 1,
+    jobsPage: 0,            // no page read yet: a first request which fails must not pass for an empty page
     jobsPageSize: JOBS_PAGE_SIZE,
     jobsTotalCount: 0,
     activeJobsTotalCount: 0,
