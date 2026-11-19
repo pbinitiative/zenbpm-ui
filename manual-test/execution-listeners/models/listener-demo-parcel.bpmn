@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:zenbpm="http://zenbpm.pbinitiative.org/1.0" id="Definitions_listener-demo-parcel" targetNamespace="http://bpmn.io/schema/bpmn"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI">
+  <bpmn:process id="listener-demo-parcel" name="Listener demo: parcel" isExecutable="true">
+    <bpmn:startEvent id="ParcelOrdered" name="Parcel ordered">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="ParcelOrdered" targetRef="PackParcel" />
+    <bpmn:subProcess id="PackParcel" name="Pack parcel">
+      <bpmn:extensionElements>
+        <zenbpm:ioMapping>
+          <zenbpm:output source="=labelled" target="parcelLabelled" />
+        </zenbpm:ioMapping>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:startEvent id="PackingStarted" name="Packing started">
+        <bpmn:outgoing>Flow_5</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:sequenceFlow id="Flow_5" sourceRef="PackingStarted" targetRef="PrintLabel" />
+      <bpmn:serviceTask id="PrintLabel" name="Print label">
+        <bpmn:extensionElements>
+          <zenbpm:taskDefinition type="listener-demo-label" />
+          <zenbpm:executionListeners>
+            <zenbpm:executionListener eventType="start" type="listener-demo-label-before" />
+            <zenbpm:executionListener eventType="end" type="listener-demo-label-after" />
+          </zenbpm:executionListeners>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_5</bpmn:incoming>
+        <bpmn:outgoing>Flow_6</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:sequenceFlow id="Flow_6" sourceRef="PrintLabel" targetRef="ParcelPacked" />
+      <bpmn:endEvent id="ParcelPacked" name="Parcel packed">
+        <bpmn:incoming>Flow_6</bpmn:incoming>
+      </bpmn:endEvent>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="PackParcel" targetRef="ChargeCustomer" />
+    <bpmn:callActivity id="ChargeCustomer" name="Charge customer">
+      <bpmn:extensionElements>
+        <zenbpm:calledElement processId="listener-demo-payment" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="ChargeCustomer" targetRef="ParcelSent" />
+    <bpmn:endEvent id="ParcelSent" name="Parcel sent">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="listener-demo-parcel">
+      <bpmndi:BPMNShape id="ParcelOrdered_di" bpmnElement="ParcelOrdered">
+        <dc:Bounds x="160" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PackParcel_di" bpmnElement="PackParcel" isExpanded="true">
+        <dc:Bounds x="256" y="80" width="352" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PackingStarted_di" bpmnElement="PackingStarted">
+        <dc:Bounds x="286" y="110" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PrintLabel_di" bpmnElement="PrintLabel">
+        <dc:Bounds x="382" y="110" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ParcelPacked_di" bpmnElement="ParcelPacked">
+        <dc:Bounds x="542" y="110" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ChargeCustomer_di" bpmnElement="ChargeCustomer">
+        <dc:Bounds x="668" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ParcelSent_di" bpmnElement="ParcelSent">
+        <dc:Bounds x="828" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="322" y="128" />
+        <di:waypoint x="352" y="128" />
+        <di:waypoint x="352" y="150" />
+        <di:waypoint x="382" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6">
+        <di:waypoint x="482" y="150" />
+        <di:waypoint x="512" y="150" />
+        <di:waypoint x="512" y="128" />
+        <di:waypoint x="542" y="128" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="196" y="98" />
+        <di:waypoint x="226" y="98" />
+        <di:waypoint x="226" y="150" />
+        <di:waypoint x="256" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="608" y="150" />
+        <di:waypoint x="638" y="150" />
+        <di:waypoint x="638" y="120" />
+        <di:waypoint x="668" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="768" y="120" />
+        <di:waypoint x="798" y="120" />
+        <di:waypoint x="798" y="98" />
+        <di:waypoint x="828" y="98" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
