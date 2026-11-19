@@ -337,9 +337,11 @@ two start listeners and its own job are completed.
    both pages. History → `ShipOrder` → **View related jobs**: the jobs of `ShipOrder` on the
    page shown are highlighted, and a message says *Jobs of this element are also on other pages
    of the Jobs tab: 2*.
-5. Still on U11 with five rows to a page, go to page 2 of the Jobs tab, then History →
-   `OrderReceived` → row menu. **View related jobs** is offered although the listener job of the
-   start event is on page 1, and leads there.
+5. Still on U11 with five rows to a page, go to page 2 of the Jobs tab. The engine hands out
+   the jobs of an instance oldest first, and the tab shows the rows of one page newest on top:
+   the listener job of the start event, the first job of the instance, is therefore on page 1,
+   at the bottom. History → `OrderReceived` → row menu: **View related jobs** is offered
+   although that job is not on the page shown, and leads to page 1.
 
 ### U5. Failing a listener's job offers no error code
 
