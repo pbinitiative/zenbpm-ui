@@ -8,13 +8,11 @@ function childrenNamed(parent: Element, localName: string): Element[] {
   return Array.from(parent.children).filter((child) => child.localName === localName);
 }
 
-/** Whether the element carries an execution listener, in whatever namespace, as the engine reads it. */
-function carriesAnExecutionListener(element: Element): boolean {
-  return childrenNamed(element, 'extensionElements').some((extensionElements) =>
-    childrenNamed(extensionElements, 'executionListeners').some(
-      (listeners) => childrenNamed(listeners, 'executionListener').length > 0
-    )
-  );
+/** How many execution listeners the element carries, in whatever namespace, as the engine reads them. */
+function executionListenersOf(element: Element): number {
+  return childrenNamed(element, 'extensionElements')
+    .flatMap((extensionElements) => childrenNamed(extensionElements, 'executionListeners'))
+    .reduce((count, listeners) => count + childrenNamed(listeners, 'executionListener').length, 0);
 }
 
 /** Reads the model of a definition; undefined where there is none or it cannot be read. */
@@ -46,7 +44,7 @@ export function elementIdsWithJobsTheirTypeDoesNotTell(bpmnData: string | undefi
   if (!model) return ids;
   for (const event of Array.from(model.getElementsByTagNameNS('*', 'startEvent'))) {
     // the engine runs the listeners of a start event only directly under the process
-    if (event.parentElement?.localName === 'process' && carriesAnExecutionListener(event) && event.id) {
+    if (event.parentElement?.localName === 'process' && executionListenersOf(event) > 0 && event.id) {
       ids.add(event.id);
     }
   }
@@ -57,20 +55,26 @@ export function elementIdsWithJobsTheirTypeDoesNotTell(bpmnData: string | undefi
 }
 
 /**
- * The ids of the elements of a process model which carry execution listeners,
- * or undefined where the model does not tell.
+ * The most jobs one instance of each element with execution listeners can
+ * have, by the id of the element, or undefined where the model does not
+ * tell. The engine creates one job for every listener and one for the work
+ * of the element itself; a start event has no work of its own.
  *
- * An element instance has one job, unless its element carries listeners: then
- * their jobs and the element's own share it. So this tells whether the jobs
- * of an element instance may lie on several pages of the Jobs tab.
+ * An element instance has one job, unless its element carries listeners:
+ * then their jobs and the element's own share it, and may lie on several
+ * pages of the Jobs tab. An element the map does not hold has one job.
  */
-export function elementIdsWithExecutionListeners(bpmnData: string | undefined): ReadonlySet<string> | undefined {
+export function mostJobsOfElementsWithExecutionListeners(
+  bpmnData: string | undefined
+): ReadonlyMap<string, number> | undefined {
   const model = modelOf(bpmnData);
   if (!model) return undefined;
-  const ids = new Set<string>();
+  const mostJobs = new Map<string, number>();
   for (const listeners of Array.from(model.getElementsByTagNameNS('*', 'executionListeners'))) {
     const element = listeners.parentElement?.parentElement;
-    if (element?.id && carriesAnExecutionListener(element)) ids.add(element.id);
+    if (!element?.id || mostJobs.has(element.id)) continue;
+    const listenerJobs = executionListenersOf(element);
+    if (listenerJobs > 0) mostJobs.set(element.id, listenerJobs + (element.localName === 'startEvent' ? 0 : 1));
   }
-  return ids;
+  return mostJobs;
 }

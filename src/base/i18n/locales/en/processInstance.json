@@ -124,6 +124,8 @@
     "messageSendFailed": "Failed to send message",
     "relatedJobNotFound": "No related job was found",
     "relatedJobsOnOtherPages": "Jobs of this element are also on other pages of the Jobs tab: {{pages}}",
+    "relatedJobsOnOtherPagesAtLeast": "Jobs of this element are also on other pages of the Jobs tab: {{pages}}. The engine failed to answer while the jobs were looked through, so later pages may hold more of them.",
+    "relatedJobsNotAllLookedThrough": "The engine failed to answer while the jobs of this element were looked for, so other pages of the Jobs tab may hold more of them.",
     "relatedJobSearchFailed": "Failed to find the related job",
     "relatedEventNotFound": "No related event subscription was found",
     "relatedEventSearchFailed": "Failed to find the related event subscription",

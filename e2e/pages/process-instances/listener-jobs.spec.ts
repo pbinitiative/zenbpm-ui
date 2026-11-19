@@ -27,6 +27,12 @@ import {
   TASK_LISTENERS_USER_TASK_LISTENER_JOB_KEY,
   TASK_LISTENERS_USER_TASK_OWN_JOB_KEY,
 } from '../../../src/mocks/data/well-known-keys';
+import {
+  holdMockAnswers,
+  keepFromRefreshing,
+  releaseMockAnswers,
+  watchRequestsToTheEngine,
+} from '../../fixtures/mock-answers';
 
 // E2E coverage for the jobs of execution listeners. The engine runs the start
 // listeners of an element, then the element's own job, then its end listeners,
@@ -239,26 +245,105 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await expect(page.getByText('Jobs of this element are also on other pages of the Jobs tab: 1')).toBeVisible();
   });
 
+  test('looks through the jobs of an element a hundred at a time, whatever the table shows to a page', async ({ page }) => {
+    // Eight jobs at five to a page: four jobs of the service task on the first page, its last one on the second.
+    await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    await showFiveJobsToAPage(page);
+    const engineAtRest = await atRestWithoutRefreshing(page);
+    const lookedThrough = jobsPagesAskedFor(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+
+    await viewRelatedJobsOf(page, 'ShipOrder');
+    await expect(page.getByText('Jobs of this element are also on other pages of the Jobs tab: 2')).toBeVisible();
+
+    // one request holds all eight jobs, where the pages of the table would take two
+    await engineAtRest();
+    expect(lookedThrough.map((request) => new URL(request.url()).search)).toEqual(['?page=1&size=100']);
+  });
+
+  test('asks for no jobs where the model says that all jobs of the element are in view', async ({ page }) => {
+    // Eight jobs at five to a page. The start event carries one listener and has no job of its own, so the
+    // one job in view is all it can have, although the jobs of the instance take two pages.
+    await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    await showFiveJobsToAPage(page);
+    await expect(jobRow(page, TASK_LISTENERS_START_EVENT_LISTENER_JOB_KEY)).toHaveCount(1);
+    const engineAtRest = await atRestWithoutRefreshing(page);
+    const lookedThrough = jobsPagesAskedFor(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+
+    await viewRelatedJobsOf(page, 'OrderReceived');
+    await expect(jobRow(page, TASK_LISTENERS_START_EVENT_LISTENER_JOB_KEY)).toHaveAttribute('data-focused', 'true');
+
+    await engineAtRest();
+    expect(lookedThrough.map((request) => new URL(request.url()).search)).toEqual([]);
+  });
+
+  test('turns to the page which holds the jobs of an element where the page shown holds none of them', async ({ page }) => {
+    // Eight jobs at five to a page. The user task has the job of its start listener and its own: both are on
+    // the second page, and the first page shown holds none of them.
+    await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    await showFiveJobsToAPage(page);
+    const engineAtRest = await atRestWithoutRefreshing(page);
+
+    await viewRelatedJobsOf(page, 'ConfirmDelivery');
+
+    await expect(page.getByTestId('jobs-table').getByRole('button', { name: 'page 2', exact: true }))
+      .toHaveAttribute('aria-current', 'page');
+    await expect(focusedJobRows(page)).toHaveCount(2);
+    await engineAtRest();
+    await expect(page.getByText('Jobs of this element are also on other pages')).toHaveCount(0);
+  });
+
+  test('stays on the Jobs page selected where it holds a job of the element, though its rows arrive after the search began', async ({ page }) => {
+    // Eight jobs at five to a page: four jobs of the service task on the first page, its last one on the second.
+    await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    await showFiveJobsToAPage(page);
+    const engineAtRest = await atRestWithoutRefreshing(page);
+    const lookedThrough = jobsPagesAskedFor(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY, '100');
+
+    // The second page is selected while its rows are kept back, and so is the answer to the search which begins.
+    await holdTheSearch(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    await holdMockAnswers(page, {
+      name: 'second page',
+      path: `/v1/process-instances/${TASK_LISTENERS_USER_TASK_INSTANCE_KEY}/jobs`,
+      params: { page: '2', size: '5' },
+    });
+    await goToJobsPage(page, 2);
+    await viewRelatedJobsOf(page, 'ShipOrder');
+    await expect.poll(() => lookedThrough.length).toBe(1);
+
+    // The rows of the second page arrive first, the last job of the service task among them.
+    await releaseMockAnswers(page, 'second page');
+    await expect(jobRowOfType(page, 'archive-order')).toHaveAttribute('data-focused', 'true');
+
+    // The search found jobs on the first page as well. The table stays where its user turned it, with a job in view.
+    await releaseMockAnswers(page, 'search');
+    await engineAtRest();
+    await expect(page.getByTestId('jobs-table').getByRole('button', { name: 'page 2', exact: true }))
+      .toHaveAttribute('aria-current', 'page');
+    await expect(jobRowOfType(page, 'archive-order')).toHaveAttribute('data-focused', 'true');
+    await expect(page.getByText('Jobs of this element are also on other pages of the Jobs tab: 1')).toBeVisible();
+  });
+
   test('says nothing about other pages once the page is turned while they are looked through', async ({ page }) => {
     // Eight jobs at five to a page: four jobs of the service task on the first page, its last one on the second.
     await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
     await showFiveJobsToAPage(page);
-    const lookedThrough = jobsPagesAskedFor(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    const engineAtRest = await atRestWithoutRefreshing(page);
+    const lookedThrough = jobsPagesAskedFor(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY, '100');
 
-    // the engine takes its time, so that the page is turned while the other pages are looked through
-    await answerAfter(page, SLOWLY);
+    // the answer to the search is kept back, so that the page is turned while the other pages are looked through
+    await holdTheSearch(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
     await viewRelatedJobsOf(page, 'ShipOrder');
     await expect(focusedJobRows(page)).toHaveCount(4);
     // the four rows were loaded before: only a request tells that the other pages are being looked through
-    await expect.poll(() => lookedThrough.length).toBeGreaterThan(0);
-    await answerAfter(page, 'real');
+    await expect.poll(() => lookedThrough.length).toBe(1);
     await goToJobsPage(page, 2);
     await expect(jobRowOfType(page, 'archive-order')).toBeVisible();
 
     // Turning the page ended the search, whose request was still without an answer.
     await expect.poll(() => wasGivenUp(lookedThrough)).toBe(true);
     // A hint counted from the first page would name the page now shown.
-    await page.waitForTimeout(SLOWLY + 1000);
+    await releaseMockAnswers(page, 'search');
+    await engineAtRest();
     await expect(page.getByText('Jobs of this element are also on other pages')).toHaveCount(0);
   });
 
@@ -271,15 +356,15 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     await page.getByRole('menuitem', { name: 'View in history' }).click();
     const historyRow = page.getByTestId('history-table').locator('tbody tr').filter({ hasText: 'ShipOrder' });
     await expect(historyRow).toHaveAttribute('data-focused', 'true');
-    const lookedThrough = jobsPagesAskedFor(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    const engineAtRest = await atRestWithoutRefreshing(page);
+    const lookedThrough = jobsPagesAskedFor(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY, '100');
 
-    // the engine takes its time, so that the browser goes back while the other pages are looked through
-    await answerAfter(page, SLOWLY);
+    // the answer to the search is kept back, so that the browser goes back while the other pages are looked through
+    await holdTheSearch(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
     await historyRow.getByRole('button', { name: 'Row actions' }).click();
     await page.getByRole('menuitem', { name: 'View related jobs' }).click();
     await expect(focusedJobRows(page)).toHaveCount(4);
-    await expect.poll(() => lookedThrough.length).toBeGreaterThan(0);
-    await answerAfter(page, 'real');
+    await expect.poll(() => lookedThrough.length).toBe(1);
 
     // Both addresses name the same element and no job, so only the tab tells them apart.
     await page.goBack();
@@ -288,7 +373,8 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
     // Leaving the Jobs tab ended the search, whose request was still without an answer.
     await expect.poll(() => wasGivenUp(lookedThrough)).toBe(true);
     // Its answer would speak of the pages of the Jobs tab over the history.
-    await page.waitForTimeout(SLOWLY + 1000);
+    await releaseMockAnswers(page, 'search');
+    await engineAtRest();
     await expect(page.getByText('Jobs of this element are also on other pages')).toHaveCount(0);
   });
 
@@ -486,29 +572,39 @@ async function goToJobsPage(page: Page, number: number) {
     .toHaveAttribute('aria-current', 'page');
 }
 
-// Long enough for a test to act while an answer of the mocked engine is on its way.
-const SLOWLY = 1500;
-
-// The mocked engine answers every request it receives from here on after so many milliseconds; `real` is its
-// usual pace, a fraction of a second. An answer already on its way keeps the pace it was asked at.
-async function answerAfter(page: Page, delay: number | 'real') {
-  await page.evaluate(
-    (delay) => (window as unknown as { __setMockDelay: (delay: number | 'real') => void }).__setMockDelay(delay),
-    delay
-  );
+// The page looks for the jobs of an element a hundred at a time, and asks for the rows of its table at the size of
+// a page of it: so the size tells a request of the search. Its answers are kept back until the hold `search` is
+// released.
+async function holdTheSearch(page: Page, processInstanceKey: string) {
+  await holdMockAnswers(page, {
+    name: 'search',
+    path: `/v1/process-instances/${processInstanceKey}/jobs`,
+    params: { size: '100' },
+  });
 }
 
-// The requests for a page of the jobs of the instance from here on, in the order they are sent.
-function jobsPagesAskedFor(page: Page, processInstanceKey: string): Request[] {
+// Ends the periodic refresh of the page and waits for what it still had under way. The function returned waits
+// until the engine has answered everything the page asked for since, and nothing has followed for a moment.
+async function atRestWithoutRefreshing(page: Page) {
+  const engineAtRest = watchRequestsToTheEngine(page);
+  await keepFromRefreshing(page);
+  await engineAtRest();
+  return engineAtRest;
+}
+
+// The requests for jobs of the instance from here on, in the order they are sent; with a size, only those which
+// ask for that many jobs at once.
+function jobsPagesAskedFor(page: Page, processInstanceKey: string, size?: string): Request[] {
   const requests: Request[] = [];
   page.on('request', (request) => {
-    if (new URL(request.url()).pathname === `/v1/process-instances/${processInstanceKey}/jobs`) requests.push(request);
+    const url = new URL(request.url());
+    if (url.pathname !== `/v1/process-instances/${processInstanceKey}/jobs`) return;
+    if (size === undefined || url.searchParams.get('size') === size) requests.push(request);
   });
   return requests;
 }
 
-// Whether one of the requests was given up before its answer came. The periodic refresh of the page asks for the
-// jobs too, and waits for every answer: a request given up is one of a search which was ended.
+// Whether one of the requests was given up before its answer came, as those of a search which was ended are.
 function wasGivenUp(requests: Request[]): boolean {
   return requests.some((request) => request.failure() !== null);
 }
