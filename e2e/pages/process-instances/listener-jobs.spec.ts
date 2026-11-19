@@ -33,6 +33,7 @@ import {
   releaseMockAnswers,
   watchRequestsToTheEngine,
 } from '../../fixtures/mock-answers';
+import { clearMockFailures, failMockRequests } from '../../fixtures/version-history';
 
 // E2E coverage for the jobs of execution listeners. The engine runs the start
 // listeners of an element, then the element's own job, then its end listeners,
@@ -342,6 +343,46 @@ test.describe('Process Instance Jobs - Execution listeners', () => {
       .toHaveAttribute('aria-current', 'page');
     await expect(jobRowOfType(page, 'archive-order')).toHaveAttribute('data-focused', 'true');
     await expect(page.getByText('Jobs of this element are also on other pages of the Jobs tab: 1')).toBeVisible();
+  });
+
+  test('says that other pages may hold more jobs of the element when the engine fails to answer the search', async ({ page }) => {
+    // Eight jobs at five to a page: four jobs of the service task on the first page, its last one on the second.
+    await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    await showFiveJobsToAPage(page);
+    await atRestWithoutRefreshing(page);
+    await failMockRequests(page, {
+      path: `/v1/process-instances/${TASK_LISTENERS_USER_TASK_INSTANCE_KEY}/jobs`,
+      params: { size: '100' },
+      status: 503,
+    });
+
+    await viewRelatedJobsOf(page, 'ShipOrder');
+
+    // the jobs in view stay focused; what is lost is where the others are, and the page says so
+    await expect(focusedJobRows(page)).toHaveCount(4);
+    await expect(
+      page.getByText('The engine failed to answer while the jobs of this element were looked for, so other pages of the Jobs tab may hold more of them.')
+    ).toBeVisible();
+    await clearMockFailures(page);
+  });
+
+  test('says that the related job was not found when the engine fails to answer the search for a job out of view', async ({ page }) => {
+    // Eight jobs at five to a page: both jobs of the user task are on the second page.
+    await openJobsTab(page, TASK_LISTENERS_USER_TASK_INSTANCE_KEY);
+    await showFiveJobsToAPage(page);
+    await atRestWithoutRefreshing(page);
+    await failMockRequests(page, {
+      path: `/v1/process-instances/${TASK_LISTENERS_USER_TASK_INSTANCE_KEY}/jobs`,
+      params: { size: '100' },
+      status: 503,
+    });
+
+    await viewRelatedJobsOf(page, 'ConfirmDelivery');
+
+    await expect(page.getByText('Failed to find the related job')).toBeVisible();
+    await expect(page.getByTestId('jobs-table').getByRole('button', { name: 'page 1', exact: true }))
+      .toHaveAttribute('aria-current', 'page');
+    await clearMockFailures(page);
   });
 
   test('says nothing about other pages once the page is turned while they are looked through', async ({ page }) => {
