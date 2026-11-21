@@ -52,9 +52,11 @@ export const getBpmnContainerStyles = (isInteractive: boolean): SxProps<Theme> =
     stroke: `${themeColors.bpmn.completedStroke} !important`,
     strokeWidth: '2px !important',
   },
-  // Highlight active elements - green glow
+  // Highlight active elements - green glow. One drop-shadow on purpose: where Chrome rasterizes
+  // on the GPU, a chain of two draws stray pieces of a large element, such as an expanded
+  // sub-process, beside it: a cut-off copy of its label and fragments of its border.
   '& .element-active .djs-visual': {
-    filter: `drop-shadow(0 0 4px ${themeColors.bpmn.selectionGlow}) drop-shadow(0 0 8px ${themeColors.bpmn.selectionGlowLight}) !important`,
+    filter: `drop-shadow(0 0 6px ${themeColors.bpmn.selectionGlow}) !important`,
   },
   // Highlight selected element - strong border stroke to distinguish from active
   '& .element-selected .djs-visual rect, & .element-selected .djs-visual polygon, & .element-selected .djs-visual circle':

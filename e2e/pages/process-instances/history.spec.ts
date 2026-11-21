@@ -135,6 +135,22 @@ test.describe('Process Instance Diagram - Active Marker', () => {
     // element from the active set left its .element-active class behind.
     await expect(page.locator('.element-active')).toHaveCount(1);
   });
+
+  // Where Chrome rasterizes on the GPU, a chain of two drop-shadows draws
+  // stray pieces of a large active element, such as an expanded sub-process,
+  // beside it: a cut-off copy of its label and fragments of its border. The
+  // test runner rasterizes in software and never shows them, so what is held
+  // here is the cause: the glow stays one drop-shadow.
+  test('should draw the glow of the active element with a single drop-shadow', async ({ page }) => {
+    await page.goto(`/process-instances/${ACTIVE_INSTANCE_KEY}`);
+    await expect(page.getByText('Instance Details')).toBeVisible({ timeout: 10000 });
+
+    const glowingShape = page.locator(
+      '.djs-element[data-element-id="task-a"].element-active .djs-visual',
+    );
+    // one function, whose colour may carry parentheses of its own
+    await expect(glowingShape).toHaveCSS('filter', /^drop-shadow\((?:[^()]|\([^()]*\))*\)$/, { timeout: 10000 });
+  });
 });
 
 test.describe('Process Definition Detail - BPMN Diagram', () => {
