@@ -30,6 +30,7 @@ import {
     editEscalationReference,
 } from '../../helpers/eventProperties';
 import {expectXmlElements, expectEventDefinitions, expectValidBpmnXml} from '../../helpers/bpmnAssertions';
+import {EXECUTION_LISTENER_GROUP} from '../../helpers/executionListeners';
 import {
     deployProcess,
     expectDeploymentSaved,
@@ -91,7 +92,8 @@ test.describe('Message intermediate throw event', () => {
         const editedId = await editIntermediateThrowEventProperties(page);
         await configureTaskDefinition(page);
         // Executed as a job like a Send Task: Task definition replaces the Message group.
-        await expectPropertyGroups(page, [...PROPERTY_GROUPS, 'zenbpm-taskDefinition']);
+        // throwing a message is the work of a job, so this event runs execution listeners; the other throw events run none
+        await expectPropertyGroups(page, [...PROPERTY_GROUPS, 'zenbpm-taskDefinition', EXECUTION_LISTENER_GROUP]);
         const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
         expectMetadataXml(xml);
         await expectDesign(page, xml, editedId);

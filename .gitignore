@@ -35,6 +35,8 @@ test-results/
 
 # Manual test guide rendered by manual-test/job-retries/seed_job_retry_scenarios.py from its template
 manual-test/job-retries/JOB_RETRY_MANUAL_TEST.md
+# Instance links the manual-test seeding scripts write next to themselves
+manual-test/*/seeded-instances.md
 
 *storybook.log
 storybook-static

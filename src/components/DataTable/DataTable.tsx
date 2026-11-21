@@ -157,10 +157,13 @@ export const DataTable = <T extends object>({
     [focusedRowKey, getRowFocusKey]
   );
 
-  const focusedRowIsVisible = useMemo(
-    () => displayedData.some(isFocusedRow),
+  // Several rows can be focused, such as the jobs of one element. The table
+  // scrolls to the first of them, from which the others follow downwards.
+  const firstFocusedRow = useMemo(
+    () => displayedData.find(isFocusedRow),
     [displayedData, isFocusedRow]
   );
+  const focusedRowIsVisible = firstFocusedRow !== undefined;
 
   useEffect(() => {
     if (!autoScrollToFocusedRow || !focusedRowIsVisible) return;
@@ -186,7 +189,7 @@ export const DataTable = <T extends object>({
     return (
       <TableRow
         key={sectionKey !== undefined ? `s${sectionKey}-${String(row[rowKey])}` : String(row[rowKey])}
-        ref={focused ? focusedRowRef : undefined}
+        ref={row === firstFocusedRow ? focusedRowRef : undefined}
         data-focused={focused ? 'true' : undefined}
         hover={!!onRowClick}
         onClick={() => onRowClick?.(row)}

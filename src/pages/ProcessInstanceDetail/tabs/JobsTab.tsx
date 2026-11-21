@@ -55,7 +55,9 @@ import {
   formatDateTimeWithSeconds,
   isIncidentOpen,
   isBadRequest,
+  isRefusedForRetriesWhichNoLongerEvaluate,
   isResolutionRefused,
+  isListenerJob,
   isWaitingOutBackoff,
   type JobRetriesRequest,
   type UpdateJobRetriesRequest,
@@ -78,6 +80,8 @@ interface JobsTabProps {
   onElementIdClick?: (elementId: string) => void;
   onNavigateToHistory?: (elementInstanceKey: string) => void;
   focusedElementInstanceKey?: string;
+  /** Narrows the focus to this job of the focused element instance. */
+  focusedJobKey?: string;
   autoScrollToFocusedRow?: boolean;
   onFocusedRowVisible?: () => void;
   findingFocusedJob?: boolean;
@@ -95,6 +99,7 @@ export const JobsTab = ({
   onElementIdClick,
   onNavigateToHistory,
   focusedElementInstanceKey,
+  focusedJobKey,
   autoScrollToFocusedRow = false,
   onFocusedRowVisible,
   findingFocusedJob = false,
@@ -124,12 +129,14 @@ export const JobsTab = ({
   // `elementType: "USER_TASK"`) is correctly classified even though its routing
   // type is not `user-task-type`. Definitions don't need to be loaded for this to
   // work — the value arrives with the job itself.
+  // The job of an execution listener on a User Task carries the same element
+  // kind, yet nobody is assigned to it: only the User Task's own job is one.
   const userTaskJobKeys = useMemo(() => {
     const keys = new Set<string>();
     if (!instanceTree) return keys;
     for (const node of collectNodes(instanceTree)) {
       for (const job of node.jobs) {
-        if (job.elementType === 'USER_TASK') keys.add(job.key);
+        if (job.elementType === 'USER_TASK' && !isListenerJob(job)) keys.add(job.key);
       }
     }
     return keys;
@@ -218,7 +225,12 @@ export const JobsTab = ({
           return;
         }
       }
-      if (request.retries === undefined && isResolutionRefused(err)) {
+      // Retries of the operator's own are the way out of one refusal only:
+      // the retries of the task definition no longer evaluate. Every other
+      // reason, such as input mappings which no longer evaluate, is the
+      // engine's to name, and its message says what to change. The retries of
+      // a listener are literals, so its job is never refused for them.
+      if (request.retries === undefined && isRefusedForRetriesWhichNoLongerEvaluate(err)) {
         throw new DefinitionRetriesNotEvaluableError(
           t('processInstance:dialogs.retryJob.definitionRetriesNotEvaluable', {
             reason: apiErrorMessage(err) ?? t('processInstance:messages.incidentResolveFailed'),
@@ -344,6 +356,27 @@ export const JobsTab = ({
               <Typography variant="caption" color="text.secondary" display="block">
                 {row.elementId}
               </Typography>
+            )}
+            {isListenerJob(row) && (
+              // The tooltip describes the chip, whose name stays the label it
+              // shows. The chip takes the focus, so that the tooltip is there
+              // for the keyboard as it is for the mouse.
+              <Tooltip describeChild title={t(`processInstance:listenerJob.tooltip.${row.listenerEventType}`)}>
+                <Chip
+                  label={t(`processInstance:listenerJob.chip.${row.listenerEventType}`)}
+                  size="small"
+                  color="info"
+                  variant="outlined"
+                  tabIndex={0}
+                  data-testid="job-listener-chip"
+                  sx={{
+                    mt: 0.5,
+                    fontSize: 'caption.fontSize',
+                    height: 20,
+                    '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 1 },
+                  }}
+                />
+              </Tooltip>
             )}
           </Box>
         ),
@@ -536,8 +569,11 @@ export const JobsTab = ({
         totalCount={totalCount}
         loading={findingFocusedJob}
         onElementIdClick={onElementIdClick}
-        focusedRowKey={focusedElementInstanceKey}
-        getRowFocusKey={(row) => row.elementInstanceKey}
+        // The jobs of an element's execution listeners share its element instance
+        // with the element's own job: a focus by element instance marks them all,
+        // one which names a job marks that job alone.
+        focusedRowKey={focusedJobKey ?? focusedElementInstanceKey}
+        getRowFocusKey={(row) => (focusedJobKey ? row.key : row.elementInstanceKey)}
         autoScrollToFocusedRow={autoScrollToFocusedRow}
         onFocusedRowVisible={onFocusedRowVisible}
       />

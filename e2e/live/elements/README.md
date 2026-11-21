@@ -1,6 +1,6 @@
 # BPMN element design tests
 
-The suite contains 36 element directories, 128 design variants and 387 tests.
+The suite contains 35 element directories, 128 design variants and 390 tests.
 Each BPMN element type has its own directory and one or more `*_design.spec.ts` files.
 Related event definitions and design variants are named scenarios in the element's
 spec file; boundary event definitions are split into per-type spec files.
@@ -8,7 +8,8 @@ The suite covers the element types exposed by the current designer palette and
 replacement menus; it does not attempt to cover BPMN metamodel types that have no
 editor UI.
 
-Every variant has three independent tests:
+Every variant has three independent tests. A variant with behaviour of its own
+adds tests to them, as the execution listener variants in the table below do.
 
 1. **Design:** open a new process, create the complete diagram through the UI,
    change the tested element's type or marker, download BPMN, and assert its semantic
@@ -25,7 +26,10 @@ Every variant has three independent tests:
 
 The suite uses real backend requests. It tests deployment and persistence, not
 process execution or job completion. A deployment accepted by the backend does
-not establish runtime support for every BPMN construct.
+not establish runtime support for every BPMN construct. How the engine runs the
+jobs of execution listeners is tested beside this suite, in
+`e2e/live/processes/startListener.spec.ts` and `taskListeners.spec.ts`, with
+`helpers/listenerProcesses.ts`.
 
 ## Coverage
 
@@ -40,6 +44,7 @@ not establish runtime support for every BPMN construct.
 | Transaction, ad-hoc sub-process | Transaction/cancel context; expanded/collapsed ad-hoc, completion condition, cancellation and loop markers |
 | Start, end, intermediate catch/throw, boundary events | All replacement-menu event definitions; date/duration/cycle timers, interrupting/non-interrupting boundaries, global references and correlation keys where exposed |
 | Gateways | Exclusive, parallel, inclusive, complex, event-based; event-based branches lead to catch events |
+| Execution listeners | The group is expected exactly where the engine runs listeners: on the service, send and user task (plain and standard loop), the job worker business rule task, the message intermediate throw event and every start event of the process; on no multi-instance and no other variant. Service task: a start and an end listener designed, exported in the order of the model, re-imported and deployed; two start listeners of one type flagged and refused; one type on a start and an end listener accepted. Start event: an end listener designed, re-imported and deployed, its type cleared, the listener removed; a FEEL type flagged and refused |
 | Sequence flow | Plain, conditional FEEL, default |
 | Process, participant, lane | Names/IDs, documentation, executable flag, version tag; expanded/empty pools, participant multiplicity; invalid and duplicate process IDs |
 | Data object/store references | Properties and collection marker |
@@ -74,6 +79,9 @@ Shared helpers have narrow responsibilities:
 - `commonProperties.ts`: reusable property operations such as metadata, input and
   output mappings, business keys and multi-instance fields.
 - `eventProperties.ts`: reference and timer controls explicitly chosen by a test.
+- `executionListeners.ts`: the id of the Execution listeners group, the entries of
+  a listener by its position, adding a listener behind the others and asserting
+  the listeners of an element in the XML.
 - `bpmnAssertions.ts`: XML queries, reference integrity and diagram coverage.
 - `processDeployment.ts`: submitting a deployment and separate assertions for
   saved definitions and validation errors.

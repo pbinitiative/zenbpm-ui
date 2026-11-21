@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:zenbpm="http://zenbpm.pbinitiative.org/1.0" id="Definitions_listener-demo-refused-08-start-event-of-a-sub-process" targetNamespace="http://bpmn.io/schema/bpmn"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI">
+  <bpmn:process id="listener-demo-refused-08-start-event-of-a-sub-process" name="Refused: a listener on a start event of a sub-process" isExecutable="true">
+    <bpmn:startEvent id="Begin" name="Begin">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Begin" targetRef="Refused" />
+    <bpmn:subProcess id="Refused" name="Refused">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:startEvent id="InnerBegin" name="Inner begin">
+        <bpmn:extensionElements>
+          <zenbpm:executionListeners>
+            <zenbpm:executionListener eventType="end" type="listener-demo-refused" />
+          </zenbpm:executionListeners>
+        </bpmn:extensionElements>
+        <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:sequenceFlow id="Flow_3" sourceRef="InnerBegin" targetRef="InnerDone" />
+      <bpmn:endEvent id="InnerDone" name="Inner done">
+        <bpmn:incoming>Flow_3</bpmn:incoming>
+      </bpmn:endEvent>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Refused" targetRef="Done" />
+    <bpmn:endEvent id="Done" name="Done">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="listener-demo-refused-08-start-event-of-a-sub-process">
+      <bpmndi:BPMNShape id="Begin_di" bpmnElement="Begin">
+        <dc:Bounds x="160" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Refused_di" bpmnElement="Refused" isExpanded="true">
+        <dc:Bounds x="256" y="80" width="200" height="120" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="InnerBegin_di" bpmnElement="InnerBegin">
+        <dc:Bounds x="286" y="110" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="InnerDone_di" bpmnElement="InnerDone">
+        <dc:Bounds x="382" y="110" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Done_di" bpmnElement="Done">
+        <dc:Bounds x="516" y="80" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="322" y="128" />
+        <di:waypoint x="382" y="128" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="196" y="98" />
+        <di:waypoint x="226" y="98" />
+        <di:waypoint x="226" y="140" />
+        <di:waypoint x="256" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="456" y="140" />
+        <di:waypoint x="486" y="140" />
+        <di:waypoint x="486" y="98" />
+        <di:waypoint x="516" y="98" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

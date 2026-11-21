@@ -7,10 +7,13 @@ export {
   findOpenIncidentOfJob,
   isIncidentOpen,
   isBadRequest,
+  isRefusedForRetriesWhichNoLongerEvaluate,
   isResolutionRefused,
   parsePositiveInteger,
   timestampAfter,
   type JobRetriesRequest,
   type UpdateJobRetriesRequest,
 } from './jobRetries';
-export { collectNodes, compareByProcessType } from './instanceTree';
+export { collectNodes, compareByProcessType, holdsJobsOfPage } from './instanceTree';
+export { isListenerJob } from './listenerJobs';
+export { elementIdsWithJobsTheirTypeDoesNotTell, mostJobsOfElementsWithExecutionListeners } from './jobElements';

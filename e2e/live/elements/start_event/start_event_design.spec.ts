@@ -9,7 +9,7 @@ import {
     appendElement,
     renameSelectedElement,
 } from '../../helpers/processDesigner';
-import {openGroup, fillEntry, expectPropertyGroups} from '../../helpers/propertiesPanel';
+import {openGroup, fillEntry, entry, expectPropertyGroups} from '../../helpers/propertiesPanel';
 import {
     COMMON_PROPERTY_GROUPS,
     editMetadata,
@@ -20,13 +20,25 @@ import {
 } from '../../helpers/commonProperties';
 import {editMessageReference, editSignalReference, editTimer} from '../../helpers/eventProperties';
 import {expectXmlElements, expectEventDefinitions, expectValidBpmnXml} from '../../helpers/bpmnAssertions';
-import {deployProcess, expectDeploymentSaved} from '../../helpers/processDeployment';
+import {deployProcess, expectDeploymentRejected, expectDeploymentSaved} from '../../helpers/processDeployment';
+import {
+    EXECUTION_LISTENER_GROUP,
+    addListener,
+    expectListenersXml,
+    listenerEntry,
+    type DesignedListener,
+} from '../../helpers/executionListeners';
 
 const ELEMENT_ID = 'Element_under_test';
+// Every start event of this spec sits directly under the process, where the
+// engine runs its end execution listeners, so each offers the group.
 const PROPERTY_GROUPS = [
     ...COMMON_PROPERTY_GROUPS,
     'zenbpm-ioMapping-outputs',
+    EXECUTION_LISTENER_GROUP,
 ];
+// A start event takes end listeners only, so the panel offers no other event type there.
+const LISTENER: DesignedListener = {eventType: 'end', type: 'order-started', retries: '3'};
 
 test.describe('Start event', () => {
     test.beforeEach(async ({page}) => {
@@ -268,6 +280,75 @@ test.describe('Signal start event', () => {
     async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
         await expectStartEventXml(page, xml, id);
         await expectEventDefinitions(page, xml, id, ['signalEventDefinition']);
+    }
+});
+
+test.describe('Start event with an execution listener', () => {
+    test.beforeEach(async ({page}) => {
+        await createStartDiagram(page);
+        await selectShape(page, ELEMENT_ID);
+    });
+
+    test('designs the element and exports its end listener', async ({page}) => {
+        await addListener(page, ELEMENT_ID, LISTENER);
+        const xml = await downloadBpmnXml(page);
+        await expectDesign(page, xml, ELEMENT_ID);
+        await expectListenersXml(page, xml, ELEMENT_ID, [LISTENER]);
+    });
+
+    test('shows, edits and persists properties through XML import', async ({page}) => {
+        const editedId = await editStartEventProperties(page);
+        await addListener(page, editedId, LISTENER);
+        await expectPropertyGroups(page, PROPERTY_GROUPS);
+        const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
+        expectMetadataXml(xml);
+        await expectDesign(page, xml, editedId);
+        await expectListenersXml(page, xml, editedId, [LISTENER]);
+    });
+
+    test('keeps the listener and its retries while its type is cleared', async ({page}) => {
+        await addListener(page, ELEMENT_ID, LISTENER);
+        await fillEntry(page, listenerEntry(ELEMENT_ID, 0, 'type'), '');
+        await expect(entry(page, listenerEntry(ELEMENT_ID, 0, 'type')).locator('.bio-properties-panel-error')).toContainText('Enter the job type');
+        await expect(entry(page, listenerEntry(ELEMENT_ID, 0, 'retries')).getByRole('textbox')).toHaveValue('3');
+        const xml = await downloadBpmnXml(page);
+        await expectXmlElements(page, xml, `[id="${ELEMENT_ID}"] executionListeners > executionListener`, [{
+            name: 'executionListener',
+            attributes: {eventType: 'end', retries: '3'},
+        }]);
+        // the listener is matched by the attributes it keeps, which says nothing of the one it lost
+        expect(xml, 'The exported listener names no type').not.toContain(LISTENER.type);
+    });
+
+    test('removes the listener with its delete button', async ({page}) => {
+        await addListener(page, ELEMENT_ID, LISTENER);
+        const group = await openGroup(page, EXECUTION_LISTENER_GROUP);
+        await group.locator('.bio-properties-panel-collapsible-entry-header').hover();
+        await group.getByTitle('Delete item').click();
+        await expect(entry(page, listenerEntry(ELEMENT_ID, 0, 'type'))).toHaveCount(0);
+        await expect(group.getByTitle('Create new list item')).toBeVisible();
+        const xml = await downloadBpmnXml(page);
+        await expectXmlElements(page, xml, `[id="${ELEMENT_ID}"] executionListeners`, []);
+    });
+
+    test('deploys the designed process and reads back its BPMN XML', async ({page}) => {
+        await addListener(page, ELEMENT_ID, LISTENER);
+        const xml = await downloadBpmnXml(page);
+        await expectDesign(page, xml, ELEMENT_ID);
+        const response = await deployProcess(page);
+        await expectDeploymentSaved(page, response, xml);
+    });
+
+    test('flags a FEEL type, which the engine refuses at deployment', async ({page}) => {
+        await addListener(page, ELEMENT_ID, {eventType: 'end', type: '=jobType'});
+        await expect(entry(page, listenerEntry(ELEMENT_ID, 0, 'type')).locator('.bio-properties-panel-error')).toContainText('literal');
+        const response = await deployProcess(page);
+        await expectDeploymentRejected(page, response, "a listener's type must be a literal");
+    });
+
+    async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
+        await expectStartEventXml(page, xml, id);
+        await expectEventDefinitions(page, xml, id, []);
     }
 });
 

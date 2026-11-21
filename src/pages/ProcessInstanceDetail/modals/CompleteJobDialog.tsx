@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { JsonEditor } from '@components/JsonEditor';
 import type { Job } from '../types';
+import { isListenerJob } from '../utils';
 
 export interface CompleteJobDialogProps {
   open: boolean;
@@ -87,6 +88,17 @@ export const CompleteJobDialog = ({
             </Typography>
             <Typography variant="body2">{job.elementName || job.elementId}</Typography>
           </Box>
+
+          {/* What a listener's job is completed with reaches further for an end
+              listener than for a start listener: the engine writes the first to
+              the instance and keeps the second inside the listener's element.
+              The note says which holds here. It is there from the start, so it
+              is a note, not an alert which breaks in on a screen reader. */}
+          {isListenerJob(job) && (
+            <Alert severity="info" role="note" data-testid="complete-job-listener-note" sx={{ mb: 2 }}>
+              {t(`processInstance:dialogs.completeJob.listenerNote.${job.listenerEventType}`)}
+            </Alert>
+          )}
 
           <JsonEditor
             label={t('processInstance:dialogs.completeJob.variables')}

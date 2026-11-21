@@ -94,7 +94,7 @@
     "trigger": "Trigger",
     "viewInputOutput": "View Inputs & Outputs",
     "rowActions": "Row actions",
-    "viewRelatedJob": "View related job",
+    "viewRelatedJob": "View related jobs",
     "viewRelatedEvent": "View related event",
     "viewInHistory": "View in history",
     "viewFailures": "Failure history"
@@ -123,6 +123,9 @@
     "messageSent": "Message sent successfully",
     "messageSendFailed": "Failed to send message",
     "relatedJobNotFound": "No related job was found",
+    "relatedJobsOnOtherPages": "Jobs of this element are also on other pages of the Jobs tab: {{pages}}",
+    "relatedJobsOnOtherPagesAtLeast": "Jobs of this element are also on other pages of the Jobs tab: {{pages}}. The engine failed to answer while the jobs were looked through, so later pages may hold more of them.",
+    "relatedJobsNotAllLookedThrough": "The engine failed to answer while the jobs of this element were looked for, so other pages of the Jobs tab may hold more of them.",
     "relatedJobSearchFailed": "Failed to find the related job",
     "relatedEventNotFound": "No related event subscription was found",
     "relatedEventSearchFailed": "Failed to find the related event subscription",
@@ -134,12 +137,26 @@
     "jobResolvedMeanwhile": "Job handed back to its workers: somebody else resolved its incident meanwhile.",
     "jobResolvedMeanwhileWithoutRetries": "Somebody else resolved the incident of this job meanwhile, so the job is back with its workers, but without the retries chosen here. Its row shows the retries it has now; use Update Retries to change them. The engine said: {{reason}}"
   },
+  "listenerJob": {
+    "chip": {
+      "start": "Start listener",
+      "end": "End listener"
+    },
+    "tooltip": {
+      "start": "Job of a start execution listener of this element. The element's own work begins once the jobs of all its start listeners are completed.",
+      "end": "Job of an end execution listener of this element. The token leaves the element once the jobs of all its end listeners are completed."
+    }
+  },
   "dialogs": {
     "completeJob": {
       "title": "Complete Job",
       "description": "Complete this job with optional variables.",
       "variables": "Variables (JSON)",
-      "variablesHelp": "Enter variables as JSON object"
+      "variablesHelp": "Enter variables as JSON object",
+      "listenerNote": {
+        "start": "This is the job of a start execution listener. Its variables stay local to the element: the later start listeners and the element's own job receive them, and they reach the instance only where an output mapping of the element names them.",
+        "end": "This is the job of an end execution listener. Its variables are written to the instance as they are, without an output mapping: they replace variables of the instance with the same name, and the later end listeners of the element receive them too."
+      }
     },
     "completeFormJob": {
       "title": "Complete Form",
@@ -160,6 +177,7 @@
       "fromDefinition": "Resolve the incident only",
       "custom": "Resolve the incident with new retries",
       "fromDefinitionHint": "Resolving the incident restores the retries of the task definition and hands the job out at once. Retries set for this job since it failed are kept instead, together with the moment chosen for its next delivery.",
+      "fromDefinitionHintListener": "Resolving the incident restores the retries of the listener and hands the job out at once. Retries set for this job since it failed are kept instead, together with the moment chosen for its next delivery.",
       "definitionRetriesNotEvaluable": "The incident was not resolved: the retries of the task definition no longer evaluate for this job. Set new retries above and retry; the resolution then uses them instead. The engine said: {{reason}}"
     },
     "updateRetries": {
@@ -187,6 +205,7 @@
     },
     "failJob": {
       "title": "Fail Job",
+      "listenerNote": "This is the job of an execution listener, which cannot throw a BPMN error. The failure therefore takes no error code: it spends one attempt, and once no retries remain an incident stands on its element.",
       "errorCode": "Error Code",
       "variables": "Variables",
       "errorCodePlaceholder": "e.g. ORDER_FAILED",
@@ -198,12 +217,16 @@
       "outcomeRetry": "Without an error code the failure spends one attempt and leaves {{retries}} retries. The job is handed out again after its backoff; if a worker received it over the job stream, not before that worker's lock lapses, as the UI cannot release it. The variables are dropped.",
       "outcomeRetryRequested": "Without an error code the failure spends one attempt and leaves the {{retries}} retries entered, or jobs.maxRetries of the engine if that is lower. The job is handed out again after its backoff; if a worker received it over the job stream, not before that worker's lock lapses, as the UI cannot release it. The variables are dropped.",
       "outcomeIncident": "Without an error code this failure leaves no retries: the job fails with an incident and keeps the variables as its output.",
+      "outcomeRetryListener": "The failure spends one attempt and leaves {{retries}} retries. The job is handed out again after its backoff; if a worker received it over the job stream, not before that worker's lock lapses, as the UI cannot release it. The variables are dropped.",
+      "outcomeRetryRequestedListener": "The failure spends one attempt and leaves the {{retries}} retries entered, or jobs.maxRetries of the engine if that is lower. The job is handed out again after its backoff; if a worker received it over the job stream, not before that worker's lock lapses, as the UI cannot release it. The variables are dropped.",
+      "outcomeIncidentListener": "This failure leaves no retries: the job fails with an incident and keeps the variables as its output.",
       "retries": "Retries left after this failure",
       "retriesHelp": "Optional; one less than now when empty. The engine caps it at jobs.maxRetries.",
       "retriesInvalid": "Enter a whole number of at least 0",
       "retryBackoff": "Backoff",
       "retryBackoffPlaceholder": "e.g. PT10S",
       "retryBackoffHelp": "Optional ISO-8601 duration overriding the task definition's backoff.",
+      "retryBackoffHelpListener": "Optional ISO-8601 duration overriding the listener's backoff.",
       "retryBackoffInvalid": "Enter an ISO-8601 duration in weeks, days, hours, minutes or whole seconds, such as PT10S or P1D"
     },
     "addVariable": {

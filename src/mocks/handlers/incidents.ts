@@ -3,7 +3,9 @@ import { http, HttpResponse } from 'msw';
 import { findIncidentByKey } from '../data/incidents';
 import {
   definitionRetriesNotEvaluable,
+  jobChangedWhileResolving,
   incidentAlreadyResolved,
+  inputMappingsDoNotEvaluate,
   incidentWithoutJobRefusesRetries,
   jobNoLongerWaitsRefusal,
   jobOfMockIncident,
@@ -92,12 +94,24 @@ export const incidentHandlers = [
         const conflict = jobNoLongerWaitsRefusal(job);
         if (conflict !== undefined) return HttpResponse.json({ code: 'CONFLICT', message: conflict }, { status: 409 });
       }
+      // the input mappings of the element are evaluated again before anything
+      // else is changed, whatever retries come with the resolution
+      if (hasScenario(request, 'inputMappingsDoNotEvaluate')) {
+        return HttpResponse.json(
+          { code: 'CONFLICT', message: inputMappingsDoNotEvaluate(incident, job) },
+          { status: 409 }
+        );
+      }
       // the definition's retries are evaluated only without retries of the operator's own
       const refusal = body.retries === undefined && hasScenario(request, 'definitionRetriesNotEvaluable')
         ? definitionRetriesNotEvaluable(incident, job)
         : undefined;
       if (refusal !== undefined) {
         return HttpResponse.json({ code: 'CONFLICT', message: refusal }, { status: 409 });
+      }
+      // another request changes the job while the incident is being resolved
+      if (job && hasScenario(request, 'jobChangedWhileResolving')) {
+        return HttpResponse.json({ code: 'CONFLICT', message: jobChangedWhileResolving(incident) }, { status: 409 });
       }
 
       if (job && body.retries !== undefined) {

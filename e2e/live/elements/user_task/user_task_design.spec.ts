@@ -10,6 +10,7 @@ import {
     expectPropertiesRoundTrip,
 } from '../../helpers/processDesigner';
 import {openGroup, entry, fillEntry, expectPropertyGroups} from '../../helpers/propertiesPanel';
+import {EXECUTION_LISTENER_GROUP} from '../../helpers/executionListeners';
 import {
     COMMON_PROPERTY_GROUPS,
     editMetadata,
@@ -47,7 +48,7 @@ test.describe('User task', () => {
     test('shows, edits and persists properties through XML import', async ({page}) => {
         const editedId = await editUserTaskProperties(page);
         await configureUserTask(page);
-        await expectPropertyGroups(page, PROPERTY_GROUPS);
+        await expectPropertyGroups(page, [...PROPERTY_GROUPS, EXECUTION_LISTENER_GROUP]);
         const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
         expectMetadataXml(xml);
         await expectDesign(page, xml, editedId);
@@ -158,7 +159,7 @@ test.describe('User task — standard loop', () => {
     test('shows, edits and persists properties through XML import', async ({page}) => {
         const editedId = await editUserTaskProperties(page);
         await configureUserTask(page);
-        await expectPropertyGroups(page, PROPERTY_GROUPS);
+        await expectPropertyGroups(page, [...PROPERTY_GROUPS, EXECUTION_LISTENER_GROUP]);
         const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
         expectMetadataXml(xml);
         await expectDesign(page, xml, editedId);

@@ -519,6 +519,7 @@ export const processInstanceHandlers = [
           elementName: job.elementName,
           type: job.type,
           elementType: job.elementType,
+          listenerEventType: job.listenerEventType,
           processInstanceKey: job.processInstanceKey,
           processDefinitionKey: job.processDefinitionKey,
           state: job.state,

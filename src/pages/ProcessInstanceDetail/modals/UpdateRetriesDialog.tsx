@@ -25,6 +25,7 @@ import {
   DefinitionRetriesNotEvaluableError,
   apiErrorMessage,
   formatDateTimeWithSeconds,
+  isListenerJob,
   isWaitingOutBackoff,
   parsePositiveInteger,
   timestampAfter,
@@ -291,7 +292,10 @@ export const UpdateRetriesDialog = (props: UpdateRetriesDialogProps) => {
             </FormControl>
           ) : (
             <Typography variant="body2" color="text.secondary" data-testid="job-retries-resolve-only-hint">
-              {t('processInstance:dialogs.retryJob.fromDefinitionHint')}
+              {/* the retries a resolution restores are those of the model: a listener's for its job */}
+              {isListenerJob(job)
+                ? t('processInstance:dialogs.retryJob.fromDefinitionHintListener')
+                : t('processInstance:dialogs.retryJob.fromDefinitionHint')}
             </Typography>
           )}
 

@@ -58,8 +58,14 @@ test.describe('Process Instance Incidents - Job link', () => {
       return {
         tab: url.searchParams.get('tab'),
         focusElementInstanceKey: url.searchParams.get('focusElementInstanceKey'),
+        focusJobKey: url.searchParams.get('focusJobKey'),
       };
-    }).toEqual({ tab: 'jobs', focusElementInstanceKey: jobElementInstanceKey });
+    }).toEqual({
+      tab: 'jobs',
+      focusElementInstanceKey: jobElementInstanceKey,
+      // the link names the job, since an element instance can have several
+      focusJobKey: SIMPLE_TASK_FAILED_JOB_KEY,
+    });
 
     const jobRow = page.getByTestId('jobs-table').locator('tbody tr').filter({ hasText: SIMPLE_TASK_FAILED_JOB_KEY });
     await expect(jobRow).toHaveAttribute('data-focused', 'true');

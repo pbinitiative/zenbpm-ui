@@ -3,6 +3,7 @@ import { useModal } from '@components/Modals';
 import { CompleteJobDialog, type CompleteJobDialogProps } from './CompleteJobDialog';
 import { CompleteFormJobDialog, type CompleteFormJobDialogProps } from './CompleteFormJobDialog';
 import type { Job } from '../types';
+import { isListenerJob } from '../utils';
 
 const COMPLETE_JOB_DIALOG_ID = 'complete-job-dialog';
 const COMPLETE_FORM_JOB_DIALOG_ID = 'complete-form-job-dialog';
@@ -28,7 +29,11 @@ export function useCompleteJobDialog() {
       // Form completion is independent of BPMN element type and job type — a
       // truthy `inputVariables.ZEN_FORM` is the sole signal that the dialog
       // should be the form-based variant.
-      const hasZenForm = !!props.job.inputVariables?.ZEN_FORM;
+      // A listener job sees the variables of its element, so the job of a
+      // listener on a user task carries the task's `ZEN_FORM` as the task's
+      // own job does. The form is filled in for the user task, not for its
+      // listener, so a form never applies to a listener job.
+      const hasZenForm = !isListenerJob(props.job) && !!props.job.inputVariables?.ZEN_FORM;
 
       if (hasZenForm) {
         openFormJobModal({

@@ -15,7 +15,7 @@ import {
 import { JsonEditor } from '@components/JsonEditor';
 import { parseIsoBackoff } from '@base/utils/isoDuration';
 import type { Job } from '../types';
-import { MAX_INT32, apiErrorMessage } from '../utils';
+import { MAX_INT32, apiErrorMessage, isListenerJob } from '../utils';
 
 export interface FailJobRequest {
   errorCode?: string;
@@ -83,6 +83,10 @@ export const FailJobDialog = ({
     validateJson(value);
   }, [validateJson]);
 
+  // A listener job cannot throw a BPMN error (the engine answers 400), so its
+  // dialog offers no error code field, and `errorCode` stays empty: the job
+  // always fails with a retry spent.
+  const isListener = isListenerJob(job);
   // The engine ignores retries and backoff of a BPMN error, so they are
   // offered, validated and sent only for a failure without an error code.
   const isBpmnError = errorCode.trim() !== '';
@@ -128,14 +132,22 @@ export const FailJobDialog = ({
   // none fails the job with an incident. With one it throws a BPMN error.
   // Named retries above jobs.maxRetries are capped, and the UI cannot read
   // that limit, so the outcome promises them only as an upper bound.
+  // The dialog of a listener's job has no field for an error code, so its
+  // outcome does not speak of one.
   const remaining = retriesLeft ?? Math.max((job.retries ?? 1) - 1, 0);
   const outcome = isBpmnError
     ? t('processInstance:dialogs.failJob.outcomeBpmnError')
     : remaining === 0
-      ? t('processInstance:dialogs.failJob.outcomeIncident')
+      ? isListener
+        ? t('processInstance:dialogs.failJob.outcomeIncidentListener')
+        : t('processInstance:dialogs.failJob.outcomeIncident')
       : retriesLeft !== undefined
-        ? t('processInstance:dialogs.failJob.outcomeRetryRequested', { retries: remaining })
-        : t('processInstance:dialogs.failJob.outcomeRetry', { retries: remaining });
+        ? isListener
+          ? t('processInstance:dialogs.failJob.outcomeRetryRequestedListener', { retries: remaining })
+          : t('processInstance:dialogs.failJob.outcomeRetryRequested', { retries: remaining })
+        : isListener
+          ? t('processInstance:dialogs.failJob.outcomeRetryListener', { retries: remaining })
+          : t('processInstance:dialogs.failJob.outcomeRetry', { retries: remaining });
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -151,15 +163,21 @@ export const FailJobDialog = ({
         )}
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 0.5 }}>
-          <TextField
-            label={t('processInstance:dialogs.failJob.errorCode')}
-            value={errorCode}
-            onChange={(e) => setErrorCode(e.target.value)}
-            placeholder={t('processInstance:dialogs.failJob.errorCodePlaceholder')}
-            fullWidth
-            autoFocus
-            size="small"
-          />
+          {isListener ? (
+            <Alert severity="info" role="note" data-testid="fail-job-listener-note">
+              {t('processInstance:dialogs.failJob.listenerNote')}
+            </Alert>
+          ) : (
+            <TextField
+              label={t('processInstance:dialogs.failJob.errorCode')}
+              value={errorCode}
+              onChange={(e) => setErrorCode(e.target.value)}
+              placeholder={t('processInstance:dialogs.failJob.errorCodePlaceholder')}
+              fullWidth
+              autoFocus
+              size="small"
+            />
+          )}
 
           <TextField
             label={t('processInstance:dialogs.failJob.message')}
@@ -170,6 +188,7 @@ export const FailJobDialog = ({
             fullWidth
             multiline
             minRows={2}
+            autoFocus={isListener}
             size="small"
           />
 
@@ -199,7 +218,9 @@ export const FailJobDialog = ({
                 helperText={
                   backoffInvalid
                     ? t('processInstance:dialogs.failJob.retryBackoffInvalid')
-                    : t('processInstance:dialogs.failJob.retryBackoffHelp')
+                    : isListener
+                      ? t('processInstance:dialogs.failJob.retryBackoffHelpListener')
+                      : t('processInstance:dialogs.failJob.retryBackoffHelp')
                 }
                 fullWidth
                 size="small"
