@@ -49,7 +49,7 @@
     "oidc-client-ts": "^3.5.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-i18next": "^17.1.11",
+    "react-i18next": "^17.1.13",
     "react-router-dom": "^7.18.6",
     "@pbinitiative/zenbpm-bpmn-moddle": "0.3.1",
     "@pbinitiative/zenbpm-js-properties-panel": "0.6.0"
