@@ -1,6 +1,6 @@
 # BPMN element design tests
 
-The suite contains 35 element directories, 128 design variants and 390 tests.
+The suite contains 35 element directories, 131 design variants and 399 tests.
 Each BPMN element type has its own directory and one or more `*_design.spec.ts` files.
 Related event definitions and design variants are named scenarios in the element's
 spec file; boundary event definitions are split into per-type spec files.
@@ -29,7 +29,9 @@ process execution or job completion. A deployment accepted by the backend does
 not establish runtime support for every BPMN construct. How the engine runs the
 jobs of execution listeners is tested beside this suite, in
 `e2e/live/processes/startListener.spec.ts` and `taskListeners.spec.ts`, with
-`helpers/listenerProcesses.ts`.
+`helpers/listenerProcesses.ts`. That a timer whose value is a FEEL expression is
+due at what the expression evaluates to is tested in
+`e2e/live/processes/timerExpression.spec.ts`.
 
 ## Coverage
 
@@ -42,7 +44,7 @@ jobs of execution listeners is tested beside this suite, in
 | Sub-process | Expanded/collapsed, loops and business key override |
 | Event sub-process | Typed start; separate start-event scenarios for interrupting/non-interrupting message, timer, conditional, signal, escalation, error and compensation where offered |
 | Transaction, ad-hoc sub-process | Transaction/cancel context; expanded/collapsed ad-hoc, completion condition, cancellation and loop markers |
-| Start, end, intermediate catch/throw, boundary events | All replacement-menu event definitions; date/duration/cycle timers, interrupting/non-interrupting boundaries, global references and correlation keys where exposed |
+| Start, end, intermediate catch/throw, boundary events | All replacement-menu event definitions; date/duration/cycle timers, a timer value as a FEEL expression (date on a catch event, duration on a boundary event, cycle on an event sub-process start), interrupting/non-interrupting boundaries, global references and correlation keys where exposed |
 | Gateways | Exclusive, parallel, inclusive, complex, event-based; event-based branches lead to catch events |
 | Execution listeners | The group is expected exactly where the engine runs listeners: on the service, send and user task (plain and standard loop), the job worker business rule task, the message intermediate throw event and every start event of the process; on no multi-instance and no other variant. Service task: a start and an end listener designed, exported in the order of the model, re-imported and deployed; two start listeners of one type flagged and refused; one type on a start and an end listener accepted. Start event: an end listener designed, re-imported and deployed, its type cleared, the listener removed; a FEEL type flagged and refused |
 | Sequence flow | Plain, conditional FEEL, default |

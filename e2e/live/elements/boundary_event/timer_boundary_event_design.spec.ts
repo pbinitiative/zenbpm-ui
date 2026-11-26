@@ -8,8 +8,8 @@ import {
 } from '../../helpers/processDesigner';
 import {expectPropertyGroups} from '../../helpers/propertiesPanel';
 import {expectMetadataXml} from '../../helpers/commonProperties';
-import {editTimer} from '../../helpers/eventProperties';
-import {expectEventDefinitions, expectXmlElements} from '../../helpers/bpmnAssertions';
+import {editTimer, editTimerExpression} from '../../helpers/eventProperties';
+import {expectEventDefinitions, expectTimerValue, expectXmlElements} from '../../helpers/bpmnAssertions';
 import {deployProcess, expectDeploymentSaved} from '../../helpers/processDeployment';
 import {
     ELEMENT_ID,
@@ -153,6 +153,42 @@ test.describe('Timer boundary event — timeDuration — non-interrupting', () =
     async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
         await expectBoundaryTimerDesign(page, xml, id);
         await expectXmlElements(page, xml, `[id="${id}"]`, [{attributes: {cancelActivity: 'false'}}]);
+    }
+});
+
+test.describe('Timer boundary event — timeDuration FEEL expression — interrupting', () => {
+    test.beforeEach(async ({page}) => {
+        await createBoundaryDiagram(page);
+        await selectShape(page, ELEMENT_ID);
+        await changeElement(page, 'Timer boundary event');
+    });
+
+    test('designs the element and exports its BPMN type and variant', async ({page}) => {
+        await editTimerExpression(page, 'timeDuration', 'waitFor');
+        const xml = await downloadBpmnXml(page);
+        await expectDesign(page, xml, ELEMENT_ID);
+    });
+
+    test('shows, edits and persists properties through XML import', async ({page}) => {
+        const editedId = await editBoundaryEventProperties(page);
+        await editTimerExpression(page, 'timeDuration', 'waitFor');
+        await expectPropertyGroups(page, [...PROPERTY_GROUPS, 'timer']);
+        const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
+        expectMetadataXml(xml);
+        await expectDesign(page, xml, editedId);
+    });
+
+    test('deploys the designed process and reads back its BPMN XML', async ({page}) => {
+        await editTimerExpression(page, 'timeDuration', 'waitFor');
+        const xml = await downloadBpmnXml(page);
+        await expectDesign(page, xml, ELEMENT_ID);
+        const response = await deployProcess(page);
+        await expectDeploymentSaved(page, response, xml);
+    });
+
+    async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
+        await expectBoundaryTimerDesign(page, xml, id);
+        await expectTimerValue(page, xml, id, 'timeDuration', '=waitFor');
     }
 });
 

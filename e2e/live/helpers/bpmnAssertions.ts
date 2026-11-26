@@ -28,6 +28,16 @@ export async function expectEventDefinitions(page: Page, xml: string, id: string
   expect(definitions).toEqual(expected);
 }
 
+/** Assert the one value of the element's timer: its kind (timeDate, timeDuration, timeCycle) and its text, the `=` of a FEEL expression included. */
+export async function expectTimerValue(page: Page, xml: string, id: string, definition: string, value: string): Promise<void> {
+  const values = await page.evaluate(({ xml, id }) => {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    const timer = Array.from(doc.getElementById(id)?.children ?? []).find(child => child.localName === 'timerEventDefinition');
+    return Array.from(timer?.children ?? []).map(child => ({ definition: child.localName, value: child.textContent }));
+  }, { xml, id });
+  expect(values).toEqual([{ definition, value }]);
+}
+
 export async function expectValidBpmnXml(page: Page, xml: string): Promise<void> {
   const result = await page.evaluate(({ xml }) => {
     const doc = new DOMParser().parseFromString(xml, 'application/xml');

@@ -26,8 +26,9 @@ import {
     editErrorReference,
     editEscalationReference,
     editTimer,
+    editTimerExpression,
 } from '../../helpers/eventProperties';
-import {expectXmlElements, expectEventDefinitions, expectValidBpmnXml} from '../../helpers/bpmnAssertions';
+import {expectXmlElements, expectEventDefinitions, expectTimerValue, expectValidBpmnXml} from '../../helpers/bpmnAssertions';
 import {deployProcess, expectDeploymentSaved} from '../../helpers/processDeployment';
 
 const ELEMENT_ID = 'Element_under_test';
@@ -179,6 +180,44 @@ test.describe('Timer start event — timeDuration — non-interrupting', () => {
         await expectEventSubProcessStartEventXml(page, xml, id);
         await expectEventDefinitions(page, xml, id, ['timerEventDefinition']);
         await expectXmlElements(page, xml, `[id="${id}"]`, [{attributes: {isInterrupting: 'false'}}]);
+    }
+});
+
+test.describe('Timer start event — timeCycle FEEL expression — non-interrupting', () => {
+    test.beforeEach(async ({page}) => {
+        await createEventSubprocessStartDiagram(page);
+        await selectShape(page, ELEMENT_ID);
+        await changeElement(page, 'Timer start event (non-interrupting)');
+    });
+
+    test('designs the element and exports its BPMN type and variant', async ({page}) => {
+        await editTimerExpression(page, 'timeCycle', 'reminderCycle');
+        const xml = await downloadBpmnXml(page);
+        await expectDesign(page, xml, ELEMENT_ID);
+    });
+
+    test('shows, edits and persists properties through XML import', async ({page}) => {
+        const editedId = await editEventSubProcessStartEventProperties(page);
+        await editTimerExpression(page, 'timeCycle', 'reminderCycle');
+        await expectPropertyGroups(page, [...PROPERTY_GROUPS, 'timer']);
+        const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
+        expectMetadataXml(xml);
+        await expectDesign(page, xml, editedId);
+    });
+
+    test('deploys the designed process and reads back its BPMN XML', async ({page}) => {
+        await editTimerExpression(page, 'timeCycle', 'reminderCycle');
+        const xml = await downloadBpmnXml(page);
+        await expectDesign(page, xml, ELEMENT_ID);
+        const response = await deployProcess(page);
+        await expectDeploymentSaved(page, response, xml);
+    });
+
+    async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
+        await expectEventSubProcessStartEventXml(page, xml, id);
+        await expectEventDefinitions(page, xml, id, ['timerEventDefinition']);
+        await expectXmlElements(page, xml, `[id="${id}"]`, [{attributes: {isInterrupting: 'false'}}]);
+        await expectTimerValue(page, xml, id, 'timeCycle', '=reminderCycle');
     }
 });
 
