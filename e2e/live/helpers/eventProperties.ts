@@ -45,3 +45,17 @@ export async function editTimer(page: Page, definition: string, value: string): 
   await timer.selectOption(definition);
   await fillEntry(page, 'timerEventDefinitionValue', value);
 }
+
+/**
+ * Sets the timer value as a FEEL expression: it is entered as a static value and
+ * turned into an expression with the FEEL toggle, which stores it behind a `=`.
+ */
+export async function editTimerExpression(page: Page, definition: string, expression: string): Promise<void> {
+  await editTimer(page, definition, expression);
+  const value = entry(page, 'timerEventDefinitionValue');
+  await value.getByTitle('Click to set a dynamic value with FEEL expression', { exact: true }).click();
+  // A plain input has the textbox role only implicitly; the FEEL editor declares it.
+  await expect(value.locator('[role="textbox"]')).toHaveText(expression);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('process-designer-unsaved-changes')))
+    .toContain(`>=${expression}</bpmn:${definition}>`);
+}

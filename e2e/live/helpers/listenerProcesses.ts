@@ -22,9 +22,10 @@ export interface EngineJob {
 
 /**
  * Deploys the process open in the designer, starts an instance of it through
- * the definition's page and opens the instance. Answers the instance's key.
+ * the definition's page, with the variables if any are given as JSON, and opens
+ * the instance. Answers the instance's key.
  */
-export async function deployAndStartDesignedProcess(page: Page): Promise<string> {
+export async function deployAndStartDesignedProcess(page: Page, variables?: string): Promise<string> {
   const xml = await downloadBpmnXml(page);
   const deployment = await deployProcess(page);
   await expectDeploymentSaved(page, deployment, xml);
@@ -34,7 +35,7 @@ export async function deployAndStartDesignedProcess(page: Page): Promise<string>
   const [created] = await Promise.all([
     page.waitForResponse((response: Response) => new URL(response.url()).pathname === '/v1/process-instances'
       && response.request().method() === 'POST'),
-    startProcessInstance(page),
+    startProcessInstance(page, { variables }),
   ]);
   expect(created.ok(), `Start returned ${created.status()}`).toBe(true);
   const { key } = parseWithKeys.parse(await created.text()) as { key: string };

@@ -19,8 +19,8 @@ import {
     editExampleData,
     expectMetadataXml,
 } from '../../helpers/commonProperties';
-import {editMessageReference, editSignalReference, editTimer} from '../../helpers/eventProperties';
-import {expectXmlElements, expectEventDefinitions, expectValidBpmnXml} from '../../helpers/bpmnAssertions';
+import {editMessageReference, editSignalReference, editTimer, editTimerExpression} from '../../helpers/eventProperties';
+import {expectXmlElements, expectEventDefinitions, expectTimerValue, expectValidBpmnXml} from '../../helpers/bpmnAssertions';
 import {
     deployProcess,
     expectDeploymentSaved,
@@ -173,6 +173,43 @@ test.describe('Timer intermediate catch event — timeCycle', () => {
     async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
         await expectIntermediateCatchEventXml(page, xml, id);
         await expectEventDefinitions(page, xml, id, ['timerEventDefinition']);
+    }
+});
+
+test.describe('Timer intermediate catch event — timeDate FEEL expression', () => {
+    test.beforeEach(async ({page}) => {
+        await createIntermediateDiagram(page);
+        await selectShape(page, ELEMENT_ID);
+        await changeElement(page, 'Timer intermediate catch event');
+    });
+
+    test('designs the element and exports its BPMN type and variant', async ({page}) => {
+        await editTimerExpression(page, 'timeDate', 'dueAt');
+        const xml = await downloadBpmnXml(page);
+        await expectDesign(page, xml, ELEMENT_ID);
+    });
+
+    test('shows, edits and persists properties through XML import', async ({page}) => {
+        const editedId = await editIntermediateCatchEventProperties(page);
+        await editTimerExpression(page, 'timeDate', 'dueAt');
+        await expectPropertyGroups(page, [...PROPERTY_GROUPS, 'timer']);
+        const xml = await expectPropertiesRoundTrip(page, () => selectShape(page, editedId));
+        expectMetadataXml(xml);
+        await expectDesign(page, xml, editedId);
+    });
+
+    test('deploys the designed process and reads back its BPMN XML', async ({page}) => {
+        await editTimerExpression(page, 'timeDate', 'dueAt');
+        const xml = await downloadBpmnXml(page);
+        await expectDesign(page, xml, ELEMENT_ID);
+        const response = await deployProcess(page);
+        await expectDeploymentSaved(page, response, xml);
+    });
+
+    async function expectDesign(page: Page, xml: string, id: string): Promise<void> {
+        await expectIntermediateCatchEventXml(page, xml, id);
+        await expectEventDefinitions(page, xml, id, ['timerEventDefinition']);
+        await expectTimerValue(page, xml, id, 'timeDate', '=dueAt');
     }
 });
 
